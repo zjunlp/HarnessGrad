@@ -2,6 +2,7 @@
 
 Default operation is offline and read only. --archive restores the four English
 Punkt tables from a local pinned zip. --download permits the locked URLs only.
+--from-resources imports individually verified files from an explicit local root.
 The tracked lock is never regenerated. Python packages are installed separately.
 """
 import argparse
@@ -68,7 +69,7 @@ def _atomic_write(path, data):
             os.unlink(name)
 
 
-def provision(resources, *, download=False, archive=None):
+def provision(resources, *, download=False, archive=None, from_resources=None):
     """Verify all five files; opt-in restoration publishes only verified bytes."""
     resources = Path(resources).resolve()
     lock = read_spec("resources.lock.json")
@@ -87,12 +88,23 @@ def provision(resources, *, download=False, archive=None):
                 _verified(path.read_bytes(), entry)
             except ValueError:
                 missing.append(entry)
+    replacements, local_sources = {}, []
+    if from_resources is not None:
+        source = Path(from_resources).resolve()
+        for entry in list(missing):
+            candidate = _path(source, Path(entry["path"]).relative_to("resources"))
+            if candidate.is_file():
+                replacements[entry["path"]] = _verified(candidate.read_bytes(), entry)
+                local_sources.append({"path": entry["path"], "source": str(candidate),
+                                      "sha256": entry["sha256"], "bytes": entry["bytes"]})
+                missing.remove(entry)
     if missing and not download and archive is None:
         raise ValueError("missing or corrupt resources: " + ", ".join(entry["path"] for entry in missing))
-    replacements = {}
     archive_bytes = None
+    archive_source = None
     if any("archive_member" in entry for entry in missing):
         archive_path = Path(archive) if archive is not None else _path(resources, "downloads/punkt_tab.zip")
+        source_kind = "local_archive"
         if archive_path.is_file():
             archive_bytes = archive_path.read_bytes()
             if _sha(archive_bytes) != lock["nltk_archive_sha256"]:
@@ -103,8 +115,17 @@ def provision(resources, *, download=False, archive=None):
             if not download:
                 raise ValueError("pinned local Punkt archive missing")
             archive_bytes = _fetch(lock["nltk_archive_url"])
+            source_kind = "download"
         if _sha(archive_bytes) != lock["nltk_archive_sha256"]:
             raise ValueError("punkt archive checksum mismatch")
+        archive_source = {"kind": source_kind, "declared_source_url": lock["nltk_archive_url"],
+                          "sha256": _sha(archive_bytes), "bytes": len(archive_bytes), "members": []}
+        if source_kind == "local_archive":
+            archive_source["path"] = str(archive_path.resolve())
+        else:
+            archive_source["acquisition_url"] = lock["nltk_archive_url"]
+        if download:
+            archive_source["cache_destination"] = str(_path(resources, "downloads/punkt_tab.zip"))
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zipped:
             for entry in missing:
                 if "archive_member" not in entry:
@@ -118,6 +139,8 @@ def provision(resources, *, download=False, archive=None):
                 with zipped.open(info) as stream:
                     data = stream.read(entry["bytes"] + 1)
                 replacements[entry["path"]] = _verified(data, entry)
+                archive_source["members"].append({"archive_member": name, "path": entry["path"],
+                                                   "sha256": entry["sha256"], "bytes": entry["bytes"]})
     for entry in missing:
         if "archive_member" in entry:
             continue
@@ -134,7 +157,8 @@ def provision(resources, *, download=False, archive=None):
     return {"schema": "hg-mab-resource-provision-v1", "verified_files": len(entries),
             "verified_bytes": sum(entry["bytes"] for entry in entries),
             "restored_files": len(replacements), "download_allowed": bool(download),
-            "nltk_data_revision": lock["nltk_data_revision"]}
+            "nltk_data_revision": lock["nltk_data_revision"], "verified_local_sources": local_sources,
+            "verified_archive_source": archive_source}
 
 
 def main(argv=None):
@@ -142,8 +166,9 @@ def main(argv=None):
     parser.add_argument("--resources", type=Path, required=True, help="Directory containing nltk/ and tiktoken/")
     parser.add_argument("--download", action="store_true", help="Allow downloads from the pinned resource URLs")
     parser.add_argument("--archive", type=Path, help="Pinned local punkt_tab.zip for offline English-table restoration")
+    parser.add_argument("--from-resources", type=Path, help="Explicit local resources root; import only original-lock-verified files")
     args = parser.parse_args(argv)
-    print(json.dumps(provision(args.resources, download=args.download, archive=args.archive), sort_keys=True))
+    print(json.dumps(provision(args.resources, download=args.download, archive=args.archive, from_resources=args.from_resources), sort_keys=True))
     return 0
 
 

@@ -1,0 +1,313 @@
+{
+  "schema": "harnessgrad.runtime-support-inventory.v1",
+  "groups": [
+    {
+      "datasets": [
+        "gsm8k",
+        "hotpotqa",
+        "triviaqa"
+      ],
+      "loading_and_preparation": "Managed provider with pinned PyArrow; data download is separate.",
+      "trusted_execution": "Shared QA scorer; answers remain in private verifier inputs.",
+      "verification_scope": "Authored provider and QA controls; released datasets and every task are not certified by these controls."
+    },
+    {
+      "datasets": [
+        "chessbench_puzzles"
+      ],
+      "loading_and_preparation": "Managed chess provider; catalog and board construction avoid platform chess.",
+      "trusted_execution": "Independent pinned native scorer for offline replay; bound provider worker for interactive play.",
+      "verification_scope": "Authored provider and interactive controls remain distinct from the independent native scorer. Exact-pin recovery/check tooling matched 555 of 718 required blobs; 163 including the required interpreter remain unavailable, so four real-native scorer controls skip rather than substitute another runtime."
+    },
+    {
+      "datasets": [
+        "appworld"
+      ],
+      "loading_and_preparation": "Standard-library loading of pinned materialized metadata; explicit cryptography preparation runtime.",
+      "trusted_execution": "Pinned actor/service/scorer images; preparation receipt is not a scorer identity.",
+      "verification_scope": "Authored encrypted-bundle preparation controls; live container execution remains unverified in this installation work."
+    },
+    {
+      "datasets": [
+        "livecodebench"
+      ],
+      "loading_and_preparation": "Standard-library prepared metadata; NumPy only in metric helpers and managed scoring runtime.",
+      "trusted_execution": "Pinned upstream executor and aggregator, authenticated as private scorer inputs.",
+      "verification_scope": "Authored native-sandbox scoring and dependency-tampering controls; no released benchmark run."
+    },
+    {
+      "datasets": [
+        "costbench",
+        "costbench_dynamic"
+      ],
+      "loading_and_preparation": "Standard-library prepared records; shared managed execution artifact.",
+      "trusted_execution": "Separate trusted service and verifier bindings to the selected dependency artifact.",
+      "verification_scope": "Real original-package service/socket/seal/native-sandbox scorer and cleanup on author-owned inputs: static and dynamic cost_change each oracle/noop/invalid-tool scored 1/0/0. No released cases or models; other dynamic modes and domains remain outside this scope."
+    },
+    {
+      "datasets": [
+        "bird_minidev"
+      ],
+      "loading_and_preparation": "Existing dataset-specific loading and native runtime recipes.",
+      "trusted_execution": "Independently pinned native scorer closures; additional environment and binary dependencies.",
+      "verification_scope": "Per-route loader/actor/service closure and portable provisioning remain under review; native pin presence is not execution proof."
+    },
+    {
+      "datasets": [
+        "alfworld"
+      ],
+      "loading_and_preparation": "Managed service artifact actually prepared; newly resolved closure retains limited original native source/version evidence including NumPy 1.26.4.",
+      "trusted_execution": "Stdlib actor client reaches trusted managed relay; original native scorer pins and algorithm remain unchanged.",
+      "verification_scope": "Five actual bubblewrap fake-engine controls and five control-wiring controls passed. Limited matching package-source hashes do not reconstruct the whole historical environment; real game/native scoring remain unrun."
+    },
+    {
+      "datasets": [
+        "scienceworld"
+      ],
+      "loading_and_preparation": "Managed ScienceWorld 1.2.3 service artifact prepared; JAR SHA matches original native pin and JRE 17 version was inspected.",
+      "trusted_execution": "Stdlib client/trusted relay and isolated operator-oracle worker bind admitted artifact/JAR/Java; noop does not generate gold. Original native verifier remains unchanged.",
+      "verification_scope": "Producer scoped launcher, old/new CLI byte-parity, operator fake-engine and study controls: 27 passed, 1 skipped. No real world or native scorer execution; these are transport/operator controls."
+    },
+    {
+      "datasets": [
+        "jericho"
+      ],
+      "loading_and_preparation": "Declared managed provider; separate pinned CPython 3.12 Jericho execution artifact; ROMs remain external.",
+      "trusted_execution": "Bound single-game relay, stdlib actor client and unchanged native scorer manifest; upstream C/Frotz and OS dependencies remain external.",
+      "verification_scope": "Original CC0 TextWorld-ABI story ran on the original-pin Jericho/libfrotz engine with actual inventory, score and termination, real relay/client, bound-input shipped-scorer replay and process cleanup (2/2 in two actions). Fake-engine Loop controls remain separate. The complete independently pinned sealed-native scorer package is still unavailable; no released ROM or benchmark was run."
+    },
+    {
+      "datasets": [
+        "math",
+        "math500"
+      ],
+      "loading_and_preparation": "Standard-library loading of materialized native-QA records; shared math execution profile.",
+      "trusted_execution": "Bound Math-Verify 0.9.0 verifier with a complete dependency lock and private gold inputs.",
+      "verification_scope": "Authored native-sandbox equivalence and runtime/source identity controls; no released benchmark run or cross-version equivalence claim."
+    },
+    {
+      "datasets": [
+        "locomo"
+      ],
+      "loading_and_preparation": "Standard-library loader and report aggregation; explicit scorer runtime preparation.",
+      "trusted_execution": "Bound NLTK 3.10.4 scorer; original Harbor algorithm, private gold and rematerialized scorer checks.",
+      "verification_scope": "Authored controls and pinned Harbor fixture parity under the selected package version; historical versions and released datasets are not certified."
+    },
+    {
+      "datasets": [
+        "spreadsheetbench"
+      ],
+      "loading_and_preparation": "Managed openpyxl verifier artifact; workbook cases and golden bytes remain separate. ENV.task_python binds the managed dependency artifact with an actor role for shell workbook editing.",
+      "trusted_execution": "Private native manifest binds explicit LibreOffice deployment; trusted scorer helpers and isolated CLI recalculation accompany managed Python. Task sandbox hides global site packages while retaining its venv/public SDK; private manifest embeds only original-pin UNO files, SHA-checked and rebound individually read-only.",
+      "verification_scope": "Real default Loop authored editing controls remain 1/0/1/0 across v1/v2. A separate 21-case official-source versus actual platform differential checks authored normalization, formula/error fallback, selected-cell and v2 mode semantics on LibreOffice 7.3.7.2. V1 reference is a named independent snapshot, not authentication of the historical transcription; no Excel/full-corpus or hermetic-native equivalence claim."
+    },
+    {
+      "datasets": [
+        "spreadsheetbench2"
+      ],
+      "loading_and_preparation": "Separate managed Python scorer artifact and prepared workbook cases. ENV.task_python binds the managed dependency artifact with an actor role for shell workbook editing.",
+      "trusted_execution": "Private native manifest and trusted scorer helpers bind LibreOffice/UNO; CLI/UNO execution is isolated. Task sandbox hides global site packages while retaining its venv/public SDK; private manifest embeds only original-pin UNO files, SHA-checked and rebound individually read-only.",
+      "verification_scope": "Real default Loop authored editing controls remain 1/0/1/0 across v1/v2. A separate 21-case official-source versus actual platform differential checks authored normalization, formula/error fallback, selected-cell and v2 mode semantics on LibreOffice 7.3.7.2. V1 reference is a named independent snapshot, not authentication of the historical transcription; no Excel/full-corpus or hermetic-native equivalence claim."
+    },
+    {
+      "datasets": [
+        "reasoning_gym"
+      ],
+      "loading_and_preparation": "Stdlib materialized loader; historical exact pinned snapshot found and atomically imported into task-owned storage (3,315,981 bytes; 1,780 records). Managed 0.1.25 execution closure locally imports.",
+      "trusted_execution": "Bound library score_answer under admitted execution runtime; private scoring profile preserves seed/family size.",
+      "verification_scope": "Read-only retained snapshot hash matched unchanged c0ff4eaef318 pin; actual native official scorer controls returned correct=1, wrong=0, partial=0.65. These selected controls are not a full benchmark. Public acquisition/distribution licensing and historical generation reproducibility remain unresolved."
+    },
+    {
+      "datasets": [
+        "memoryagentbench"
+      ],
+      "loading_and_preparation": "Separate pinned preparation environment; original locked archive and all four English Punkt tables acquired and verified, plus locked tiktoken BPE. Offline import records archive/member provenance.",
+      "trusted_execution": "Stdlib serving/local scoring and separately identified trusted judge/scorer paths; model access is separate.",
+      "verification_scope": "All five original-lock resources verified (3,851,679 bytes). Real sentence segmentation, BPE token IDs and pinned upstream chunk function matched on six authored texts, including threshold crossing and oversized-first-sentence empty chunks, under the isolated pinned preparation venv (not platform Python or an admitted execution artifact). Tokenizer microepisode reports full_tokenizer_ready=true. Released corpus preparation, broad corpus parity and live judge acceptance remain unverified."
+    },
+    {
+      "datasets": [
+        "tau2_bench"
+      ],
+      "loading_and_preparation": "Prepared episodes and managed execution lock; external data and preparation remain separate.",
+      "trusted_execution": "Service and verifier bind the selected managed execution artifact; compatibility external-prefix route remains explicit.",
+      "verification_scope": "Original source-bound package, actual user simulator/retail tools and official ALL scorer execute authored arithmetic cases through run_one and sealed recording. Correct/action-missing/invalid-judge/HTTP503, seed, separate usage and credential controls pass; only local LLM responses are scripted. No released episodes, other domains or real model acceptance is claimed."
+    },
+    {
+      "datasets": [
+        "tau3_bench"
+      ],
+      "loading_and_preparation": "Prepared episodes and managed execution lock; external data and preparation remain separate.",
+      "trusted_execution": "Service and verifier bind the selected managed execution artifact; compatibility external-prefix route remains explicit.",
+      "verification_scope": "Original source-bound package, actual user simulator/retail tools and official ALL scorer execute authored arithmetic cases through run_one and sealed recording. Correct/action-missing/invalid-judge/HTTP503, seed, separate usage and credential controls pass; only local LLM responses are scripted. No released episodes, other domains or real model acceptance is claimed."
+    },
+    {
+      "datasets": [
+        "tau_bench"
+      ],
+      "loading_and_preparation": "Stdlib prepared records with source custody and explicit offline preparation/check tooling; vendored upstream benchmark code.",
+      "trusted_execution": "Selected original vendored retail tools, task-owned HTTP service, recording and independent DB/output/replay scorer were exercised; the original container route remains separate.",
+      "verification_scope": "Five authored real-component controls cover correct, wrong DB, wrong output, unfinished and invalid recording; 38 vendored source hashes match. These do not establish the original container deployment or released-episode acceptance."
+    },
+    {
+      "datasets": [
+        "agentdojo"
+      ],
+      "loading_and_preparation": "Managed CPython 3.12 execution artifact prepared; upstream source identity fixes 112 files and prepared cases remain separate.",
+      "trusted_execution": "Trusted relay/scorer bind the artifact and source snapshot; read-only check covered 949 pairs.",
+      "verification_scope": "Ten native fake-evaluate/relay controls and source/read-only checks cover selected plumbing; no real upstream episode or full benchmark lifecycle."
+    },
+    {
+      "datasets": [
+        "cooperbench",
+        "deepswe",
+        "jobbench",
+        "swe_bench_pro"
+      ],
+      "loading_and_preparation": "Prepared Harbor-backed task metadata.",
+      "trusted_execution": "External Harbor environment and task images.",
+      "verification_scope": "Source, package and image identity plus installed workflow acceptance remain pending."
+    },
+    {
+      "datasets": [
+        "browsecomp",
+        "deepsearchqa",
+        "hle",
+        "livemathbench"
+      ],
+      "loading_and_preparation": "Prepared records and benchmark-specific native code.",
+      "trusted_execution": "Trusted judge; selected profiles additionally use web services.",
+      "verification_scope": "Judge configuration, scorer dependency closure and failure evidence require per-dataset acceptance."
+    },
+    {
+      "datasets": [
+        "harvey_lab"
+      ],
+      "loading_and_preparation": "Managed CPython 3.12 special-worker recipe and exact dependency lock prepared; task/world resources remain separate.",
+      "trusted_execution": "Harvey worker binds the exact admitted artifact; public runtime evidence contains runtime/module identities without private case hashes or host paths.",
+      "verification_scope": "Actual harvey_worker --probe passed twice consecutively with exact artifact admission. No judge/model request, document conversion or legal-task lifecycle was exercised; native resources and real workload remain pending."
+    },
+    {
+      "datasets": [
+        "workbench"
+      ],
+      "loading_and_preparation": "Managed preparation/service/scorer component prepared; source and world records remain separate.",
+      "trusted_execution": "Trusted mutable-world relay and verifier bind the same admitted artifact.",
+      "verification_scope": "Actual artifact bubblewrap relay and post-exit positive/negative controls passed without platform dependencies. Full released-world lifecycle remains unverified; permanent preparation reservations and deterministic barrier controls prevent late-claim overwrite of directory bytes; real released preparation remains separate."
+    },
+    {
+      "datasets": [
+        "travelplanner"
+      ],
+      "loading_and_preparation": "Managed execution artifact prepared; source acquisition/conversion uses shared native_qa preparation component.",
+      "trusted_execution": "Trusted scorer binds the component artifact and unchanged native evaluator/source pins.",
+      "verification_scope": "Actual artifact controls returned correct=1 and wrong=0 without platform dependencies. Released full-pool semantics remain unverified; permanent preparation reservations and deterministic barrier controls prevent late-claim overwrite of directory bytes; real released preparation remains separate."
+    },
+    {
+      "datasets": [
+        "widesearch"
+      ],
+      "loading_and_preparation": "Managed preparation/scorer component prepared; source/gold CSV custody remains separate.",
+      "trusted_execution": "Native evaluator and judge path bind the selected artifact; platform packages and legacy interpreter overrides do not establish readiness.",
+      "verification_scope": "Focused suite: 18 passed, including scorer/precision/fetch controls in the selected artifact and three local fake-judge modes. Real judge acceptance and released full-pool semantics remain pending; permanent preparation reservations and deterministic barrier controls prevent late-claim overwrite of directory bytes; real released preparation remains separate."
+    },
+    {
+      "datasets": [
+        "swe_bench"
+      ],
+      "loading_and_preparation": "Managed CPython 3.12 official-worker recipe and exact dependency lock prepared; task/evaluator source custody remains separate.",
+      "trusted_execution": "Official worker binds the exact admitted artifact; Docker/task images remain separate dependencies. Public runtime evidence contains runtime/module identities without private case hashes or host paths.",
+      "verification_scope": "Actual swe_official check passed twice consecutively with exact artifact admission. No Docker operation, model request or benchmark task was exercised; evaluator/image custody and real container lifecycle remain pending."
+    },
+    {
+      "datasets": [
+        "terminal_bench"
+      ],
+      "loading_and_preparation": "Prepared task metadata and local task images.",
+      "trusted_execution": "Actor and verifier execute in the task image.",
+      "verification_scope": "Per-image toolchain, identity, isolation and cleanup acceptance remain pending."
+    },
+    {
+      "datasets": [
+        "ds1000"
+      ],
+      "loading_and_preparation": "Standard-library case loader and an explicit public-wheel preparation/check CLI for a separate CPython 3.12 Linux x86_64 CPU artifact; the frozen data/cohort/source pins remain unchanged.",
+      "trusted_execution": "Actor task_python and trusted verifier bind the same 29-distribution scientific artifact with separate roles; the Harness SDK stays separate. Scientific startup, official executor source and private scorer inputs are checked independently.",
+      "verification_scope": "Real cold-platform authored shell NumPy/Torch CPU computation and native bound official verification score correct=1/wrong=0, with read-only dependencies and private-source isolation. Candidate import failures retain official measured zero; missing declared science/transport is unmeasured. CPU Torch 2.5.1+cpu differs from the historical CUDA host; no historical sweep or released 926-row claim."
+    },
+    {
+      "datasets": [
+        "gaia"
+      ],
+      "loading_and_preparation": "Materialized records; PyArrow is used during preparation.",
+      "trusted_execution": "Dataset-specific task and scoring route.",
+      "verification_scope": "Preparation and execution closure must be checked separately; no whole-route stdlib claim."
+    },
+    {
+      "datasets": [
+        "aime",
+        "bbeh",
+        "fever",
+        "musique",
+        "physicsquestions",
+        "sportsunderstanding",
+        "strategyqa",
+        "twowikimultihopqa"
+      ],
+      "loading_and_preparation": "Inspected QA loading uses standard library and repository code.",
+      "trusted_execution": "Repository QA scorer with dataset-specific metric semantics.",
+      "verification_scope": "Authored cold stdlib loader and selected native-sandbox oracle/wrong/noop controls (test_stdlib_adapter_acceptance.py); production count pins remain unchanged. Released source acquisition, complete pool execution and all host platforms remain unverified; preserve declared metric deviations."
+    },
+    {
+      "datasets": [
+        "nq",
+        "searchqa",
+        "supergpqa"
+      ],
+      "loading_and_preparation": "Stdlib prepared native-QA records and local JSON/JSONL custody. Shared native_qa preparation-only runtime handles optional remote/Parquet conversion; it is not a published dataset or scorer identity.",
+      "trusted_execution": "Repository text/label scoring.",
+      "verification_scope": "Authored cold stdlib loader and selected native-sandbox oracle/wrong/noop controls (test_stdlib_adapter_acceptance.py); production count pins remain unchanged. Released source acquisition, complete pool execution and all host platforms remain unverified; preserve declared metric deviations."
+    },
+    {
+      "datasets": [
+        "bfcl_v3"
+      ],
+      "loading_and_preparation": "Prepared function-call records.",
+      "trusted_execution": "Repository AST-based comparison with its declared metric limitations.",
+      "verification_scope": "Authored cold stdlib loader and selected native-sandbox oracle/wrong/noop controls (test_stdlib_adapter_acceptance.py); production count pins remain unchanged. Released source acquisition, complete pool execution and all host platforms remain unverified; preserve declared metric deviations."
+    },
+    {
+      "datasets": [
+        "officeqa_pro"
+      ],
+      "loading_and_preparation": "Prepared records plus separately supplied corpus.",
+      "trusted_execution": "Native QA office reward and corpus access.",
+      "verification_scope": "Corpus provenance, privacy and downstream dependency closure remain under review."
+    },
+    {
+      "datasets": [
+        "strongreject"
+      ],
+      "loading_and_preparation": "Prepared records.",
+      "trusted_execution": "Trusted model judge and command scorer.",
+      "verification_scope": "Bind judge/scorer configuration and validate invalid/unmeasured outcomes; model access is separately required."
+    },
+    {
+      "datasets": [
+        "kumo",
+        "personamem_v2"
+      ],
+      "loading_and_preparation": "Prepared records and dataset-specific protocol code.",
+      "trusted_execution": "Trusted tool relay and command scorer.",
+      "verification_scope": "Cold-stdlib authored engine/scorer controls include actual relay state, selected-state startup failure, task-owned process death and cleanup, private-input refusal/stale reward removal, source-shadow refusal and read-only scorer behavior. Full upstream KUMO preparation source acquisition remains unverified; PersonaMem shares only the named controls, not a corpus-readiness claim."
+    },
+    {
+      "datasets": [
+        "authored_example_fix_bug"
+      ],
+      "loading_and_preparation": "Repository-authored task metadata.",
+      "trusted_execution": "Local files and repository verification code.",
+      "verification_scope": "Synthetic fixture; its success does not establish any external benchmark capability."
+    }
+  ]
+}

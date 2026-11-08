@@ -138,7 +138,12 @@ def test_installed_jericho_projection_imports_without_reference_payload(tmp_path
         pytest.skip("Jericho not installed")
     import data.datasets.jericho as adapter
 
-    spec = adapter._env()["agent_runtime"]
+    # Keep the historical projection contract independently testable.
+    projection_spec = importlib.util.spec_from_file_location(
+        "jericho_legacy_projection", adapter.ASSETS / "runtime.py")
+    projection = importlib.util.module_from_spec(projection_spec)
+    projection_spec.loader.exec_module(projection)
+    spec = projection.agent_runtime(str(Path(importlib.util.find_spec("jericho").origin).parent))
     overlay = stage_agent_runtime(spec, tmp_path / "projection")
     platform = tmp_path / "platform"
     platform.mkdir()

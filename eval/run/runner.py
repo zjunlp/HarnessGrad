@@ -1,6 +1,10 @@
 """Execute a harness on a task set. Framework-owned (INTERFACE.md §0)."""
 from __future__ import annotations
 from harnessgrad import slots
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import candidate_runtime
+from harnessgrad import python_exec_runtime
+from harnessgrad import verification_context as verification_context_mod
 
 import concurrent.futures as futures
 import hashlib
@@ -15,6 +19,7 @@ from pathlib import Path
 import eval.containers.container as container_mod
 import eval.containers.harness_runtime as harness_runtime
 import eval.containers.openclaw_runtime as openclaw_runtime
+from eval.containers import external_runtime
 import eval.service.modelgate as modelgate_mod
 from eval.service import container_observation as container_observation_mod
 from eval.service.native_model_route import NativeModelRoute
@@ -34,9 +39,14 @@ from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
 # a task whose state is the container's own filesystem.
 from eval.containers.container_state import _run_one_container_state
 from eval.run.task_contract import runtime_task
+from eval.run.outcomes import (
+    _PROVIDER_FAILURES, _provider_failure, _stopped_by_signals, _invalid,
+    timeout_verdict, _spread, _harness_failure,
+)
+from harnessgrad import task_python
 from eval.policy.runtime_policy import admit_native_network, phase_timeout, stage_agent_runtime
 from eval.observe.tracing import (_last_identity, _last_usage, _materialize,
-                                  _write_progress, process_outcome)
+                                  _write_progress, process_outcome, harness_usage_totals, environment_usage_totals)
 from eval.containers.immutable_runtime import ImmutableRuntimeUnavailable, projections, targets
 from eval.verification.verifier import _verify, test_rate_of
 from eval.verification.isolation import common_class, observed_class, declared_class
@@ -327,8 +337,39 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             diagnostic_authorization: Authorization | None = None,
             trial_id: str | None = None,
             observation: dict | None = None,
+            harness_runtime_identity: dict | None = None,
             _worker: dict | None = None,
-            _private_paths: tuple[Path, ...] = ()) -> dict:
+            _private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None) -> dict:
+    # A direct caller must learn configuration faults before paying for actor work.
+    # Construction reuses the broker's frozen declaration/config checks; entering
+    # the broker (socket creation and requests) remains verifier-only. Evaluation
+    # cache hits never reach run_one and need no newly configured judge.
+    judge_spec = (verifier or {}).get("judge")
+    if judge_spec is not None:
+        from eval.service.judge import Judge, JudgeUnavailable
+        try:
+            Judge(judge_spec)
+        except (JudgeUnavailable, ValueError, TypeError, OSError) as exc:
+            return _invalid(task, exc, stage="judge configuration admission", service=None)
+    try:
+        task_python.admit(env, sandbox=sandbox, setup=setup, worker=_worker)
+    except (OSError, TypeError, ValueError, RuntimeError) as exc:
+        return _invalid(task, exc, stage="task Python runtime admission", service=None)
+    try:
+        if _worker is not None and candidate_runtime.has_python(repo):
+            raise ValueError("managed Python candidates do not support workers")
+        selected_harness = candidate_runtime.admit(
+            repo, harness_runtime_identity, envs={task['task_id']: env or {}},
+            setups={task['task_id']: setup or {}}, sandbox=sandbox)
+    except (OSError, TypeError, ValueError) as exc:
+        return _invalid(task, exc, stage="harness runtime preparation", service=None)
+    if dataset_runtime_identity is not None:
+        try:
+            dataset_runtime_identity = dataset_runtime_identity_mod.for_evaluation(
+                dataset_runtime_identity, [task], {task['task_id']: setup or {}},
+                {task['task_id']: verifier or {}}, {task['task_id']: env or {}})
+        except (OSError, TypeError, ValueError) as exc:
+            return _invalid(task, exc, stage="dataset runtime admission", service=None)
     evidence_output = None
     if model_failure.enabled(verifier):
         model_failure.admit(sandbox=sandbox, setup=setup, env=env)
@@ -343,11 +384,11 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
     refusal = _refuse_unobserved_policies(
         task, env, verifier, run_id=run_id,
         diagnostic_authorization=diagnostic_authorization, observation=observation)
-    openclaw_identity = None
+    external_identities = {}
     if refusal is None:
         try:
-            openclaw_identity = openclaw_runtime.identity(repo, os.environ)
-        except openclaw_runtime.RuntimeUnavailable as exc:
+            external_identities = external_runtime.identities(repo)
+        except external_runtime.RuntimeUnavailable as exc:
             refusal = _invalid(task, exc, stage="harness runtime preparation", service=None)
     # **Both branches of this merge are kept, and neither is optional.** Ours is the admission
     # receipt (`appworld-observe`): a container observation that admits only the policy fields
@@ -361,20 +402,37 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
                           timeout_s=timeout_s, verify_timeout_s=verify_timeout_s,
                           sandbox=sandbox, run_id=run_id, run_seed=run_seed,
                           trial_id=trial_id, recordings_root=recordings_root)
+        if dataset_runtime_identity is not None:
+            cooperative.update(dataset_runtime_identity_mod.fields(dataset_runtime_identity))
         if observation is not None:
             cooperative.setdefault("env_observation", observation)
-        if openclaw_identity is not None:
-            cooperative["harness_runtime"] = {**(cooperative.get("harness_runtime") or {}),
-                                               "openclaw": openclaw_identity}
+        try:
+            external_runtime.require_current(repo, external_identities)
+            # Admission is not evidence that every peer executed this runtime.
+            # cooperative.run promotes Bun only after all actual worker receipts
+            # agree; retain its refusal and per-worker diagnostics on failure.
+            if not cooperative.get('invalid'):
+                if ('bun' in external_identities and
+                        (cooperative.get('harness_runtime') or {}).get('bun') != external_identities['bun']):
+                    cooperative['invalid'] = {'stage': 'worker runtime identity',
+                        'detail': 'Worker group did not establish the admitted Bun runtime identity'}
+                    cooperative.pop('verdict', None)
+                else:
+                    external_runtime.stamp(cooperative, external_identities)
+        except external_runtime.RuntimeUnavailable as exc:
+            cooperative.setdefault('invalid', {'stage': 'harness runtime identity', 'detail': str(exc)})
         return cooperative
-    runtime_receipt = {}
-    if openclaw_identity is not None:
-        runtime_receipt["openclaw"] = {"identity": openclaw_identity}
+    # Bun receipts come from the actual preparation/launch path. Admission alone
+    # cannot fill an early refusal or a missing peer receipt for the group reducer.
+    runtime_receipt = {kind: {'identity': value} for kind, value in external_identities.items()
+                       if kind != 'bun'}
     try:
         result = refusal if refusal is not None else _run_one(
             repo, task, timeout_s, sandbox, setup, verifier, verify_timeout_s,
             env, run_id, run_seed, recordings_root, trial_id=trial_id,
             runtime_receipt=runtime_receipt, worker=_worker,
+            dataset_runtime_identity=dataset_runtime_identity,
+            **candidate_runtime.fields(selected_harness),
             **({'private_paths': _private_paths} if _private_paths else {}),
             **({'evidence_output': evidence_output} if evidence_output is not None else {}))
     except BaseException as exc:
@@ -390,11 +448,21 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 'exception': {'type': type(exc).__name__, 'detail': str(exc)},
                 'trial_evidence_output': evidence_output, 'runtime_services': runtime_receipt}
         raise
+    if refusal is None:
+        try:
+            external_runtime.require_current(repo, external_identities)
+            external_runtime.stamp(result, {kind: value for kind, value in external_identities.items()
+                                           if not (_worker is not None and kind == 'bun')})
+        except external_runtime.RuntimeUnavailable as exc:
+            result.setdefault('invalid', {'stage': 'harness runtime identity', 'detail': str(exc)})
     if capture_evidence:
         result['trial_evidence_output'] = evidence_output
+    result.update(candidate_runtime.fields(selected_harness))
+    if dataset_runtime_identity is not None:
+        result.update(dataset_runtime_identity_mod.fields(dataset_runtime_identity))
     if runtime_receipt:
         result["runtime_services"] = runtime_receipt
-        for kind in ("bun", "openclaw"):
+        for kind in external_runtime.KINDS:
             if runtime_receipt.get(kind):
                 result["harness_runtime"] = {**(result.get("harness_runtime") or {}),
                                              kind: runtime_receipt[kind]["identity"]}
@@ -424,7 +492,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             recordings_root: Path | None = None, *, trial_id: str | None = None,
             runtime_receipt: dict | None = None, worker: dict | None = None,
             evidence_output: dict | None = None,
-            private_paths: tuple[Path, ...] = ()) -> dict:
+            harness_runtime_identity: dict | None = None,
+            private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None) -> dict:
     """Run the harness on one task in a throwaway dir, off the platform's disk.
 
     Returns {task_id, answer, trace, exit_code}. A non-zero exit is recorded as
@@ -448,6 +517,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     # absence of a declaration, not a separate code path invented for old datasets.
     env_spec = env or {"kind": "files"}
     is_exec = env_spec.get("kind") == "exec"
+    try:
+        task_artifact = task_python.admit(env_spec, sandbox=sandbox, setup=setup, worker=worker)
+    except (OSError, TypeError, ValueError, RuntimeError) as exc:
+        return _invalid(task, exc, stage="task Python runtime admission", service=None)
     relay_decl = (setup or {}).get("tool_relay") or {}
     record_spec = relay_decl.get("record")
     model_trial_seed = (relay_decl.get("model") or {}).get("seed_source") == "trial"
@@ -475,7 +548,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     try:
         protocol = chess_stepwise.protocol_of(task)
         stepwise_session = chess_stepwise.session_for(
-            task, verifier, sandbox=sandbox, env=env_spec)
+            task, verifier, sandbox=sandbox, env=env_spec,
+            dataset_runtime_identity=dataset_runtime_identity)
     except ValueError as exc:
         return _invalid(task, exc, stage="stepwise admission", service=None)
     # Inside a container the task is mounted at the dataset's `workdir` (default
@@ -503,11 +577,30 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     if not is_exec:
         admit_native_network(env_spec, _manifest, os.environ.get("HG_AGENT_BACKEND", "mock"))
     from eval.containers import bun_runtime
-    try:
-        bun_environment = bun_runtime.admit(repo, os.environ)
-        bun_preparation = bun_runtime.prepare(repo)
-    except bun_runtime.RuntimeUnavailable as exc:
-        return _invalid(task, exc, stage="harness runtime preparation", service=None)
+    managed_python = harness_runtime_identity
+    if managed_python is None and candidate_runtime.has_python(repo):
+        try:
+            managed_python = candidate_runtime.admit(
+                repo, envs={task['task_id']: env_spec}, setups={task['task_id']: setup or {}},
+                sandbox=sandbox)
+        except (OSError, TypeError, ValueError) as exc:
+            return _invalid(task, exc, stage="harness runtime preparation", service=None)
+    bun_environment, bun_preparation = {}, None
+    if managed_python is None:
+        try:
+            bun_environment = bun_runtime.admit(repo, os.environ)
+            bun_preparation = bun_runtime.prepare(repo)
+        except bun_runtime.RuntimeUnavailable as exc:
+            return _invalid(task, exc, stage="harness runtime preparation", service=None)
+    managed_placement = (python_exec_runtime.placement(managed_python, env_spec)
+                         if managed_python is not None else None)
+    managed_artifact = (managed_placement or {}).get('artifact')
+    python_paths = tuple(Path(path) for path in (managed_artifact or {}).get('runtime_paths', []))
+    task_python_paths = tuple(Path(path) for path in (task_artifact or {}).get('runtime_paths', []))
+    if task_artifact is not None:
+        runtime_receipt['task_python'] = task_python.receipt(task_artifact)
+    if managed_python is not None:
+        runtime_receipt['python'] = {'identity': managed_python}
     bun_paths = tuple(Path(p) for p in (bun_preparation or {}).get("runtime_paths", []))
     if bun_preparation:
         runtime_receipt["bun"] = bun_preparation
@@ -517,14 +610,15 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if bun_preparation.get("responses_overlay"):
             bun_environment["HG_RESPONSES_OVERLAY_SHA256"] = bun_preparation["responses_overlay"]["identity"]["sha256"]
     runtime_paths = tuple(Path(p).expanduser()
-                          for p in (_manifest.get("runtime_paths") or [])) + bun_paths
+                          for p in (_manifest.get("runtime_paths") or [])) + bun_paths + python_paths + task_python_paths
     if is_exec and env_spec.get("state") == "container":
         return _run_one_container_state(
             repo, task, env_spec=env_spec, setup=setup, verifier=verifier,
             timeout_s=timeout_s, verify_timeout_s=verify_timeout_s,
             run_id=run_id, run_seed=run_seed, recordings_root=recordings_root,
             runtime_paths=runtime_paths, runtime_env=bun_environment,
-            runtime_receipt=runtime_receipt)
+            runtime_receipt=runtime_receipt,
+            **({'harness_runtime_identity': managed_python} if managed_python is not None else {}))
     service_specs = list(env_spec.get("services") or [])
     web_spec = env_spec.get("web") or {}
     running = None
@@ -612,7 +706,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # runtime it was built against. Declared, not inferred: the platform cannot
         # know where somebody's agent CLI is installed.
         runtime_paths = tuple(Path(p).expanduser()
-                              for p in (manifest.get("runtime_paths") or [])) + bun_paths
+                              for p in (manifest.get("runtime_paths") or [])) + bun_paths + python_paths + task_python_paths
         # Inside a container the entrypoint is still `<repo>/<entry>` because the
         # harness tree is mounted at its own host path; only the task's paths move,
         # because the dataset named a location *in the environment*.
@@ -627,17 +721,24 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         workdir_arg = task_mount if is_exec else str(workdir)
         # The image's interpreter when it has one (§2.5.3), the platform's when it does
         # not. Preserve a files run's existing PATH selection when available.
-        image_python = container_mod.image_python(env_spec["image"]) if is_exec else None
-        python = image_python or (sys.executable if is_exec else _files_python())
-        argv = [python, str(repo / entry), "--task", task_arg,
-                "--workdir", workdir_arg]
+        if managed_placement is not None:
+            image_python = (managed_placement['base'] or {}).get('executable')
+        else:
+            image_python = container_mod.image_python(env_spec['image']) if is_exec else None
+        python = (managed_artifact['python'] if managed_python is not None else
+                  image_python or (sys.executable if is_exec else _files_python()))
+        if task_artifact is not None and managed_python is None:
+            # PATH activation belongs to task tools, never to harness startup.
+            python = str(Path(shutil.which(python) or python).resolve(strict=True))
+        argv = (python_exec_runtime.actor_argv(managed_python, env_spec, repo, entry) if managed_python is not None else
+                [python, str(repo / entry)]) + ["--task", task_arg, "--workdir", workdir_arg]
 
         # The harness's own dependencies, from a directory outside the task's
         # environment, resolved for **this** interpreter's Python version. `None` is the
         # ordinary case: nobody configured one, and the run then behaves exactly as it
         # did before this existed. See `eval/containers/harness_runtime.py` for why this is not a
         # derived image and not the platform's interpreter.
-        overlay = harness_runtime.lookup(
+        overlay = None if managed_python is not None else harness_runtime.lookup(
             repo, python, image=(env_spec["image"] if is_exec else None),
             image_digest=(env_spec.get("image_digest") if is_exec else None))
         if overlay:
@@ -652,7 +753,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # tree. Exported so a harness need not know the platform's layout, and
         # stated in the environment rather than passed as an argument because the
         # entrypoint contract (INTERFACE.md §1.2) is `--task` and `--workdir` only.
-        state_dir = repo / STATE_DIRNAME
+        state_dir = (workdir / '.harnessgrad-state' if managed_python is not None and is_exec
+                     else repo / STATE_DIRNAME)
         # Created on demand, not just at staging time: a workspace committed before
         # `.state/` existed would otherwise make every run refuse to start, and the
         # sandbox needs a real directory to mount over. Empty and gitignored, so it
@@ -701,9 +803,15 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         if worker is not None:
             child_env["HG_WORKER_ID"] = worker["id"]
         child_env["HG_AGENT_DEADLINE_S"] = str(timeout_s)
-        child_env["HARNESSGRAD_STATE"] = str(state_dir)
+        child_env["HARNESSGRAD_STATE"] = (container_mod.to_container(state_dir, workdir, task_mount)
+                                            if managed_python is not None and is_exec else str(state_dir))
         if overlay:
             child_env.update(harness_runtime.env_for(overlay))
+        if managed_python is not None:
+            child_env = python_exec_runtime.actor_environment(child_env, managed_artifact,
+                                                               image=is_exec)
+
+        child_env = task_python.environment(child_env, task_artifact)
 
         # Publish the agent's model onto the task's network. A containerised harness
         # cannot reach a model on the host's loopback -- measured, every obvious route
@@ -757,7 +865,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # The platform's interpreter is mounted only when it is going to be used, so an
         # image that brings its own does not also get the host's Python on its disk.
         runtime = ((tuple(runtime_paths)
-                    + (() if image_python else container_mod.interpreter_paths()))
+                    + (() if image_python or managed_python is not None else container_mod.interpreter_paths()))
                    if is_exec else ())
 
         if stepwise_session is not None:
@@ -805,7 +913,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 return container_mod.run(
                     argv, image=env_spec["image"], task_dir=workdir,
                     task_mount=task_mount, harness_root=repo,
-                    state_dirs=(state_dir,), cwd=task_mount, env=child_env,
+                    state_dirs=(() if managed_python is not None else (state_dir,)), cwd=task_mount, env=child_env,
                     timeout_s=timeout_s, network=network,
                     # The declared envelope, finally reaching the launcher. Until
                     # `container_mod.run` took a `limits` keyword it had no way to pass
@@ -837,6 +945,14 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                              or repo.parent.parent)
             if worker is not None:
                 work_root = worker["root"]
+            surfaced_runtime = harness_runtime.surfaced_paths(
+                overlay, work_root=work_root, platform=PLATFORM_ROOT)
+            if managed_python is not None or task_artifact is not None:
+                # The admitted artifact may live under private /tmp. Restore only
+                # its exact runtime trees after the hides, never the store parent.
+                hidden = sandbox_mod.hidden_trees(work_root, PLATFORM_ROOT)
+                surfaced_runtime += tuple(path for path in (*python_paths, *task_python_paths)
+                    if any(path.is_relative_to(tree) for tree in hidden))
             return sandbox_mod.run(argv, platform=PLATFORM_ROOT,
                                    work_root=work_root, task_dir=workdir,
                                    env=child_env, timeout_s=timeout_s, cwd=workdir,
@@ -844,9 +960,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                    runtime_paths=runtime_paths,
                                    limits=subject_limits,
                                    visible_paths=(((stepwise_dir,) if stepwise_dir else ())
-                                                  + harness_runtime.surfaced_paths(
-                                                      overlay, work_root=work_root,
-                                                      platform=PLATFORM_ROOT)),
+                                                  + surfaced_runtime),
                                    network=env_spec.get("network"),
                                    model_socket=(model_gateway.socket_path
                                                  if isinstance(model_gateway, NativeModelRoute) else None),
@@ -856,10 +970,24 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                                 tool_relay.path if tool_relay is not None else None),
                                    package_overlays=package_overlays,
                                    immutable_runtimes=immutable_runtimes,
+                                   **({'platform_interpreter': False} if managed_python is not None else {}),
+                                   **({'opaque_source_dirs': ('.git', '_harnessgrad', '.opencode-state', '.state')}
+                                      if managed_python is not None else {}),
                                    **({'private_paths': private_paths} if private_paths else {}))
 
         try:
             with phases("agent"):
+                if task_artifact is not None:
+                    try:
+                        task_python.admit(env_spec, sandbox=sandbox, setup=setup, worker=worker)
+                    except (OSError, TypeError, ValueError, RuntimeError) as exc:
+                        return _invalid(task, exc, stage="task Python runtime admission", service=None)
+                if managed_python is not None:
+                    try:
+                        if not candidate_runtime.matches_source(repo, managed_python):
+                            raise ValueError('Managed candidate source changed after runtime admission')
+                    except (OSError, TypeError, ValueError) as exc:
+                        return _invalid(task, exc, stage='harness runtime identity', service=None)
                 if stepwise_relay is not None:
                     stepwise_relay.start()
                 try:
@@ -936,6 +1064,11 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # The harness has exited. Grade the controller's completed live exchange,
         # or its frozen artifacts on the existing offline path (§2.2 and §2.4).
         with phases("verify"):
+            if task_artifact is not None:
+                try:
+                    task_python.admit(env_spec, sandbox=sandbox, setup=setup, worker=worker)
+                except (OSError, TypeError, ValueError, RuntimeError) as exc:
+                    return _invalid(task, exc, stage="task Python runtime admission", service=None)
             if tool_relay is not None and record_spec is not None:
                 try:
                     entry = tool_relay.recording_input(archive_root=recordings_root)
@@ -968,9 +1101,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         env_usage = running.usage() if running is not None else {}
         if tool_relay is not None and tool_relay.model is not None:
             model_report = tool_relay.model.report()
-            env_usage = {"input_tokens": model_report["usage"]["prompt_tokens"],
-                         "output_tokens": model_report["usage"]["completion_tokens"],
-                         "calls": len(model_report["calls"]), "services_reported": 1}
+            env_usage = _environment_model_usage(model_report)
 
         worker_artifacts = {}
         if worker is not None:
@@ -995,14 +1126,17 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                      if sandbox else
                                      {"applied": False, "reason": "--no-sandbox"}),
                 "verdict": verdict, "env_usage": env_usage,
-                "harness_runtime": harness_runtime.record(
+                **candidate_runtime.fields(managed_python),
+                "harness_runtime": (python_exec_runtime.record(managed_python, env_spec,
+                                        python_minor=manifest['runtime']['python'])
+                                    if managed_python is not None else harness_runtime.record(
                     overlay, platform_interpreter=(image_python is None),
                     # The `files` case runs on the host's `python` and the caller is the
                     # only one that can ask which version that is; for an image the
                     # overlay already carries it. Left unasked, a `files` point said
                     # `python: null`, which is the one field two such points differ in.
                     interpreter=(None if is_exec
-                                 else harness_runtime.interpreter_version(python))),
+                                 else harness_runtime.interpreter_version(python)))),
                 "runtime_boundary": {
                     "agent_timeout_s": timeout_s,
                     "verifier_timeout_s": verify_timeout_s,
@@ -1062,221 +1196,6 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             shutil.rmtree(runtime_dir, ignore_errors=True)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#: Markers for failures to reach the model from inside the harness.
-#:
-#: On 2026-10-02 (`loop-terminal_bench-submit-1`), two harnesses died with
-#: `RuntimeError: 3 attempts failed, last: Connection error.` but received 0.0.
-#: Section 2.5.7 separates tasks that could not be measured from measured zeros.
-#:
-#: Reproduction details are in `eval/service/modelgate.py`: uvicorn closed idle
-#: keep-alive connections after five seconds, the gateway forwarded upstream EOF,
-#: and a later harness call reused the dead connection after a lengthy command.
-_PROVIDER_FAILURES = (
-    "APIConnectionError", "APITimeoutError", "Connection error",
-    "RemoteDisconnected", "Connection refused", "Connection reset",
-    "connect timeout", "Server disconnected",
-    # The OpenCode adapter emits this only for an unhandled provider error event.
-    # Authentication, HTTP and malformed-stream failures must not become benchmark 0s.
-    "OpenCode provider failure:",
-)
-
-
-def _provider_failure(result: dict) -> dict | None:
-    """Identify a harness death caused by an unreachable model endpoint, or return None.
-
-    Deliberately require both a nonzero exit code and client connection/timeout
-    markers at the end of stderr. Earlier markers may describe an error that the
-    harness recovered from successfully.
-
-    A zero exit code never qualifies: the harness completed and keeps its score.
-    """
-    if not result.get("exit_code"):            # Neither None (invalid) nor zero qualifies.
-        return None
-    tail = (result.get("stderr") or "")[-1500:]
-    for marker in _PROVIDER_FAILURES:
-        if marker in tail:
-            # Preserve the matching line so the record identifies the exact error.
-            line = next((l.strip() for l in reversed(tail.splitlines())
-                         if marker in l), marker)
-            return {"marker": marker, "line": line[:240],
-                    "exit_code": result.get("exit_code")}
-    return None
-
-
-def _stopped_by_signals(measured: list[dict]) -> dict | None:
-    """Was this task killed by something the platform never graded as a task failure?
-
-    `process_outcome` separates five endings. Three are scores under `INTERFACE.md` §2.2 --
-    the harness ran, the harness crashed on its own, and the harness blew through the
-    `agent_timeout_s` budget it was given (a *declared* bound, so exceeding it is failing to
-    finish in budget). Two are not: a negative return code that is not the platform's own
-    timeout marker, and the sandbox wrapper's `128+signal` relay of an inner signal. In
-    both, no trial got the chance to leave an artifact and nothing graded one.
-
-    The relayed case is deliberately weaker than the negative one. A wrapper exit says a
-    signal ended the process inside the wrapper and says nothing about who sent it -- a
-    harness that killed itself and an outside kill are the same number -- so the record
-    names the convention and leaves the cause undetermined instead of asserting one. Only
-    `sandbox=True` records can take this branch; on the host the same kill arrives negative.
-
-    That is the case `_cancel` already names -- "a cancelled task is not a task that
-    scored nothing ... rather than given a zero the platform never measured" (§2.5.7).
-    Nothing checked the sign of the return code until now, so all endings fell through to
-    the verifier and were written as ordinary zeros. Measured on our own AgentDojo passes:
-    the tasks an operator watchdog killed (156,157,159,160 and
-    294,295,296,297,301,302,303,307, eval 257,259) are recorded as clean `0.0` and are
-    the only zeros in that collection that are actually wrong.
-
-    A passing verdict is never overruled, for the same reason the provider rule declines
-    to: it is positive evidence that the artifact was correct.
-    """
-    if any((res.get("verdict") or {}).get("passed") for res in measured or []):
-        return None
-    for res in reversed(measured or []):
-        outcome = process_outcome(res.get("exit_code"), res.get("stderr"),
-                                  wrapper=bool(res.get("sandbox")))
-        if outcome == "relayed_signal":
-            # The sandbox wrapper's account of an inner signal. It says a signal ended the
-            # process; it does not say who sent it, and a harness that killed itself is
-            # the same number here as an outside kill. The rule the operator chose is to
-            # keep the task unmeasured when nothing passed *and say that the cause is
-            # undetermined*, rather than pick one reading and hide the other.
-            code = res.get("exit_code")
-            return {"stage": "harness", "outcome": "relayed_signal",
-                    "detail": (f"the sandbox wrapper reported exit {code} "
-                               f"({code - 128} = the 128+signal convention) and no trial "
-                               f"passed, so no artifact was ever graded; whether the task "
-                               f"killed itself or was killed from outside is not "
-                               f"distinguishable from a wrapper exit, and this is not a score")}
-        if outcome != "stopped_by_signal":
-            continue
-        code = res.get("exit_code")
-        return {"stage": "harness", "outcome": "stopped_by_signal",
-                "detail": (f"the task was terminated by signal {-code} (exit code {code}) "
-                           f"from outside the measurement, so no artifact was ever "
-                           f"graded; this is not a score")}
-    return None
-
-
-def _invalid(task: dict, exc, *, stage: str, service: str | None) -> dict:
-    """A task the platform could not measure, as opposed to one it measured as zero.
-
-    INTERFACE.md §2.5.7: the result is **not** a `per_task` score and **not** a zero,
-    and it is attributed to the dataset and the service by name. The distinction is the
-    entire reason this platform exists — a broken mock API and a weak harness must not
-    be the same number — and it is independently attested: JarvisBench reports that
-    "harness or provider failures are marked invalid rather than assigned a score of
-    zero" (`INTERFACE.md` §2.5.7).
-    """
-    return {"task_id": task["task_id"], "invalid": {
-                "stage": stage, "service": service, "detail": str(exc)},
-            "answer": "", "trace": "", "exit_code": None, "stderr": "",
-            "env_usage": {}, "model_gateway": None, "identity": None}
-
-
-
-
-def timeout_verdict(reason) -> bool:
-    """Is this unmeasured verdict a **timeout**, which is scored 0 rather than excluded?
-
-    The verifier reports `{"outcome": "timeout", "unmeasured": "the verifier timed out after
-    900s", ...}`; the process-level path reports the bare string `"timeout"` when the wrapper was
-    killed at its budget. Both are the harness's failure to finish, and both are scored 0
-    (operator decision 2026-10-23). Everything else -- `"unmeasured"` (the check wrote no reward
-    file), `"relayed_signal"`, `"stopped_by_signal"` -- stays `invalid`, because the platform,
-    not the method, failed it.
-    """
-    if isinstance(reason, dict):
-        return reason.get("outcome") == "timeout"
-    return reason == "timeout"
-
-
-def _spread(xs: list[float]) -> float:
-    """Population standard deviation, with no dependency and no ambiguity.
-
-    The population form because these are *all* the trials this run took, not a sample
-    from a larger population of runs -- `statistics.pstdev` is the honest name for it, and
-    the difference from `stdev` matters most at small n, which is exactly where a reader
-    compares two harnesses.
-    """
-    if len(xs) < 2:
-        return 0.0
-    mu = sum(xs) / len(xs)
-    return (sum((x - mu) ** 2 for x in xs) / len(xs)) ** 0.5
-
-
-def _harness_failure(result: dict) -> dict | None:
-    """Why a harness left nothing to read, when it left nothing.
-
-    A task can be **measured** and still say nothing about the harness: the check reads
-    the artifact, finds it wrong, and records a 0.0 -- and that 0.0 is a real score. But
-    if the harness *also* wrote no trace, then no method has anything to read while the
-    curve reports a number, and those two situations are indistinguishable on the curve.
-
-    Measured, and the reason this exists: a harness that needed a package the task image
-    did not have died on its first model call with `ModuleNotFoundError`, exit code 1.
-    The trace was 0 bytes, the score was 0.000, and the run reported *nothing* -- the
-    exit code and stderr were computed here and then dropped, so "the method decided not
-    to edit" was the only reading available. A harness that cannot start is a fact about
-    the run and belongs in the record.
-
-    Every harness the platform ships writes `trace.jsonl`, so an empty one is always
-    abnormal; a harness that simply chose to write nothing is worth knowing about too.
-    Deliberately **not** folded into `invalid`: the task was measured, so it keeps its
-    score. This is the attribution, not a reason to drop the measurement (§2.5.7).
-
-    **The second trigger, and the measured case that forced it.** A non-empty trace is
-    not proof that the harness ran. Measured 2026-10-04 on the current platform:
-    `--harness cli_agent` (then in `base_harness/`, now a test fixture) with no CLI writes
-    exactly one line,
-    `{"error": "HG_CLI is unset: no CLI to run"}`, never calls a model, exits 2 -- and the
-    curve said `score 0.0, harness_failed: null, invalid: null`. The console warned and
-    the verdict file carried the exit code, so the fact existed in two places and not on
-    the point, which is where a reader compares runs.
-
-    So: a harness that **exited non-zero without recording a single model call** is a
-    harness failure too. "A model call" is read from the `usage` block, which the harness
-    contract requires (`INTERFACE.md` §1.2) -- the platform is entitled to rely on it, and
-    it is the only schema-independent evidence that a harness talked to a model. A
-    scripted harness that legitimately makes no calls (`base_harness/oracle`) exits 0 and
-    is not flagged.
-    """
-    trace = (result.get("trace") or "").strip()
-    reason = None
-    if not trace:
-        reason = "the harness left no trace at all"
-    elif result.get("exit_code") and _last_usage(trace) is None:
-        # State only what the platform knows. Usage is written after completion,
-        # so a crash can hide real calls. On 2026-10-04, three local-model tasks
-        # had 15-23 calls and 120-140 KB traces, yet the old message incorrectly
-        # reported "left no trace" because their usage blocks were absent.
-        reason = (f"the harness exited {result['exit_code']} and its trace has no `usage` "
-                  f"block, so the run did not reach its end")
-    if reason is None:
-        return None
-    return {"reason": reason, "exit_code": result.get("exit_code"),
-            "stderr": (result.get("stderr") or "")[-1500:]}
-
-
 def _reporter():
     """The reporter an evaluation should narrate through.
 
@@ -1307,7 +1226,10 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              round_no: int = 0, trials: int = 1, jobs: int = 1,
              progress_dir: Path | None = None,
              diagnostic_authorization: Authorization | None = None,
-             persist_trial_report: bool = True) -> dict:
+             persist_trial_report: bool = True,
+             dataset_runtime_identity: dict | None = None,
+             harness_runtime_identity: dict | None = None,
+             verification_context: dict | None = None) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1325,6 +1247,11 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                          recordings_root=recordings_root, round_no=round_no,
                          trials=trials, jobs=jobs, progress_dir=progress_dir,
                          persist_trial_report=persist_trial_report,
+                         dataset_runtime_identity=dataset_runtime_identity,
+                         **({'verification_context': verification_context}
+                            if verification_context is not None else {}),
+                         **({'harness_runtime_identity': harness_runtime_identity}
+                            if harness_runtime_identity is not None else {}),
                          diagnostic_authorization=diagnostic_authorization)
         if diagnostic_authorization is not None:
             result["enforcement"] = diagnostic_authorization.record()
@@ -1434,6 +1361,19 @@ def _native_cache_matches(entry: dict, expected: dict | None, trials: int) -> bo
             and all(isinstance(row, dict) and row.get('native_runtime') == expected for row in rows))
 
 
+def _environment_model_usage(report):
+    """Preserve broker attempt coverage; its usage sums alone are lower bounds."""
+    complete = report.get("usage_complete") is True
+    usage = report.get("usage") or {}
+    return {"input_tokens": usage.get("prompt_tokens") if complete else None,
+            "output_tokens": usage.get("completion_tokens") if complete else None,
+            "input_tokens_reported": usage.get("prompt_tokens"),
+            "output_tokens_reported": usage.get("completion_tokens"),
+            "calls": len(report["calls"]), "attempts": len(report["attempts"]),
+            "unknown_usage_attempts": sum(not attempt["usage_known"] for attempt in report["attempts"]),
+            "usage_complete": complete, "services_reported": 1}
+
+
 def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               cache: dict | None = None, harness_sha: str = "",
               sandbox: bool = True, setups: dict | None = None,
@@ -1445,7 +1385,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               recordings_root: Path | None = None,
               trials: int = 1, jobs: int = 1,
               diagnostic_authorization: Authorization | None = None,
-              persist_trial_report: bool = True) -> dict:
+              persist_trial_report: bool = True,
+              dataset_runtime_identity: dict | None = None,
+              harness_runtime_identity: dict | None = None,
+              verification_context: dict | None = None) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1474,6 +1417,36 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         raise ValueError(f"trials must be at least 1, not {trials}")
     if jobs < 1:
         raise ValueError(f"jobs must be at least 1, not {jobs}")
+    context, context_error = None, None
+    try:
+        context = verification_context_mod.capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox)
+        if verification_context is not None:
+            expected = verification_context_mod.project(verification_context, [t['task_id'] for t in tasks])
+            if verification_context_mod.problems(expected, context):
+                raise ValueError('verification context differs from recorded plan')
+    except (OSError, TypeError, ValueError, RuntimeError) as exc:
+        context_error = str(exc)
+    runtime_identity, runtime_identity_error = None, None
+    try:
+        # Cache hits must prove the same artifacts as fresh trusted launches.
+        for task in tasks:
+            task_python.validate((envs or {}).get(task['task_id']), sandbox=sandbox,
+                                 setup=(setups or {}).get(task['task_id']))
+        runtime_identity = dataset_runtime_identity_mod.for_evaluation(
+            dataset_runtime_identity, tasks, setups, verifiers, envs)
+    except (OSError, TypeError, ValueError) as exc:
+        runtime_identity_error = str(exc)
+    task_runtimes = dataset_runtime_identity_mod.project_many(
+        runtime_identity, [task['task_id'] for task in tasks])
+    selected_harness, harness_runtime_error = None, None
+    try:
+        selected_harness = candidate_runtime.admit(
+            repo, harness_runtime_identity, envs={task['task_id']: (envs or {}).get(task['task_id']) or {}
+                                                for task in tasks},
+            setups={task['task_id']: (setups or {}).get(task['task_id']) or {} for task in tasks},
+            sandbox=sandbox)
+    except (OSError, TypeError, ValueError) as exc:
+        harness_runtime_error = str(exc)
     evaluation_protocols = {task["task_id"]: protocol for task in tasks
                             if (protocol := chess_stepwise.protocol_of(task)) is not None}
     if len(set(evaluation_protocols.values())) > 1:
@@ -1512,19 +1485,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     or (relay.get("model") or {}).get("seed_source") == "trial"
                     or ((setups or {}).get(tid) or {}).get("workers"))
 
-    from eval.containers import bun_runtime
-    bun_identity, openclaw_identity, runtime_error = None, None, None
+    runtime_identities, runtime_error = {}, None
     try:
-        bun_runtime.admit(repo, os.environ)
-        bun_identity = bun_runtime.identity(repo)
-        openclaw_identity = openclaw_runtime.identity(repo, os.environ)
-    except (bun_runtime.RuntimeUnavailable, openclaw_runtime.RuntimeUnavailable) as exc:
+        if harness_runtime_error is None:
+            runtime_identities = external_runtime.identities(repo)
+    except external_runtime.RuntimeUnavailable as exc:
         runtime_error = str(exc)
-    runtime_identities = {kind: value for kind, value in
-                          (("bun", bun_identity), ("openclaw", openclaw_identity)) if value is not None}
-    # External runtimes without complete dependency-content identities still run,
-    # but neither read nor populate the measurement cache.
-    cache_allowed = all(value.get("cacheable", True) for value in runtime_identities.values())
+    cache_allowed = external_runtime.cacheable(runtime_identities)
 
     native_identities, native_errors, native_profiles = {}, {}, {}
     for task in tasks:
@@ -1562,12 +1529,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
 
     def measurement_key(task):
         key = f"{harness_sha}:{task['task_id']}:{trials}"
-        if bun_identity is not None:
-            key += ":runtime:" + hashlib.sha256(json.dumps(
-                bun_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-        if openclaw_identity is not None:
-            key += ":openclaw:" + hashlib.sha256(json.dumps(
-                openclaw_identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if context is not None:
+            key += ':verification-context:' + context['tasks'][task['task_id']]
+        selected = task_runtimes[task['task_id']]
+        if selected is not None:
+            key += ":dataset-runtime:" + hashlib.sha256(json.dumps(
+                selected, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+        if selected_harness is not None:
+            key += ':harness-runtime:' + selected_harness['sha256']
+        if runtime_identities:
+            key += ':external-runtime:' + hashlib.sha256(json.dumps(
+                runtime_identities, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         # A changed scorer declaration must not reuse another runtime's score.
         bundle = ((verifiers or {}).get(task["task_id"]) or {}).get("scorer_bundle")
         if bundle is not None:
@@ -1659,7 +1631,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     runtime_diagnostics: dict[str, dict] = {}
     declarations: list[dict] = []
     tampered: dict[str, list[str]] = {}
-    env_usage = {"input": 0, "output": 0, "calls": 0, "services_reported": 0}
+    environment_usage_by_task = {}
     #: Whether the platform had to publish the agent's model onto the task's network.
     #: A fact about the measurement: a containerised harness that could not reach a
     #: model would score zero for a reason that is not about the harness.
@@ -1677,7 +1649,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # in `_measure`: a probe starts a container and costs about 1.3 s, and `_measure` runs
     # on up to `jobs` threads. A diagnostic authorization bypasses admission by design, so
     # it needs none and this does not spend the probe on it.
-    observations = ({} if diagnostic_authorization is not None
+    observations = ({} if diagnostic_authorization is not None or harness_runtime_error is not None
                     else _observations_for(envs, tasks, run_id=run_id))
     if observations:
         admitted = len({id(receipt) for receipt in observations.values()})
@@ -1695,8 +1667,36 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # of number this platform exists to refuse.
     def _measure(task_index: int, task: dict) -> dict:
         tid = task["task_id"]
+        task_runtime = task_runtimes[tid]
+        task_context = verification_context_mod.project(context, [tid]) if context is not None else None
+        runtime_fields = {**dataset_runtime_identity_mod.fields(task_runtime),
+                          **candidate_runtime.fields(selected_harness),
+                          **verification_context_mod.fields(task_context)}
         enforcement = (diagnostic_authorization.record()
                        if diagnostic_authorization is not None else None)
+        if context_error is not None:
+            invalid = {'stage': 'verification context', 'detail': context_error}
+            _write_progress(progress_dir, round_no, tid, [], invalid, **runtime_fields)
+            return {'task_id': tid, 'invalid': invalid}
+        try:
+            task_python.admit((envs or {}).get(tid), sandbox=sandbox,
+                              setup=(setups or {}).get(tid))
+            current_context = verification_context_mod.capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
+            if verification_context_mod.problems(task_context, current_context):
+                raise ValueError('verification context changed before task admission')
+        except (OSError, TypeError, ValueError, RuntimeError) as exc:
+            invalid = {'stage': 'verification context', 'detail': str(exc)}
+            _write_progress(progress_dir, round_no, tid, [], invalid, **runtime_fields)
+            return {'task_id': tid, 'invalid': invalid}
+        if runtime_identity_error is not None:
+            invalid_runtime = {"stage": "dataset runtime identity", "detail": runtime_identity_error}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime,
+                            **runtime_fields)
+            return {"task_id": tid, "invalid": invalid_runtime}
+        if harness_runtime_error is not None:
+            invalid_runtime = {'stage': 'harness runtime preparation', 'detail': harness_runtime_error}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime, **runtime_fields)
+            return {'task_id': tid, 'invalid': invalid_runtime}
         # The backend observation for *this* environment, when the platform has one. It is
         # handed to both admission checks -- this one, which decides whether the task runs
         # at all, and `run_one`'s, which is the same check made once more where the task is
@@ -1710,37 +1710,58 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                                               observation=observation)
         if refusal is not None:
             _write_progress(progress_dir, round_no, tid, [], refusal["invalid"],
-                            diagnostic=refusal, enforcement=enforcement)
+                            diagnostic=refusal, enforcement=enforcement, **runtime_fields)
             return {"task_id": tid, "invalid": refusal["invalid"]}
         # A cache hit cannot bypass the interactive isolation/input requirements.
         # Construction is local and lazy; it neither loads the CSV nor launches I/O.
         if evaluation_protocols.get(tid) == chess_stepwise.STEPWISE:
             try:
                 chess_stepwise.session_for(task, (verifiers or {}).get(tid),
-                                           sandbox=sandbox, env=(envs or {}).get(tid) or {})
+                                           sandbox=sandbox, env=(envs or {}).get(tid) or {},
+                                           dataset_runtime_identity=task_runtime)
             except ValueError as exc:
                 refusal = _invalid(task, exc, stage="stepwise admission", service=None)
                 _write_progress(progress_dir, round_no, tid, [], refusal["invalid"],
-                                diagnostic=refusal)
+                                diagnostic=refusal, **runtime_fields)
                 return {"task_id": tid, "invalid": refusal["invalid"]}
         # The trial count is part of the key: a cached single measurement is not a
         # cached mean of three, and reusing one for the other would quietly answer a
         # different question than the run asked.
         if runtime_error is not None:
             invalid_runtime = {"stage": "harness runtime preparation", "detail": runtime_error}
-            _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime, **runtime_fields)
             return {"task_id": tid, "invalid": invalid_runtime}
         if tid in native_errors:
             invalid_runtime = {'stage': 'native runtime preparation', 'detail': native_errors[tid]}
             _write_progress(progress_dir, round_no, tid, [], invalid_runtime)
             return {'task_id': tid, 'invalid': invalid_runtime}
+        try:
+            external_runtime.require_current(repo, runtime_identities)
+        except external_runtime.RuntimeUnavailable as exc:
+            invalid_runtime = {'stage': 'harness runtime identity', 'detail': str(exc)}
+            _write_progress(progress_dir, round_no, tid, [], invalid_runtime, **runtime_fields)
+            return {'task_id': tid, 'invalid': invalid_runtime}
         key = measurement_key(task)
         hit = None if fresh_measurement(tid) or not cache_allowed else cache.get(key)
         if hit is not None and not _native_cache_matches(hit, native_identities.get(tid), trials):
             hit = None
-        if (hit is not None and bun_identity is not None
-                and (hit.get("harness_runtime") or {}).get("bun") != bun_identity):
+        if hit is not None:
+            try:
+                external_runtime.require_records(runtime_identities, hit)
+            except external_runtime.RuntimeUnavailable:
+                hit = None
+        if hit is not None and dataset_runtime_identity_mod.problems(
+                hit.get('dataset_runtime_identity'), task_runtime):
             hit = None
+        if hit is not None and (hit.get('verification_context') is None or
+                verification_context_mod.problems(hit.get('verification_context'), task_context)):
+            hit = None
+        if hit is not None and candidate_runtime.problems(hit.get('harness_runtime_identity'), selected_harness):
+            hit = None
+        if hit is not None and selected_harness is not None:
+            record = hit.get('harness_runtime')
+            if not isinstance(record, dict) or candidate_runtime.problems(record.get('identity'), selected_harness):
+                hit = None
         if hit is not None:
             if declared_class((verifiers or {}).get(tid)) == "pristine-offline":
                 cached = hit.get("trial_verdicts") or [hit.get("verdict") or {}]
@@ -1765,6 +1786,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         # round all along; only the live record had lost the number.
         # One task, `trials` times. See `evaluate` for why one is not enough.
         measured: list[dict] = []
+        usage_records = []  # Spend survives even a trial whose scorer cannot measure it.
         unmeasured: dict | None = None
         unmeasured_result: dict | None = None
         trial_marker = None
@@ -1783,10 +1805,19 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             from eval.observe import task_verdicts
             task_verdicts.start(progress_dir, round_no, tid)
         for trial in range(trials):
+            try:
+                external_runtime.require_current(repo, runtime_identities)
+            except external_runtime.RuntimeUnavailable as exc:
+                unmeasured_result = _invalid(task, exc, stage='harness runtime identity', service=None)
+                unmeasured = unmeasured_result['invalid']
+                break
             with progress_mod.task_progress(tid, round_no=round_no, index=task_index,
                                             total=len(tasks)) as held:
                 try:
                     result = run_one(repo, task, sandbox=sandbox,
+                                     **({"dataset_runtime_identity": task_runtime}
+                                        if evaluation_protocols.get(tid) == chess_stepwise.STEPWISE else {}),
+                                     **candidate_runtime.fields(selected_harness),
                                      **({'_private_paths': private_paths} if private_paths else {}),
                                      setup=(setups or {}).get(tid),
                                      verifier=(verifiers or {}).get(tid),
@@ -1804,11 +1835,25 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                     held.failed(f"{type(exc).__name__}: {exc}")
                     captured = getattr(exc, 'trial_evidence_result', None)
                     if tid in evidence_tasks and captured is not None:
+                        captured.update(runtime_fields)
                         row = {'task_id': tid, 'trial_id': trial_identity(trial),
                                'seed': str(trial_protocol['seeds'][trial]) if trial_protocol else str(run_seed),
                                'status': 'raised', 'exception_type': type(exc).__name__}
                         exc.trial_evidence = trial_evidence.save(progress_dir, evidence_plan, row, captured)
                     raise
+
+                environment_report = result.get("env_usage") or {}
+                if not environment_report and (((setups or {}).get(tid) or {}).get("tool_relay") or {}).get("model"):
+                    environment_report = {"coverage_unknown": True}
+                usage_records.append({"usage": _last_usage(result.get("trace") or ""),
+                                      "env_usage": environment_report})
+                try:
+                    external_runtime.require_current(repo, runtime_identities)
+                    external_runtime.stamp(result, runtime_identities)
+                except external_runtime.RuntimeUnavailable as exc:
+                    result.setdefault('invalid', {'stage': 'harness runtime identity', 'detail': str(exc)})
+
+                result.update(dataset_runtime_identity_mod.fields(task_runtime))
 
                 # Validate the trial identity before either report consumes its
                 # score; a refused verdict must remain unmeasured in pass^k too.
@@ -1831,6 +1876,12 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                        for kind, expected in runtime_identities.items()):
                     result.setdefault("invalid", {"stage": "harness runtime identity",
                         "detail": "Runtime changed after evaluation admission; refusing mixed measurements"})
+                actual_runtime = result.get('harness_runtime')
+                if selected_harness is not None and (candidate_runtime.problems(
+                        result.get('harness_runtime_identity'), selected_harness) or not isinstance(actual_runtime, dict)
+                        or candidate_runtime.problems(actual_runtime.get('identity'), selected_harness)):
+                    result.setdefault('invalid', {'stage': 'harness runtime identity',
+                        'detail': 'Actor runtime differs from the exact candidate binding admitted for evaluation'})
                 if trial_protocol or ordinary_task_plan:
                     plan = {"task_id": tid, "trial_id": trial_identity(trial),
                             "seed": str(trial_protocol["seeds"][trial]) if trial_protocol else str(run_seed)}
@@ -1933,19 +1984,31 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             diagnostic = unmeasured_result or result
             _write_progress(progress_dir, round_no, tid, [], unmeasured,
                             diagnostic=diagnostic, enforcement=enforcement,
+                            usage_records=usage_records, **runtime_fields,
                             **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
             if ordinary_task_plan:
                 trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
-            return {"task_id": tid, "invalid": unmeasured,
+            return {"task_id": tid, "invalid": unmeasured, "usage_records": usage_records,
                     "harness_runtime": (diagnostic or {}).get("harness_runtime"),
                     "runtime_services": (diagnostic or {}).get("runtime_services")}
+        try:
+            task_python.admit((envs or {}).get(tid), sandbox=sandbox,
+                              setup=(setups or {}).get(tid))
+            current_context = verification_context_mod.capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
+            if verification_context_mod.problems(task_context, current_context):
+                raise ValueError('verification context changed during task execution')
+        except (OSError, TypeError, ValueError, RuntimeError) as exc:
+            invalid = {'stage': 'verification context', 'detail': str(exc)}
+            _write_progress(progress_dir, round_no, tid, [], invalid, **runtime_fields)
+            return {'task_id': tid, 'invalid': invalid}
         _write_progress(progress_dir, round_no, tid, measured, None, enforcement=enforcement,
+                        usage_records=usage_records, **runtime_fields,
                         **({'trial_evidence': trial_rows[tid]} if ordinary_task_plan else {}))
         if ordinary_task_plan:
             trial_evidence.save_ordinary_task(progress_dir, ordinary_task_plan, trial_rows[tid])
         if trial_marker is not None:
             trial_marker.unlink()
-        return {"task_id": tid, "measured": measured}
+        return {"task_id": tid, "measured": measured, "usage_records": usage_records}
 
     outcomes = _in_parallel(tasks, _measure, jobs)
 
@@ -1957,6 +2020,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         tid = task["task_id"]
         key = measurement_key(task)
         outcome = outcomes[tid]
+        if "usage_records" in outcome:
+            environment_usage_by_task[tid] = [record["env_usage"] for record in outcome["usage_records"]]
 
         # The round stopped before this task: the harness had already failed to start on
         # `jobs` others, so there is no measurement here to keep and none to invent.
@@ -2095,14 +2160,6 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             runtime_records.append(runtime_record)
         if result.get("runtime_services"):
             runtime_diagnostics[tid] = result["runtime_services"]
-        for key_name in ("input", "output", "calls"):
-            value = (result.get("env_usage") or {}).get(
-                {"input": "input_tokens", "output": "output_tokens",
-                 "calls": "calls"}[key_name])
-            if isinstance(value, int):
-                env_usage[key_name] += value
-        env_usage["services_reported"] += (result.get("env_usage") or {}).get(
-            "services_reported", 0)
         if result.get("model_gateway"):
             model_gateway = result["model_gateway"]
         declared = result.get("identity")
@@ -2126,6 +2183,9 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                           # `loop-terminal_bench-41133` round 5: all five verdict files were
                           # empty because the round was entirely cache hits.
                           "verdict": verdicts.get(tid) or {},
+                          **dataset_runtime_identity_mod.fields(task_runtimes[tid]),
+                          **verification_context_mod.fields(verification_context_mod.project(context, [tid])),
+                          **candidate_runtime.fields(selected_harness),
                           "harness_runtime": result.get("harness_runtime"),
                           "runtime_services": result.get("runtime_services")}
 
@@ -2137,18 +2197,14 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # constant zero is not a weak rule, it is no rule -- measured: the platform
     # reported `generation_tokens: 0` for every point, so `Delta C` was always 0 and
     # `beta0 + beta1 * Delta S` was satisfied by every candidate.
-    tokens = {"input": 0, "output": 0, "calls": 0, "tasks_reported": 0}
-    for trace in traces.values():
-        usage = _last_usage(trace)
-        if usage is None:
-            continue
-        tokens["tasks_reported"] += 1
-        for key, field in (("input", "input_tokens"), ("output", "output_tokens")):
-            value = usage.get(field)
-            if isinstance(value, int):
-                tokens[key] += value
-        if isinstance(usage.get("calls"), int):
-            tokens["calls"] += usage["calls"]
+    harness_usage_by_task = {task["task_id"]:
+        ([record["usage"] for record in outcomes[task["task_id"]]["usage_records"]]
+         if "usage_records" in outcomes[task["task_id"]] else
+         [_last_usage(trace) for trace in trial_traces.get(task["task_id"],
+          [traces[task["task_id"]]] if task["task_id"] in traces else [])]) for task in tasks}
+    tokens = harness_usage_totals(harness_usage_by_task, trials=trials)
+    env_usage = environment_usage_totals(
+        report for reports in environment_usage_by_task.values() for report in reports)
 
     # A cached task never ran, so a fully-cached evaluation reports nothing --
     # correct: the platform did not execute anything this time.
@@ -2221,7 +2277,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         if progress_dir is not None and persist_trial_report:
             report_root = repeated_trials.report_root(progress_dir, round_no, harness_sha)
             repeated_trials.persist(report_root, report)
-    return {**repeated, "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
+    return {**repeated, **dataset_runtime_identity_mod.fields(runtime_identity),
+            **verification_context_mod.fields(context),
+            **candidate_runtime.fields(selected_harness),
+            "per_task": per_task, "per_task_std": per_task_std, "score_std": score_std,
             "scorer_isolation_class": scorer_isolation_class,
             # Preserve unobserved diagnostic facts without making them comparable.
             "scorer_isolation_comparable": scorer_isolation_class != "unknown",
@@ -2250,6 +2309,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             "harness_runtime": runtime_records,
             "runtime_diagnostics": runtime_diagnostics,
             "env_usage": env_usage,
+            "harness_usage_by_task": harness_usage_by_task,
+            "environment_usage_by_task": environment_usage_by_task,
             "model_gateway": model_gateway,
             # The receipts that admitted these tasks, deduplicated. They are the evidence
             # for the `env.cpus`/`env.memory_mb`/`env.exec_defaults`/`env.network` fields

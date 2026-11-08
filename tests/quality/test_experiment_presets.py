@@ -143,22 +143,80 @@ def test_a_preset_parses_and_names_a_shipped_published_method(path: Path) -> Non
         f"{path.name}: trials must be the method's declared minimum")
 
 
-def test_every_preset_dataset_resolves_to_a_provisioned_adapter() -> None:
-    """`DATASETS.md` lists `gsm8k` as provisioned; the file must name a real adapter.
+@pytest.fixture
+def authored_gsm8k_provider(tmp_path, monkeypatch):
+    """Real provider admission with an authored JSON reader in a managed runtime.
 
-    The `provision_status` hook is consulted only when the adapter has one: `None` means
-    the adapter makes no claim, which is not the same as "the bytes are missing".
+    The trusted installer stand-in supplies only the tiny pyarrow surface used
+    by this fixture. No released GSM8K rows, real Parquet or host packages are read.
+    Descriptor, installed-package, artifact and child-interpreter checks stay real.
     """
-    from data.scaffolds import registry  # noqa: PLC0415 - keep the module import cheap
+    import stat
+    from harnessgrad import dataset_runtime
 
-    for name in sorted({config_of(path)["dataset"] for path in presets()}):
-        assert registry.kind_of(name) == "dataset", f"{name!r} is not a dataset adapter"
-        status = registry.provision_status(name)
-        if status is None:
-            pytest.skip(f"{name}: the adapter has no provision_status() to read")
-        assert status.get("present") is True, (
-            f"{name} is not provisioned on this machine: {status}; "
-            "pick a dataset DATASETS.md marks as provisioned")
+    root = tmp_path / "authored-gsm8k"
+    (root / "main").mkdir(parents=True)
+    for split in ("train", "test"):
+        rows = [{"question": f"Authored {split} arithmetic control", "answer": "#### 42"}]
+        (root / "main" / f"{split}-00000-of-00001.parquet").write_text(json.dumps(rows))
+    monkeypatch.setenv("HG_DATA_GSM8K", str(root))
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", str(tmp_path / "provider-store"))
+    monkeypatch.setenv("UV_OFFLINE", "1")
+    monkeypatch.setenv("UV_PYTHON_DOWNLOADS", "never")
+    original_run = dataset_runtime._run
+
+    def install(argv, *, timeout_s=None, allow_downloads=False):
+        args = [str(arg) for arg in argv]
+        if args[1:3] != ["pip", "install"]:
+            return original_run(argv, timeout_s=timeout_s, allow_downloads=allow_downloads)
+        assert allow_downloads is True
+        assert Path(args[-1]) == ROOT / "data/datasets/gsm8k/requirements-load.txt"
+        python = Path(args[args.index("--python") + 1])
+        site = python.parent.parent / f"lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+        package = site / "pyarrow"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text('"""Authored JSON transport, never real Arrow."""\n')
+        (package / "parquet.py").write_text(
+            "import json\nfrom pathlib import Path\n"
+            "class Table:\n"
+            "    def __init__(self, rows): self.rows = rows\n"
+            "    def to_pylist(self): return self.rows\n"
+            "def read_table(path, columns=None):\n"
+            "    rows = json.loads(Path(path).read_text())\n"
+            "    return Table(rows if columns is None else [{k: row[k] for k in columns} for row in rows])\n")
+        metadata = site / "pyarrow-23.0.0.dist-info"
+        metadata.mkdir()
+        (metadata / "METADATA").write_text("Metadata-Version: 2.1\nName: pyarrow\nVersion: 23.0.0\n")
+        return ""
+
+    monkeypatch.setattr(dataset_runtime, "_run", install)
+    try:
+        selected = dataset_runtime.prepare("gsm8k", python=sys.executable)
+        assert dataset_runtime.resolve("gsm8k")["runtime_id"] == selected["runtime_id"]
+        yield selected
+    finally:
+        for path in (tmp_path / "provider-store").rglob("*"):
+            if path.is_dir() and not path.is_symlink():
+                path.chmod(stat.S_IMODE(path.stat().st_mode) | 0o700)
+
+
+def test_every_preset_dataset_resolves_to_a_provisioned_adapter(authored_gsm8k_provider) -> None:
+    """Preset names resolve through real provider admission with authored local data.
+
+    This checks the preset/adapter wiring without asserting that a developer has
+    downloaded benchmark data. The provider still verifies the managed artifact
+    and launches its exact interpreter to inspect these synthetic files.
+    """
+    from data.scaffolds import registry
+
+    with registry.provider_session():
+        for name in sorted({config_of(path)["dataset"] for path in presets()}):
+            assert registry.kind_of(name) == "dataset", f"{name!r} is not a dataset adapter"
+            status = registry.provision_status(name)
+            assert status is not None, f"{name!r} does not declare provision status"
+            assert status.get("present") is True, status
+            assert status["tasks"] == 2
+        assert registry.provider_runtime("gsm8k")["runtime_id"] == authored_gsm8k_provider["runtime_id"]
 
 
 # ----------------------------------------------------------------- run ids ---

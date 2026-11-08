@@ -8,14 +8,13 @@ ranges only arrive as trusted verifier inputs after actors exit.
 from __future__ import annotations
 
 import hashlib
-import importlib.metadata
+from collections.abc import Mapping
 import json
 import os
 from pathlib import Path
 
 from harnessgrad.paths import dataset_root
 import re
-import shutil
 
 from data.scaffolds.native_harbor import safe_file
 from data.scaffolds.scorer_input import bind as bind_scorer_input
@@ -72,6 +71,7 @@ def load():
     tasks = [{'task_id': r['task_id'],
               'goal': (r['row']['instruction'] + '\n\nInput workbook: input.xlsx. '
                        f'Save the completed workbook as {r["output"]} in the working directory. '
+                       'Use python or python3 with the task-owned openpyxl 3.1.2 to edit it. '
                        'The platform recalculates the workbook and applies the native regression/modification accuracy evaluator after execution.'),
               'submission': {'kind': 'files', 'paths': [r['output']]}} for r in rows]
     return tasks, {r['task_id']: METRIC for r in rows}
@@ -82,36 +82,84 @@ def _setup(record):
 
 
 def _verify(record):
-    # Preserve the original filename: native Debugging modes inspect Color /
-    # Embedded in spreadsheet_path. The original/golden are trusted private copies.
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from data.scaffolds.spreadsheet_runtime.native import require_runtime, snapshot_native_python
+    binding = bind(resolve_execution('spreadsheetbench2'), 'verifier')
+    native = snapshot_native_python(require_runtime())
+    native.pop('soffice', None)  # Never execute an external, unbound launcher.
+    native_content = json.dumps(native, sort_keys=True, separators=(',', ':'))
+    sources = {
+        'check.py': ASSETS / 'verify/check.py',
+        'evaluation.py': ASSETS / 'verify/evaluation.py',
+        'open_spreadsheet.py': ASSETS / 'verify/open_spreadsheet.py',
+        'PROVENANCE.json': ASSETS / 'PROVENANCE.json',
+        'native.py': Path(__file__).resolve().parents[1] / 'scaffolds/spreadsheet_runtime/native.py',
+        'data/scaffolds/scorer_input.py': Path(__file__).resolve().parents[1] / 'scaffolds/scorer_input.py',
+    }
+    context = {'schema': 'spreadsheetbench2.trusted-context.v1',
+               'task_id': record['task_id'], 'python_runtime': binding,
+               'native_manifest_sha256': hashlib.sha256(native_content.encode()).hexdigest(),
+               'native_identity': {
+                   'python': native['python'],
+                   'python_sha256': native['files'][native['python']],
+                   'soffice_binary': native['soffice_binary'],
+                   'soffice_sha256': native['files'][native['soffice_binary']],
+                   'uno_bindings': {name: sha for name, sha in native['files'].items()
+                                    if Path(name).name in ('uno.py', 'pyuno.so', 'pyuno.pyd')}},
+               'sources': {name: hashlib.sha256(path.read_bytes()).hexdigest()
+                           for name, path in sources.items()},
+               'metric': METRIC}
     native_input = 'original/' + Path(record['row']['spreadsheet_path']).name
     row = {**record['row'], 'spreadsheet_path': native_input, 'golden_response_path': 'golden.xlsx'}
-    spec = {'kind': 'command', 'argv': ['python3', 'spreadsheetbench2-check/check.py'],
-            'inputs': [{'path': 'spreadsheetbench2-check/check.py', 'from': str(ASSETS / 'verify/check.py')},
-                       {'path': 'spreadsheetbench2-check/evaluation.py', 'from': str(ASSETS / 'verify/evaluation.py')},
-                       {'path': 'spreadsheetbench2-check/open_spreadsheet.py', 'from': str(ASSETS / 'verify/open_spreadsheet.py')},
-                       {'path': 'spreadsheetbench2-check/PROVENANCE.json', 'from': str(ASSETS / 'PROVENANCE.json')},
+    spec = {'kind': 'command',
+            'python_runtime': binding, 'runtime_paths': list(binding['runtime_paths']),
+            'argv': [binding['python'], '-I', '-B', 'check.py'],
+            'inputs': [{'path': name, 'from': str(path)} for name, path in sources.items()
+                       if name != 'data/scaffolds/scorer_input.py'] + [
+                       {'path': 'native-runtime.json', 'content': native_content},
+                       {'path': 'runtime-context.json', 'content': json.dumps(context, sort_keys=True)},
                        {'path': native_input, 'from': str(record['input'])},
                        {'path': 'golden.xlsx', 'from': str(record['golden'])},
                        {'path': 'record.json', 'content': json.dumps({'task_id': record['task_id'], 'category': record['category'], 'row': row})}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
-            'timeout_s': 180, 'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
-    return bind_scorer_input(spec, record['task_id'], [native_input, 'golden.xlsx', 'record.json'])
+            'timeout_s': 300, 'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
+    # bind() stages scorer_input.py itself; bind its exact source too.
+    spec['inputs'].append({'path': 'data/scaffolds/scorer_input.py',
+                           'from': str(sources['data/scaffolds/scorer_input.py'])})
+    bound = bind_scorer_input(spec, record['task_id'],
+                              [entry['path'] for entry in spec['inputs']])
+    # bind() supplies the same trusted helper; retain one declaration per path.
+    bound['inputs'] = list({entry['path']: entry for entry in bound['inputs']}.values())
+    return bound
 
 
 def provision_status():
-    status = {'root': str(DATASET_ROOT), 'present': False, 'tasks': None,
-              'libreoffice': shutil.which('soffice') or shutil.which('libreoffice')}
+    from harnessgrad.dataset_runtime import check_execution
+    from data.scaffolds.spreadsheet_runtime.native import require_runtime
+    execution = check_execution('spreadsheetbench2')
+    try:
+        root = str(DATASET_ROOT)
+    except ValueError:
+        root = None
+    status = {'root': root, 'present': False, 'tasks': None,
+              'execution_runtime': execution}
+    try:
+        native = require_runtime()
+        status['formula_runtime'] = {'present': True, 'status': 'ready',
+            'version': native['version'], 'deployment': native['deployment'],
+            'limitations': native['limitations']}
+    except (OSError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+        status['formula_runtime'] = {'present': False, 'status': 'unknown',
+            'detail': type(exc).__name__,
+            'prepare': 'python -m data.scaffolds.spreadsheet_runtime.native prepare --soffice /usr/bin/soffice --python /usr/bin/python3 --directory /absolute/private/cache/spreadsheet-native; set HG_SPREADSHEET_NATIVE_MANIFEST'}
     try:
         rows = records()
-        packages = {name: importlib.metadata.version(name) for name in ('openpyxl', 'tqdm')}
-        exact_packages = packages == {'openpyxl': '3.1.2', 'tqdm': '4.66.4'}
-        status.update(tasks=len(rows), present=bool(status['libreoffice']) and exact_packages,
-                      source_prepared=True, metric=METRIC,
-                      python_packages=packages,
-                      detail='Native workbooks present; UNO must be installed for /usr/bin/python3. Exact Python dependencies are checked again by the verifier.')
-    except (OSError, ValueError, importlib.metadata.PackageNotFoundError) as exc:
-        status['detail'] = str(exc)
+        status.update(tasks=len(rows), source_prepared=True, metric=METRIC)
+    except (OSError, ValueError) as exc:
+        status.update(source_prepared=False, detail=str(exc))
+    status['present'] = bool(status.get('source_prepared') and execution['present']
+                             and status['formula_runtime']['present'])
+    status['prepare_execution'] = 'python tools/prepare_dataset.py --dataset spreadsheetbench2 --runtime execution --python 3.12'
     return status
 
 
@@ -119,18 +167,29 @@ def downloads():
     return [{'kind': 'hf-dataset', 'name': 'SpreadsheetBench-2 native workbook collection',
              'repo': 'KAKA22/SpreadsheetBench-v2', 'version': REVISION,
              'files': [ARCHIVE], 'dst': '_src', 'size': 'upstream archive size',
-             'note': 'Pinned v2 workbook bytes. Run prepare.py to extract only supported categories; no Visualization proxy is loaded.'},
-            {'kind': 'pip', 'name': 'official workbook evaluator openpyxl', 'package': 'openpyxl',
-             'version': '3.1.2', 'size': '~250 KB', 'note': 'Workbook reader used by the unchanged official v2 evaluator; pinned to the control-tested runtime.'},
-            {'kind': 'pip', 'name': 'official workbook evaluator tqdm', 'package': 'tqdm',
-             'version': '4.66.4', 'size': '~80 KB', 'note': 'Imported by the unchanged official evaluator and native LibreOffice helper; pinned to the control-tested runtime.'}]
+             'note': 'Pinned v2 workbook bytes. Run prepare.py to extract only supported categories; no Visualization proxy is loaded.'}]
+
+
+class _Verifiers(Mapping):
+    def __iter__(self):
+        return (record['task_id'] for record in records())
+
+    def __len__(self):
+        return len(records())
+
+    def __getitem__(self, task_id):
+        for record in records():
+            if record['task_id'] == task_id:
+                return _verify(record)
+        raise KeyError(task_id)
 
 
 def __getattr__(name):
     if name == 'SETUP':
         return {r['task_id']: _setup(r) for r in records()}
     if name == 'VERIFY':
-        return {r['task_id']: _verify(r) for r in records()}
+        return _Verifiers()
     if name == 'ENV':
-        return {r['task_id']: dict(DEFAULT_ENV) for r in records()}
+        from data.scaffolds.spreadsheet_runtime.actor import Environments
+        return Environments('spreadsheetbench2', records)
     raise AttributeError(name)

@@ -140,6 +140,9 @@ class ToolRelay:
         self.model = None
         self.diagnostic: dict | None = None
         self.private_diagnostics = private_diagnostics
+        self.python_runtime: dict | None = None
+        self.service_pid: int | None = None
+        self.service_pidfd: int | None = None
 
     def __enter__(self) -> "ToolRelay":
         return self
@@ -156,7 +159,15 @@ class ToolRelay:
         # Popen starts a new session. Stop descendants too, including when the
         # leader exited early. Never signal the runner's own process group.
         try:
-            os.killpg(self.proc.pid, signal.SIGTERM)
+            if self.service_pid is not None and was_running:
+                # Killing bubblewrap first activates --die-with-parent and
+                # interrupts the service's final episode/receipt write.
+                if self.service_pidfd is not None:
+                    signal.pidfd_send_signal(self.service_pidfd, signal.SIGTERM)
+                elif os.getpgid(self.service_pid) == self.proc.pid:
+                    os.kill(self.service_pid, signal.SIGTERM)
+            else:
+                os.killpg(self.proc.pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
         try:
@@ -171,6 +182,9 @@ class ToolRelay:
             self.proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             self.faults.append("relay did not exit after SIGKILL")
+        if self.service_pidfd is not None:
+            os.close(self.service_pidfd)
+            self.service_pidfd = None
         code = self.proc.returncode
         if code not in ((0, -15) if was_running else (0,)):
             suffix = '' if self.private_diagnostics else ': ' + self._tail()
@@ -277,13 +291,16 @@ class ToolRelay:
         return {"path": self.record_spec["path"], "from": str(sealed), "immutable": True}
 
     def report(self) -> dict:
-        return {"receipt": (_diagnostic_metadata(self.receipt) if self.private_diagnostics else self.receipt),
+        result = {"receipt": (_diagnostic_metadata(self.receipt) if self.private_diagnostics else self.receipt),
                 "faults": list(self.faults),
                 "model": self.model.report() if self.model is not None else None,
                 "recording": self.recording,
                 "diagnostic": _diagnostic_metadata(self.diagnostic),
                 "cleanup": {"complete": not self.directory.exists(),
                             "errors": list(self.cleanup_errors)}}
+        if self.python_runtime is not None:
+            result["python_runtime"] = self.python_runtime
+        return result
 
 
 def declaration(setup: dict | None) -> dict | None:
@@ -313,6 +330,7 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
     handle = None
     model = None
     binding = dict(context or {})
+    info_read = info_write = None
     try:
         os.chmod(directory, 0o700)
         state = directory / "state"
@@ -346,14 +364,16 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
                 argv += [flag, str(decl[key])]
 
         child_env = None
+        recording_handles = {}
         if decl.get("record") is not None:
             binding = {**(context or {}), "input_sha256": hashlib.sha256(payload.read_bytes()).hexdigest()}
             if not all(isinstance(binding.get(k), str) and binding[k] for k in ("task_id", "run_id", "trial_id")):
                 raise RuntimeError("recorded relay requires task_id/run_id/trial_id")
             context_path = directory / "context.json"
             context_path.write_text(json.dumps(binding))
-            child_env = {**os.environ, "HG_RELAY_CONTEXT_PATH": str(context_path),
-                         "HG_RELAY_RECORD_PATH": str(directory / "episode.json")}
+            recording_handles = {"HG_RELAY_CONTEXT_PATH": str(context_path),
+                                 "HG_RELAY_RECORD_PATH": str(directory / "episode.json")}
+            child_env = {**os.environ, **recording_handles}
         if decl.get("model") is not None:
             from eval.service.judge import Judge
             model = Judge(decl["model"], role="environment",
@@ -361,24 +381,70 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
             child_env = {k: v for k, v in (child_env or os.environ).items()
                          if not k.startswith(("HG_AGENT_", "HG_METHOD_", "HG_JUDGE_", "HG_ENV_"))}
             child_env["HG_ENV_MODEL_SOCKET"] = str(model.path)
+        selected_runtime = None
+        launch_options = {}
+        if "python_runtime" in decl:
+            from harnessgrad.dataset_runtime import admit_binding
+            from eval.containers import python_service
+            if not isinstance(decl.get("python"), str):
+                raise ValueError("bound Python service requires an explicit interpreter")
+            selected_runtime = admit_binding(decl["python_runtime"], "service", python=argv[0])
+            argv[1:1] = ["-I", "-B"]
+            # Only the recording branch above may grant this instance recording handles.
+            handles = dict(recording_handles)
+            if model is not None:
+                handles["HG_ENV_MODEL_SOCKET"] = str(model.path)
+            child_env = python_service.environment(directory, handles)
+            info_read, info_write = os.pipe()
+            os.set_blocking(info_read, False)
+            argv = python_service.command(
+                argv, directory=directory, runtime_paths=selected_runtime["runtime_paths"],
+                read_paths=decl.get("read_paths"), model_socket=child_env.get("HG_ENV_MODEL_SOCKET"),
+                info_fd=info_write)
+            launch_options["pass_fds"] = (info_write,)
         log = log_path.open("w")
         try:
             proc = subprocess.Popen(argv, stdout=log, stderr=subprocess.STDOUT,
-                                    stdin=subprocess.DEVNULL, start_new_session=True, env=child_env)
+                                    stdin=subprocess.DEVNULL, start_new_session=True, env=child_env,
+                                    **launch_options)
         finally:
             log.close()
+            if info_write is not None:
+                os.close(info_write)
+                info_write = None
 
         handle = ToolRelay(sock, directory, proc, receipt_path, log_path,
                            private_diagnostics=private_diagnostics)
         handle.model = model
         handle.record_spec = decl.get("record")
         handle.context = binding
+        if selected_runtime is not None:
+            handle.python_runtime = dict(decl["python_runtime"])
         deadline = time.monotonic() + ready_timeout_s
+        launch_info = b""
         while True:
             if proc.poll() is not None:
                 handle.faults.append(f"relay exited during startup (code {proc.returncode})")
                 raise RuntimeError(f"{handle.fault()}: {handle._tail()}")
-            if sock.exists():
+            if info_read is not None:
+                try:
+                    launch_info += os.read(info_read, 4096)
+                except BlockingIOError:
+                    pass
+                try:
+                    child_pid = json.loads(launch_info)["child-pid"]
+                except (ValueError, KeyError):
+                    child_pid = None
+                if child_pid is not None:
+                    if (type(child_pid) is not int or child_pid <= 0 or child_pid == proc.pid
+                            or os.getpgid(child_pid) != proc.pid):
+                        raise RuntimeError("invalid bound Python service process identity")
+                    handle.service_pid = child_pid
+                    if hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal"):
+                        handle.service_pidfd = os.pidfd_open(child_pid)
+                    os.close(info_read)
+                    info_read = None
+            if sock.exists() and info_read is None:
                 probe = socket_mod.socket(socket_mod.AF_UNIX, socket_mod.SOCK_STREAM)
                 probe.settimeout(2.0)
                 try:
@@ -431,3 +497,7 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
             detail += f"; cleanup: {handle.cleanup_errors}"
         raise ToolRelayStartError(detail, safe_message=safe_message,
                                   report=report, diagnostic=diagnostic) from exc
+    finally:
+        for fd in (info_read, info_write):
+            if fd is not None:
+                os.close(fd)

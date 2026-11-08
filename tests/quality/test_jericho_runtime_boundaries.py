@@ -230,6 +230,9 @@ def test_control_materialization_resets_actions_and_requires_explicit_id(tmp_pat
     rom.write_bytes(b"synthetic ROM")
     record = {"task_id": "synthetic", "rom": rom.name, "path": rom, "seed": 0, "walkthrough": []}
     monkeypatch.setitem(adapter.__dict__, "_RECORDS", [record])
+    from harnessgrad import dataset_runtime
+    monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda name: {})
+    monkeypatch.setattr(dataset_runtime, 'bind', lambda runtime, role: {'python': '/synthetic/python'})
     work = tmp_path / "task"
     control.materialize(record, work)
     (work / adapter.LOG_FILE).write_text('{"kind":"action","action":"synthetic old action"}\n')

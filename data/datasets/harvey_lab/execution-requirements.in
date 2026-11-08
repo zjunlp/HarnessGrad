@@ -1,0 +1,14 @@
+anthropic>=0.40.0
+google-genai>=1.0.0
+markitdown>=0.1.0
+matplotlib>=3.8.0
+openai>=1.50.0
+openpyxl>=3.1.0
+pandas>=2.0.0
+pdfplumber>=0.10.0
+python-pptx>=0.6.23
+seaborn>=0.13.0
+anthropic==0.88.0
+# HG's fixed flashrsi source projection uses a file lock during import.
+filelock
+huggingface-hub

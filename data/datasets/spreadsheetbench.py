@@ -33,8 +33,8 @@ running `transform_value` on each side:
 a program that computes its own values has them; one whose cells hold formulas that were never
 evaluated has `None` everywhere. So the check **recalculates the agent's workbook with
 LibreOffice** before comparing, which is what the repository's own
-`evaluation/open_spreadsheet.py` exists to do. Measured on this host: `soffice` is installed
-(`/usr/bin/soffice`) and `--headless --calc --convert-to xlsx` does cache the computed values.
+`evaluation/open_spreadsheet.py` exists to do. Select an explicitly prepared native
+manifest; formula conversion runs in a private namespace through its trusted helper.
 
 What is deliberately not added, and what is not checked
 -------------------------------------------------------
@@ -53,11 +53,13 @@ from __future__ import annotations
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "spreadsheetbench"
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
@@ -186,7 +188,8 @@ def _goal(record: dict) -> str:
         "## The workbook\n"
         "\n"
         f"`{INIT_WORKBOOK}` in your working directory is an Excel workbook. Edit it with any\n"
-        "tool available to you (for example `python3` with `openpyxl`, which is installed).\n"
+        "tool available in your execution environment. `python` and `python3` provide\n"
+        "the task-owned Python with `openpyxl` 3.1.2 for editing this workbook.\n"
         "\n"
         "## What to leave behind\n"
         "\n"
@@ -228,19 +231,32 @@ def _verifier(record: dict) -> dict:
     re-materializes them immediately before grading -- the same rule ALFWorld's game file
     follows, and the reason a dataset with an artifact can be graded honestly.
     """
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+    binding = bind(resolve_execution("spreadsheetbench"), "verifier")
+    from data.scaffolds.spreadsheet_runtime.native import require_runtime, snapshot_native_python
+    native = snapshot_native_python(require_runtime())
+    # Pin selected contents, never a mutable environment/path at worker launch.
+    native.pop("soffice", None)
+    native_content = json.dumps(native, sort_keys=True, separators=(",", ":"))
     spec = {
         "kind": "command",
+        "python_runtime": binding,
+        "runtime_paths": list(binding["runtime_paths"]),
         "argv": [
-            "python3", "check.py",
+            binding["python"], "-I", "-B", "check.py",
             "--workdir", ".",
             "--answer", "answer.txt",
             "--result", RESULT_WORKBOOK,
             "--golden", "golden.xlsx",
             "--task", "task.json",
+            "--native-manifest", "native-runtime.json",
             "--reward-file", REWARD_REL,
             "--evidence-file", EVIDENCE_REL,
         ],
         "inputs": [
+            {"path": "native-runtime.json", "content": native_content},
+            {"path": "native.py", "from": str(Path(__file__).resolve().parent.parent
+                                                   / "scaffolds/spreadsheet_runtime/native.py")},
             {"path": "check.py",
              "from": str(Path(__file__).resolve().parent / "spreadsheetbench"
                          / "verify" / "check.py")},
@@ -253,8 +269,9 @@ def _verifier(record: dict) -> dict:
         "reward_file": REWARD_FILE,
         "evidence_file": EVIDENCE_FILE,
         "timeout_s": 300,
+        "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
     }
-    return bind_scorer_input(spec, record["task_id"], ["golden.xlsx", "task.json"])
+    return bind_scorer_input(spec, record["task_id"], ["golden.xlsx", "task.json", "native-runtime.json"])
 
 
 def downloads() -> list[dict]:
@@ -273,20 +290,11 @@ def downloads() -> list[dict]:
                     "**cached** formula values (`data_only=True`), so a workbook whose formulas "
                     "were never evaluated has no values at all -- the check recalculates with "
                     "LibreOffice, which is what the repository's own `open_spreadsheet.py` "
-                    "exists to do, and `soffice` must be installed for any formula-using task. "
+                    "exists to do; select an explicitly prepared native LibreOffice manifest for "
+                    "formula-using tasks (see spreadsheetbench/runtime.md). "
                     "Trap 3: the `verified_400` release ships **one** variant per task, while "
                     "the paper's `soft`/`hard` numbers aggregate three; a score here is not "
                     "that aggregate.",
-        },
-        {
-            "kind": "pip",
-            "name": "openpyxl",
-            "package": "openpyxl",
-            "version": "3.1.2",
-            "size": "~250 KB",
-            "note": "The library the official scorer uses to read both workbooks, and the one "
-                    "the agent is expected to edit with. Both sides use the same version so a "
-                    "round-trip difference is not a scoring difference.",
         },
     ]
 
@@ -321,25 +329,48 @@ def _ensure() -> list[dict]:
 
 def provision_status() -> dict:
     tarball = DATASET_ROOT / "_src" / TARBALL
+    from harnessgrad.dataset_runtime import check_execution
+    execution = check_execution("spreadsheetbench")
+    data_present = (DATASET_ROOT / TASKS_JSON).is_file() and tarball.is_file()
+    native = _native_status()
     return {
         "root": str(DATASET_ROOT),
-        "present": (DATASET_ROOT / TASKS_JSON).is_file() and tarball.is_file(),
+        "present": data_present and execution["present"] and native["present"],
+        "data_present": data_present,
+        "execution_runtime": execution,
+        "formula_runtime": native,
+        "status": (execution["status"] if not execution["present"] else
+                   "unknown" if not native["present"] else
+                   "ready" if data_present else "data_missing"),
         "split_dir": str(DATASET_ROOT / RELEASE_DIR),
         "tarball": str(tarball) if tarball.is_file() else None,
-        "libreoffice": _soffice(),
+        "libreoffice": native.get("soffice_binary"),
         "tasks": len(_RECORDS),
     }
 
 
+def _native_status() -> dict:
+    from data.scaffolds.spreadsheet_runtime.native import require_runtime
+    try:
+        native = require_runtime()
+        return {"present": True, "status": "ready", "deployment": native["deployment"],
+                "version": native.get("version"), "limitations": native.get("limitations"),
+                "soffice_binary": native["soffice_binary"]}
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError, AttributeError) as exc:
+        return {"present": False, "status": "unknown", "detail": str(exc),
+                "prepare": "python -m data.scaffolds.spreadsheet_runtime.native prepare "
+                           "--soffice /usr/bin/soffice --python /usr/bin/python3 "
+                           "--directory /absolute/private/cache/spreadsheet-native; set "
+                           "HG_SPREADSHEET_NATIVE_MANIFEST to its manifest.json"}
+
+
 def _soffice() -> str | None:
-    """The LibreOffice binary, or None. Reported by `provision_status` because every
-    formula-using task is unmeasurable without it and that must not look like a 0."""
-    import shutil
-    for candidate in ("soffice", "libreoffice"):
-        found = shutil.which(candidate)
-        if found:
-            return found
-    return None
+    """Report only the explicitly verified deployment, never a PATH fallback."""
+    from data.scaffolds.spreadsheet_runtime.native import require_runtime
+    try:
+        return require_runtime()["soffice_binary"]
+    except (OSError, ValueError, RuntimeError, TypeError, KeyError, AttributeError):
+        return None
 
 
 def load() -> tuple[list[dict], dict[str, str]]:
@@ -355,13 +386,29 @@ def load() -> tuple[list[dict], dict[str, str]]:
 DEFAULT_ENV: dict = {"kind": "files"}
 
 
+class _Verifiers(Mapping):
+    """Resolve artifacts only for selected tasks; loading needs no scoring packages."""
+    def __iter__(self):
+        return (r["task_id"] for r in _ensure())
+
+    def __len__(self):
+        return len(_ensure())
+
+    def __getitem__(self, task_id):
+        for record in _ensure():
+            if record["task_id"] == task_id:
+                return _verifier(record)
+        raise KeyError(task_id)
+
+
 def __getattr__(name: str):
     if name == "ENV":
-        return {r["task_id"]: {"kind": "files"} for r in _ensure()}
+        from data.scaffolds.spreadsheet_runtime.actor import Environments
+        return Environments("spreadsheetbench", _ensure)
     if name == "SETUP":
         return {r["task_id"]: _setup(r) for r in _ensure()}
     if name == "VERIFY":
-        return {r["task_id"]: _verifier(r) for r in _ensure()}
+        return _Verifiers()
     if name == "SPLIT_SOURCE":
         return "none"
     if name == "SPLIT":

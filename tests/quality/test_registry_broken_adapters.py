@@ -64,17 +64,37 @@ def test_checkout_has_all_reviewed_adapter_declarations():
         f"expected every declared adapter ({declared}) to be published, got {len(published)}")
 
 
-def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypatch):
-    def unavailable(name):
-        raise ModuleNotFoundError("synthetic unavailable runtime")
+def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypatch, tmp_path):
+    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
 
-    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=unavailable))
+    # Select only new empty task-owned storage, never a developer's prepared runtime.
+    monkeypatch.setenv("HG_REVIEWED_ENVIRONMENT_ONLY", "1")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("HG_DATA_ROOT", str(tmp_path / "datasets"))
+    monkeypatch.setenv("HG_DATA_GSM8K", str(tmp_path / "datasets" / "gsm8k"))
+    runtime_root = tmp_path / "runtime-store"
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", str(runtime_root))
     declared = len([path for path in (ROOT / "data/datasets").glob("*.py")
                     if path.stem != "__init__"])
     assert len(registry.published()) == declared
     assert registry.broken_adapters() == {}
-    with pytest.raises(ModuleNotFoundError, match="synthetic unavailable runtime"):
+    with pytest.raises(DatasetRuntimeUnavailable) as failure:
         registry.load("gsm8k")
+    assert str(runtime_root) in str(failure.value)
+    assert "ready.json" in str(failure.value)
+    assert "prepare_dataset.py --dataset gsm8k" in str(failure.value)
+    assert len(registry.published()) == declared
+    assert not runtime_root.exists(), "read-only loading must not provision a runtime"
+
+
+def test_nonprovider_import_failure_remains_visible_at_load(monkeypatch):
+    def unavailable(name):
+        raise ModuleNotFoundError("synthetic unavailable runtime")
+
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=unavailable))
+    assert "authored_example_fix_bug" in registry.published()
+    with pytest.raises(ModuleNotFoundError, match="synthetic unavailable runtime"):
+        registry.load("authored_example_fix_bug")
 
 
 def test_download_json_keeps_catalog_diagnostics_on_stderr(monkeypatch, capsys):

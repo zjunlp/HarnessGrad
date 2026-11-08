@@ -16,14 +16,16 @@ measurement.** This is a coverage fact, reported rather than hidden. No substitu
 published under the benchmark's name.
 
 * **47 rows: the official test code imports `tensorflow`** (45 labelled `Tensorflow`, plus 2
-  labelled `Numpy` whose prompts are tensorflow conversions). This interpreter has
-  pandas/numpy/scipy/sklearn/matplotlib/seaborn/torch but no `tensorflow`. Measured: under
+  labelled `Numpy` whose prompts are tensorflow conversions). The historical host had
+  pandas/numpy/scipy/sklearn/matplotlib/seaborn/torch but no `tensorflow`. At that time, under
   `--platform` the verification namespace starts from an empty root and binds only `/usr`,
   the interpreter prefix, the work root and the task directory, so a dataset-local Python
   tree outside the work root is not visible (`FileNotFoundError` on an absolute dataset
   path, `HOME=/tmp`). TensorFlow is therefore reachable only by mutating the shared platform
   environment or by copying a multi-gigabyte tree into every task's workdir; neither is
-  acceptable here. This group is recomputed from `code_context`, so it cannot drift.
+  acceptable there. These are historical observations, not a limitation of the new
+  execution-runtime mechanism. The CPU profile still excludes TensorFlow and retains
+  this group unchanged; it is selected from `code_context`.
 * **27 rows: the released gold and test code target an older library stack** than the one
   installed. Measured by running every offered row's `reference_code` through the official
   construction on 2026-10-07: **926 passed, 27 failed**, and each failure names its cause in
@@ -33,6 +35,12 @@ published under the benchmark's name.
   `scipy.linalg.triu`), one absent optional package (`xgboost`), and one row whose official
   test fetches over the network (`HTTP 403`). DS-1000 ships an `environment.yml` pinning the
   versions its numbers came from; these rows are where that pin differs from this host.
+
+The new managed Python 3.12 CPU profile is declared in ds1000/execution-runtime.json.
+Its torch==2.5.1+cpu variant is distinct from the previously observed CUDA build.
+The frozen 926/74 queue is retained; this change does not re-run or reproduce the
+2026-10-07 sweep or certify these historical exclusions under the new profile.
+See ds1000/README.md for dependency preparation and authored validation scope.
 
 Two further notes for whoever picks this up. The official tests' only *network* dependency
 was 14 Matplotlib rows calling `sns.load_dataset(...)`; those are provisioned offline here
@@ -45,7 +53,9 @@ from __future__ import annotations
 
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
+import hashlib
 import json
+from collections.abc import Mapping
 import re
 from pathlib import Path
 
@@ -54,6 +64,7 @@ from data.scaffolds import command_control
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "ds1000"
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
@@ -76,6 +87,7 @@ SEABORN_DIR = DATASET_ROOT / "seaborn-data"
 ASSETS = Path(__file__).resolve().parent / "ds1000"
 CHECK_FILE = ASSETS / "verify" / "check.py"
 EXECUTION_FILE = SOURCE_DIR / "execution.py"
+EXECUTION_SHA256 = "fab0beb2a5c3300f4540c2225ffc013881e5770fed388ad20d4620ae040cd311"
 REVISION = "4416080ac5cb80bdf7576aefb8f9a0b4d5426a44"
 DATA_SHA256 = "26a492838b05f9d030b2f08a5715c6bafecafb601c157da912bf417fd8b0d363"
 SOURCE_COMMIT = "b39aab71"
@@ -114,7 +126,15 @@ _TF_PATTERN = re.compile(r"\b(import tensorflow|from tensorflow|tf\.)")
 
 
 def _read() -> list[dict]:
-    with DATA_FILE.open(encoding="utf-8") as handle:
+    try:
+        handle = DATA_FILE.open(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"ds1000: data_missing: {DATA_FILE}. Prepare the pinned data with "
+            "`python3 tools/datasets.py --fetch --dataset ds1000`; "
+            "check all required assets with `python3 tools/datasets.py --check --dataset ds1000`."
+        ) from exc
+    with handle:
         rows = [json.loads(line) for line in handle if line.strip()]
     if len(rows) != 1000:
         raise ValueError(f"DS-1000 expected 1000 rows, got {len(rows)}")
@@ -171,7 +191,36 @@ def task_id(index: int) -> str:
 SPLIT = None
 SPLIT_SOURCE = "none"
 
-ENV = {task_id(i): {"kind": "files"} for i in included_indices()}
+class _TaskDeclarations(Mapping):
+    """Enumerate the frozen pool without selecting or preparing dependencies."""
+    def __iter__(self):
+        return (task_id(i) for i in included_indices())
+
+    def __len__(self):
+        return len(included_indices())
+
+    @staticmethod
+    def _index(key):
+        if not isinstance(key, str) or not key.startswith("ds1000/"):
+            raise KeyError(key)
+        try:
+            index = int(key.removeprefix("ds1000/"))
+            if task_id(index) != key or index not in included_indices():
+                raise ValueError
+        except ValueError as exc:
+            raise KeyError(key) from exc
+        return index
+
+
+class _Environments(_TaskDeclarations):
+    def __getitem__(self, key):
+        self._index(key)
+        from harnessgrad.dataset_runtime import bind, resolve_execution
+        return {"kind": "files", "network": "none",
+                "task_python": bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "actor")}
+
+
+ENV = _Environments()
 
 
 def task_for(index: int) -> dict:
@@ -192,9 +241,14 @@ def setup_for(index: int) -> dict:
 
 
 def verify_for(index: int) -> dict:
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+    if hashlib.sha256(EXECUTION_FILE.read_bytes()).hexdigest() != EXECUTION_SHA256:
+        raise ValueError("DS-1000 pinned execution.py changed")
+    binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "verifier")
     spec = {
         "kind": "command",
-        "argv": ["python3", "verify/check.py",
+        "python_runtime": binding, "runtime_paths": list(binding["runtime_paths"]),
+        "argv": [binding["python"], "-I", "-B", "verify/check.py",
                  "--reward-file", command_control.REWARD_REL,
                  "--evidence-file", command_control.EVIDENCE_REL],
         "inputs": [
@@ -210,14 +264,26 @@ def verify_for(index: int) -> dict:
         ],
         "reward_file": command_control.REWARD_FILE,
         "evidence_file": command_control.EVIDENCE_FILE,
+        "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
+        "timeout_s": 180,
     }
-    return bind_scorer_input(spec, task_id(index),
-                             ["context.json", *[f"seaborn-data/{name}"
+    spec = bind_scorer_input(spec, task_id(index),
+                             ["context.json", "execution.py", *[f"seaborn-data/{name}"
                                                 for name in sorted(SEABORN_CSVS)]])
+    if spec["scorer_input"]["files"]["execution.py"] != EXECUTION_SHA256:
+        raise ValueError("DS-1000 pinned execution.py changed while binding")
+    return spec
 
 
 SETUP = {task_id(i): setup_for(i) for i in included_indices()}
-VERIFY = {task_id(i): verify_for(i) for i in included_indices()}
+
+
+class _Verifiers(_TaskDeclarations):
+    def __getitem__(self, key):
+        return verify_for(self._index(key))
+
+
+VERIFY = _Verifiers()
 
 
 def load():

@@ -77,7 +77,16 @@ def test_missing_or_unadmitted_worker_identity_fails_closed(group, tmp_path, mon
     assert not result.get("verdict"), result
     assert not result.get("harness_runtime", {}).get("bun")
     assert result["runtime_services"]["workers"]["cleanup"]["complete"]
-    assert Path(result["worker_group"]["archive"], "workers.json").is_file()
+    archive = Path(result["worker_group"]["archive"], "workers.json")
+    assert archive.is_file()
+    archived = json.loads(archive.read_text())['workers']
+    bob = (archived['bob']['harness_runtime'] or {}).get('bun')
+    if identity_case == 'missing':
+        assert bob is None
+    else:
+        assert bob['binary_sha256'] == 'wrong'
+    alice = (archived['alice']['harness_runtime'] or {}).get('bun')
+    assert alice['binary_sha256'] == ('wrong' if identity_case == 'all_wrong' else group[1]['binary_sha256'])
 
 
 def test_failed_bun_worker_preserves_execution_failure_and_peer_receipt(group, tmp_path, monkeypatch):
@@ -88,6 +97,17 @@ def test_failed_bun_worker_preserves_execution_failure_and_peer_receipt(group, t
     assert result["worker_group"]["workers"]["alice"]["harness_runtime"]["bun"] == group[1]
     assert not result.get("harness_runtime", {}).get("bun")
     assert result["runtime_services"]["workers"]["cleanup"]["complete"]
+
+
+def test_direct_failure_before_bun_preparation_does_not_promote_admission(group, monkeypatch):
+    def refuse(*args, **kwargs):
+        return {'task_id': 'early', 'invalid': {'stage': 'before actor', 'detail': 'authored refusal'},
+                'trace': '', 'exit_code': None}
+    monkeypatch.setattr(runner, '_run_one', refuse)
+    result = runner.run_one(group[0], {'task_id': 'early'})
+    assert result['invalid']['stage'] == 'before actor'
+    assert not result.get('harness_runtime', {}).get('bun')
+    assert not result.get('runtime_services', {}).get('bun')
 
 
 def test_evaluate_accepts_real_bun_worker_aggregate_and_diagnostics(group, monkeypatch):
@@ -167,9 +187,48 @@ def test_worker_runtime_receipt_survives_progress_and_resume(group, tmp_path, mo
     actor(monkeypatch)
     result = run_group(group, tmp_path)
     assert result["verdict"]["score"] == 1
-    _write_progress(tmp_path, 0, "pair", [result], None)
+    from harnessgrad import verification_context
+    context = verification_context.capture([{'task_id': 'pair'}], {},
+        setups={'pair': group[2]}, verifiers={'pair': group[3]})
+    _write_progress(tmp_path, 0, "pair", [result], None, verification_context=context)
     record = json.loads((tmp_path / "progress/round-0/pair.json").read_text())
-    assert _resume_runtime_mismatch(group[0], {"pair": record}) is None
+    assert record['verification_context'] == context
+    assert record['runtime_services'][0]['workers']['worker_group']['workers']['alice']['harness_runtime']['bun'] == group[1]
+    assert _resume_runtime_mismatch(group[0], {"pair": record}, verification_context=context) is None
     merged = _merge_prior({}, {"pair": record})
     assert merged["harness_runtime"] == [{"bun": group[1]}]
     assert merged["runtime_diagnostics"]["pair"]["workers"]["worker_group"]["workers"]["alice"]["harness_runtime"]["bun"] == group[1]
+    without_context = {key: value for key, value in record.items() if key != 'verification_context'}
+    assert 'verification context missing' in _resume_runtime_mismatch(
+        group[0], {'pair': without_context}, verification_context=context)
+    record['runtime_services'][0]['bun']['identity'] = {'kind': 'bun', 'binary_sha256': 'changed'}
+    assert _resume_runtime_mismatch(group[0], {'pair': record}, verification_context=context)
+
+
+def test_invalid_worker_group_rechecks_current_without_promoting_admission(group, tmp_path, monkeypatch):
+    from eval.containers import external_runtime
+    actor(monkeypatch, identity_case='missing')
+    checked = []
+    original = external_runtime.require_current
+    def recheck(repo, expected, env=None):
+        checked.append(Path(repo))
+        return original(repo, expected, env)
+    monkeypatch.setattr(external_runtime, 'require_current', recheck)
+    result = run_group(group, tmp_path)
+    assert group[0] in checked
+    assert result['invalid']['stage'] == 'worker runtime identity'
+    assert not result.get('harness_runtime', {}).get('bun')
+    assert result['runtime_services']['workers']['cleanup']['complete']
+
+
+def test_evaluate_does_not_promote_invalid_group_runtime(group, monkeypatch):
+    actor(monkeypatch, identity_case='missing')
+    repo, _, setup, verifier = group
+    result = runner._evaluate(repo, [{'task_id': 'pair'}], {}, setups={'pair': setup},
+                              verifiers={'pair': verifier}, run_id='worker-identity')
+    assert result['invalid']['pair']['stage'] == 'worker runtime identity'
+    assert not result['per_task']
+    assert result['harness_runtime'] == []
+    workers = result['runtime_diagnostics']['pair']['workers']['worker_group']['workers']
+    assert workers['alice']['harness_runtime']['bun'] == group[1]
+    assert not (workers['bob']['harness_runtime'] or {}).get('bun')

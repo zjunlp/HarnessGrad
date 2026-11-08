@@ -12,6 +12,10 @@ from `PROVENANCE.json` (which names the four upstream task files and their count
 from the staged ground-truth records' own `domain`/`split` fields -- not from the
 adapter's pool, which would make the test agree with whatever the adapter did.
 
+Real prepared-data checks are explicit opt-in via `HG_TEST_TAU_BENCH_REAL_DATA=1`
+and configured external prepared storage. The default manifest-only check reads no
+case bytes; authored adapter controls live in test_tau_bench_prepared.py.
+
 **Why reload and not a subprocess.** `HG_TAU_BENCH_POOL` is read at import, so each case
 sets its environment with `monkeypatch` and re-imports; an autouse fixture puts the module
 back on the default pool afterwards, because another test file imports it too.
@@ -20,6 +24,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -45,7 +50,9 @@ def records() -> dict[str, dict]:
 
 
 @pytest.fixture(autouse=True)
-def _back_to_the_default_pool(monkeypatch):
+def _back_to_the_default_pool(monkeypatch, request):
+    if request.node.name != "test_the_four_official_task_sets_are_the_ones_that_were_staged" and os.environ.get("HG_TEST_TAU_BENCH_REAL_DATA") != "1":
+        pytest.skip("real prepared-data integrity check: explicit HG_TEST_TAU_BENCH_REAL_DATA=1 required; no benchmark measured")
     yield
     monkeypatch.delenv(POOL_KNOB, raising=False)
     importlib.reload(tau_bench)
@@ -78,7 +85,7 @@ def test_the_four_official_task_sets_are_the_ones_that_were_staged():
     # The legacy `tasks.py` set (185 retail / 76 airline) is not what the environment
     # scored and is not staged.
     assert "tasks.py" not in " ".join(provenance["task_files"].values())
-    assert len(tau_bench._ALL_GT) == sum(OFFICIAL_SETS.values()) == 685
+    assert sum(name.startswith("gt/") for name in provenance["files"]) == sum(OFFICIAL_SETS.values()) == 685
 
 
 def test_every_task_id_names_the_file_it_came_from(records):
@@ -86,7 +93,7 @@ def test_every_task_id_names_the_file_it_came_from(records):
     for task_id, record in records.items():
         assert task_id == f"{record['domain']}_{record['split']}_{record['index']:03d}"
         assert record["split"] in ("train", "dev", "test")
-        path = tau_bench.ASSETS / "gt" / f"{task_id}.json"
+        path = Path(tau_bench.PREPARED_ROOT) / "gt" / f"{task_id}.json"
         assert path.is_file()
     per_set = Counter(f"{r['domain']}/{r['split']}" for r in records.values())
     assert dict(per_set) == OFFICIAL_SETS
@@ -121,11 +128,11 @@ def test_the_declared_split_passes_the_registry_check(monkeypatch):
 
 
 @pytest.mark.parametrize("pool,count", [("test", 634), ("dev", 514)])
-def test_registry_loads_committed_assets_without_external_storage(monkeypatch, pool, count):
+def test_registry_loads_explicit_external_prepared_storage(monkeypatch, pool, count):
     from harnessgrad import paths
     monkeypatch.setattr(paths, "_settings", lambda: {})
     module = _reload(monkeypatch, pool)
-    assert isinstance(module.DATASET_ROOT, paths.DatasetPath)
+    assert module.PREPARED_ROOT != module.ASSETS
     tasks, scorable, split = registry.load_split("tau_bench")
     assert len(tasks) == len(scorable) == count
     assert split == module.SPLIT

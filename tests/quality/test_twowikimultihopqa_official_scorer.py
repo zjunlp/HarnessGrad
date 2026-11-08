@@ -1,36 +1,13 @@
-"""2WikiMultihopQA: the transcription is byte-for-byte, and upstream runs it.
+"""Offline authored loader/metric controls and explicit 2Wiki release integrations.
 
-Most datasets in this repository need a scorer transcribed *carefully* and then a test that
-notices when the transcription drifts. This one can do better, and the difference is worth
-naming: the upstream file is a **self-contained, standard-library script** (one `ujson`
-import aside), so the test can run the upstream file itself, as a subprocess, on the same
-rows and the same predictions, and require the two aggregates to be equal. That is the
-strongest form of the gate -- not "a second transcription agrees" but "the original
-program agrees" -- and it is affordable here for the reason `data/datasets/musique.py` gives: the
-metric is a function of two text files.
-
-What the pins are, and what each one catches
---------------------------------------------
-* **the transcription** -- the whole `def normalize_answer` .. `def eval` region is present
-  in `data/datasets/twowikimultihopqa.py` **verbatim**, asserted as a substring of the adapter's
-  source. A single edited character fails it, including edits that look harmless.
-* **the source** -- `_src/2wikimultihop-<commit>/2wikimultihop_evaluate_v1.1.py`, pinned by
-  digest, so "verbatim" is a claim about a specific file and not about whatever a URL
-  served today.
-* **the normalization order** -- lower, then punctuation, then articles. The order that
-  *looks* equivalent changes 196 of the first 2,000 gold answers (9.8%), and the measured
-  effect on the aggregate is in `test_articles_are_removed_after_lowercasing`.
-* **the alias channel** -- `{answer}` plus the Wikidata aliases of `answer_id`. The
-  aggregate moves when it is dropped (68.18 -> 67.54 on 500 rows), which is the measurement
-  that says a parquet mirror of this dataset cannot reproduce the metric.
-* **the two mirrors** -- `dev.json` and the independent `validation.parquet` agree on
-  question, answer and supporting facts for all 12,576 rows. That is the only provenance
-  evidence available on a machine that cannot reach the official host, and it is a test
-  rather than a sentence in a docstring because a claim in a docstring is not checked.
+HG_TEST_TWOWIKI_DATA_ROOT opts into existing release/source/witness artifacts.
+Historical full-pool counts and measured aggregates remain integration assertions;
+default tests never infer that an authored fixture proves release provenance.
 """
 from __future__ import annotations
 
 import hashlib
+import os
 import json
 import subprocess
 import sys
@@ -41,25 +18,82 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import data.datasets.twowikimultihopqa as dataset  # noqa: E402
+from stdlib_authored_fixture_helpers import adapter_at
 
-ADAPTER = ROOT / "data" / "datasets" / "twowikimultihopqa.py"
-SOURCE = (dataset.DATASET_ROOT / "_src" / f"2wikimultihop-{dataset.OFFICIAL_COMMIT}"
-          / "2wikimultihop_evaluate_v1.1.py")
+# A private module instance cannot inherit another test's cached pool or ambient storage.
+dataset = adapter_at('twowikimultihopqa', Path('/__hg_authored_unprepared_twowiki__'))
+ADAPTER = ROOT / 'data/datasets/twowikimultihopqa.py'
+
+
+def require_files(root, *relative):
+    missing = [str(root / item) for item in relative if not (root / item).is_file()]
+    if missing:
+        pytest.skip('2Wiki explicit integration root missing files: ' + ', '.join(missing))
+
+
+@pytest.fixture
+def release_root(monkeypatch):
+    selected = os.environ.get('HG_TEST_TWOWIKI_DATA_ROOT')
+    if not selected:
+        pytest.skip('released 2Wiki opt-in: set HG_TEST_TWOWIKI_DATA_ROOT to an existing pinned data/source root')
+    root = Path(selected).expanduser()
+    if not root.is_dir():
+        pytest.skip('2Wiki explicit integration root missing directory: ' + str(root))
+    monkeypatch.setattr(dataset, 'DATASET_ROOT', root)
+    monkeypatch.setattr(dataset, '_ALIASES', None)
+    return root
+
+
+@pytest.fixture
+def source(release_root):
+    relative = '_src/2wikimultihop-' + dataset.OFFICIAL_COMMIT + '/2wikimultihop_evaluate_v1.1.py'
+    require_files(release_root, relative)
+    path = release_root / relative
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == dataset.EVALUATOR_SHA256
+    return path
+
+
+@pytest.fixture
+def synthetic_rows(tmp_path, monkeypatch):
+    """Authored dev+alias bytes run through the unchanged JSON/JSONL loader."""
+    rows = [{'_id': 'authored-' + str(i), 'question':'Authored question.',
+             'answer':'The Crimson City', 'answer_id':'Q_answer', 'type':'comparison',
+             'context':[['Public Page ' + str(n), ['Public sentence.']] for n in range(10)],
+             'supporting_facts':[['Public Page 0',0]],
+             'evidences':[['Subject','relation','Object']], 'evidences_id':[]}
+            for i in range(2)]
+    (tmp_path / dataset.DATA_FILE).write_text(json.dumps(rows))
+    (tmp_path / dataset.ALIAS_FILE).write_text(json.dumps({
+        'Q_id':'Q_answer','aliases':['PRIVATE_ALIAS'], 'demonyms':['Crimson Citizens']}) + '\n')
+    monkeypatch.setattr(dataset,'DATASET_ROOT',tmp_path)
+    monkeypatch.setattr(dataset,'EXPECTED_ROWS',2)
+    monkeypatch.setattr(dataset,'_ALIASES',None)
+    monkeypatch.setattr(dataset._SPEC,'root',tmp_path)
+    monkeypatch.setattr(dataset._SPEC,'_records',[])
+    monkeypatch.setattr(dataset._SPEC,'load_error',None)
+    monkeypatch.setattr(dataset._SPEC,'_load_cause',None)
+    loaded = dataset._rows()['dev']
+    assert loaded == rows
+    tasks, _ = dataset.load()
+    assert len(tasks) == len(rows)
+    assert 'PRIVATE_ALIAS' not in json.dumps(tasks)
+    return loaded
+
 
 #: The deterministic prediction rule the end-to-end comparison uses. Fixed here so that the
 #: two aggregates below are a property of the pinned data, not of an agent.
 SLICE = 500
 
 
-@pytest.fixture(scope="module")
-def rows() -> list[dict]:
-    if not (dataset.DATASET_ROOT / dataset.DATA_FILE).is_file():
-        pytest.skip("twowikimultihopqa: not provisioned")
+@pytest.fixture
+def rows(release_root) -> list[dict]:
+    require_files(release_root, dataset.DATA_FILE, dataset.ALIAS_FILE)
+    for relative, expected in ((dataset.DATA_FILE,dataset.DATA_SHA256),(dataset.ALIAS_FILE,dataset.ALIAS_SHA256)):
+        assert hashlib.sha256((release_root / relative).read_bytes()).hexdigest() == expected
     return dataset._rows()["dev"]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def predictions(rows) -> dict[str, str]:
     """Every fifth answer empty, even rows the gold verbatim, odd rows its first token."""
     return {row["_id"]: ("" if i % 5 == 0 else
@@ -91,14 +125,21 @@ def _aggregate(rows, predictions, *, use_aliases: bool = True) -> tuple[float, f
 # ------------------------------------------------------------- the transcription ---
 
 
-def test_the_source_file_is_the_pinned_one():
-    assert SOURCE.is_file(), "fetch the declared official source archive"
-    assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == dataset.EVALUATOR_SHA256
+def test_transcribed_scorer_region_has_its_reviewed_digest():
+    source_text = ADAPTER.read_text()
+    region = source_text[source_text.index('def normalize_answer(s):'):
+                         source_text.index('# ------------------------------------------------------------------- the platform')]
+    assert hashlib.sha256(region.encode()).hexdigest() == 'e18ccdf4b87d16c30e03a62b1dc9d0906c0b0130ae5eace17885d2a9ea1b13c9'
+
+
+def test_the_source_file_is_the_pinned_one(source, release_root):
+    require_files(release_root, "_src/2wikimultihop.tar.gz")
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == dataset.EVALUATOR_SHA256
     archive = dataset.DATASET_ROOT / "_src" / "2wikimultihop.tar.gz"
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == dataset.SOURCE_SHA256
 
 
-def test_the_transcription_is_byte_identical_to_upstream():
+def test_the_transcription_is_byte_identical_to_upstream(source):
     """The whole region, as a substring of the adapter -- so an edit cannot hide.
 
     Sliced from `def normalize_answer` to the `__main__` block, which is the part of
@@ -108,7 +149,7 @@ def test_the_transcription_is_byte_identical_to_upstream():
     exactly: a test that compares "after the edits I remember making" is a test that
     forgives the edit nobody remembers.
     """
-    upstream = SOURCE.read_text()
+    upstream = source.read_text()
     region = upstream[upstream.index("def normalize_answer(s):"):
                       upstream.index("if __name__ == '__main__':")]
     assert region.rstrip().endswith("print(json.dumps(metrics, indent=4))")
@@ -128,7 +169,7 @@ def test_legacy_answer_only_is_labeled_and_does_not_claim_joint():
 # ------------------------------------------------------- the upstream program runs ---
 
 
-def test_the_upstream_evaluator_agrees_end_to_end(rows, predictions, tmp_path):
+def test_the_upstream_evaluator_agrees_end_to_end(rows, predictions, tmp_path, source):
     """The original program, on this pool, with these predictions, and the same numbers.
 
     Nothing of this repository is on the path the subprocess sees except the two JSON
@@ -141,7 +182,7 @@ def test_the_upstream_evaluator_agrees_end_to_end(rows, predictions, tmp_path):
     (tmp_path / "pred.json").write_text(json.dumps(
         {"answer": predictions, "sp": {}, "evidence": {}}, ensure_ascii=False))
     proc = subprocess.run(
-        [sys.executable, str(SOURCE), str(tmp_path / "pred.json"),
+        [sys.executable, str(source), str(tmp_path / "pred.json"),
          str(tmp_path / "gold.json"), str(dataset.DATASET_ROOT / dataset.ALIAS_FILE)],
         capture_output=True, text=True, timeout=600)
     assert proc.returncode == 0, proc.stderr[-2000:]
@@ -155,7 +196,7 @@ def test_the_upstream_evaluator_agrees_end_to_end(rows, predictions, tmp_path):
     assert (em, f1) == (55.8, 68.18)
 
 
-def test_the_articles_are_removed_after_lowercasing(rows):
+def test_released_normalization_order_measurement(rows):
     """The normalization order is load-bearing, and this is the measurement.
 
     Upstream lowercases first. Doing it after `re.sub(r"\\b(a|an|the)\\b", ...)` leaves a
@@ -223,8 +264,9 @@ def test_a_gold_without_an_answer_is_reported_rather_than_scored():
     assert "not a row of this pool" in verdict["why"]
 
 
-def test_the_question_carries_the_ten_paragraphs_and_no_annotation(rows):
-    """The prompt is the question and the released paragraphs. Nothing else is in it."""
+def test_the_question_carries_the_ten_paragraphs_and_no_annotation(synthetic_rows):
+    rows = synthetic_rows
+    """The authored prompt contains its ten public paragraphs and no gold annotations."""
     row = rows[0]
     question = dataset._question(row)
     assert len(row["context"]) == 10
@@ -256,6 +298,7 @@ def test_the_witness_mirror_agrees_with_the_pool_on_every_row(rows):
     answer and every supporting-fact pair. The witness has no `answer_id`, which is
     precisely why it cannot be the pool.
     """
+    require_files(dataset.DATASET_ROOT, dataset.WITNESS_FILE)
     pq = pytest.importorskip("pyarrow.parquet",
                              reason="the witness is a parquet file")
     witness = pq.read_table(dataset.DATASET_ROOT / dataset.WITNESS_FILE).to_pylist()
@@ -271,11 +314,57 @@ def test_the_witness_mirror_agrees_with_the_pool_on_every_row(rows):
                                                        other["supporting_facts"]["sent_id"])]
 
 
-@pytest.mark.parametrize("arm,expected", [("--oracle", "1.0"), ("--noop", "0.0")])
-def test_platform_control(arm, expected):
-    proc = subprocess.run([sys.executable, "data/scaffolds/qa/control.py", "--dataset",
-                           "twowikimultihopqa", arm, "--platform"],
-                          capture_output=True, text=True, timeout=300)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert f"score    {expected}" in proc.stdout
-    assert "sandbox=True" in proc.stdout
+def test_normalization_order_on_authored_strings():
+    assert dataset.normalize_answer('The City') == 'city'
+    assert dataset.normalize_answer('A Tale') == 'tale'
+    assert dataset.normalize_answer('An Example!') == 'example'
+
+
+def test_authored_loader_refuses_duplicate_native_ids(synthetic_rows):
+    duplicate = [synthetic_rows[0], synthetic_rows[0]]
+    (dataset.DATASET_ROOT / dataset.DATA_FILE).write_text(json.dumps(duplicate))
+    with pytest.raises(ValueError, match='exactly 2 unique'):
+        dataset._rows()
+
+
+def test_aliases_change_the_authored_loader_score(synthetic_rows):
+    gold = dataset._gold(synthetic_rows[0])
+    assert set(gold['aliases']) == {'PRIVATE_ALIAS','Crimson Citizens'}
+    assert dataset.score('PRIVATE_ALIAS', gold)['reward'] == 1.0
+    assert dataset.score('PRIVATE_ALIAS', {**gold,'aliases':[]})['reward'] == 0.0
+    predictions = {row['_id']:'PRIVATE_ALIAS' for row in synthetic_rows}
+    assert _aggregate(synthetic_rows,predictions) == (100.0,100.0)
+    assert _aggregate(synthetic_rows,predictions,use_aliases=False) == (0.0,0.0)
+
+
+@pytest.mark.parametrize('correct', [True,False])
+def test_platform_control(correct, synthetic_rows, tmp_path, monkeypatch):
+    """Real native sandbox controls on one authored selected task, no released exam."""
+    from eval.ckpt.git_state import stage_workspace
+    from eval.run.runner import run_one
+    tasks, _ = dataset.load()
+    record = dataset._SPEC.ensure()[0]
+    setup = dataset._SPEC.setup(record)
+    verifier = dataset._SPEC.verifier(record)
+    submission = dataset._oracle_submission(record['gold']) if correct else {'schema_version':1,'answer':'WRONG'}
+    source_dir = tmp_path / 'actor';source_dir.mkdir()
+    (source_dir / 'harness.json').write_text(json.dumps({
+        'name':'twowiki-authored-control','version':'1','entrypoint':'agent.py','env_kinds':['files']}))
+    (source_dir / 'agent.py').write_text(
+        'import argparse,json\nfrom pathlib import Path\n'
+        'p=argparse.ArgumentParser();p.add_argument("--task");p.add_argument("--workdir");a=p.parse_args();w=Path(a.workdir)\n'
+        'assert not (w/"gold.json").exists()\n'
+        'assert "PRIVATE_ALIAS" not in Path(a.task).read_text()\n'
+        + '(w/"answer.txt").write_text(' + repr(json.dumps(submission)) + ')\n'
+        + '(w/"trace.jsonl").write_text(json.dumps({"usage":{"calls":0,"input_tokens":0,"output_tokens":0}})+"\\n")\n')
+    work = tmp_path / 'work'
+    repo = work / 'control/workspace';stage_workspace(source_dir,repo)
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT',str(work))
+    monkeypatch.setenv('HG_AGENT_BACKEND','mock')
+    result = run_one(repo,tasks[0],sandbox=True,setup=setup,verifier=verifier,
+                     timeout_s=30,verify_timeout_s=30,run_id='authored-twowiki')
+    assert not result.get('invalid'),result
+    assert result['exit_code'] == 0,result
+    assert result['verdict']['score'] == float(correct),result
+    assert not result['verdict'].get('unmeasured'),result
+    assert result['verdict']['evidence']['measured'] is True

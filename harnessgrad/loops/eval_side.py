@@ -19,8 +19,13 @@ import time
 from eval.ckpt.git_state import commit_state
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
+from eval.observe.tracing import harness_usage_totals, environment_usage_totals
 from harnessgrad import policies
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import verification_context as verification_context_mod
+from eval.containers import external_runtime
+from harnessgrad import candidate_runtime
 from harnessgrad.environments import _env_record
 from harnessgrad.environments import _report_harness_failed
 from harnessgrad.environments import _report_invalid
@@ -43,7 +48,7 @@ def _baseline_block(path: str, point: dict) -> dict:
     would throw away a real score because a side file moved.
     """
     block: dict = {"kind": "frozen", "path": path}
-    if point.get("scoring_identity") is not None:
+    if point.get("scoring_identity") is not None or point.get('dataset_runtime_identity') is not None:
         block["comparable"] = False
     try:
         reference = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -59,7 +64,28 @@ def _baseline_block(path: str, point: dict) -> dict:
         reference, point,
         reference_tasks=reference.get("per_task") or {},
         current_tasks=point.get("per_task") or {})
-    if reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None:
+    for problem in dataset_runtime_identity_mod.problems(
+            reference.get('dataset_runtime_identity'), point.get('dataset_runtime_identity')):
+        if problem not in block['problems']:
+            block['problems'].append(problem)
+    try:
+        reference_context = reference.get("verification_context")
+        point_context = point.get("verification_context")
+        if reference_context is None or point_context is None:
+            problems = ["verification context missing"]
+        else:
+            ids = list(point.get("per_task") or {})
+            problems = verification_context_mod.problems(
+                verification_context_mod.project(reference_context, ids),
+                verification_context_mod.project(point_context, ids))
+    except (KeyError, TypeError, ValueError):
+        problems = ["verification context unavailable"]
+    for problem in problems:
+        if problem not in block['problems']:
+            block['problems'].append(problem)
+    if (reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None
+            or reference.get('dataset_runtime_identity') is not None
+            or point.get('dataset_runtime_identity') is not None or problems):
         block["comparable"] = not bool(block["problems"])
     return block
 
@@ -139,28 +165,46 @@ def _unmeasured_rounds(run_dir: Path) -> dict[int, dict]:
             out[int(point.get("round") or 0)] = point["unmeasured"]
     return out
 
-def _eval_from_record(runs_root: Path, run_id: str, round_no: int) -> dict:
+def _eval_from_record(runs_root: Path, run_id: str, round_no: int, *,
+                      source: Path | None = None) -> dict:
     """What the train run's own record says about the state being measured.
 
     Read rather than recomputed: the link has to survive on the record, and a reader of
     the eval run should be able to follow it to the train run's point without running
     anything. `harness_sha` is the join key and it is on both points already.
     """
-    curve = Path(runs_root) / run_id / "curve.jsonl"
-    if not curve.exists():
-        return {"run_id": run_id, "round": round_no}
-    for line in reversed(curve.read_text().splitlines()):
+    run_dir = Path(runs_root) / run_id
+    curve = run_dir / "curve.jsonl"
+    point = None
+    for line in reversed(curve.read_text().splitlines() if curve.exists() else []):
         if not line.strip():
             continue
         try:
             p = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if p.get("round") == round_no:
-            return {"run_id": run_id, "round": round_no,
-                    "harness_sha": (p.get("identity") or {}).get("harness_sha"),
-                    "train_score": p.get("score") if p.get("side") != "eval" else None}
-    return {"run_id": run_id, "round": round_no}
+        if isinstance(p, dict) and p.get("round") == round_no:
+            point = p
+            break
+    binding = (point or {}).get("harness_runtime_identity")
+    if source is not None and candidate_runtime.has_python(source):
+        if point is None:
+            raise ValueError("the selected managed checkpoint has no original curve point")
+        # A trained candidate must keep its exact actor artifact. Missing provenance
+        # cannot turn eval into preparation of the current publication for these deps.
+        binding = candidate_runtime.checkpoint_binding(run_dir, point)
+        if binding is None:
+            raise ValueError("harness_runtime_identity is missing from the selected managed checkpoint")
+        binding = candidate_runtime.admit(source, binding)
+    if source is not None:
+        # Selecting source for a fresh eval is not reusing its historical score.
+        external_runtime.identities(source)
+    if point is None:
+        return {"run_id": run_id, "round": round_no}
+    return {"run_id": run_id, "round": round_no,
+            **candidate_runtime.fields(binding),
+            "harness_sha": (point.get("identity") or {}).get("harness_sha"),
+            "train_score": point.get("score") if point.get("side") != "eval" else None}
 
 def _progress_results(run_dir: Path) -> dict[str, dict]:
     """Per-task results an interrupted eval run already wrote.
@@ -223,6 +267,15 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     except (OSError, json.JSONDecodeError) as exc:
         return f"{run_dir.name}/run_meta.json is unreadable: {exc}"
     errors = scoring_identity.problems(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+    errors += dataset_runtime_identity_mod.problems(
+        meta.get('dataset_runtime_identity'), getattr(args, 'dataset_runtime_identity', None))
+    errors += candidate_runtime.problems(
+        meta.get("harness_runtime_identity"), getattr(args, "current_harness_runtime_identity", None))
+    current_context = getattr(args, "verification_context", None)
+    if meta.get("verification_context") is None or current_context is None:
+        errors.append("verification context missing")
+    else:
+        errors += verification_context_mod.problems(meta["verification_context"], current_context)
     if errors:
         return "; ".join(errors)
     recorded_from = meta.get("from_run") or meta.get("evaluated_from") or {}
@@ -246,24 +299,42 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     return None
 
 
-def _resume_runtime_mismatch(work: Path, prior: dict[str, dict]) -> str | None:
-    """Resume may not bypass current Bun/transport admission or mix old trials."""
-    from eval.containers import bun_runtime
+def _resume_runtime_mismatch(work: Path, prior: dict[str, dict], *,
+                             dataset_runtime_identity: dict | None = None,
+                             harness_runtime_identity: dict | None = None,
+                             verification_context: dict | None = None) -> str | None:
+    """Resume may not bypass external actor admission or mix old trials."""
     try:
-        current = bun_runtime.identity(work)
-    except bun_runtime.RuntimeUnavailable as exc:
+        dataset_runtime_identity_mod.admit(dataset_runtime_identity)
+        candidate_runtime.admit(work, harness_runtime_identity)
+        task_runtimes = dataset_runtime_identity_mod.project_many(dataset_runtime_identity, prior)
+        for task_id, record in prior.items():
+            expected = task_runtimes[task_id]
+            recorded = record.get("verification_context")
+            if recorded is None or verification_context is None:
+                return f"{task_id}: verification context missing"
+            errors = verification_context_mod.problems(recorded, verification_context_mod.project(verification_context, [task_id]))
+            if errors:
+                return f"{task_id}: " + '; '.join(errors)
+            errors = dataset_runtime_identity_mod.problems(record.get('dataset_runtime_identity'), expected)
+            if errors:
+                return f"{task_id}: " + '; '.join(errors)
+            errors = candidate_runtime.problems(record.get("harness_runtime_identity"), harness_runtime_identity)
+            if errors:
+                return f"{task_id}: " + "; ".join(errors)
+        current = external_runtime.identities(work)
+        for task_id, record in prior.items():
+            try:
+                external_runtime.require_records(current, record, services=True)
+            except external_runtime.RuntimeUnavailable as exc:
+                return f'{task_id}: {exc}; use a fresh run ID'
+    except (OSError, TypeError, ValueError) as exc:
         return str(exc)
-    if current is None:
-        return None
-    for task_id, record in prior.items():
-        services = record.get("runtime_services") or []
-        if (not services or len(services) != record.get("n_trials")
-                or any(((item or {}).get("bun") or {}).get("identity") != current for item in services)):
-            return f"{task_id}: missing or changed Bun/Responses overlay identity; use a fresh run ID"
     return None
 
 
-def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
+def _merge_prior(res: dict, prior: dict[str, dict], *,
+                 dataset_runtime_identity: dict | None = None) -> dict:
     """Fold the already-scored tasks back into a fresh `evaluate()` result.
 
     Counts of invalid and harness-failed tasks come from the same records, so the merged
@@ -273,7 +344,14 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     from eval.verification.isolation import observed_class
 
     merged = dict(res)
+    merged.update(dataset_runtime_identity_mod.fields(dataset_runtime_identity))
     per_task = dict(merged.get("per_task") or {})
+    usage_by_task = dict(merged.get("harness_usage_by_task") or {})
+    for task_id in per_task:
+        usage_by_task.setdefault(task_id, [])  # Legacy aggregate sums prove no per-task coverage.
+    environment_by_task = dict(merged.get("environment_usage_by_task") or {})
+    for task_id in per_task:
+        environment_by_task.setdefault(task_id, [{"coverage_unknown": True}])
     multiple_trials = merged.get("trials", 1) > 1
     trial_scores = dict(merged.get("per_task_trials") or {})
     per_task_std = dict(merged.get("per_task_std") or {})
@@ -288,14 +366,16 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     for task_id, record in prior.items():
         if task_id in per_task:
             continue
+        usage_by_task[task_id] = record.get("trial_usage") or []
+        environment_by_task[task_id] = record.get("trial_env_usage") or [{"coverage_unknown": True}]
         for services in record.get("runtime_services") or []:
             if services:
                 diagnostics[task_id] = services
-                bun = services.get("bun") or {}
-                if bun.get("identity") is not None:
-                    runtime = {"bun": bun["identity"]}
-                    if runtime not in runtimes:
-                        runtimes.append(runtime)
+                runtime = {kind: (services.get(kind) or {})['identity']
+                           for kind in external_runtime.KINDS
+                           if (services.get(kind) or {}).get('identity') is not None}
+                if runtime and runtime not in runtimes:
+                    runtimes.append(runtime)
         outcome = record.get("process_outcome")
         if outcome in ("invalid", "unmeasured"):
             invalid.setdefault(task_id, {'stage': 'resume', 'detail': record.get('detail') or outcome})
@@ -334,7 +414,23 @@ def _merge_prior(res: dict, prior: dict[str, dict]) -> dict:
     merged["harness_failed"] = failed
     merged["harness_runtime"] = runtimes
     merged["runtime_diagnostics"] = diagnostics
+    merged["harness_usage_by_task"] = usage_by_task
+    merged["environment_usage_by_task"] = environment_by_task
+    usage_trials = merged.get("trials") or max(
+        [1, *[record["n_trials"] for record in prior.values()
+              if type(record.get("n_trials")) is int and record["n_trials"] > 0]])
+    merged["tokens"] = harness_usage_totals(usage_by_task, trials=usage_trials)
+    merged["env_usage"] = environment_usage_totals(
+        report for reports in environment_by_task.values() for report in reports)
     return merged
+
+
+def _checked_verification_context(tasks, scorable, setups, verifiers, envs, expected, *, sandbox=True):
+    current = verification_context_mod.capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox)
+    if expected is None or verification_context_mod.problems(
+            verification_context_mod.project(expected, [task['task_id'] for task in tasks]), current):
+        raise ValueError('verification context changed after preflight')
+    return current
 
 
 def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: list[dict],
@@ -355,8 +451,28 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     """
     cache: dict = {}
     planned_ids = [t["task_id"] for t in tasks]
+    try:
+        actor_binding = candidate_runtime.admit(
+            work, getattr(args, "current_harness_runtime_identity", None),
+            envs=envs, setups=setups, sandbox=args.sandbox)
+        current_runtime_identity = dataset_runtime_identity_mod.for_evaluation(
+            getattr(args, 'dataset_runtime_identity', None), tasks, setups, verifiers, envs)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f'refusing dataset runtime identity: {exc}', level='error')
+        return 2
+    try:
+        current_verification_context = _checked_verification_context(
+            tasks, scorable, setups, verifiers, envs, getattr(args, 'verification_context', None), sandbox=args.sandbox)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f'refusing verification context: {exc}', level='error')
+        return 2
+
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
+    preparation = getattr(args, "harness_preparation", None)
+    preparation_seconds = float((preparation or {}).get("seconds") or 0.0)
+    if preparation is not None:
+        cumulative["harness_preparation_wall_clock_s"] = preparation_seconds
     sha = commit_state(work, f"eval of {args.from_run} round "
                              f"{(eval_from or {}).get('round')}")
     t0 = time.time()
@@ -364,6 +480,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     # per-task progress files are the evidence of which tasks are done; a task that was
     # scored once must not be scored again, because two measurements of one task are two
     # numbers and picking either is a choice the record cannot defend.
+
     prior: dict[str, dict] = {}
     from eval.run import repeated_trials, trial_evidence
     protocol = repeated_trials.protocol_for(tasks, verifiers or {}, args.trials)
@@ -390,6 +507,8 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                                          round_no=0, harness_sha=sha)
     execution_plan = trial_plan or ordinary_plan
     if execution_plan:
+        execution_plan.update(dataset_runtime_identity_mod.fields(current_runtime_identity))
+        execution_plan.update(candidate_runtime.fields(actor_binding))
         # Bind the selected declarations too: same seeds with a different user,
         # judge, task input or endpoint are not the same measurement.
         declarations = {'tasks': tasks, 'scorable': {t['task_id']: scorable[t['task_id']] for t in tasks},
@@ -433,7 +552,10 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         if prior:
             why = _resume_mismatch(run_dir, args,
                                    os.environ.get("HG_ALFWORLD_POOL", ""), sha)
-            why = why or _resume_runtime_mismatch(work, prior)
+            why = why or _resume_runtime_mismatch(
+                work, prior, dataset_runtime_identity=current_runtime_identity,
+                verification_context=current_verification_context,
+                harness_runtime_identity=actor_binding)
             if why:
                 console.note(f"refusing --resume: {why}", level="error")
                 return 2
@@ -450,11 +572,15 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        progress_dir=run_dir,
                        trials=args.trials, jobs=args.jobs,
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
+                       **dataset_runtime_identity_mod.fields(current_runtime_identity),
+                       verification_context=current_verification_context,
+                       **candidate_runtime.fields(actor_binding),
                        run_seed=os.environ["HARNESSGRAD_SEED"],
                        recordings_root=run_dir / "recordings", round_no=0,
                        **({'persist_trial_report': False} if execution_plan else {}))
     if prior:
-        res = _merge_prior(res, prior)
+        res = _merge_prior(res, prior, dataset_runtime_identity=current_runtime_identity)
+    res.update(candidate_runtime.fields(actor_binding))
     if trial_plan:
         fresh_rows = (res.get('repeated_trials') or {}).get('results', [])
         report = repeated_trials.aggregate(trial_plan['manifest'], old_trial_rows + fresh_rows,
@@ -506,9 +632,8 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         return 2
 
     cumulative["evaluation_trials"] = len(tasks)
-    cumulative["wall_clock_s"] = time.time() - t0
-    cumulative["env_generation_tokens"] = sum(
-        (res.get("env_usage") or {}).get(k, 0) for k in ("input", "output"))
+    cumulative["wall_clock_s"] = time.time() - t0 + preparation_seconds
+    cumulative["env_generation_tokens"] = _cost_of(res, len(tasks), 0)["env_generation_tokens"]
 
     point = _curve_point(
         run_id=run_id, round_index=0,
@@ -520,6 +645,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                   "selection_basis_round": 0, "selected_within": "eval"},
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
         scoring_identity=getattr(args, "scoring_identity", None),
+        dataset_runtime_identity=current_runtime_identity,
+        harness_runtime_identity=actor_binding,
+        verification_context=current_verification_context,
         train_scores=None, train_ids=None, split=split,
         env_record=_env_record(envs, scored),
         invalid=res.get("invalid"),
@@ -534,6 +662,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
         per_task_trials=res.get("per_task_trials"),
         **_test_rate_fields(res),
         **_level_fields(res, scored))
+    if preparation is not None:
+        point["harness_preparation"] = preparation
+        point["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
     point["measured_by_platform"] = True
     point["verifier_kinds"] = sorted({(verifiers.get(t) or {}).get("kind", "answer")
                                       for t in scored})

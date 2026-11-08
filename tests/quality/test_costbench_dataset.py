@@ -103,6 +103,7 @@ def test_corrupt_database_shard_is_infrastructure_failure(prepared, tmp_path):
     location.write_text('{}')
     spec['dataset_root'] = str(tmp_path)
     setup['tool_relay']['content'] = json.dumps(spec)
+    setup['tool_relay']['read_paths'].append(str(index.parent.resolve()))
     relay = tool_relay.start(setup, context={'task_id': tid, 'run_id': 'shard-corruption',
                                            'trial_id': '1', 'seed': '0'})
     try:
@@ -169,6 +170,7 @@ def test_private_case_corruption_refused_before_agent(prepared, tmp_path):
     fake.write_text('{}')
     spec['case'] = str(fake)
     setup['tool_relay']['content'] = json.dumps(spec)
+    setup['tool_relay']['read_paths'].append(str(fake.resolve()))
     with pytest.raises(RuntimeError, match='digest mismatch'):
         tool_relay.start(setup, context={'task_id': tid, 'run_id': 'corruption', 'trial_id': '1', 'seed': '0'})
 

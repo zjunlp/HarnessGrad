@@ -155,7 +155,7 @@ def test_native_platform_control(synthetic, tmp_path, monkeypatch, oracle, relay
     assert relays[0].receipt['queries_used'] == int(oracle)
 
 
-def run_probe(synthetic, tmp_path, monkeypatch, answer='a', **kwargs):
+def run_probe(synthetic, tmp_path, monkeypatch, answer='a', forge_scorer=False, **kwargs):
     from eval.run.runner import run_one
     work_root = tmp_path / 'work'
     harness = work_root / 'harness'
@@ -172,6 +172,14 @@ assert 'SECRET_OBSERVATION' in r.stdout
 (w/'tool_recording.json').write_text('{"forged":true}')
 (w/'answer.txt').write_text(ANSWER)
 '''.replace('PRIVATE_PATH', repr(private)).replace('ANSWER', repr(answer))
+    if forge_scorer:
+        program += '''
+for name in ('check.py', 'scoring.py', 'engine.py'):
+    target = w/'kumo_verify'/name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("raise RuntimeError('ACTOR_SCORER')")
+(w/'kumo_verify/private.json').write_text('{}')
+'''
     (harness / 'agent.py').write_text(program)
     (harness / 'harness.json').write_text(json.dumps({'name': 'probe', 'entrypoint': 'agent.py',
                                                     'backend': 'cli', 'env_kinds': ['files'],
@@ -213,3 +221,187 @@ def test_registered_interaction_and_adapter_split(synthetic):
     # No declared division means no side counts; `None` is the classifier's "not loadable
     # here" (this host has no prepared KUMO payload), so both states are accepted.
     assert row['train'] in (None, 0) and row['eval'] in (None, 0)
+
+
+def test_stdlib_venv_platform_controls(synthetic, tmp_path, request):
+    """A package-free interpreter runs the real actor, relay and official scorer."""
+    import os
+    import subprocess
+    import venv
+    import tempfile
+    runtime_dir = tempfile.TemporaryDirectory(prefix='hg-stdlib-control-', dir=Path.home())
+    request.addfinalizer(runtime_dir.cleanup)
+    runtime = Path(runtime_dir.name)
+    venv.EnvBuilder(with_pip=False).create(runtime)
+    row = kumo.roster()[synthetic['task_id']]
+    script = """
+import importlib.util, json, os, sys
+from pathlib import Path
+assert not list((Path(sys.prefix) / 'lib').glob('python*/site-packages/*'))
+from data.datasets import kumo
+kumo.PREPARED = Path(sys.argv[1])
+row = json.loads(sys.argv[2])
+kumo.roster = lambda: {row['task_id']: row}
+assert len(kumo.load()[0]) == 1
+spec = importlib.util.spec_from_file_location('control', kumo.ASSETS / 'control.py')
+control = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(control)
+os.environ['HG_AGENT_BACKEND'] = 'mock'
+for oracle in (True, False):
+    work = Path(sys.argv[3]) / str(oracle)
+    work.mkdir()
+    assert control.run(oracle, True, row['task_id'], work) == 0
+    assert os.environ['PATH'].split(os.pathsep)[0] == str(Path(sys.executable).absolute().parent)
+"""
+    result = subprocess.run([str(runtime / 'bin/python'), '-c', script,
+                             str(kumo.PREPARED), json.dumps(row), str(tmp_path)],
+                            cwd=ROOT, env={**os.environ, 'PYTHONPATH': str(ROOT),
+                                           'PYTHONNOUSERSITE': '1'},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_unconfigured_storage_status_is_diagnostic(monkeypatch, tmp_path):
+    from harnessgrad import paths
+    monkeypatch.setattr(paths, '_settings', lambda: {})
+    monkeypatch.setattr(kumo, 'DATASET_ROOT', paths.DatasetPath('unconfigured'))
+    status = kumo.provision_status()
+    assert status['present'] is False
+    assert status['status'] == 'config_missing'
+    assert status['root'] is None
+    assert 'HG_DATA_ROOT' in status['detail']
+    assert 'HG_DATA_UNCONFIGURED' in status['detail']
+    assert 'DatasetPath(' not in str(status)
+
+    # An authenticated-data failure with configured storage is not missing config.
+    monkeypatch.setattr(paths, '_settings', lambda: {'HG_DATA_UNCONFIGURED': str(tmp_path)})
+    def broken():
+        raise ValueError('prepared artifact digest mismatch')
+    monkeypatch.setattr(kumo, 'roster', broken)
+    status = kumo.provision_status()
+    assert status['root'] == str(tmp_path)
+    assert status.get('status') != 'config_missing'
+    assert status['detail'] == 'prepared artifact digest mismatch'
+
+
+def test_registry_selection_reauthenticates_current_manifest(tmp_path, monkeypatch):
+    from data.scaffolds import registry
+    prepared = tmp_path / 'prepared'
+    prepared.mkdir()
+    rows = [{'task_id': f'kumo/easy/Authored/{i}', 'path': 'case'} for i in range(5290)]
+    raw = json.dumps({'source_revision': kumo.REVISION, 'tasks': rows}).encode()
+    manifest_path = prepared / 'manifest.json'
+    manifest_path.write_bytes(raw)
+    monkeypatch.setattr(kumo, 'PREPARED', prepared)
+    monkeypatch.setattr(kumo, 'DATASET_ROOT', tmp_path)
+    # Fixture-only pin; the adapter's released manifest pin is unchanged.
+    monkeypatch.setattr(kumo, 'MANIFEST_SHA256', hashlib.sha256(raw).hexdigest())
+    kumo._refresh_catalog()
+    try:
+        assert len(registry.load('kumo')[0]) == 5290
+        manifest_path.write_bytes(raw + b' ')
+        with pytest.raises(ValueError, match='manifest digest mismatch'):
+            registry.load('kumo')
+        status = kumo.provision_status()
+        assert status['present'] is False
+        assert 'manifest digest mismatch' in status['detail']
+    finally:
+        kumo._refresh_catalog()
+
+
+@pytest.mark.parametrize('entrypoint', [
+    ['-m', 'tools.prepare_kumo'],
+    ['-m', 'data.datasets.personamem_v2.prepare'],
+    [str(ROOT / 'data/datasets/kumo/prepare.py')],
+])
+def test_preparation_help_is_stdlib_and_has_no_side_effects(tmp_path, entrypoint):
+    import os
+    import subprocess
+    result = subprocess.run([sys.executable, '-S', *entrypoint, '--help'],
+                            cwd=tmp_path,
+                            env={**os.environ, 'PYTHONPATH': str(ROOT),
+                                 'PYTHONDONTWRITEBYTECODE': '1'},
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'usage:' in result.stdout
+    assert not list(tmp_path.iterdir())
+
+
+def test_completed_actor_cannot_score_after_real_relay_crash(synthetic, tmp_path, monkeypatch):
+    handles = []
+    completed_queries = []
+    original_start = tool_relay.start
+    def start(*args, **kwargs):
+        handle = original_start(*args, **kwargs)
+        handles.append(handle)
+        original_stop = handle.stop
+        def crash_on_stop():
+            try:
+                if handle.proc.poll() is None:
+                    try:
+                        completed_queries.append(call(handle.path, 'stats', {})['queries_used'])
+                    finally:
+                        handle.proc.kill()
+                        handle.proc.wait(timeout=5)
+            finally:
+                original_stop()
+        handle.stop = crash_on_stop
+        return handle
+    monkeypatch.setattr(tool_relay, 'start', start)
+    result = run_probe(synthetic, tmp_path, monkeypatch, answer='a')
+    assert completed_queries == [1]
+    assert result.get('invalid'), result
+    assert result['invalid']['stage'] == 'tool relay'
+    assert (result.get('verdict') or {}).get('score') is None, result
+    service = result['runtime_services']['tool_relay']
+    assert service['faults'], service
+    assert service['cleanup'] == {'complete': True, 'errors': []}
+    assert handles[0].proc.returncode == -9
+    assert not handles[0].directory.exists()
+
+
+def test_real_scorer_missing_private_state_removes_previous_reward(synthetic, tmp_path):
+    import shutil
+    import subprocess
+    spec = kumo.VERIFY[synthetic['task_id']]
+    work = tmp_path / 'scorer'
+    work.mkdir()
+    for entry in spec['inputs']:
+        target = work / entry['path']
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(entry['from'], target)
+    command = [sys.executable, '-I', '-S', *spec['argv'][2:]]
+    (work / 'answer.txt').write_text('a')
+    correct = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert correct.returncode == 0, correct.stderr
+    assert (work / 'verifier/reward.txt').read_text().strip() == '1'
+    (work / 'answer.txt').write_text('b')
+    wrong = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert wrong.returncode == 0, wrong.stderr
+    assert (work / 'verifier/reward.txt').read_text().strip() == '0'
+    (work / 'verifier/reward.txt').write_text('1\n')
+    (work / 'kumo_verify/private.json').unlink()
+    missing = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert missing.returncode == 3, missing.stderr
+    assert not (work / 'verifier/reward.txt').exists()
+    evidence = json.loads((work / 'verifier/evidence.json').read_text())
+    assert evidence['measured'] is False
+    assert 'FileNotFoundError' in evidence['error']
+
+
+def test_missing_private_state_refuses_relay_start_and_cleans_up(synthetic, tmp_path, monkeypatch):
+    setup = kumo.SETUP[synthetic['task_id']]
+    Path(json.loads(setup['tool_relay']['content'])['path']).unlink()
+    temporary = tmp_path / 'startup'
+    temporary.mkdir()
+    monkeypatch.setattr(tool_relay.tempfile, 'tempdir', str(temporary))
+    with pytest.raises(RuntimeError, match='FileNotFoundError'):
+        tool_relay.start(setup)
+    assert not list(temporary.iterdir())
+
+
+def test_actor_scorer_forgery_cannot_change_official_wrong_score(synthetic, tmp_path, monkeypatch):
+    result = run_probe(synthetic, tmp_path, monkeypatch, answer='b', forge_scorer=True)
+    assert result['exit_code'] == 0, result
+    assert result['verdict']['score'] == 0, result
+    assert result['verdict']['evidence']['scorer_input']['verified'] is True

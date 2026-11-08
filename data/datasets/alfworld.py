@@ -54,15 +54,10 @@ behind*. The tau-bench pattern resolves that: the agent acts through a CLI
 reads TextWorld's own `won` flag. The CLI's observations, its summary and any `won` it
 prints are never consulted -- the log holds actions and actions are re-executed.
 
-The environment is `kind: "files"`, not a container. That is forced by a hard constraint
-of this exercise (`Do NOT use Docker`) and it is the reason this dataset works on a
-host with nothing but `pip install alfworld textworld`: the CLI and the check both run
-under the platform's Python. The consequence is stated loudly in
-`docs/dataset-onboarding-skill.md`: a `files` environment cannot declare a longer
-`agent_timeout_s`, and the platform's `reward_file`/`evidence_file` channels were
-container-only before this dataset (`eval/verification/verifier.py::_verify` now honours them for a
-host check as well -- the smallest change that let a no-Docker dataset keep the
-contract's evidence channel).
+The environment is `kind: "files"`. Dataset discovery and the actor's socket client
+use only the standard library. The trusted relay explicitly binds the separately
+prepared `alfworld` execution artifact; no host Python package fallback is allowed.
+The native verifier retains its independently pinned, sealed scorer runtime.
 
 What the agent can read, and what that used to cost
 --------------------------------------------------
@@ -146,6 +141,9 @@ KIND = "dataset"
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
 ORACLE_SOURCE = "released"
+
+# Only the trusted interactive service needs third-party Python packages.
+MANAGED_EXECUTION_RUNTIME = "alfworld"
 
 
 #: The benchmark's own evaluation set, within this adapter's pool: **every task here belongs
@@ -437,6 +435,9 @@ def _setup(record: dict) -> dict:
     `VERIFY.inputs` keeps the game, and that copy is the one the runner stages for the
     relay: the same bytes, read by the check and by the relay, never by the agent.
     """
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+
+    binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "service")
     return {
         "files": [
             {"path": "gym_env.py", "from": str(LIB_DIR / "gym_env.py")},
@@ -451,6 +452,11 @@ def _setup(record: dict) -> dict:
             "filename": GAME_IN_WORKDIR,
             "content": record["stripped_game"],
             "budget": STEP_BUDGET,
+            "python": binding["python"],
+            "python_runtime": binding,
+            "read_paths": [str(ASSETS / "relay.py"),
+                           str(LIB_DIR / "gym_env.py"),
+                           str(TRANSPORT_SOURCE)],
         },
     }
 

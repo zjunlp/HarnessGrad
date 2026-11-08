@@ -81,8 +81,8 @@ for _path in (str(_HERE), str(_ROOT)):
     if _path not in sys.path:
         sys.path.append(_path)
 
-import bridge  # noqa: E402 - path set above; the trusted snapshot builder, reused not copied
-from agentdojo.functions_runtime import FunctionsRuntime  # noqa: E402 - dataset runtime only
+bridge = None
+FunctionsRuntime = None
 from eval.service.tool_transport import MAX_CALLS, Relay  # noqa: E402 - the one transport
 
 #: The closed op set. A test asserts this is exactly what the handler serves.
@@ -95,7 +95,16 @@ class UnsupportedOp(RuntimeError):
 
 def build_handler(case_path):
     """The environment, in this process only, and the closed handler over it."""
+    global bridge, FunctionsRuntime
     case = json.loads(Path(case_path).read_text())
+    if 'source_root' in case:
+        from bootstrap import bootstrap
+        bootstrap(Path(case['source_root']))
+        case = json.loads(Path(case['case_path']).read_text())
+    if bridge is None:
+        import bridge as loaded_bridge
+        from agentdojo.functions_runtime import FunctionsRuntime as loaded_runtime
+        bridge, FunctionsRuntime = loaded_bridge, loaded_runtime
     suite, user, _injection, injections = bridge.get_case(case)
     environment = user.init_environment(suite.load_and_inject_default_environment(injections))
     # `suite.tools` is `[make_function(t) for t in TOOLS]` -- the same list the deleted

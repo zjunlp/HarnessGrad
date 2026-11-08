@@ -14,7 +14,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE_DIRS = ("data", "eval", "harnessgrad", "tools")
+SOURCE_DIRS = ("data", "eval", "harnessgrad", "tools", "console")
+
+# Small extracted units have explicit dependencies, including stdlib capabilities.
+# Keep these separate from permissions: extraction must not grant a reverse edge.
+EXTRACTED_UNIT_IMPORTS = {
+    "eval/run/outcomes.py": {"__future__", "eval.observe.tracing"},
+    "console/record_reader.py": {"__future__", "json", "math", "pathlib", "re", "time"},
+    "harnessgrad/entrypoints/experiment_config.py": {
+        "__future__", "pathlib", "harnessgrad.config", "harnessgrad.experiments"},
+    "harnessgrad/entrypoints/run_parser.py": {
+        "__future__", "argparse", "collections.abc", "pathlib",
+        "harnessgrad.entrypoints.experiment_config"},
+}
 
 # Exact file/module edges, not permission for all of eval to depend on config.
 ALLOWED_EVAL_CONFIG_EDGES = {
@@ -28,10 +40,32 @@ ALLOWED_EVAL_CONFIG_EDGES = {
         "Reads the resolved service configuration.",
 }
 
-# Existing layering debt reviewed at 6c539d8. Keys are (rule, file, module), so
+# Reviewed operator/transport bridges. Keys are (rule, file, module), so
 # neither a whole control directory nor other imports from these files are exempt.
 # Remove an entry when its dependency is moved; stale entries fail the guard.
 EXCEPTIONS = {
+    ("data-eval", "data/datasets/alfworld/control.py", "eval.run.tool_relay"):
+        "The operator control starts the admitted private engine service rather than importing it on the platform.",
+    ("data-eval", "data/datasets/alfworld/control.py", "eval.verification.verifier"):
+        "Legacy operator controls use the same sealed native verifier as the normal runner.",
+    ("data-eval", "data/datasets/scienceworld/control.py", "eval.containers.python_service"):
+        "Only the explicit oracle control launches the managed private reference worker.",
+    ("data-eval", "data/datasets/scienceworld/control.py", "eval.run.tool_relay"):
+        "The operator control owns the fixed-task replay service lifecycle.",
+    ("data-eval", "data/datasets/scienceworld/control.py", "eval.containers.sandbox"):
+        "The operator control invokes the same isolated stdlib client as the actor.",
+    ("data-eval", "data/datasets/scienceworld/control.py", "eval.verification.verifier"):
+        "Legacy operator controls keep the independently pinned native grading route.",
+    ("data-eval", "data/datasets/scienceworld/relay.py", "eval.service.tool_transport"):
+        "The fixed-task private engine service uses the shared transport, with no oracle operation.",
+    ("data-eval", "data/datasets/jericho/control.py", "eval.run.tool_relay"):
+        "The operator control owns the same selected-game relay lifecycle as the runner.",
+    ("data-eval", "data/datasets/jericho/relay.py", "eval.service.tool_transport"):
+        "The trusted single-game server reuses the shared transport rather than another wire protocol.",
+    ("data-eval", "data/scaffolds/command_control.py", "eval.verification.verifier"):
+        "The operator-only control validates private scorer receipts against the selected declaration.",
+    ("data-eval", "data/scaffolds/command_control.py", "eval.verification.result_contract"):
+        "The operator-only control interprets measured and unmeasured results through the shared contract.",
     ("data-eval", "data/scaffolds/native_research/swe_relay.py", "eval.run.native_supervisor"):
         "Fixed native relay cleanup is supervised independently of blocked startup, calls and patch sealing.",
     ("data-eval", "data/scaffolds/native_harbor_runtime/relay.py", "eval.run.native_supervisor"):
@@ -58,12 +92,16 @@ EXCEPTIONS = {
         "Dynamic protocol control validates real sandbox execution and sealed scoring.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.tool_relay"):
         "Dynamic control owns the selected-task relay and trusted event record lifecycle.",
+    ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.verification.verifier"):
+        "Direct dynamic controls reuse bound-runtime admission and the read-only verifier sandbox.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.service.tool_transport"):
         "Dynamic control uses the actor transport for costed, event-triggering actions.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.runner"):
         "Dataset control validates the real sandbox and sealed official trajectory scorer.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.run.tool_relay"):
         "Manual control owns the same selected-task relay and trusted record lifecycle.",
+    ("data-eval", "data/datasets/costbench/control.py", "eval.verification.verifier"):
+        "Direct static controls reuse bound-runtime admission and the read-only verifier sandbox.",
     ("data-eval", "data/datasets/costbench/control.py", "eval.service.tool_transport"):
         "Control executes costed tool actions through the actor's actual transport.",
     ("data-eval", "data/datasets/costbench/relay.py", "eval.service.tool_transport"):
@@ -241,6 +279,9 @@ def _adapter_namespace(module: str) -> str | None:
 
 
 def _rule(edge: ImportEdge) -> str | None:
+    if (edge.file in EXTRACTED_UNIT_IMPORTS
+            and edge.target not in EXTRACTED_UNIT_IMPORTS[edge.file]):
+        return "extracted-unit-dependency"
     adapter = _adapter_namespace(edge.source)
     if (adapter and _within(edge.target, "data")
             and not any(_within(edge.target, shared)
@@ -320,8 +361,19 @@ class ImportDirectionTests(unittest.TestCase):
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")
         adapters = ROOT / "data/datasets"
+        preparation_profiles = {"native_qa"}
         for directory in adapters.iterdir():
             if not directory.is_dir() or directory.name == "__pycache__":
+                continue
+            if directory.name in preparation_profiles:
+                # This is a dependency recipe, not a published adapter. Keep its
+                # explicit classification and ensure it cannot add a 57th dataset.
+                self.assertFalse(directory.with_suffix(".py").exists())
+                profile = json.loads((directory / "execution-runtime.json").read_text())
+                self.assertEqual(profile["schema"], "harnessgrad.dataset-execution-runtime.v1")
+                self.assertEqual(profile["dataset"], directory.name)
+                self.assertTrue((directory / profile["requirements"]).is_file())
+                self.assertTrue((directory / "README.md").is_file())
                 continue
             self.assertTrue(directory.with_suffix(".py").is_file(),
                             f"assets lack their own adapter: {directory}")
@@ -414,6 +466,20 @@ class ImportDirectionTests(unittest.TestCase):
             self.assertEqual(registry.kind_of(name), registry.KIND_DATASET)
             self.assertFalse((ROOT / "data" / f"{name}.py").exists())
         self.assertEqual(registry.module_name("demo"), "data.demo")
+
+    def test_extracted_units_reject_reverse_imports_and_execution_capabilities(self):
+        for file in EXTRACTED_UNIT_IMPORTS:
+            for statement in ("import driver", "from console import server",
+                              "import eval.run.runner", "import subprocess",
+                              "def nested():\n    import tools.improver"):
+                with self.subTest(file=file, statement=statement):
+                    edges = _imports(file, statement, {"console.server"})
+                    errors = _policy_errors(edges, {}, {})
+                    self.assertTrue(any("extracted-unit-dependency" in e for e in errors))
+        edges = _imports("harnessgrad/entrypoints/run_parser.py",
+                         "from .experiment_config import config_help",
+                         {"harnessgrad.entrypoints.experiment_config"})
+        self.assertEqual(_policy_errors(edges, {}, {}), [])
 
     def test_current_source_layering(self):
         for directory in SOURCE_DIRS:

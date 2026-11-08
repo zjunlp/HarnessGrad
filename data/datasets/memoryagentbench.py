@@ -38,7 +38,8 @@ PREPARED_ROOT = configured_path('HG_DATA_MEMORYAGENTBENCH_PREPARED', DATASET_ROO
 REVISION = "7ea066982b140a19337e17e60d45d4076e042faf"
 
 
-@lru_cache(maxsize=1)
+# Preserve cache_clear() for callers while always revalidating on-disk artifacts.
+@lru_cache(maxsize=0)
 def _rows():
     from data.datasets.memoryagentbench.lib.storage import load_pool
     pool = load_pool(PREPARED_ROOT)

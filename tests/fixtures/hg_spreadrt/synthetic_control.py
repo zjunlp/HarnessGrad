@@ -24,6 +24,7 @@ def sha(path):
 
 def main():
     work = Path(sys.argv[1])
+    native_manifest = Path(sys.argv[2]).resolve(strict=True)
     work.mkdir(parents=True)
     print('label=synthetic offline control; not dataset measurement or official scorer execution', flush=True)
     print('work=' + str(work), flush=True)
@@ -40,9 +41,11 @@ def main():
                 assert exc.errno in (errno.ENETUNREACH, errno.EPERM, errno.EACCES)
             else:
                 raise AssertionError('external route unexpectedly available')
-    version = subprocess.run(['/usr/bin/soffice', '--version'], capture_output=True, text=True, check=True)
-    print('engine_version_stdout=' + repr(version.stdout), flush=True)
-    print('engine_version_stderr=' + repr(version.stderr), flush=True)
+    from data.scaffolds.spreadsheet_runtime.native import check as check_native
+    native = check_native(native_manifest)
+    native.pop('soffice', None)
+    (work / 'native-runtime.json').write_text(json.dumps(native, sort_keys=True))
+    print('engine_version=' + native['version'], flush=True)
     wb = openpyxl.Workbook()
     wb.active.title = 'Synthetic'
     wb.active['A1'] = 2
@@ -84,8 +87,9 @@ def main():
     print('before_compare=' + repr(initial), flush=True)
     assert before == [999, 888] and initial[0] is False
     candidate_sha256 = sha(candidate)
-    files = {name: sha(work / name) for name in ('golden.xlsx', 'task.json')}
-    argv = [sys.executable, str(check_path), '--workdir', str(work),
+    files = {name: sha(work / name) for name in ('golden.xlsx', 'task.json', 'native-runtime.json')}
+    argv = [sys.executable, '-I', '-B', str(check_path), '--workdir', str(work),
+            '--native-manifest', 'native-runtime.json',
             '--reward-file', str(work / 'reward.txt'), '--evidence-file', str(work / 'evidence.json'),
             '--task-id', task['task_id'], '--scorer-input-sha256', inventory_digest(files),
             '--scorer-input-files', json.dumps(files, sort_keys=True)]

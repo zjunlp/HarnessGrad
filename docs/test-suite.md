@@ -1,7 +1,8 @@
 # Running the tests
 
-The quality suite is ~3,500 tests in ~140 files. Run **all** of it rarely; run the
-part you changed, always.
+The quality suite covers platform contracts, dataset adapters and optional native
+controls. Run the affected tests during development. A selected passing subset
+does not establish whole-suite acceptance.
 
 ## Run the tests for one dataset
 
@@ -12,9 +13,8 @@ python3 tools/run_tests.py --dataset bfcl_v3 --list              # plan only, ru
 ```
 
 This selects the files for that dataset **plus the core platform tests**. It does
-not run other datasets' tests. That matters: `test_appworld_official_scorer.py`
-spends about twenty minutes in release replay, and someone editing the GSM8K
-scorer has no reason to pay for it.
+not run other datasets' tests. Scorer suites can include release replay; keep
+those checks selected when changing their adapter or a shared execution path.
 
 Core is included on purpose — a platform regression still matters while you work on
 an adapter.
@@ -37,15 +37,16 @@ check. Run them for layer work, not for every adapter edit.
 
 ```sh
 python3 tools/run_tests.py                      # whole suite, parallel
-python3 tools/run_tests.py --jobs 8             # fewer workers
+python3 tools/run_tests.py --jobs 8             # eight workers
 python3 tools/run_tests.py --fast               # skip the measured-slow files
 python3 tools/run_tests.py --file test_scorer   # files whose path contains this
 python3 tools/run_tests.py --file test_scorer --file test_verifier   # both, one pass
 ```
 
-`--file` is repeatable and a file matching **any** of the substrings is included. Passing
-several in one invocation is not just brevity: each file still lands in its own lane, and
-the lane split is derived once for the whole set instead of once per file.
+`--file` is repeatable. Repository-relative paths containing `/` match exactly;
+bare terms match path substrings. The selection includes a file matching any
+argument. Each selected file runs in its own lane; the lane split is derived
+once for the combined selection.
 
 The runner starts one pytest process per file across two lanes:
 
@@ -59,12 +60,12 @@ Use `--list` to see the plan and the estimated wall clock before running anythin
 
 ## Why `--basetemp` must be outside the platform
 
-Every file gets its own `--basetemp` under `/tmp`. This is not cosmetic. Driver-based
-tests use `tmp_path` as a harness work root, and the driver **correctly refuses** a
-work root inside the platform tree. A basetemp of `.scratch/...` therefore turns
-ordinary tests into confusing failures. `conftest.py` rejects an in-platform
-`--basetemp` at startup with an actionable message rather than letting you debug the
-symptom. Omitting the option keeps pytest's normal default.
+The runner gives each file its own external `--basetemp`. Set its parent with
+`--basetemp-root`; the default uses `HG_TEST_TMPDIR` or Python's temporary-directory
+selection. Driver-based tests use `tmp_path` as a harness work root, which must
+be outside the platform tree. `conftest.py` rejects an in-platform `--basetemp`
+at startup. Direct pytest invocations retain pytest's normal default when the
+option is omitted.
 
 ## Which tests belong to which dataset
 
@@ -129,3 +130,44 @@ re-runs every failed file **on its own** and separates them:
 
 Both exit non-zero by default. `--allow-load-sensitive` exits 0 when only the second kind
 remain, for a fast local loop.
+
+## Working on the composition roots
+
+Read [architecture](architecture.md#small-unit-extraction-stage-and-remaining-responsibilities)
+and [import direction](import-direction.md) before moving code from `driver.py`,
+`console/server.py` or `eval/run/runner.py`. The current stage extracts argument
+configuration, record projection and outcome interpretation only. Linux acceptance
+remains tracked separately in [remaining work](linux-runtime-remaining.md).
+
+Start with the canonical unit's interface, callers and tests. Keep dependencies
+explicit, give each mutable cache/lock/resource one owner, and patch the canonical
+implementation in internal tests. Existing public CLI/function delegates and the
+identity-preserving `eval.runner` alias remain supported. Function aliases do not
+promise that rebinding an old private global changes the new owner's dependency.
+Never add reflected global synchronization to make an old test patch work.
+
+For these extracted units, a focused offline check is:
+
+```sh
+python -m pytest -q --basetemp=/tmp/hg-extracted-units \
+  tests/quality/test_import_direction.py tests/quality/test_boundaries.py \
+  tests/quality/test_eval_package_compat.py tests/quality/test_outcomes.py \
+  tests/quality/test_console_record_reader.py tests/quality/test_run_parser.py \
+  tests/quality/test_cli_entry.py tests/quality/test_experiments.py
+```
+
+Use a unique external basetemp for concurrent runs. Also select affected consumer
+checks: provider/signal interpretation for outcomes, console record APIs for the
+reader, and source-review/scenario/experiment refusal tests for parsing changes.
+Report exact commands, pass/skip counts and scope. These checks establish local
+syntax, dependency and fixture contracts; they do not establish real model,
+Docker, benchmark or Linux isolation/lifecycle acceptance.
+
+Before any later migration, name the complete responsibility being moved and
+its dependency ports, inspect callers and monkeypatch targets, and retain the
+selection -> identity capture -> admission -> workspace/commit -> measurement
+ordering documented in architecture. Preserve historical record shapes, measured
+versus invalid outcomes, unknown costs, actor/verifier privacy and cleanup on
+partial startup. Require the applicable Linux gate receipts before splitting
+those execution closures. Do not combine a large move with a scoring/schema or
+identity change.

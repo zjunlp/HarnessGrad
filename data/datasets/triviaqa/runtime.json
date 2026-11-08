@@ -1,0 +1,7 @@
+{
+  "schema": "harnessgrad.dataset-runtime.v1",
+  "dataset": "triviaqa",
+  "provider": "qa",
+  "python": "3.12",
+  "requirements": "requirements-load.txt"
+}

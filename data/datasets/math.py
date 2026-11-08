@@ -7,6 +7,7 @@ from harnessgrad.paths import dataset_root
 from data.scaffolds.native_qa import Dataset
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "math"
 ORACLE_SOURCE = "released"
 METRIC = 'math-verify-0.9.0-last-boxed'
 DATASET_ROOT = dataset_root('math')

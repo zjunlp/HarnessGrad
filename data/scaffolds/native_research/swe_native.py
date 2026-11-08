@@ -28,14 +28,16 @@ IMAGE = re.compile(r'sha256:[a-f0-9]{64}')
 
 
 def python():
-    value = Path(os.environ.get('HG_SWE_PYTHON', sys.executable))
-    if not value.is_absolute() or not value.is_file():
-        raise ConfigMissing('swe_bench: HG_SWE_PYTHON must name an installed absolute interpreter')
-    return str(value)
+    from .special_runtime import binding, admit
+    return admit(binding('swe_bench'))
 
 
-def official(action, root=None, *, timeout_s=30):
-    argv = [python(), '-I', '-X', 'utf8', str(ASSETS / 'swe_official.py'), action]
+def official(action, root=None, *, timeout_s=30, selected_binding=None, expected_identity=None):
+    from .special_runtime import binding, admit
+    selected_binding = selected_binding or binding('swe_bench')
+    if expected_identity is not None and worker_identity(selected_binding) != expected_identity:
+        raise ValueError('SWE worker source identity changed')
+    argv = [admit(selected_binding), '-I', '-B', '-X', 'utf8', str(ASSETS / 'swe_official.py'), action]
     if root is not None:
         argv.append(str(root))
     environment = {'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'PYTHON_DOTENV_DISABLED': '1'}
@@ -45,8 +47,15 @@ def official(action, root=None, *, timeout_s=30):
         capture_output=True, text=True, errors='replace', timeout=timeout_s,
         env=environment)
     if result.returncode:
-        raise ConfigMissing('swe_bench: pinned official evaluator unavailable or failed; install swebench at ' + REVISION)
+        raise ConfigMissing('swe_bench: pinned official evaluator unavailable or failed; see data/datasets/swe_bench/execution-recipe.md; source revision ' + REVISION)
     return {} if action == 'check' else json.loads(result.stdout)
+
+
+def worker_identity(selected):
+    from .special_runtime import fingerprint
+    return fingerprint(selected, {'worker': ASSETS/'swe_official.py',
+        'bootstrap': ASSETS/'special_runtime.py', 'grader': HELPER,
+        'source_inventory': ASSETS/'SWE_EVALUATOR_SOURCE.json'})
 
 
 def configuration():
@@ -206,6 +215,11 @@ def run(spec, artifact_root, *, task_id, run_id, trial_id, timeout_s):
             raise TimeoutError('native SWE verification timed out')
         return value
     try:
+        from .special_runtime import binding
+        selected_binding = binding('swe_bench')
+        identity = worker_identity(selected_binding)
+        from .special_runtime import public_identity
+        evidence['execution_identity'] = public_identity(identity)
         case_raw = (artifact_root / spec['scorer_input']['path']).read_bytes()
         case = json.loads(case_raw)
         case_sha256 = hashlib.sha256(case_raw).hexdigest()
@@ -227,7 +241,7 @@ def run(spec, artifact_root, *, task_id, run_id, trial_id, timeout_s):
             root.chmod(0o755)
             (root / 'request.json').write_text(json.dumps({'row': {k: case['row'][k] for k in fields}}))
             (root / 'model.patch').write_text(patch, encoding='utf-8', newline='\n')
-            prepared = official('prepare', root, timeout_s=remaining())
+            prepared = official('prepare', root, timeout_s=remaining(), selected_binding=selected_binding, expected_identity=identity)
             runtime = Runtime(runtime_spec(entry, actor=False), binding={
                 'adapter_id': task_id, 'run_id': run_id or 'direct', 'trial_id': trial_id or 'trial-1', 'manifest_sha256': case_sha256},
                 timeout_s=remaining(), deadline=deadline, mounts=[(root, '/run/hg-swe-grade')])
@@ -260,7 +274,7 @@ def run(spec, artifact_root, *, task_id, run_id, trial_id, timeout_s):
             if not runtime.receipt.get('cleanup', {}).get('complete'):
                 raise RuntimeError('native SWE verifier cleanup failed')
             (root / 'test_output.txt').write_text(output, encoding='utf-8')
-            verdict = official('grade', root, timeout_s=remaining())
+            verdict = official('grade', root, timeout_s=remaining(), selected_binding=selected_binding, expected_identity=identity)
         if (type(verdict.get('resolved')) is not bool or type(verdict.get('patch_successfully_applied')) is not bool
                 or verdict['resolved'] and not (applied and verdict['patch_successfully_applied'])):
             raise ValueError('invalid native official verdict')

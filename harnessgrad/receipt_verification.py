@@ -224,7 +224,10 @@ class ReceiptStore:
         if any("platform" not in p and "improver" not in p for p in problems):
             return []
         if any(not isinstance(run['meta'].get(key), str) for key in
-               ('run_id', 'agent_model', 'agent_backend', 'harness', 'dataset', 'workspace')):
+               ('run_id', 'agent_backend', 'harness', 'dataset', 'workspace')):
+            return []
+        if not isinstance(run['meta'].get('agent_model'), str) and not (
+                run['meta'].get('agent_backend') == 'mock' and run['meta'].get('agent_model') is None):
             return []
         return [r for r, point in sorted(run["points"].items()) if not measurement_problems(point)]
 

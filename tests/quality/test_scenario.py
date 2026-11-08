@@ -16,6 +16,33 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.fixture
+def offline_loop_dependencies(tmp_path, monkeypatch):
+    """Authored wheel metadata for Loop's mock backend; real managed admission.
+
+    No SDK behavior is emulated: these tests use only Loop's stdlib mock path.
+    Keep its real declaration and lock intact so source and runtime identities
+    still pass through preparation, staging, and execution validation.
+    """
+    from test_python_harness_store import wheel
+    from harnessgrad import python_harness_runtime
+
+    wheelhouse = tmp_path / "authored-wheelhouse"
+    for line in (ROOT / "base_harness/loop/requirements.lock").read_text().splitlines():
+        if line and not line.startswith("#"):
+            name, version = line.split("==")
+            wheel(wheelhouse, name=name, version=version)
+    store = tmp_path / "managed-harness-store"
+    monkeypatch.setenv("HG_HARNESS_WHEELHOUSE", str(wheelhouse))
+    monkeypatch.setenv("HG_HARNESS_RUNTIME_ROOT", str(store))
+    monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "uv-cache"))
+    monkeypatch.setenv("UV_OFFLINE", "1")
+    monkeypatch.setenv("UV_PYTHON_DOWNLOADS", "never")
+    yield
+    if store.exists():
+        python_harness_runtime.remove_instance(store)
+
+
 def _spec(**fields):
     spec = {"name": "unit", "dataset": "terminal_bench", "split": "declared",
             "side": "train", "sampling": "all", "rounds": 0, "trials": 1,
@@ -277,7 +304,7 @@ def _run_scenario(tmp_path, run_id, *extra):
 
 
 @pytest.mark.parametrize("extra", [(), ("--sampling=all", "--rounds", "0")])
-def test_scenario_run_records_raw_file_identity(tmp_path, extra):
+def test_scenario_run_records_raw_file_identity(tmp_path, extra, offline_loop_dependencies):
     proc = _run_scenario(tmp_path, "metadata", *extra)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     meta = json.loads((tmp_path/"runs/metadata/run_meta.json").read_text())
@@ -295,9 +322,10 @@ def test_scenario_run_records_raw_file_identity(tmp_path, extra):
     points = [json.loads(line) for line in (tmp_path/"runs/metadata/curve.jsonl").read_text().splitlines()]
     assert len(points) == 1 and sorted(points[0]["per_task"]) == ["t01", "t02", "t03", "t04"]
     assert points[0]["measured_by_platform"] is True
+    assert points[0]["harness_runtime_identity"] == meta["harness_runtime_identity"]
 
 
-def test_same_scenario_preserves_split_sha(tmp_path):
+def test_same_scenario_preserves_split_sha(tmp_path, offline_loop_dependencies):
     for run_id in ("one", "two"):
         proc = _run_scenario(tmp_path, run_id)
         assert proc.returncode == 0, proc.stdout + proc.stderr

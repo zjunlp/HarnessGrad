@@ -1,16 +1,21 @@
 {
   "name": "miniagent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
-  "install": "requirements.txt",
+  "install": "requirements.lock",
+  "runtime": {
+    "kind": "python",
+    "python": "3.12",
+    "requirements": "requirements.lock"
+  },
   "env_kinds": [
     "files"
   ],
   "runtime_paths": [],
   "role": "harness",
-  "notes": "Native MiniAgent runtime vendored from RUC-NLPIR/upstream main at dea1b1d0285e3328234a1e344562bb9e54ce14f7. Only files environments are declared; exec requires a separately provisioned dependency overlay with the same Python ABI. The runtime and resource files are part of this candidate and may be edited by a method.",
+  "notes": "Native MiniAgent runtime vendored from RUC-NLPIR/FlashRSI at dea1b1d0285e3328234a1e344562bb9e54ce14f7. Sandboxed native files tasks use a managed CPython 3.12 environment with the complete requirements.lock. The runtime and resource files remain candidate-owned and may be edited by a method. Container/exec and unsandboxed execution are unsupported.",
   "components": {
     "context": [
       "agent.yaml",
@@ -48,6 +53,7 @@
       "LICENSE.upstream",
       "PROVENANCE.json",
       "README.md",
+      "requirements.lock",
       "requirements.txt",
       "runtime/__init__.py"
     ],

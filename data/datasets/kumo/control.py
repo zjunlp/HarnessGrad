@@ -30,6 +30,8 @@ def run(oracle, platform, task_id, work):
         if oracle:
             setup['files'] += [{'path': '.oracle/' + name, 'content': content}
                                for name, content in kumo.oracle_files(task).items()]
+        # Preserve the selected interpreter's venv spelling for env-python CLIs.
+        os.environ['PATH'] = str(Path(sys.executable).absolute().parent) + os.pathsep + os.environ.get('PATH', '')
         os.environ['HARNESSGRAD_WORK_ROOT'] = str(work)
         result = run_one(repo=harness, task=task, setup=setup, verifier=kumo.VERIFY[task_id],
                          env=kumo.ENV[task_id], sandbox=True,

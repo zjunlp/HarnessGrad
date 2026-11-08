@@ -18,10 +18,13 @@ the platform's final scorer alone does not.
 ## Provisioning
 
 ```sh
-python3 data/datasets/kumo/prepare.py --fetch
+python3 -m tools.prepare_kumo --fetch
 python3 tools/datasets.py --check --dataset kumo
 python3 tools/dataset_lint.py --dataset kumo
 ```
+
+The module entrypoint works from an installed distribution. The existing checkout
+entrypoint `python3 data/datasets/kumo/prepare.py` remains supported.
 
 `--fetch` uses a pinned sparse Git checkout, then audits every candidate twice and
 creates `prepared-v1`. With an existing checkout, omit `--fetch`. Preparation refuses
@@ -111,3 +114,69 @@ and verifier directly through the command-control helpers.
 
 Real model runs use the platform runner/driver and base harness. Keep API receipts
 and diagnostic artifacts outside the repository.
+
+## Dependency and resource boundary
+
+The prepared execution route has no third-party Python dependency: loading uses
+`hashlib/json/pathlib`, the public `kumo.py` client uses the shared stdlib socket
+transport, the host relay loads the selected authenticated private case, and the
+isolated verifier reconstructs rules for the verbatim pinned `vendor/engine.py`.
+There is no environment model, judge model, endpoint or credential requirement.
+The original upstream agents/LLM clients are not this adapter's actor or scorer.
+Native platform runs still require Linux bubblewrap, the platform's supported
+Python and an admissible interpreter location outside hidden sandbox trees.
+Control scripts preserve the invoking virtual environment in `PATH` for the
+actor's Python commands. A package-free virtual environment is a validation
+fixture, not a new required dataset runtime.
+
+Preparation is a separate source boundary: `--fetch` needs Git, HTTPS and the
+pinned upstream repository. Checking an existing Git checkout also invokes Git;
+the downloaded hash-inventory layout checks all source bytes without Git.
+`prepare.py` imports upstream `env.load_env` and audits source environments;
+the bundled stdlib engine alone does **not** establish closure of those upstream
+imports. In the November 2026 offline audit, attempts to retrieve the fixed source
+from raw.githubusercontent.com failed at TLS, so complete pinned-source
+preparation was **not measured**. The original revision, source inventory,
+manifest digest, scorer and license remain unchanged.
+
+`test_stdlib_venv_platform_controls` uses authored prepared cases and an empty
+`venv --without-pip` to run the real bubblewrap runner, actor CLI, private relay
+and verifier: oracle = 1, noop = 0. KUMO scores an empty answer as an incorrect
+answer. Other dedicated tests cover private/public digest changes, private actor
+mount isolation, query budgets and relay cleanup. The authored case replaces the
+release roster only in that test; it does not validate the full 5,290-task pool,
+source preparation, or a model-based harness. Oracle answer material is an
+explicit control-only actor input; ordinary setup never stages it.
+
+Each `load()` and readiness check clears the manifest/roster caches once before
+reading the current manifest and checking its original pinned SHA256. A changed
+manifest is refused even in an already-running console process. Factories then
+reuse the validated selection snapshot, with public/private case bytes checked
+against its digests when selected. Replacing prepared files during an active run
+remains unsupported; a subsequent selection authenticates current bytes. Storage
+configuration resolved at adapter import remains fixed for that process, so
+changing the configured root still requires restarting the host.
+
+### Selected-engine failure audit
+
+The additional authored-case checks in `test_kumo_dataset.py` distinguish
+three boundaries beyond ordinary oracle/noop execution. Missing selected private
+state prevents the real relay from starting and removes its temporary state.
+After an actor has queried the live relay and written the correct candidate,
+killing the test-owned relay process at shutdown invalidates the run and cleans
+up its directory; the answer cannot restore a measured result. Direct isolated
+`python -I -S` execution of the actual projected scorer scores correct/wrong
+candidates as 1/0, then removes a deliberately stale reward when private state is
+missing and exits 3 with unmeasured error evidence.
+
+The actor also attempts to replace the checker, scoring adapter, vendored engine
+and private input with local forgeries; a wrong answer still scores 0 against the
+authenticated source. This adapter restores verifier inputs after the actor exits;
+it does not declare the scorer's own copied files as immutable mounts. Host relay
+state stays outside the actor mount, and only requested observations cross the
+stdlib socket transport. The execution import path is `Game` plus shared
+`Relay`/socket transport, then `scoring.environment` plus the pinned `Environment`;
+these use stdlib modules and local platform code, with no judge/provider imports.
+Native isolation still relies on bubblewrap, the OS and the selected Python
+installation. These selected synthetic checks do not close the unmeasured
+upstream `env.load_env` preparation dependency boundary described above.

@@ -26,8 +26,10 @@ sandbox, the receipts — and never needs to know what your three do.
 
 ## Stage 1 — a harness
 
-**1.1 Copy the smallest working example.** `base_harness/loop` is a complete harness in one
-file; `base_harness/miniagent` is the smallest. Copy, do not edit in place.
+**1.1 Copy the closest working example.** `base_harness/loop` is a complete harness in one
+file. `base_harness/miniagent` includes a native runtime and a managed CPython 3.12
+dependency lock; follow its README for preparation and sandboxed driver checks
+instead of the legacy smoke path below. Copy, do not edit in place.
 
 **1.2 Write `harness.json`.** It must declare:
 

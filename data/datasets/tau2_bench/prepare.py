@@ -17,15 +17,17 @@ policy and the tool schemas.
 
 Usage
 -----
-    <runtime>/bin/python data/datasets/tau2_bench/prepare.py --source <extracted v0.1.0 tree> \
+    python -m tools.prepare_tau2_bench --source <extracted v0.1.0 tree> \
         --target <fresh dataset root>/tau2-bench
     python3 data/datasets/tau2_bench/prepare.py --check-only --target <prepared root> \
         --runtime <Python 3.13 runtime directory>
 
-Generation requires Python 3.13 and publishes a complete fresh directory by atomic rename.
+The standard-library controller launches the selected managed Python 3.13 artifact.
+Generation publishes a complete fresh directory by atomic no-replace rename.
 --reuse-bundle regenerates into temporary storage and proves reproducibility, without
-replacing existing assets. Check-only can run on Python 3.12 and never imports tau2; its
-runtime probe checks module discovery and installed metadata, not model/provider health.
+replacing existing assets. The platform controller can run on Python 3.12. Check-only starts a bytecode-free
+managed worker and never imports tau2; its runtime probe checks discovery and metadata,
+not model/provider health. Normal preparation never installs dependencies.
 """
 import sys
 
@@ -44,20 +46,50 @@ from collections import Counter
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from data.datasets import tau2_bench as dataset  # noqa: E402
+
 
 ASSETS = pathlib.Path(__file__).resolve().parent
+import hashlib as _source_hashlib
+if '__executed_source_sha256__' not in globals():
+    __executed_source_sha256__ = _source_hashlib.sha256(ASSETS.joinpath('prepare.py').read_bytes()).hexdigest()
 MAX_STEPS = 200
 MAX_ERRORS = 10
 
 
+def _controller():
+    import hashlib
+    import types
+    path = ROOT / 'tools/_tau_prepare.py'
+    if path.is_symlink() or path.resolve(strict=True) != path:
+        raise ValueError('Tau preparation controller requires a physical source file')
+    raw = path.read_bytes()
+    identity = globals().get('__tau_source_identity__')
+    if identity and hashlib.sha256(raw).hexdigest() != identity['tools/_tau_prepare.py']:
+        error = ValueError('Tau preparation controller source changed')
+        error.preparation_source_changed = True
+        raise error
+    module = types.ModuleType('_tau_preparation_controller')
+    module.__file__ = str(path)
+    module.__dict__['__tau_source_identity__'] = identity
+    module.__dict__['__executed_source_sha256__'] = hashlib.sha256(raw).hexdigest()
+    exec(compile(raw, str(path), 'exec'), module.__dict__)
+    if identity is None:
+        identity = module.source_identity()
+        if identity['data/datasets/tau2_bench/prepare.py'] != __executed_source_sha256__:
+            raise module.PreparationSourceChanged('Tau preparation entry source changed')
+        globals()['__tau_source_identity__'] = identity
+        module.__dict__['__tau_source_identity__'] = identity
+    module.verify_sources(identity)
+    return module
+
+
+dataset = _controller().owned_module(ROOT / 'data/datasets/tau2_bench.py', '_tau2_prepare_dataset', globals().get('__tau_source_identity__'))
+
+
 def _bootstrap_module():
     # No sys.path mutation or importing the official package during read-only inspection.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("tau2_prepare_bootstrap", ASSETS / "lib/bootstrap.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return _controller().owned_module(ASSETS / 'lib/bootstrap.py', 'tau2_prepare_bootstrap',
+                                      globals().get('__tau_source_identity__'))
 
 
 def _safe_file(root: pathlib.Path, relative: str) -> pathlib.Path:
@@ -165,10 +197,10 @@ def check_runtime(runtime: pathlib.Path) -> dict:
     return info
 
 
-def check_only(target: pathlib.Path, runtime: pathlib.Path | None = None) -> dict:
+def check_only(target: pathlib.Path, runtime: pathlib.Path) -> dict:
     _bootstrap_module().validate_bundle(target / "bundle")
     manifest = validate_cases(target)
-    info = check_runtime(runtime if runtime is not None else target / "runtime")
+    info = check_runtime(runtime)
     return {"tasks": len(manifest["tasks"]), "manifest_sha256": digest(target / "manifest.json"),
             "runtime": info, "check_only": True}
 
@@ -217,6 +249,8 @@ def prepare(source: pathlib.Path, target: pathlib.Path, reuse: bool = False) -> 
     if sys.version_info[:2] != (3, 13):
         raise ValueError("tau2 preparation requires Python 3.13")
     existing = target.exists()
+    if reuse and not existing:
+        raise ValueError("reuse requires an existing payload; it never creates or repairs one")
     if existing:
         if not reuse:
             raise ValueError("target already exists; use a fresh target or --reuse-bundle to check reproducibility")
@@ -232,7 +266,7 @@ def prepare(source: pathlib.Path, target: pathlib.Path, reuse: bool = False) -> 
         if not existing:
             if target.exists():
                 raise ValueError("target appeared during preparation; refusing to overwrite it")
-            staged.rename(target)  # Same filesystem: the complete payload becomes visible at once.
+            _controller().publish(staged, target)
         return manifest
 
 
@@ -328,27 +362,43 @@ def _constructor(domain: str, total: pathlib.Path, config: dict, task):
     return lambda **kwargs: constructor(**kwargs)
 
 
+def _managed_operation(operation, options, runtime):
+    target = pathlib.Path(options['target'])
+    if operation == 'check':
+        return check_only(target, pathlib.Path(runtime['path']))
+    manifest = prepare(pathlib.Path(options['source']), target, options.get('reuse', False))
+    return {'tasks': len(manifest['tasks']), 'manifest_sha256': digest(target / 'manifest.json')}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--source", help="extracted v0.1.0 tree (preparation only)")
-    parser.add_argument("--target", required=True, help="prepared dataset root")
-    parser.add_argument("--runtime", help="Python 3.13 runtime directory (default: <target>/runtime)")
+    parser.add_argument("--target", help="prepared dataset root")
+    parser.add_argument("--runtime", help="must name the selected managed execution artifact")
     parser.add_argument("--check-only", action="store_true",
                         help="validate pins, both case halves and runtime readiness; no writes or model calls")
     parser.add_argument("--reuse-bundle", action="store_true",
                         help="read an existing payload's bundle and prove identical regeneration; never overwrite")
+    parser.add_argument("--prepare-runtime", action="store_true", help="explicitly build the managed execution artifact")
     args = parser.parse_args()
+    from harnessgrad import dataset_runtime
+    if args.prepare_runtime and (args.check_only or args.reuse_bundle or args.runtime or args.source or args.target):
+        parser.error("--prepare-runtime is a separate action")
+    if args.prepare_runtime:
+        print(json.dumps(dataset_runtime.prepare_execution("tau2_bench"), sort_keys=True))
+        return 0
+    if not args.target:
+        parser.error("--target is required")
     if not args.check_only and not args.source:
         parser.error("--source is required for preparation (not for --check-only)")
     try:
         target = pathlib.Path(args.target)
-        if args.check_only:
-            result = check_only(target, pathlib.Path(args.runtime) if args.runtime else None)
-        else:
-            manifest = prepare(pathlib.Path(args.source), target, args.reuse_bundle)
-            result = {"tasks": len(manifest["tasks"]), "manifest_sha256": digest(target / "manifest.json")}
-    except (OSError, ValueError, KeyError, TypeError, ImportError) as exc:
+        run = _controller().run
+        result = run('tau2_bench', 'check' if args.check_only else 'prepare',
+                     {'target': str(target), 'source': args.source, 'reuse': args.reuse_bundle},
+                     runtime_override=args.runtime)
+    except (OSError, ValueError, KeyError, TypeError, ImportError, RuntimeError) as exc:
         print(f"tau2 preparation failed: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))

@@ -688,7 +688,7 @@ def test_corpus_aggregation_declaration_is_live(unequal_episode_results, monkeyp
         dataset.aggregate(unequal_episode_results[1], unequal_episode_results[0])
 
 
-def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monkeypatch):
+def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monkeypatch, request):
     from data.datasets.personamem_v2 import prepare
     raw = tmp_path / "raw"
     history_name = "data/chat_history_32k/history.json"
@@ -723,6 +723,30 @@ def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monke
     monkeypatch.setattr(prepare, "source_pins", lambda: (pins, "a" * 64))
     monkeypatch.setattr(prepare, "COUNTS", {"train": 3, "val": 1, "benchmark": 1})
     output = tmp_path / "prepared"
+    # The authored CSV/history fixture exercises preparation without host packages.
+    import tempfile
+    import venv
+    runtime_dir = tempfile.TemporaryDirectory(prefix='hg-personamem-prepare-', dir=Path.home())
+    request.addfinalizer(runtime_dir.cleanup)
+    runtime = Path(runtime_dir.name)
+    venv.EnvBuilder(with_pip=False).create(runtime)
+    script = """
+import json, sys
+from pathlib import Path
+assert not list((Path(sys.prefix) / 'lib').glob('python*/site-packages/*'))
+from data.datasets.personamem_v2 import prepare
+pins = json.loads(sys.argv[3])
+prepare.source_pins = lambda: (pins, 'a' * 64)
+prepare.COUNTS = {'train': 3, 'val': 1, 'benchmark': 1}
+result = prepare.prepare(Path(sys.argv[1]), Path(sys.argv[2]))
+assert result['episodes'] == 3 and result['questions'] == 4, result
+"""
+    child = subprocess.run([str(runtime / 'bin/python'), '-c', script, str(raw),
+                            str(tmp_path / 'stdlib-prepared'), json.dumps(pins)],
+                           cwd=Path(__file__).resolve().parents[2],
+                           env={**os.environ, 'PYTHONNOUSERSITE': '1'},
+                           capture_output=True, text=True, timeout=60)
+    assert child.returncode == 0, child.stdout + child.stderr
     result = prepare.prepare(raw, output)
     assert result["episodes"] == 3 and result["questions"] == 4
     assert result["original_questions"] == 5 and result["excluded_questions"] == 1
@@ -761,7 +785,7 @@ def test_prepare_keeps_native_membership_and_checks_source_bytes(tmp_path, monke
 
 
 def test_complete_release_inventory_native_overlap_and_gold_parity():
-    if not (dataset.PREPARED_ROOT / "manifest.json").is_file():
+    if not dataset.provision_status()["present"]:
         pytest.skip("provision the pinned release to audit full native divisions")
     rows = dataset.rows()
     assert len(rows) == 1735 and sum(r["question_count"] for r in rows.values()) == 25609
@@ -796,3 +820,236 @@ def test_complete_release_inventory_native_overlap_and_gold_parity():
             assert score_answer("\\boxed{" + q["correct_letter"] + "}", q["correct_letter"]) == 1
             scored += 1
     assert scored == 25609
+
+
+def test_stdlib_venv_platform_controls(prepared, tmp_path, request):
+    """Complete oracle/wrong/noop episodes with no installed Python packages."""
+    import venv
+    import tempfile
+    runtime_dir = tempfile.TemporaryDirectory(prefix='hg-stdlib-control-', dir=Path.home())
+    request.addfinalizer(runtime_dir.cleanup)
+    runtime = Path(runtime_dir.name)
+    venv.EnvBuilder(with_pip=False).create(runtime)
+    root = Path(__file__).resolve().parents[2]
+    script = """
+import os, sys
+from pathlib import Path
+assert not list((Path(sys.prefix) / 'lib').glob('python*/site-packages/*'))
+from data.datasets import personamem_v2 as dataset
+from data.datasets.personamem_v2 import control
+assert dataset.load()[0][0]['task_id'] == sys.argv[1]
+for mode, expected in [('oracle', 1), ('wrong', 0), ('noop', None)]:
+    work = Path(sys.argv[2]) / mode
+    work.mkdir()
+    result = control.run(mode, True, sys.argv[1], work)
+    assert result['score'] == expected, result
+    assert os.environ['PATH'].split(os.pathsep)[0] == str(Path(sys.executable).absolute().parent)
+    assert result['detail']['runtime_services']['tool_relay']['cleanup'] == {'complete': True, 'errors': []}
+    if mode == 'noop':
+        assert result['evidence']['reason'] == 'incomplete_episode', result
+"""
+    result = subprocess.run([str(runtime / 'bin/python'), '-c', script, prepared[0], str(tmp_path)],
+                            cwd=root, env={**os.environ, 'PYTHONPATH': str(root),
+                                           'PYTHONNOUSERSITE': '1',
+                                           'HG_DATA_PERSONAMEM_V2': str(dataset.PREPARED_ROOT.parent)},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_unconfigured_storage_status_is_diagnostic(monkeypatch, tmp_path):
+    from harnessgrad import paths
+    monkeypatch.setattr(paths, '_settings', lambda: {})
+    monkeypatch.setattr(dataset, 'DATASET_ROOT', paths.DatasetPath('unconfigured'))
+    status = dataset.provision_status()
+    assert status['present'] is False
+    assert status['status'] == 'config_missing'
+    assert status['root'] is None
+    assert 'HG_DATA_ROOT' in status['detail']
+    assert 'HG_DATA_UNCONFIGURED' in status['detail']
+    assert 'DatasetPath(' not in str(status)
+
+    # An authenticated-data failure with configured storage is not missing config.
+    monkeypatch.setattr(paths, '_settings', lambda: {'HG_DATA_UNCONFIGURED': str(tmp_path)})
+    def broken():
+        raise ValueError('prepared artifact digest mismatch')
+    monkeypatch.setattr(dataset, 'rows', broken)
+    status = dataset.provision_status()
+    assert status['root'] == str(tmp_path)
+    assert status.get('status') != 'config_missing'
+    assert status['detail'] == 'prepared artifact digest mismatch'
+    monkeypatch.setattr(dataset, 'PREPARED_ROOT', paths.DatasetPath('unconfigured', ('prepared',)))
+    def unavailable():
+        raise paths.DataRootNotConfigured('Set HG_DATA_ROOT or HG_DATA_PERSONAMEM_V2')
+    monkeypatch.setattr(dataset, 'rows', unavailable)
+    with pytest.raises(AttributeError, match='HG_DATA_PERSONAMEM_V2') as error:
+        getattr(dataset, 'NATIVE_SPLITS')
+    assert isinstance(error.value.__cause__, paths.DataRootNotConfigured)
+    assert 'DatasetPath(' not in str(error.value)
+
+
+def test_registry_selection_refreshes_authenticated_pool_once(prepared, monkeypatch, tmp_path):
+    tid, payload, gold = prepared
+    root = dataset.PREPARED_ROOT
+    monkeypatch.setattr(dataset, 'DATASET_ROOT', root.parent)
+    calls = []
+    original = storage.pool
+    def counted(path):
+        calls.append(path)
+        return original(path)
+    monkeypatch.setattr(storage, 'pool', counted)
+    before = registry.load('personamem_v2')[0][0]
+    assert '2 history messages' in before['goal']
+    # Factory and repeated row reads reuse the selection's authenticated snapshot.
+    for _ in range(5):
+        dataset.rows()
+        dataset.SETUP[tid]
+    assert len(calls) == 1
+
+    payload['chunks'].append('THIRD_AUTHORED_MESSAGE')
+    payload.pop('input_sha256')
+    payload['input_sha256'] = digest(payload)
+    gold.update(chunk_count=3, input_sha256=payload['input_sha256'])
+    pool = json.loads((root / 'pool.json').read_text())
+    pool[0].update(chunk_count=3, input_sha256=payload['input_sha256'])
+    metadata = storage.manifest(root)
+    for name, value in [('pool.json', pool), (f'service/{tid}.json', payload), (f'gold/{tid}.json', gold)]:
+        path = root / name
+        path.write_text(canonical(value) + '\n')
+        metadata['artifacts'][name] = storage.file_sha(path)
+    (root / 'manifest.json').write_text(canonical(metadata) + '\n')
+    after = registry.load('personamem_v2')[0][0]
+    assert '3 history messages' in after['goal']
+    assert len(calls) == 2
+    current_context = json.loads(dataset.SETUP[tid]['tool_relay']['content'])
+    assert current_context['chunks'][-1] == 'THIRD_AUTHORED_MESSAGE'
+    assert current_context['input_sha256'] == payload['input_sha256']
+    assert 'correct_letter' not in canonical(current_context)
+    work = tmp_path / 'fresh-control'
+    work.mkdir()
+    fresh = control.run('oracle', True, tid, work)
+    assert fresh['score'] == 1, fresh
+    assert dataset.provision_status()['present'] is True
+    assert len(calls) == 3
+
+    # Metadata-only discovery must authenticate current bytes too.
+    (root / 'pool.json').write_text('[]')
+    with pytest.raises(AttributeError, match='digest or path mismatch') as error:
+        getattr(dataset, 'NATIVE_SPLITS')
+    assert isinstance(error.value.__cause__, ValueError)
+    with pytest.raises(ValueError, match='digest or path mismatch'):
+        registry.load('personamem_v2')
+    status = dataset.provision_status()
+    assert status['present'] is False
+    assert 'digest or path mismatch' in status['detail']
+
+
+def test_completed_episode_cannot_score_after_real_relay_crash(prepared, tmp_path, monkeypatch):
+    handles = []
+    completed_states = []
+    original_start = control.tool_relay.start
+    def start(*args, **kwargs):
+        handle = original_start(*args, **kwargs)
+        handles.append(handle)
+        original_stop = handle.stop
+        def crash_on_stop():
+            try:
+                if handle.proc.poll() is None:
+                    try:
+                        completed_states.append(control.call(handle.path, 'next'))
+                    finally:
+                        handle.proc.kill()
+                        handle.proc.wait(timeout=5)
+            finally:
+                original_stop()
+        handle.stop = crash_on_stop
+        return handle
+    monkeypatch.setattr(control.tool_relay, 'start', start)
+    work = tmp_path / 'control'
+    work.mkdir()
+    result = control.run('oracle', True, prepared[0], work)
+    assert completed_states == [{'kind': 'done'}]
+    assert result['score'] is None, result
+    assert result['detail']['invalid']['stage'] == 'tool relay', result
+    service = result['detail']['runtime_services']['tool_relay']
+    assert service['faults'], service
+    assert service['cleanup'] == {'complete': True, 'errors': []}
+    assert handles[0].proc.returncode == -9
+    assert not handles[0].directory.exists()
+
+
+@pytest.mark.parametrize('missing', ['gold', 'record'])
+def test_real_scorer_missing_state_removes_previous_reward(prepared, tmp_path, missing):
+    import shutil
+    tid, payload, _ = prepared
+    spec = dataset.VERIFY[tid]
+    work = tmp_path / 'scorer'
+    work.mkdir()
+    for entry in spec['inputs']:
+        target = work / entry['path']
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if Path(entry['from']).is_dir():
+            shutil.copytree(entry['from'], target)
+        else:
+            shutil.copyfile(entry['from'], target)
+    record = work / 'trusted_episode/episode.json'
+    record.parent.mkdir()
+    record.write_text(canonical(completed_record(payload)))
+    command = [sys.executable, '-I', '-S', *spec['argv'][2:]]
+    correct = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert correct.returncode == 0, correct.stderr
+    assert (work / 'verifier/reward.txt').read_text().strip() == '1.0'
+    record.write_text(canonical(completed_record(payload, r'\boxed{a}')))
+    wrong = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert wrong.returncode == 0, wrong.stderr
+    assert (work / 'verifier/reward.txt').read_text().strip() == '0.0'
+    (work / 'verifier/reward.txt').write_text('1\n')
+    (record if missing == 'record' else work / 'personamem_verify/gold.json').unlink()
+    failed = subprocess.run(command, cwd=work, capture_output=True, text=True, timeout=30)
+    assert failed.returncode == 3, failed.stderr
+    assert not (work / 'verifier/reward.txt').exists()
+    evidence = json.loads((work / 'verifier/evidence.json').read_text())
+    assert evidence['measured'] is False
+    assert evidence['reason'] == 'scorer_error'
+    assert 'FileNotFoundError' in evidence['detail']
+
+
+def test_missing_episode_state_refuses_relay_start_and_cleans_up(prepared, tmp_path, monkeypatch):
+    setup = copy.deepcopy(dataset.SETUP[prepared[0]])
+    episode = json.loads(setup['tool_relay']['content'])
+    episode.pop('chunks')
+    setup['tool_relay']['content'] = canonical(episode)
+    temporary = tmp_path / 'startup'
+    temporary.mkdir()
+    monkeypatch.setattr(control.tool_relay.tempfile, 'tempdir', str(temporary))
+    with pytest.raises(RuntimeError, match='invalid episode input'):
+        control.tool_relay.start(setup, context={'task_id': prepared[0], 'run_id': 'startup', 'trial_id': 'trial-1'})
+    assert not list(temporary.iterdir())
+
+
+def test_real_scorer_projection_is_read_only(prepared, tmp_path):
+    from eval.verification.verifier import _verify
+    tid, payload, _ = prepared
+    spec = copy.deepcopy(dataset.VERIFY[tid])
+    work = tmp_path / 'readonly'
+    work.mkdir()
+    record = work / 'trusted_episode/episode.json'
+    record.parent.mkdir()
+    record.write_text(canonical(completed_record(payload)))
+    check = spec['argv'][2]
+    wrapper = tmp_path / 'probe.py'
+    wrapper.write_text('''import errno, runpy, sys
+from pathlib import Path
+for target in ('personamem_scorer/lib/scoring.py', 'personamem_scorer/WRITE_PROBE'):
+    try:
+        Path(target).write_text('raise RuntimeError("mutated")')
+    except OSError as exc:
+        assert exc.errno in (errno.EROFS, errno.EACCES, errno.EPERM), exc
+    else:
+        raise AssertionError('scorer projection was writable: ' + target)
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name='__main__')
+''')
+    spec['inputs'].append({'path': 'probe.py', 'from': str(wrapper)})
+    spec['argv'] = [sys.executable, '-I', 'probe.py', check, *spec['argv'][3:]]
+    verdict = _verify(work, spec, '', sandbox=True, timeout_s=30)
+    assert verdict['score'] == 1, verdict

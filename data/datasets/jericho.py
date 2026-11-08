@@ -75,6 +75,7 @@ from pathlib import Path
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "jericho"
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
@@ -215,30 +216,32 @@ def _goal(record: dict) -> str:
 
 
 def _setup(record: dict) -> dict:
-    """What the agent receives: the CLI, its library, the game's identity, and the ROM.
-
-    The ROM has to be here and not only in `VERIFY.inputs`, which cost a platform control run
-    to learn: measured, `--oracle --platform` scored 0 with "the log holds no actions", because
-    the harness's `jer do ...` could not start the game -- the harness and the check share one
-    workdir, and the ROM had only been written for the check. The platform's own dataset
-    pattern (ALFWorld, ScienceWorld) puts everything both sides need in `SETUP` **and** in
-    `VERIFY.inputs`, and that is now what this does.
-
-    The ROM is not a secret -- it is the game, and the agent cannot play without it. The
-    *answer* is the walkthrough. The agent sees a stripped package projection;
-    the installed reference-bearing package is reserved for trusted verification.
-    """
+    """Publish only a stdlib client and bind the trusted single-game service."""
+    import hashlib
     import json
+    from harnessgrad.dataset_runtime import bind, resolve_execution
 
-    return {"files": [
-        {"path": LOG_FILE, "content": ""},
-        {"path": GAME_FILE,
-         "content": json.dumps({"task_id": record["task_id"], "rom": record["rom"],
-                                "seed": record["seed"]})},
-        {"path": "jer_env.py", "from": str(LIB_DIR / "jer_env.py")},
-        {"path": "jer", "from": str(CLI_DIR / "jer")},
-        {"path": record["rom"], "from": str(record["path"])},
-    ]}
+    binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "service")
+    rom = Path(record["path"]).resolve(strict=True)
+    digest = hashlib.sha256(rom.read_bytes()).hexdigest()
+    return {
+        "files": [
+            {"path": LOG_FILE, "content": ""},
+            {"path": GAME_FILE, "content": json.dumps({"task_id": record["task_id"],
+                "rom": record["rom"], "seed": record["seed"]})},
+            {"path": "jer", "from": str(CLI_DIR / "jer-relay")},
+        ],
+        "tool_relay": {
+            "program": str(ASSETS / "relay.py"), "filename": "case.json",
+            "content_flag": "--case-spec",
+            "content": json.dumps({"rom_path": str(rom), "rom_sha256": digest,
+                                   "seed": record["seed"]}),
+            "python": binding["python"], "python_runtime": binding,
+            "read_paths": [str(rom), str(ASSETS / "lib"),
+                           str(ASSETS / "relay.py"),
+                           str(ASSETS.parents[2] / "eval" / "service")],
+        },
+    }
 
 
 def _verifier(record: dict) -> dict:
@@ -329,15 +332,22 @@ _LOAD_ERROR: str | None = None
 
 
 def _env() -> dict:
-    import importlib.util
+    return dict(DEFAULT_ENV)
 
-    spec = importlib.util.find_spec("jericho")
-    if spec is None or not spec.origin:
-        raise ValueError("jericho runtime is not installed")
-    runtime_spec = importlib.util.spec_from_file_location("_jericho_public_runtime", ASSETS / "runtime.py")
-    runtime = importlib.util.module_from_spec(runtime_spec)
-    runtime_spec.loader.exec_module(runtime)
-    return {**DEFAULT_ENV, "agent_runtime": runtime.agent_runtime(str(Path(spec.origin).parent))}
+
+def command_control(task_id=None) -> dict:
+    """Resolve a private native control snapshot inside the managed loader."""
+    import json
+    if task_id is None:
+        raise ValueError("--task-id is required; controls must explicitly select approved games")
+    record = next((r for r in __getattr__("_RECORDS") if r["task_id"] == task_id), None)
+    if record is None:
+        raise ValueError(f"unknown task id {task_id!r}")
+    return {"record": {"task_id": task_id},
+            "task": {"task_id": task_id, "goal": _goal(record), "inputs": []},
+            "setup": _setup(record), "verifier": _verifier(record), "env": _env(),
+            "oracle_files": {".oracle/actions.json": json.dumps(record["walkthrough"])},
+            "noop_expected": 0.0}
 
 
 def provision_status() -> dict:
@@ -363,7 +373,7 @@ def load() -> tuple[list[dict], dict[str, str]]:
         raise ValueError(
             f"jericho: cannot read the game suite ({_LOAD_ERROR}). Provision it with "
             f"`python3 tools/datasets.py --fetch --dataset jericho` and install "
-            f"`jericho==3.3.1`.")
+            f"the declared Jericho managed dataset runtime.")
     if not records:
         raise ValueError(f"jericho: no games under {games_dir()}")
     tasks = [{"task_id": r["task_id"], "goal": _goal(r), "inputs": []} for r in records]

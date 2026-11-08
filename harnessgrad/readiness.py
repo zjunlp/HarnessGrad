@@ -36,6 +36,7 @@ from __future__ import annotations
 import json
 import importlib.util
 import os
+import re
 import shlex
 import shutil
 import shlex
@@ -154,23 +155,64 @@ def _method_plan(args):
     entry = getattr(args, 'method_entrypoint', None)
     if not entry:
         return {'error': 'improvement rounds need --method-entrypoint (or experiment method)'}
-    from harnessgrad.methods import _check_method_entrypoint
+    from harnessgrad.methods import _check_method_entrypoint, _script_argument
     argv = shlex.split(entry) if isinstance(entry, str) else entry
     if not argv or not (Path(argv[0]).is_file() or shutil.which(argv[0])):
         return {'error': 'method executable is missing'}
     problem = _check_method_entrypoint(argv)
     if problem:
         return {'error': problem}
-    if any(part.endswith('.py') and not Path(part).is_file() for part in argv):
+    if any(script is not None and not Path(script).is_file()
+           for script in map(_script_argument, argv)):
         return {'error': 'method script is missing; use an existing absolute entrypoint'}
     method = None
     for arg in argv:
-        path = Path(arg)
+        script = _script_argument(arg)
+        if script is None:
+            continue
+        path = Path(script)
         if path.name == 'run.py' and path.parent.parent.resolve() == (PLATFORM_ROOT / 'methods').resolve():
             method = path.parent
             break
     if method is None:
         return {'custom': True}  # A self-contained external method may need no editor.
+    if method.name == 'lightrsi':
+        # LightRSI parses --base from the actual entrypoint argv, not from a
+        # separate experiment field. It may skip the base only after observing
+        # a saturated incumbent, which cannot be assumed during preflight.
+        options = []
+        rest = list(argv)[list(argv).index(str(method / 'run.py')) + 1:] if str(method / 'run.py') in argv else list(argv)
+        for index, part in enumerate(rest):
+            if part == '--base':
+                if index + 1 >= len(rest) or rest[index + 1].startswith('--'):
+                    return {'error': 'LightRSI requires --base NAME or --base /absolute/path/to/script.py'}
+                options.append(rest[index + 1])
+            elif part.startswith('--base='):
+                options.append(part.partition('=')[2])
+        if not options or not options[-1]:
+            return {'error': 'LightRSI requires --base NAME or --base /absolute/path/to/script.py'}
+        base = options[-1]
+        if '/' in base or base.endswith('.py'):
+            path = Path(base)
+            if not path.is_absolute():
+                return {'error': 'LightRSI --base script path must be absolute'}
+        elif re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', base):
+            path = PLATFORM_ROOT / 'methods' / base / 'run.py'
+        else:
+            return {'error': 'LightRSI --base must be a method name or absolute script path'}
+        if not path.is_file():
+            return {'error': f'LightRSI base entrypoint does not exist: {path}'}
+        if path.resolve() == (PLATFORM_ROOT / 'methods/lightrsi/run.py').resolve():
+            return {'error': 'LightRSI cannot wrap itself'}
+        base_manifest = path.parent / 'method.json'
+        base_requires = json.loads(base_manifest.read_text()).get('requires') or {} if base_manifest.is_file() else {}
+        if not isinstance(base_requires, dict):
+            raise ValueError('base method requires must be an object')
+        name = path.parent.name
+        return {'name': name, 'requires': base_requires, 'wrapper': True,
+                'needs_editor': bool(base_requires.get('editor_model')),
+                'endpoint_only': bool(base_requires.get('editor_model')) or name == 'rrsi'
+                    or (name == 'meta_harness' and rounds > 1)}
     manifest = json.loads((method / 'method.json').read_text())
     if manifest.get('kind') not in ('published', 'improver'):
         return {'custom': True}
@@ -239,22 +281,25 @@ def configuration_checks(args):
         # differently: `editor` is "the model that proposes edits is not configured",
         # `method` is "this method cannot run this experiment". Collapsing them made a
         # missing HG_METHOD_* look like a property of the method.
-        editor = _editor_plan(args, method)
-        editor_error = editor.get('error')
-        if editor.get('kind') == 'cli':
-            path = editor.get('path')
-            if not path or not (Path(path).is_file() or shutil.which(path)):
-                editor_error = 'selected CLI improver executable is missing'
-            if method['endpoint_only']:
-                direct = current().method
-                if not all((direct.base_url, direct.model, direct.api_key)):
-                    editor_error = 'this method has structured roles requiring HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY as well as its CLI editor'
-        elif not editor_error:
-            missing = [label for label in ('base_url','model','key') if not editor.get(label)]
-            if missing:
-                editor_error = 'method editor needs HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY (or an explicitly configured improver)'
-        if editor_error:
-            checks.append(Check('editor', True, False, editor_error))
+        if method.get('needs_editor', True):
+            editor = _editor_plan(args, method)
+            editor_error = editor.get('error')
+            if editor.get('kind') == 'cli':
+                path = editor.get('path')
+                if not path or not (Path(path).is_file() or shutil.which(path)):
+                    editor_error = 'selected CLI improver executable is missing'
+                if method['endpoint_only']:
+                    direct = current().method
+                    if not all((direct.base_url, direct.model, direct.api_key)):
+                        editor_error = 'this method has structured roles requiring HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY as well as its CLI editor'
+            elif not editor_error:
+                missing = [label for label in ('base_url','model','key') if not editor.get(label)]
+                if missing:
+                    editor_error = 'method editor needs HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY (or an explicitly configured improver)'
+            if editor_error:
+                if method.get('wrapper'):
+                    editor_error = f"LightRSI base {method['name']} may run unless the incumbent is saturated: {editor_error}"
+                checks.append(Check('editor', True, False, editor_error))
         error = None
         requires = method['requires']
         minimum = requires.get('min_trials', 1)
@@ -280,7 +325,9 @@ def configuration_checks(args):
                 paths = [p for values in modules.values() for p in values]
                 if len(paths)!=len(set(paths)) or any(not _resource(root,p) for p in paths):
                     error = 'ModularRSI modules need disjoint existing harness files'
-        checks.append(Check('method', True, not error, error or f"{method['name']}: local requirements configured; editor checked separately"))
+        checks.append(Check('method', True, not error, error or
+            (f"LightRSI base {method['name']}: potential requirements checked; saturated rounds may skip it"
+             if method.get('wrapper') else f"{method['name']}: local requirements configured; editor checked separately")))
     except (OSError, ValueError, TypeError, AttributeError) as exc:
         checks.append(Check('method', True, False, f'method configuration is invalid ({type(exc).__name__})'))
     return checks
@@ -308,7 +355,7 @@ def endpoint_checks(args):
     if agent.backend != 'mock':
         checks.append(_probe_endpoint('agent-endpoint', agent.base_url, agent.api_key))
     method = _method_plan(args)
-    if method and not method.get('custom') and not method.get('error'):
+    if method and not method.get('custom') and not method.get('error') and method.get('needs_editor', True):
         editor = _editor_plan(args, method)
         if editor.get('kind') == 'openai-compatible':
             checks.append(_probe_endpoint('method-endpoint', editor.get('base_url'), editor.get('key')))
@@ -403,12 +450,15 @@ def method_checks(args) -> list[Check]:
         return [Check("method", True, False, "improvement rounds need --method-entrypoint")]
     try:
         argv = shlex.split(entry) if isinstance(entry, str) else list(entry)
-        from harnessgrad.methods import _check_method_entrypoint
+        from harnessgrad.methods import _check_method_entrypoint, _script_argument
         problem = _check_method_entrypoint(argv)
         if problem:
             return [Check("method", True, False, problem)]
+        script = next((Path(value) for part in argv
+                       if (value := _script_argument(part)) is not None), None)
+        if script is not None and script.resolve() == (PLATFORM_ROOT / "methods/lightrsi/run.py").resolve():
+            return [check for check in configuration_checks(args) if check.name in ("method", "editor")]
         checks = [Check("method", True, True, "entrypoint exists; execution is not probed")]
-        script = next((Path(part) for part in argv if part.endswith(".py")), None)
         manifest = script.parent / "method.json" if script is not None else None
         requirements = (json.loads(manifest.read_text(encoding="utf-8")).get("requires") or {}
                         if manifest is not None and manifest.is_file() else {})

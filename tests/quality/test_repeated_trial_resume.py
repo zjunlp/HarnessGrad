@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from eval.run import repeated_trials, runner
+from harnessgrad import verification_context
 from harnessgrad.loops import eval_side
 
 
@@ -23,12 +24,24 @@ def session(tmp_path, monkeypatch):
     state = SimpleNamespace(run=run, tasks=tasks, args=args, verifiers=verifiers,
                             calls=[], results=[], sha='harness-a', interrupt=None,
                             interrupt_trial=None, actor_exit=0)
+    def preflight(*, persist=True):
+        # Match driver preflight and persisted metadata before entering the eval loop.
+        args.verification_context = verification_context.capture(
+            state.tasks, {task['task_id']: 'metric' for task in state.tasks},
+            {}, verifiers, {}, sandbox=args.sandbox)
+        if persist:
+            metadata = json.loads((run / 'run_meta.json').read_text())
+            metadata.update(verification_context.fields(args.verification_context))
+            (run / 'run_meta.json').write_text(json.dumps(metadata))
+    state.preflight = preflight
+    preflight()
     monkeypatch.setenv('HARNESSGRAD_SEED', '0')
     monkeypatch.setattr(eval_side, 'commit_state', lambda *a: state.sha)
     monkeypatch.setattr(eval_side, '_identity', lambda *a, **kw: {})
     monkeypatch.setattr(eval_side, '_env_record', lambda *a: {})
     monkeypatch.setattr(eval_side, '_curve_point', lambda **kw: {
-        'per_task': dict(zip(kw['task_ids'], kw['scores'])), 'score_std': kw['score_std']})
+        'per_task': dict(zip(kw['task_ids'], kw['scores'])), 'score_std': kw['score_std'],
+        **verification_context.fields(kw['verification_context'])})
     monkeypatch.setattr(eval_side, '_save_verdicts', lambda *a: None)
     monkeypatch.setattr(eval_side, '_save_traces', lambda *a, **kw: None)
     monkeypatch.setattr(eval_side.console, 'results', lambda *a, **kw: None)
@@ -61,10 +74,15 @@ def session(tmp_path, monkeypatch):
 
 
 def interrupted(session):
+    session.preflight()
     session.interrupt = 'b'
     with pytest.raises(KeyboardInterrupt):
         session.execute()
     assert [c[0] for c in session.calls] == ['a'] * 3
+    saved = eval_side._progress_results(session.run)
+    assert set(saved) == {'a'}
+    assert saved['a']['verification_context'] == verification_context.project(
+        session.args.verification_context, ['a'])
     assert not (session.root / 'repeated-trials.json').exists()
     session.interrupt = None
     session.args.resume = True
@@ -106,7 +124,7 @@ def test_all_tasks_completed_resume_reuses_evidence_and_existing_report(session,
 
 
 @pytest.mark.parametrize('change', ['missing', 'seed', 'score', 'harness', 'protocol', 'selection', 'declaration', 'removed_protocol', 'model_policy', 'model_policy_statuses'])
-def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(session, change):
+def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(session, change, capsys):
     if change in ('model_policy', 'model_policy_statuses'):
         session.args.sandbox = True
         for verifier in session.verifiers.values():
@@ -137,8 +155,13 @@ def test_resume_refuses_missing_or_changed_trial_evidence_before_execution(sessi
                 verifier['model_failure_policy']['invalidate_on_http_status'] = [429, *range(500, 600)]
     else:
         session.verifiers['a']['argv'] = ['different-scorer']
+    # Recapture current declarations as driver preflight would, while preserving
+    # the interrupted run's identity. The trial/resume gate must reject the
+    # changed evidence, rather than accidentally stopping at stale preflight.
+    session.preflight(persist=False)
     assert session.execute() == 2
     assert len(session.calls) == 3
+    assert 'verification context changed after preflight' not in capsys.readouterr().err
 
 
 def test_different_published_report_is_never_overwritten(session):
@@ -206,3 +229,43 @@ def test_completion_window_before_marker_removal_fails_closed(session, monkeypat
     monkeypatch.setattr(Path, 'unlink', unlink)
     session.args.resume = True
     assert session.execute() == 2 and len(session.calls) == 3
+
+
+@pytest.mark.parametrize('damage', ['missing', 'stale'])
+@pytest.mark.parametrize('resume', [False, True])
+def test_current_preflight_context_is_required_before_trial_execution(session, damage, resume, capsys):
+    if resume:
+        interrupted(session)
+    before = list(session.calls)
+    if damage == 'missing':
+        del session.args.verification_context
+    else:
+        session.tasks[0]['goal'] = 'changed after preflight'
+    assert session.execute() == 2
+    assert session.calls == before
+    assert 'verification context changed after preflight' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('location', ['metadata', 'progress'])
+@pytest.mark.parametrize('damage', ['missing', 'stale'])
+def test_saved_context_cannot_authorize_resume(session, location, damage, capsys):
+    interrupted(session)
+    path = (session.run / 'run_meta.json' if location == 'metadata' else
+            next((session.run / 'progress/round-0').glob('*.json')))
+    record = json.loads(path.read_text())
+    if damage == 'missing':
+        record.pop('verification_context')
+    else:
+        # A valid envelope for different measurement inputs, not corrupt JSON.
+        changed_tasks = copy.deepcopy(session.tasks)
+        changed_tasks[0]['goal'] = 'different measurement'
+        stale = verification_context.capture(changed_tasks, {'a': 'metric', 'b': 'metric'},
+                                             {}, session.verifiers, {}, sandbox=False)
+        record['verification_context'] = (stale if location == 'metadata' else
+                                          verification_context.project(stale, [record['task_id']]))
+    path.write_text(json.dumps(record))
+    before = path.read_bytes()
+    assert session.execute() == 2
+    assert len(session.calls) == 3
+    assert path.read_bytes() == before
+    assert 'verification' in capsys.readouterr().err

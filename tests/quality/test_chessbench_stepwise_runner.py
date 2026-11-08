@@ -78,6 +78,21 @@ def forbid_dataset_reads(monkeypatch):
 
 @pytest.fixture
 def case(tmp_path, monkeypatch):
+    # Test-only admitted artifact: the local interpreter already provides python-chess.
+    # Production must pass an actual captured provider envelope.
+    actual_session = chess_stepwise.session_for
+    actual_validate = chess_stepwise.runtime_identity_mod.validate
+    def validate(value):
+        if value == {"synthetic": True}:
+            return {"provider": {"dataset": "chessbench_puzzles"}}
+        return actual_validate(value)
+    monkeypatch.setattr(chess_stepwise.runtime_identity_mod, "validate", validate)
+    monkeypatch.setattr(chess_stepwise.dataset_runtime, "admit_provider",
+                        lambda name, provider: {"python": sys.executable})
+    def session(task, verifier, **kwargs):
+        kwargs["dataset_runtime_identity"] = kwargs.get("dataset_runtime_identity") or {"synthetic": True}
+        return actual_session(task, verifier, **kwargs)
+    monkeypatch.setattr(chess_stepwise, "session_for", session)
     monkeypatch.setenv("HARNESSGRAD_WORK_ROOT", str(tmp_path))
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
     repo = tmp_path / "harness"
@@ -113,9 +128,19 @@ def local_chess_runtime(tmp_path_factory):
     manifest = json.loads(path.read_text())
     reviewed = json.loads((root / "data/runtimes/chessbench_puzzles-native.json").read_text())
     manifest["dataset"] = "chessbench_puzzles"
+    # The native scorer intentionally retains the reviewed pre-provider QA base.
+    # The current platform base has since changed; preserve the exact pinned
+    # bytes rather than pointing a pinned digest at the new source.
+    pinned_base = (root / 'tests/fixtures/chessbench_native_sources/qa_base.py').read_bytes()
+    expected_base = reviewed['files']['/scorer/data/scaffolds/qa/base.py']
+    assert hashlib.sha256(pinned_base).hexdigest() == expected_base['sha256']
+    assert len(pinned_base) == expected_base['size']
+    historical_base = work / 'pinned-qa-base.py'
+    historical_base.write_bytes(pinned_base)
     for target, entry in reviewed["files"].items():
         if target.startswith("/scorer/"):
             source = (root / "data/scaffolds/qa/verify/check.py" if target == "/scorer/check.py"
+                      else historical_base if target == "/scorer/data/scaffolds/qa/base.py"
                       else root / target.removeprefix("/scorer/"))
             manifest["files"][target] = {**entry, "source": str(source)}
     package = Path(chess.__file__).resolve().parent
@@ -221,18 +246,17 @@ trace({{'initial': initial, 'terminal': terminal}})
 
 
 def test_unreviewed_public_field_is_never_delivered(case, monkeypatch):
-    original = dataset.StepwisePuzzle
-
-    class PollutedSession(original):
-        def public_task(self):
-            return {**super().public_task(), "private_reference": self._moves}
-
-    monkeypatch.setattr(dataset, "StepwisePuzzle", PollutedSession)
-    result = execute(case, "s, f = connect()\nassert f.readline() == b''\n")
-    assert result["exit_code"] == 0, result["stderr"]
-    receipt = assert_incomplete(result)
-    assert receipt["transport"]["reason"] == "invalid_public_observation"
-    assert receipt["transport"]["events"] == []
+    # A malformed worker response must be rejected before any actor is launched.
+    def polluted(*args, **kwargs):
+        return SimpleNamespace(returncode=0, stdout=json.dumps({
+            "contract": dataset.STEPWISE_CONTRACT, "fen": "x", "solver_turn": 0,
+            "status": "awaiting_move", "verdict": "awaiting_move",
+            "private_reference": case[2]["moves"]}))
+    monkeypatch.setattr(chess_stepwise, "run", polluted)
+    result = execute(case, "raise AssertionError('actor must not start')\n")
+    assert result["invalid"]["stage"] == "stepwise admission"
+    assert case[2]["puzzle_id"] not in json.dumps(result)
+    assert all(move not in json.dumps(result) for move in case[2]["moves"])
 
 
 @pytest.mark.parametrize("ending", ["s.close(); f.close()", "os.kill(os.getpid(), signal.SIGKILL)"])
@@ -462,7 +486,7 @@ else:
         return runner.evaluate(repo, [t], {}, cache=cache, sandbox=True,
                                verifiers={TASK_ID: verifier}, harness_sha="same")
     batch = measure(offline)
-    assert batch["per_task"] == {TASK_ID: 1.0}
+    assert batch["per_task"] == {TASK_ID: 1.0}, json.dumps(batch.get("invalid"), indent=2)
     native = batch["verdicts"][TASK_ID]["native_runtime"]
     assert native["verified"] and native["sha256"] == local_chess_runtime["sha256"]
     assert batch["verdicts"][TASK_ID]["protocol"] == chess_stepwise.OFFLINE

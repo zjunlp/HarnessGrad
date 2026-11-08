@@ -1,0 +1,163 @@
+{
+  "schema": "harnessgrad.linux-delivery-validation.v1",
+  "recorded_at": "2026-11-07T07:45:34.686657+00:00",
+  "source_commit": "d41db673d3d7b6905a705e32b0ce73f0090f167d",
+  "scope": "Selected Linux delivery controls; not the full quality suite, complete adapter acceptance, or a benchmark result.",
+  "environment": {
+    "python": "3.12.4",
+    "platform": "Linux",
+    "machine": "x86_64",
+    "tracked_dirty": false,
+    "pytest_environment": {
+      "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "selected_quality": {
+    "status": "completed",
+    "returncode": 0,
+    "planned_files": [
+      "tests/quality/test_authored_dataset.py",
+      "tests/quality/test_boundaries.py",
+      "tests/quality/test_ci_workflow.py",
+      "tests/quality/test_console_evidence_api.py",
+      "tests/quality/test_console_evidence_integration.py",
+      "tests/quality/test_dataset_execution_runtime.py",
+      "tests/quality/test_dataset_runtime.py",
+      "tests/quality/test_dataset_runtime_cache.py",
+      "tests/quality/test_dataset_runtime_identity.py",
+      "tests/quality/test_dataset_runtime_lifecycle.py",
+      "tests/quality/test_dataset_runtime_private_environment.py",
+      "tests/quality/test_datasets_doc.py",
+      "tests/quality/test_download_index.py",
+      "tests/quality/test_evidence_export.py",
+      "tests/quality/test_evidence_export_privacy.py",
+      "tests/quality/test_evidence_runtime_integration.py",
+      "tests/quality/test_evidence_verification_context.py",
+      "tests/quality/test_experiment_presets.py",
+      "tests/quality/test_h0_reuse_identity.py",
+      "tests/quality/test_harness_path.py",
+      "tests/quality/test_import_direction.py",
+      "tests/quality/test_math_native_failure_boundaries.py",
+      "tests/quality/test_memoryagentbench_prepare.py",
+      "tests/quality/test_memoryagentbench_resources.py",
+      "tests/quality/test_native_runtime_cache.py",
+      "tests/quality/test_prepare_h0.py",
+      "tests/quality/test_python_candidate_h0.py",
+      "tests/quality/test_python_candidate_smoke.py",
+      "tests/quality/test_quality_receipts.py",
+      "tests/quality/test_repeated_trial_resume.py",
+      "tests/quality/test_resume_eval.py",
+      "tests/quality/test_resume_train.py",
+      "tests/quality/test_resume_train_e2e.py",
+      "tests/quality/test_round_private_recovery.py",
+      "tests/quality/test_round_recovery_pinned.py",
+      "tests/quality/test_run_namespace.py",
+      "tests/quality/test_run_parser.py",
+      "tests/quality/test_scenario.py",
+      "tests/quality/test_scoring_identity.py",
+      "tests/quality/test_shared_h0.py",
+      "tests/quality/test_shared_round_ledger.py",
+      "tests/quality/test_submission_smoke_state.py",
+      "tests/quality/test_verification_context.py",
+      "tests/quality/test_verification_context_workflows.py",
+      "tests/quality/test_wheel_adapter_resources.py",
+      "tests/quality/test_wheel_console.py"
+    ],
+    "executed_files": 46,
+    "unexecuted_files": [],
+    "test_case_counts": {
+      "passed": 950,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 7
+    },
+    "full_quality_suite": false,
+    "receipt_sha256": "4e6b2fc550c1089c338cdc29a883974975da823a3d57d5a2a96f16b1a2719a91"
+  },
+  "installed_wheel": {
+    "status": "passed",
+    "wheel_sha256": "3c6a0c939fbd7f209c22c810a57e85ee69b62aa861ef4787fe6ac4756470b509",
+    "build_source_removed_before_use": true,
+    "platform_component_sdks_absent": [
+      "openai",
+      "numpy",
+      "pyarrow",
+      "litellm"
+    ],
+    "steps": [
+      {
+        "name": "build",
+        "exit_code": 0
+      },
+      {
+        "name": "install",
+        "exit_code": 0
+      },
+      {
+        "name": "dependency-boundary",
+        "exit_code": 0
+      },
+      {
+        "name": "first-use",
+        "exit_code": 0
+      },
+      {
+        "name": "preset",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-readonly",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-smoke",
+        "exit_code": 0
+      },
+      {
+        "name": "chess-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "appworld-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "math-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "locomo-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "editor-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "readonly-all56",
+        "exit_code": 0
+      }
+    ],
+    "readonly_catalog": {
+      "reported_datasets": 56,
+      "diagnosed_unready": 55,
+      "authored_example_ready": true,
+      "data_or_store_created": false
+    },
+    "receipt_sha256": "36e31df760ec0b63ebdf936570445d063e7245e67d6e818b7673a9da7b445573"
+  },
+  "controls": {
+    "tasks": "Authored synthetic fixtures; no released benchmark episodes or real model calls.",
+    "math": "Real admitted Math-Verify 0.9.0 artifact from a cold platform; prediction/reference/deadline controls.",
+    "memoryagentbench": "Original locked resources and real tokenizer/upstream chunk parity in separate pinned preparation Python; no released corpus or live judge acceptance.",
+    "method_editor": "Standard-library client against a local scripted HTTP endpoint.",
+    "catalog": "Network-disabled readiness diagnosis; missing data and components remain unready."
+  },
+  "remaining_evidence": "docs/linux-runtime-remaining.md",
+  "goal_complete": false,
+  "publication": {
+    "pushed": false,
+    "development_commits_consolidated_for_release": false
+  }
+}

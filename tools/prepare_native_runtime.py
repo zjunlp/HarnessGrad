@@ -20,7 +20,7 @@ from harnessgrad import native_runtime_store as store
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('import', 'export', 'verify', 'assemble'))
+    parser.add_argument('action', choices=('import', 'export', 'verify', 'assemble', 'inventory'))
     parser.add_argument('--dataset', required=True, choices=sorted(store.DATASETS))
     parser.add_argument('--root', type=Path, help='external package store override for this command')
     parser.add_argument('--manifest', type=Path, help='explicit reviewed manifest (requires --sha256)')
@@ -46,7 +46,7 @@ def main(argv=None):
         parser.error('--archive requires import or assemble')
     if args.action != 'export' and args.output:
         parser.error('--output requires export')
-    if args.action == 'export' and args.probe:
+    if args.action in ('export', 'inventory') and args.probe:
         parser.error('--probe requires verify, import or assemble')
     remaps = []
     for value in args.source_map:
@@ -68,6 +68,8 @@ def main(argv=None):
         elif args.action == 'export':
             output = store.export_package(binding, args.output, args.root)
             result = {'dataset': args.dataset, 'sha256': binding['sha256'], 'archive': str(output)}
+        elif args.action == 'inventory':
+            result = store.inventory_package(binding, args.root)
         else:
             result = store.verify_package(binding, args.root)
         if args.probe:

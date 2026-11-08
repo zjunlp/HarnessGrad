@@ -51,23 +51,16 @@ file before it builds tasks. No branch/latest source, automatic import-time
 fetch, model API or proxy scorer is used.
 
 Math grading requires `math-verify==0.9.0` in the trusted verifier's interpreter.
-Without it load refuses with `ConfigMissing`; there is no string-match fallback.
-A native parse error/timeout is unmeasured and has no score.
-For `math` and `math500`, the verifier uses the current absolute `sys.executable`
-and declares both `sys.prefix` and `sys.base_prefix` through existing read-only
-`VERIFY.runtime_paths`, so grading uses the same interpreter checked at load.
-Provision isolated Math-Verify virtual environments **outside `/tmp`**; prefixes
-under that hidden sandbox tree refuse with `ConfigMissing`. The adapter checks
-and uses the current platform interpreter for this dependency. This does not
-relax sandbox isolation or add an automatic dependency install.
+The `math` and `math500` loaders need no Math-Verify installation. Before
+selecting verifier tasks, explicitly prepare their shared execution artifact:
+`python tools/prepare_dataset.py --dataset math --runtime execution`. Use the
+same command with `--check` to inspect it without installation. The verifier
+binds and rechecks that exact artifact; a missing or changed artifact refuses
+execution. There is no string-match fallback, and a native parse error/timeout
+is unmeasured and has no score.
 
-Sandbox plan 6 mounts the active venv and its base interpreter as distinct
-read-only runtime trees, preserving symlink-venv dependencies during the driver
-startup probe and task/scorer execution. Use an environment such as
-`~/.venvs/harnessgrad`, outside `/tmp`, the platform checkout and task/work
-storage. Hidden or writable runtime prefixes are refused before launch; do not
-disable sandboxing to bypass that guard. Provision Math-Verify in the environment
-used to launch the driver.
+The verifier mounts the prepared venv and its base interpreter as read-only
+runtime trees. It does not require Math-Verify in the driver environment.
 
 OfficeQA-Pro separately requires `HG_DATA_OFFICEQA_PRO_CORPUS` or `<root>/corpus`.
 Supply the entire public corpus directory, with only ordinary txt/md/pdf/json

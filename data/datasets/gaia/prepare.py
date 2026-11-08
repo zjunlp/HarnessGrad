@@ -42,6 +42,8 @@ import json
 import os
 import pathlib
 import sys
+import subprocess
+import tempfile
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -97,9 +99,36 @@ def _sha256(body: bytes) -> str:
     return hashlib.sha256(body).hexdigest()
 
 
-def fetch() -> dict:
+def _tables(src: pathlib.Path, hashes=None) -> tuple[list, list]:
+    """Decode exactly the downloaded bytes in the admitted preparation artifact."""
+    from harnessgrad import dataset_runtime
+    runtime = dataset_runtime.resolve_execution("native_qa")
+    binding = dataset_runtime.bind(runtime, "service")
+    worker = pathlib.Path(__file__).with_name("prepare_worker.py")
+    inputs = []
+    for relative in (METADATA, METADATA_TEST):
+        path = src / LOCAL[relative]
+        digest = hashes[relative]["sha256"] if hashes else _sha256(path.read_bytes())
+        inputs.append({"path": str(path), "sha256": digest})
+    identity = {"purpose": "GAIA Parquet preparation only", "binding": binding,
+                "inputs": inputs, "worker_sha256": _sha256(worker.read_bytes())}
+    (src / "preparation-runtime.json").write_text(json.dumps(identity, sort_keys=True))
+    selected = dataset_runtime.admit_binding(binding, "service")
+    proc = subprocess.run([selected["python"], "-I", "-B", str(worker)],
+        input=json.dumps({"inputs": inputs, "binding": binding}), text=True, capture_output=True,
+        env=dataset_runtime._child_environment())
+    if proc.returncode:
+        raise ValueError("gaia: Parquet preparation worker failed; retained attempt for inspection")
+    dataset_runtime.admit_binding(binding, "service", python=selected["python"])
+    if _sha256(worker.read_bytes()) != identity["worker_sha256"]:
+        raise ValueError("gaia: preparation worker source changed; retained attempt for inspection")
+    return tuple(json.loads(proc.stdout))
+
+
+def fetch(root=None) -> dict:
     """Download the metadata and the validation attachments; return the measured provenance."""
-    src = adapter.DATASET_ROOT / "_src"
+    root = pathlib.Path(root) if root is not None else adapter.DATASET_ROOT
+    src = root / "_src"
     provenance: dict = {"parquets": {}}
     for relative in (METADATA, METADATA_TEST, README):
         body = _download(relative, src / LOCAL[relative])
@@ -110,10 +139,7 @@ def fetch() -> dict:
     # .png that are simply small -- so the guess was replaced by the declared number.
     listing = json.loads(_download_json(f"{ENDPOINT}/api/datasets/{adapter.REPO}"))
     declared = {entry["rfilename"]: entry.get("size") for entry in listing.get("siblings", [])}
-    import pyarrow.parquet as pq
-
-    table = pq.read_table(src / LOCAL[METADATA]).to_pylist()
-    table_test = pq.read_table(src / LOCAL[METADATA_TEST]).to_pylist()
+    table, table_test = _tables(src, provenance["parquets"])
     provenance["validation_rows"] = len(table)
     provenance["test_rows"] = len(table_test)
     provenance["test_placeholder_golds"] = sum(
@@ -133,7 +159,11 @@ def fetch() -> dict:
             relative = str(row["file_path"]).strip()
             if not relative.endswith(name):
                 raise SystemExit(f"gaia: file_path {relative!r} does not end in {name!r}")
-            destination = adapter.DATASET_ROOT / adapter.ATTACHMENTS / name
+            if pathlib.PurePosixPath(name).name != name or name in (".", ".."):
+                raise ValueError("gaia: attachment must be a plain basename")
+            if relative.startswith("/") or ".." in pathlib.PurePosixPath(relative).parts:
+                raise ValueError("gaia: unsafe attachment path")
+            destination = root / adapter.ATTACHMENTS / name
             if destination.is_file():
                 body = destination.read_bytes()
             else:
@@ -162,7 +192,21 @@ def digest() -> str:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--prepare-runtime", action="store_true", help="explicitly install preparation dependencies")
+    mode.add_argument("--check-runtime", action="store_true", help="read-only runtime check")
+    parser.add_argument("--runtime-root", type=pathlib.Path)
+    parser.add_argument("--python")
     args = parser.parse_args(argv)
+    if args.prepare_runtime or args.check_runtime:
+        from harnessgrad import dataset_runtime
+        if args.prepare_runtime:
+            dataset_runtime.prepare_execution("native_qa", root=args.runtime_root, python=args.python)
+        result = dataset_runtime.check_execution("native_qa", root=args.runtime_root)
+        print(json.dumps(result, indent=2))
+        return 0 if result["present"] else 1
+    if args.runtime_root is not None:
+        os.environ["HG_DATASET_RUNTIME_ROOT"] = str(args.runtime_root)
     path = adapter.DATASET_ROOT / POOL
     if args.check:
         if not path.is_file():
@@ -171,16 +215,35 @@ def main(argv=None) -> int:
         header = json.loads(path.open(encoding="utf-8").readline())
         print(f"{path}\n  rows {header['rows']}\n  sha256 {digest()}")
         return 0
-    built = fetch()
+    from harnessgrad import dataset_runtime
+    # Fail before any authenticated fetch when the preparation component is absent.
+    dataset_runtime.resolve_execution("native_qa")
+    root = adapter.DATASET_ROOT
+    attachments = root / adapter.ATTACHMENTS
+    if os.path.lexists(path) or os.path.lexists(attachments):
+        raise ValueError("gaia: pool or attachments already exists; use a fresh workspace")
+    root.mkdir(parents=True, exist_ok=True)
+    attempt = pathlib.Path(tempfile.mkdtemp(prefix="gaia-preparation-attempt-", dir=root))
+    built = fetch(attempt)
     rows, provenance = built["rows"], built["provenance"]
     if len(rows) != adapter.ROWS:
         raise SystemExit(f"gaia: expected {adapter.ROWS} validation rows, got {len(rows)}")
     header = {"kind": "gaia-pool", "repo": adapter.REPO, "revision": adapter.REVISION,
               "split": "validation", "rows": len(rows), **provenance}
-    with path.open("w", encoding="utf-8") as handle:
+    staged = attempt / POOL
+    with staged.open("x", encoding="utf-8") as handle:
         handle.write(json.dumps(header, sort_keys=True) + "\n")
         for row in rows:
             handle.write(json.dumps(row, sort_keys=True) + "\n")
+    (attempt / adapter.ATTACHMENTS).mkdir(exist_ok=True)
+    # Symlink creation and hard-link publication refuse concurrent existing names.
+    os.symlink(str(attempt / adapter.ATTACHMENTS), attachments, target_is_directory=True)
+    try:
+        os.link(staged, path)
+    except BaseException:
+        if attachments.is_symlink() and os.readlink(attachments) == str(attempt / adapter.ATTACHMENTS):
+            attachments.unlink()
+        raise
     print(f"wrote {path} ({len(rows)} rows, {path.stat().st_size} bytes)")
     print(f"  attachments {provenance['attachment_count']} "
           f"({provenance['attachment_bytes'] / 1e6:.1f} MB) under {adapter.ATTACHMENTS}/")
@@ -192,5 +255,15 @@ def main(argv=None) -> int:
     return 0
 
 
+def cli_main(argv=None):
+    """Canonical CLI diagnostics shared by source and installed entry points."""
+    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
+        return main(argv)
+    except (DatasetRuntimeUnavailable, DataRootNotConfigured, ValueError) as exc:
+        raise SystemExit(str(exc)) from None
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(cli_main())

@@ -59,35 +59,36 @@ gate prevents the upstream empty-result `all([])` case from becoming a success.
 
 ## Preparation
 
-Use Python 3.12 for the isolated dependency runtime and direct runtime tests.
-The platform driver may use its own supported Python. Keep the following directory
-outside the repository and outside the sandbox's private `/tmp`:
+Use the standard-library platform controller from either the checkout or an
+installed wheel. It resolves an existing managed Python 3.12 execution artifact;
+normal generation and read-only checking never install dependencies.
 
 ```bash
 export HG_DATA_TAU3_BENCH=/absolute/datasets/tau3_bench
-export HG_DATA_TAU3_BENCH_RUNTIME="$HG_DATA_TAU3_BENCH/runtime"
-python3.12 -m venv "$HG_DATA_TAU3_BENCH_RUNTIME"
-"$HG_DATA_TAU3_BENCH_RUNTIME/bin/pip" install -r data/datasets/tau3_bench/requirements.lock
-"$HG_DATA_TAU3_BENCH_RUNTIME/bin/python" -I data/datasets/tau3_bench/prepare.py \
-  --root "$HG_DATA_TAU3_BENCH" --fetch
+export HG_DATASET_RUNTIME_ROOT=/absolute/cache/dataset-runtimes
+
+# Separate explicit installation action, only when needed.
+python -m tools.prepare_tau3_bench --prepare-runtime
+
+# Fresh generation; --archive can replace the explicit source download.
+python -m tools.prepare_tau3_bench --root "$HG_DATA_TAU3_BENCH" --fetch
+python -m tools.prepare_tau3_bench --root "$HG_DATA_TAU3_BENCH" --check-only
 ```
 
-Alternatively supply `--archive /path/to/source.tar.gz`. Preparation verifies the
-archive digest, requires the exact base inventory and writes each case separately.
-The runtime bundle omits task sets, gold trajectories and historical model results.
-Preparation requires a fresh root.
-No model is called during preparation. `PYTHON_DOTENV_DISABLED=1` prevents upstream
-imports from reading ambient credential files.
+The selected interpreter runs an isolated bytecode-free worker. Before provider
+imports, the worker admits the exact binding and `sys.executable`; worker and
+parent re-admit after completion. A fresh payload is generated in sibling staging
+storage and atomically published only after those checks. No-replace publication
+refuses even a concurrent empty target. `--reuse-bundle` only validates an existing
+payload and never repairs/replaces it. `--runtime`, if supplied, must name the
+selected managed artifact. No external-venv or platform-Python fallback is used.
 
-The relay and verifier both launch `HG_DATA_TAU3_BENCH_RUNTIME/bin/python`. Verifier declarations
-include read-only `runtime_paths` for that environment and its base Python prefixes,
-queried from the selected interpreter once per runtime configuration. The verifier
-imports dependencies from that interpreter's own site-packages. Host `PATH`
-and the driver's Python do not select the scoring interpreter. The local startup
-probe has a 10-second management timeout; it is not an episode or model-call limit.
-Missing or non-3.12 runtime installations refuse configuration. At verification,
-invalid mounts or runtime failures remain unmeasured; bootstrap checks Python 3.12
-before importing pinned dependencies. No system-Python fallback is used.
+The pinned archive digest, native split validation, bundle digest and final task
+manifest/case digests remain authoritative. Prepared bundles omit task sets,
+gold trajectories and historical model results. Check-only reads existing bytes
+without starting a model or task episode. Worker environments exclude model/API
+credentials, active venv/PYTHONPATH and provider configuration; dotenv is disabled.
+Host libraries and base stdlib remain compatibility inputs, not a sealed OS.
 
 ## Model roles and trials
 
@@ -192,3 +193,53 @@ The adapter uses the shared [`record`, `model`, `judge` and `trial_protocol`
 interfaces](../../../docs/dataset-runtime-interfaces.md). The service owns official
 business APIs and user simulation; the platform owns model credentials, record
 sealing and complete-trial reporting.
+
+## Managed execution artifact
+
+Service and scorer declarations now require the separately prepared execution
+profile, built at its final path from the existing exact `requirements.lock`:
+
+```bash
+python tools/prepare_dataset.py --dataset tau3_bench --runtime execution
+```
+
+Preparation is explicit; loading and readiness never install dependencies. Both
+trusted launch roles carry the artifact identity and revalidate its bytes before
+launch. Discovery is not cached by the adapter. Existing external venvs are not
+copied or silently adopted. `HG_DATA_TAU3_BENCH_RUNTIME`, if set, must name the selected
+managed artifact; unset the old override when migrating. The legacy `RUNTIME`
+constant remains available to direct fixture utilities, but does not select the
+production service, scorer or preparation controller. Use the formal
+`python -m tools.prepare_tau3_bench` entry point for preparation.
+
+The artifact covers the venv and base executable. Host shared libraries and the
+base standard library are compatibility inputs, not an immutable operating system.
+Pinned bundle source and private/public case digests remain separate checks;
+runtime identity contains no private task or answer bytes. Readiness does not
+establish model endpoint health or an episode score.
+
+
+Preparation source admission also commits the finite set of owned controller,
+prepare, adapter and bootstrap/runtime helper `.py` files. Those helpers are
+compiled directly from their source bytes at explicit owned paths; timestamp-valid
+`.pyc` files and import-cache/cwd helper substitutions are not used. The worker
+checks that source identity before/after loading and execution, and the parent
+checks it again before publication. Upstream bundle/source/task pins are unchanged.
+Source drift fails closed and retains the sibling staging directory with the
+expected source inventory, source snapshots and minimal worker-attempt metadata;
+an existing payload and its provenance are never rewritten by check-only.
+
+Each dependency/provider worker uses a temporary private HOME, XDG directories,
+TMP and cwd. Relative CLI source/target/archive arguments are normalized against
+the controller's original cwd before launch. Explicit source fetching stays in
+the standard-library controller with its existing authentication/proxy settings;
+workers receive the archive path and still enforce the original archive digest.
+
+
+Once a fresh preparation attempt has been created, every failure preserves its
+private staging directory: source snapshots, partial payload, worker attempt and
+raw stdout/stderr diagnostics. `failed.json` contains only the exception type and
+phase; the public error gives that safe summary and the private stage path, never
+raw task/error text. Only successful publication removes staging. A late target
+collision leaves the concurrent target and all historical receipts unchanged.
+Reuse and read-only checks create no attempt/output directories.

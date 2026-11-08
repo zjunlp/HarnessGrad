@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path, PurePosixPath
 
@@ -9,6 +10,38 @@ BUN_GENERATED = frozenset({
     ".git", "node_modules", ".state", "__pycache__",
     ".opencode-state", "_harnessgrad",
 })
+PYTHON_GENERATED = BUN_GENERATED | frozenset({".venv", "venv"})
+PYTHON_BYTECODE = (".pyc", ".pyo")
+
+
+def python_spec(spec, install=None):
+    """Validate the data-only managed Python declaration, without imports/builds."""
+    if (not isinstance(spec, dict) or set(spec) not in (
+            {"kind", "python", "requirements"}, {"kind", "python", "requirements", "exec"})
+            or spec.get("kind") != "python"
+            or not isinstance(spec.get("python"), str)
+            or not re.fullmatch(r"3\.[0-9]+", spec["python"])
+            or int(spec["python"].split(".")[1]) < 8):
+        raise ValueError("Python runtime requires kind, Python 3.8+ minor and requirements")
+    if "exec" in spec:
+        execution = spec["exec"]
+        if (not isinstance(execution, dict) or set(execution) != {"requirements"}
+                or not isinstance(execution["requirements"], dict) or not execution["requirements"]
+                or any(not isinstance(minor, str) or not re.fullmatch(r"3\.[0-9]+", minor)
+                       or int(minor.split('.')[1]) < 8
+                       for minor in execution["requirements"])):
+            raise ValueError("Python exec requires an explicit minor-version to lock-file map")
+        for path in execution["requirements"].values():
+            python_spec({"kind": "python", "python": spec["python"], "requirements": path})
+    relative = spec["requirements"]
+    if (not isinstance(relative, str) or not relative or "\\" in relative or ":" in relative
+            or PurePosixPath(relative).is_absolute() or ".." in PurePosixPath(relative).parts
+            or any(part in PYTHON_GENERATED for part in PurePosixPath(relative).parts)
+            or str(PurePosixPath(relative)) != relative):
+        raise ValueError("Python requirements must be a normalized owned relative file")
+    if install is not None and install != relative:
+        raise ValueError("Python runtime and legacy install must name the same lock file")
+    return dict(spec)
 
 
 def runtime_spec(root: Path) -> dict | None:
@@ -25,8 +58,28 @@ def runtime_spec(root: Path) -> dict | None:
     spec = manifest.get("runtime")
     if spec is None:
         return None
+    if isinstance(spec, dict) and spec.get("kind") == "python":
+        spec = python_spec(spec, manifest.get("install"))
+        if manifest.get("runtime_paths") not in (None, []):
+            raise ValueError("Managed Python runtime_paths must be empty; external runtime roots are not supported")
+        for relative in {spec["requirements"], *(spec.get("exec", {}).get("requirements", {}).values())}:
+            lock = Path(root) / relative
+            if (lock.is_symlink() or not lock.is_file()
+                    or lock.resolve() != Path(root).resolve() / relative):
+                raise ValueError("Python requirements must be an owned regular file without directory aliases")
+        entry = manifest.get("entrypoint")
+        if (not isinstance(entry, str) or not entry or "\\" in entry or ":" in entry
+                or PurePosixPath(entry).is_absolute() or ".." in PurePosixPath(entry).parts
+                or any(part in PYTHON_GENERATED for part in PurePosixPath(entry).parts)
+                or entry.endswith(PYTHON_BYTECODE) or str(PurePosixPath(entry)) != entry):
+            raise ValueError("Python entrypoint must be a normalized owned source path outside generated environments")
+        executable = Path(root) / entry
+        if (executable.is_symlink() or not executable.is_file()
+                or executable.resolve() != Path(root).resolve() / entry):
+            raise ValueError("Python entrypoint must be an owned regular source file without aliases")
+        return spec
     if not isinstance(spec, dict) or spec.get("kind") != "bun":
-        raise ValueError("runtime must declare supported kind 'bun'")
+        raise ValueError("runtime must declare supported kind 'bun' or 'python'")
     if set(spec) != {"kind", "source", "entrypoint", "package"}:
         raise ValueError("Bun runtime requires kind, source, entrypoint and package")
     for name in ("source", "entrypoint"):
@@ -44,13 +97,20 @@ def runtime_spec(root: Path) -> dict | None:
 
 
 def has_bun_runtime(root: Path) -> bool:
-    return runtime_spec(root) is not None
+    spec = runtime_spec(root)
+    return spec is not None and spec["kind"] == "bun"
+
+
+def has_python_runtime(root: Path) -> bool:
+    spec = runtime_spec(root)
+    return spec is not None and spec["kind"] == "python"
 
 
 def copy_harness(source, target, **kwargs):
-    """Keep declared Bun source separate from dependencies and generated state."""
-    if has_bun_runtime(Path(source)):
-        return _copy_source_only(source, target, **kwargs)
+    """Keep managed source separate from dependencies and generated state."""
+    spec = runtime_spec(Path(source))
+    if spec is not None:
+        return _copy_source_only(source, target, python=spec["kind"] == "python", **kwargs)
     return shutil.copytree(source, target, **kwargs)
 
 
@@ -61,13 +121,15 @@ def copy_rejected_harness(source, target, **kwargs):
     then, retaining symlinks rather than dereferencing method-supplied targets.
     Callers must keep this tree unmeasured; normal copies remain strict.
     """
-    return _copy_source_only(source, target, **kwargs)
+    return _copy_source_only(source, target, python=True, **kwargs)
 
 
-def _copy_source_only(source, target, **kwargs):
+def _copy_source_only(source, target, *, python=False, **kwargs):
     previous = kwargs.get("ignore")
     kwargs["ignore"] = lambda directory, names: (
-        set(names) & BUN_GENERATED
+        set(names) & (PYTHON_GENERATED if python else BUN_GENERATED)
+    ) | (
+        {name for name in names if name.endswith(PYTHON_BYTECODE)} if python else set()
     ) | (set(previous(directory, names)) if previous else set())
     kwargs["symlinks"] = True
     return shutil.copytree(source, target, **kwargs)

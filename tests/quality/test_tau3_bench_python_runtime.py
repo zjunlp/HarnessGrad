@@ -44,7 +44,7 @@ finally:
         'pydantic_origin': getattr(sys.modules.get('pydantic'), '__file__', None),
         'runtime_projection_present': Path('tau3_runtime').exists()}))
 '''
-    spec['argv'][2] = 'python_probe.py'
+    spec['argv'][3] = 'python_probe.py'
     spec['inputs'].extend([{'path': 'trusted_episode', 'from': str(record), 'immutable': True},
                            {'path': 'python_probe.py', 'content': probe}])
     config = tmp_path / 'spec.json'
@@ -68,9 +68,10 @@ Path(sys.argv[4]).write_text(json.dumps(result))
     assert result.get('score') == 1, result
     info = json.loads((work / 'verifier/python.json').read_text())
     assert info['version'] == [3, 12] and info['readonly'], info
-    assert info['executable'] == str(dataset.RUNTIME / 'bin/python')
-    assert Path(info['prefix']).resolve() == dataset.RUNTIME.resolve()
-    site = dataset.RUNTIME / 'lib/python3.12/site-packages'
+    selected = dataset._execution_runtime()
+    assert info['executable'] == selected['python']
+    assert Path(info['prefix']).resolve() == Path(selected['path']).resolve()
+    site = Path(selected['path']) / 'lib/python3.12/site-packages'
     assert info['site_paths'] == [str(site)], info
     assert Path(info['pydantic_origin']).is_relative_to(site), info
     assert not info['runtime_projection_present'], info

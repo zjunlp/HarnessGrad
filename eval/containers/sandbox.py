@@ -80,7 +80,8 @@ from harnessgrad.config import current as current_config
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
 #: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
-PLAN_VERSION = 13  # 13 restores required traversal structure after platform/temporary hides;
+PLAN_VERSION = 14  # 14 hides base Python global third-party sites;
+                   # 13 restores required traversal structure after platform/temporary hides;
                    # 12 preserves empty traversal directories needed by relative runtime links;
                    # 11 refuses declared runtimes overlapping writable task/state storage;
                    # 10 mounts declared runtimes at physical paths and restores all declared link chains;
@@ -200,6 +201,31 @@ def _interpreter_mounts(platform: Path, work_root: Path, task_dir: Path, writabl
     return prefixes
 
 
+def _opaque_source_mounts(repo: Path, names, state_dirs):
+    """Hide ignored actor storage without changing the host's source checkout."""
+    allowed = {'.git', '_harnessgrad', '.opencode-state', '.state'}
+    if any(name not in allowed for name in names):
+        raise SandboxUnavailable('unsupported opaque source directory')
+    private_states = {Path(path).resolve() for path in state_dirs}
+    plan = []
+    for directory, dirs, files in os.walk(repo, followlinks=False):
+        for name in sorted((set(dirs) | set(files)) & set(names)):
+            path = Path(directory) / name
+            if name in dirs:
+                dirs.remove(name)
+            if path.is_symlink():
+                raise SandboxUnavailable('opaque source storage must not be a symlink')
+            if path in private_states:
+                continue  # The existing private writable .state tmpfs covers it.
+            if path.is_dir():
+                plan += ['--tmpfs', str(path), '--remount-ro', str(path)]
+            elif path.is_file():
+                plan += ['--ro-bind', '/dev/null', str(path)]
+            else:
+                raise SandboxUnavailable('opaque source storage must be an owned file or directory')
+    return plan
+
+
 def _runtime_symlinks(paths, mounted, *, hidden=()):
     """Collect links and empty traversal directories, without exposing parent trees."""
     links = {}
@@ -309,6 +335,36 @@ def _bwrap() -> str:
     return exe
 
 
+def _global_python_sites(runtime_roots):
+    """Global third-party directories are not part of a Python stdlib grant.
+
+    Inspect only conventional Python layout metadata, never package contents.
+    A separately selected venv owns its site packages; its base does not.
+    """
+    candidates = {Path(sys.base_prefix).resolve(), Path('/usr'), Path('/usr/local')}
+    for path in runtime_roots:
+        path = Path(path).resolve()
+        candidates.update((path, *path.parents))
+        # Runtime stores may declare a parent of the selected interpreter.
+        for executable in path.glob('*/bin/python*') if path.is_dir() else ():
+            candidates.add(executable.parent.parent.resolve())
+    sites = set()
+    for root in candidates:
+        if root == Path('/') or (root / 'pyvenv.cfg').is_file():
+            continue
+        if not any((root / 'bin').glob('python*')):
+            continue
+        for library in ('lib', 'lib64', 'local/lib'):
+            for stdlib in (root / library).glob('python*'):
+                if not (stdlib / 'os.py').is_file() and root not in (Path('/usr'), Path('/usr/local')):
+                    continue
+                for name in ('site-packages', 'dist-packages'):
+                    site = stdlib / name
+                    if site.is_dir():
+                        sites.add(site.resolve())
+    return tuple(sorted(sites, key=str))
+
+
 def command(argv: list[str], *, platform: Path, work_root: Path,
             task_dir: Path, env: dict[str, str], repo: Path | None = None,
             state_dirs: tuple[Path, ...] = (),
@@ -323,6 +379,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
             package_overlays: tuple[tuple[Path, Path], ...] = (),
             immutable_runtimes: tuple[tuple[Path, str], ...] = (),
             private_paths: tuple[Path, ...] = (),
+            platform_interpreter: bool = True,
+            opaque_source_dirs: tuple[str, ...] = (),
             unsetenv: tuple[str, ...] = ()) -> list[str]:
     """Wrap `argv` so it runs with the platform off its disk.
 
@@ -343,14 +401,16 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
     if network == "none":
         plan += ["--unshare-net"]
 
-    prefixes = _interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+    prefixes = (_interpreter_mounts(platform, work_root, task_dir, writable_paths, state_dirs)
+                if platform_interpreter else ())
     runtime_roots = tuple(Path(path) for path in (*RUNTIME, *DNS, *prefixes)
                           if Path(path).exists())
     for path in runtime_roots:
         plan += ["--ro-bind", str(path), str(path)]
-    links, runtime_directories = _interpreter_symlinks(
+    links, runtime_directories = (_interpreter_symlinks(
         prefixes, platform=platform, work_root=work_root, task_dir=task_dir,
         writable_paths=writable_paths, state_dirs=state_dirs, private_paths=private_paths)
+        if platform_interpreter else ([], set()))
     runtime_links = dict(links)
 
     # Trees the harness declares it needs, bound read-only.
@@ -521,18 +581,8 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
                 f"the workspace is staged (ckpt/git_state.py); a workspace built by "
                 f"hand from an older commit will not have it.")
         plan += ["--tmpfs", str(state)]
-
-    # Last mounts win: runtime_paths or a parent bind must never uncover the
-    # installed reference-bearing package after its public projection is mounted.
-    for source, target in package_overlays:
-        source, target = Path(source).resolve(), Path(target).resolve()
-        if not source.is_dir() or not target.is_dir():
-            raise SandboxUnavailable("agent package overlay is missing")
-        for writable in (task_dir, *writable_paths, *state_dirs):
-            writable = Path(writable).resolve()
-            if source == writable or writable in source.parents:
-                raise SandboxUnavailable("agent package projection is in writable storage")
-        plan += ["--ro-bind", str(source), str(target)]
+    if opaque_source_dirs:
+        plan += _opaque_source_mounts(repo, opaque_source_dirs, state_dirs)
 
     # Only in the surviving re-assert pass, after the writable task --bind and all
     # parent mounts: bwrap is last-one-wins. These exact shared sources are read-only
@@ -545,6 +595,34 @@ def command(argv: list[str], *, platform: Path, work_root: Path,
         # writable. Freeze that parent without recursively replacing child mounts:
         # runtime binds stay read-only, and the verdict directory stays writable.
         plan += ["--remount-ro", str(task_dir)]
+
+    # Apply after every parent rebind. Import-path isolation alone does not stop
+    # arbitrary actor code from reading a base interpreter's installed packages.
+    for site in _global_python_sites((*runtime_roots, *physical)):
+        for path in (*runtime_paths, *visible_paths):
+            if Path(path).resolve().is_relative_to(site):
+                raise SandboxUnavailable('global Python site packages are not a declared runtime; '
+                                         'install dependencies in an independent virtualenv')
+        plan += ['--tmpfs', str(site)]
+        # bwrap cannot create the public projection's mount point after this
+        # empty site becomes read-only. Create only its empty traversal first.
+        for _, target in package_overlays:
+            target = Path(target).resolve()
+            if target.is_relative_to(site):
+                plan += ['--dir', str(target)]
+        plan += ['--remount-ro', str(site)]
+
+    # Last mounts win: runtime_paths or a parent bind must never uncover the
+    # installed reference-bearing package after its public projection is mounted.
+    for source, target in package_overlays:
+        source, target = Path(source).resolve(), Path(target).resolve()
+        if not source.is_dir() or not target.is_dir():
+            raise SandboxUnavailable("agent package overlay is missing")
+        for writable in (task_dir, *writable_paths, *state_dirs):
+            writable = Path(writable).resolve()
+            if source == writable or writable in source.parents:
+                raise SandboxUnavailable("agent package projection is in writable storage")
+        plan += ["--ro-bind", str(source), str(target)]
 
     if model_socket is not None:
         # After every parent bind/hide and immutable projection: no later mount
@@ -848,6 +926,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
         package_overlays: tuple[tuple[Path, Path], ...] = (),
         immutable_runtimes: tuple[tuple[Path, str], ...] = (),
         private_paths: tuple[Path, ...] = (),
+        platform_interpreter: bool = True,
+        opaque_source_dirs: tuple[str, ...] = (),
         limits: dict | None = None):
     """`subprocess.run` with the namespace in place. Same return type.
 
@@ -886,6 +966,8 @@ def run(argv: list[str], *, platform: Path, work_root: Path, task_dir: Path,
                           model_socket=model_socket, model_path=model_path,
                           tool_socket=tool_socket,
                           immutable_runtimes=immutable_runtimes,
+                          **({'platform_interpreter': False} if not platform_interpreter else {}),
+                          **({'opaque_source_dirs': opaque_source_dirs} if opaque_source_dirs else {}),
                           **({'private_paths': private_paths} if private_paths else {}),
                           **({'unsetenv': unsetenv} if unsetenv else {}))
     except SandboxUnavailable as exc:

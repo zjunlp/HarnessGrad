@@ -1,0 +1,7 @@
+# New service recipe; upstream adapter pins retained. Not the native scorer lock.
+alfworld==0.4.2
+textworld[pddl]==1.7.0
+# Original native source-file identities verified against installed distribution metadata.
+numpy==1.26.4
+jericho==3.3.1
+tatsu==5.8.3

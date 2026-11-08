@@ -22,9 +22,8 @@ from data.scaffolds.native_research import harvey_native as native
 from eval.run.runner import harness_env
 from harnessgrad.config.areas import ConfigMissing
 
-PYTHON=Path(os.environ.get('HG_HARVEY_TEST_PYTHON','/tmp/hg-harvey-native-venv/bin/python'))
 PANDOC=Path(os.environ.get('HG_HARVEY_TEST_PANDOC','/tmp/hg-harvey-native-venv/lib/python3.12/site-packages/pypandoc/files/pandoc'))
-NATIVE_READY=PYTHON.is_file()and PANDOC.is_file()
+NATIVE_READY=bool(os.environ.get('HG_DATASET_RUNTIME_ROOT') and os.environ.get('HG_JUDGE_HARVEY_WHEEL')) and PANDOC.is_file()
 needs_runtime=pytest.mark.skipif(not NATIVE_READY,reason='pinned lab-core/Anthropic/pandoc runtime is not provisioned')
 
 
@@ -100,7 +99,6 @@ def local_providers(*, anthropic_pass=True,openai_pass=True,malformed_openai=Fal
 
 def configure(monkeypatch,base):
     for key,value in basic_env().items():monkeypatch.setenv(key,value)
-    monkeypatch.setenv('HG_JUDGE_HARVEY_PYTHON',str(PYTHON))
     monkeypatch.setenv('HG_JUDGE_HARVEY_PANDOC',str(PANDOC))
     monkeypatch.setenv('HG_JUDGE_HARVEY_ANTHROPIC_BASE_URL',base)
     monkeypatch.setenv('HG_JUDGE_HARVEY_OPENAI_BASE_URL',base+'/v1')

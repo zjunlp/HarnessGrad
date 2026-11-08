@@ -1,0 +1,12 @@
+{
+  "schema": "hg-mab-license-provenance-v1",
+  "scope": "Vendored adaptations of upstream MemoryAgentBench source; not an additional corpus license claim",
+  "repository": "https://github.com/HUST-AI-HYZ/MemoryAgentBench",
+  "revision": "538026089d1a8a8eff05121d0db89b388f360eba",
+  "source_path": "LICENSE",
+  "vendored_path": "MemoryAgentBench-MIT.txt",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2026 Yuanzhe Hu",
+  "note": "The fixed raw-data source specification is preserved separately in specs/source.json; tokenizer-derived code also retains specs/tiktoken-LICENSE.txt.",
+  "vendored_sha256": "94d735aad92355b4880c969fa309e824eb12fdeeb271ae51cf6143866cf78cf7"
+}

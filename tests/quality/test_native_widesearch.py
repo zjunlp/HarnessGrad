@@ -7,7 +7,9 @@ from contextlib import contextmanager
 import base64
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import importlib.util
+import functools
+import inspect
+import subprocess
 import json
 from pathlib import Path
 import sys
@@ -23,19 +25,44 @@ from tools.prepare_native_research import prepare
 from data.scaffolds.native_research import wide_runtime
 from harnessgrad.config.areas import ConfigMissing
 
-needs_native = pytest.mark.skipif(importlib.util.find_spec('dateparser') is None,
-    reason='native WideSearch dateparser is not provisioned in this interpreter')
+def require_managed_runtime():
+    from harnessgrad import dataset_runtime
+    try:
+        return dataset_runtime.resolve_execution('widesearch')
+    except dataset_runtime.DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('managed WideSearch execution artifact is not provisioned')
 
 
-def test_explicit_runtime_requires_both_fields():
-    with pytest.raises(ConfigMissing, match='together'):
-        wide_runtime.settings({'HG_JUDGE_WIDESEARCH_PYTHON': sys.executable})
+def needs_native(function):
+    """Run native controls in the selected artifact, regardless of host packages."""
+    @functools.wraps(function)
+    def managed(*args, **kwargs):
+        from harnessgrad import dataset_runtime
+        runtime = require_managed_runtime()
+        arguments = inspect.signature(function).bind(*args, **kwargs).arguments
+        values = {key: str(value) if isinstance(value, Path) else value
+                  for key, value in arguments.items() if key != 'monkeypatch'}
+        request = {'function': function.__name__, 'arguments': values,
+                   'runtime': dataset_runtime.bind(runtime, 'service')}
+        worker = ROOT / 'tests/fixtures/native_widesearch_control.py'
+        proc = subprocess.run([runtime['python'], '-I', '-B', str(worker), str(ROOT)],
+            input=json.dumps(request), text=True, capture_output=True,
+            env=dataset_runtime._child_environment(), timeout=60)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+    return managed
 
 
-def test_explicit_runtime_cannot_reexpose_hidden_tmp(tmp_path):
-    with pytest.raises(ValueError, match='outside hidden platform/tmp'):
-        wide_runtime.settings({'HG_JUDGE_WIDESEARCH_PYTHON': sys.executable,
-            'HG_JUDGE_WIDESEARCH_RUNTIME_PATHS': json.dumps([str(tmp_path)])})
+
+@pytest.mark.parametrize('environment', [
+    {'HG_JUDGE_WIDESEARCH_PYTHON': sys.executable},
+    {'HG_JUDGE_WIDESEARCH_PYTHON': sys.executable,
+     'HG_JUDGE_WIDESEARCH_RUNTIME_PATHS': '["/tmp"]'},
+])
+def test_legacy_runtime_overrides_are_explicitly_rejected(environment):
+    with pytest.raises(ConfigMissing, match='managed execution runtime'):
+        wide_runtime.settings(environment)
 
 
 def row():
@@ -207,7 +234,10 @@ def test_explicit_fetch_captures_original_csv_without_second_download(tmp_path, 
         return str(source)
     monkeypatch.setattr(huggingface_hub, 'snapshot_download', snapshot)
     output = tmp_path / 'prepared'
-    manifest = prepare('widesearch', output, {}, fetch=True, judge_model='local-control')
+    # Exercise only the native acquisition shim with an in-process fake Hub.
+    # The public preparation controller's process boundary is tested separately.
+    from tools.prepare_native_research import _prepare
+    manifest = _prepare('widesearch', output, {}, fetch=True, judge_model='local-control')
     assert len(requests) == 1
     assert requests[0]['revision'] == DATA_REVISION
     private = json.loads((output / manifest['records'][0]['case']).read_text())
@@ -242,9 +272,9 @@ def local_provider(fail=False):
     finally: server.shutdown(); server.server_close(); thread.join()
 
 
-@needs_native
 @pytest.mark.parametrize('mode', ['positive', 'wrong', 'provider-failure'])
 def test_prepare_native_gold_and_hg_private_judge_broker(mode, tmp_path, monkeypatch):
+    require_managed_runtime()
     from eval.ckpt.git_state import stage_workspace
     from eval.run.runner import run_one
     from harnessgrad import config
@@ -256,9 +286,6 @@ def test_prepare_native_gold_and_hg_private_judge_broker(mode, tmp_path, monkeyp
     prepared = tmp_path / 'prepared'
     prepare('widesearch', prepared, {'data_path': str(source)}, judge_model='local-scripted-widejudge')
     monkeypatch.setenv('HG_DATA_WIDESEARCH', str(prepared))
-    if sys.prefix != sys.base_prefix:
-        monkeypatch.setenv('HG_JUDGE_WIDESEARCH_PYTHON', sys.executable)
-        monkeypatch.setenv('HG_JUDGE_WIDESEARCH_RUNTIME_PATHS', json.dumps(list(dict.fromkeys([sys.prefix, sys.base_prefix]))))
     adapter = Adapter('widesearch')
     task = adapter.load()[0][0]
     assert 'PRIVATE_GOLD_DESCRIPTION' not in json.dumps(task)
@@ -288,9 +315,8 @@ assert not os.environ.get('HG_JUDGE_WIDESEARCH_PYTHON')
         monkeypatch.setenv('HG_JUDGE_MODEL', 'local-scripted-widejudge')
         config.reset()
         verifier = adapter.verifier(task['task_id'])
-        if sys.prefix != sys.base_prefix:
-            assert verifier['argv'][0] == sys.executable
-            assert verifier['runtime_paths'] == list(dict.fromkeys([sys.prefix, sys.base_prefix]))
+        assert verifier['argv'][0] == verifier['python_runtime']['python']
+        assert verifier['runtime_paths'] == verifier['python_runtime']['runtime_paths']
         # This is an authored output grading control. No public web research
         # was performed or claimed; the actor's output is intentionally fixed.
         result = run_one(repo, task, sandbox=True, setup=adapter.setup(task['task_id']),

@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import pathlib
 
 __all__ = ["load", "BundleError"]
@@ -89,8 +90,12 @@ class BundleError(ValueError):
 
 def _read_tree(root: pathlib.Path) -> list[dict]:
     """Every regular file under `root`, as `{"path", "content"}`, with binaries refused."""
+    if not root.is_dir():
+        raise BundleError(f"材料目录不存在：{root}")
     files = []
     for path in sorted(root.rglob("*")):
+        if _bytecode(path.relative_to(root)):
+            continue
         if path.is_dir():
             continue
         if path.is_symlink():
@@ -111,7 +116,9 @@ def load(slug: str, authored_root: pathlib.Path | None = None) -> tuple[list[dic
     if not bundle_path.is_file():
         raise BundleError(f"{bundle_path} 不存在")
     data = json.loads(bundle_path.read_text(encoding="utf-8"))
-    kind = (data.get("env") or {}).get("kind")
+    if not isinstance(data, dict) or not isinstance(data.get("env"), dict):
+        raise BundleError(f"{slug}: bundle 和 env 必须是对象")
+    kind = data["env"].get("kind")
     if kind != "files":
         raise BundleError(f"{slug}: 只有 env.kind=files 的 bundle 能被编译（现在是 {kind!r}）")
     tasks, setup, verify = [], {}, {}
@@ -163,6 +170,38 @@ def load(slug: str, authored_root: pathlib.Path | None = None) -> tuple[list[dic
     return tasks, setup, verify
 
 
+def _bytecode(relative):
+    return "__pycache__" in relative.parts or relative.suffix.lower() in (".pyc", ".pyo")
+
+
+def download_entry(slug, authored_root=None):
+    """Read-only fixture identity and an explicit missing/invalid diagnosis."""
+    root = pathlib.Path(authored_root or pathlib.Path(__file__).resolve().parents[2]
+                        / "data" / "authored") / slug
+    entry = {"kind": "authored", "name": slug, "version": "unavailable", "size": "unavailable",
+             "note": "authored scenario bundle: bundle.json + materials + oracle, versioned with this repository",
+             "path": "data/authored/" + slug, "sha256": None}
+    try:
+        if not (root / "bundle.json").is_file():
+            entry.update(availability="missing", detail="missing authored bundle: " + str(root / "bundle.json"))
+            return entry
+        raw = (root / "bundle.json").read_bytes()
+        digest = hashlib.sha256(raw).hexdigest()
+        entry.update(sha256=digest, version=digest[:16])
+        tasks, _, _ = load(slug, authored_root=root.parent)
+        if not tasks:
+            raise BundleError("authored bundle contains no tasks")
+        for task in json.loads(raw)["tasks"]:
+            if task.get("oracle") and not (root / task["oracle"]).is_file():
+                raise BundleError("missing authored oracle: " + task["oracle"])
+        size = sum(path.stat().st_size for path in root.rglob("*")
+                   if path.is_file() and not _bytecode(path.relative_to(root)))
+        entry.update(size=f"{size} bytes", availability="ready")
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        entry.update(availability="invalid", detail=f"{type(exc).__name__}: {exc}")
+    return entry
+
+
 def module_source(slug: str) -> str:
     """The tiny adapter file `--publish` writes. It holds no data, only the reference."""
     return "".join([
@@ -188,16 +227,10 @@ def module_source(slug: str) -> str:
         '    不写 `downloads()` 是沉默，不是"没有数据"：这里声明来源、内容摘要与字节数，\n',
         '    于是 run 的记录能说清它量的是哪一份 bundle。\n',
         '    """\n',
-        '    import hashlib\n',
+        '    from data.scaffolds.authored import download_entry\n',
         '    import pathlib\n',
-        f'    root = pathlib.Path(__file__).resolve().parents[1] / "authored" / "{slug}"\n',
-        '    digest = hashlib.sha256((root / "bundle.json").read_bytes()).hexdigest()\n',
-        '    size = sum(p.stat().st_size for p in root.rglob("*") if p.is_file())\n',
-        '    return [{"kind": "authored", "name": _BUNDLE_NAME, "version": digest[:16],\n',
-        '             "size": f"{size} bytes",\n',
-        '             "note": "authored scenario bundle: bundle.json + materials + oracle, "\n',
-        '                     "versioned with this repository",\n',
-        f'             "path": "data/authored/{slug}", "sha256": digest}}]\n',
+        '    root = pathlib.Path(__file__).resolve().parents[1] / "authored"\n',
+        '    return [download_entry(_BUNDLE_NAME, authored_root=root)]\n',
         'DEFAULT_ENV = {"kind": "files"}\n',
         f'DEFAULT_SPLIT = {{"by": "sha256(task_id)", "eval_fraction": 0.2}}\n',
     ])

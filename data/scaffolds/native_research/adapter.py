@@ -5,12 +5,12 @@ repartition or execute upstream's agent/algorithm. Every private case is hash-ch
 """
 from collections.abc import Mapping
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
 
 from harnessgrad.config.areas import ConfigMissing
+from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
 from harnessgrad.paths import DatasetPath, dataset_root
 from .profiles import COMMIT, PROFILES, SOURCES
 
@@ -71,9 +71,10 @@ class Adapter:
     def case(self, record, manifest=None):
         manifest = self.manifest() if manifest is None else manifest
         path = owned(self.root, record['case'])
-        if digest(path) != manifest['files'].get(record['case']):
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != manifest['files'].get(record['case']):
             raise ValueError('private native case digest mismatch')
-        case = json.loads(path.read_text())
+        case = json.loads(raw)
         if case.get('task_id') != record['task_id'] or not isinstance(case.get('question'), str) or not case['question'].strip():
             raise ValueError('prepared native case task binding mismatch')
         return case
@@ -91,14 +92,9 @@ class Adapter:
         if self.name == 'swe_bench':
             from .swe_native import readiness
             return readiness(self, m, task_id=task_id)
-        if self.name == 'widesearch':
-            from .wide_runtime import readiness as wide_readiness
-            wide_readiness()
-        required = {'travelplanner': ('pandas', 'numpy'),
-                    'workbench': ('pandas', 'numpy')}.get(self.name, ())
-        absent = [name for name in required if importlib.util.find_spec(name) is None]
-        if absent:
-            raise ConfigMissing(f'{self.name}: native dependency missing: {", ".join(absent)}')
+        if self.name in ('travelplanner', 'workbench', 'widesearch'):
+            from .component_runtime import binding
+            binding(self.name, 'verifier')
         if self.profile['judge']:
             self.judge(m)  # No endpoint call; validate the explicit frozen model/profile before actor work.
         if self.name == 'travelplanner':
@@ -188,6 +184,8 @@ class Adapter:
             m = self.readiness()
             record = self.records()[tid]
             case = self.case(record, m)
+            from .component_runtime import binding
+            runtime = binding('workbench', 'service')
             spec = {'task_id': tid, 'world': str(self.root / 'world'),
                 'world_sha256': case['world_sha256'],
                 'files': {k.removeprefix('world/'): v for k, v in m['files'].items() if k.startswith('world/')}}
@@ -195,6 +193,8 @@ class Adapter:
                 {'path': 'workbench.py', 'from': str(ASSETS / 'cli/workbench_env.py')},
                 {'path': 'workbench_transport.py', 'from': str(ROOT / 'eval/service/tool_transport.py')}],
                 'tool_relay': {'program': str(ASSETS / 'workbench_relay.py'),
+                    'python': runtime['python'], 'python_runtime': runtime,
+                    'read_paths': [str(ASSETS), str(ROOT / 'eval'), str(self.root / 'world')],
                     'content_flag': '--case-spec', 'content': canonical(spec), 'filename': 'world.json',
                     'max_calls': None, 'deadline_s': None, 'max_line_bytes': None,
                     'record': {'path': 'trusted_episode', 'max_bytes': None}}}
@@ -241,7 +241,7 @@ class Adapter:
                 'scorer_input': {'task_id': tid, 'path': 'upstream_case.json', 'sha256': m['files'][r['case']]},
                 'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}}
         profile = self.profile
-        spec = {'kind': 'command', 'argv': ['python3', '-I', 'native_research/verify.py',
+        spec = {'kind': 'command', 'argv': ['python3', '-I', '-B', 'native_research/verify.py',
                     '--dataset', self.name, '--task-id', tid, '--case-sha256', m['files'][r['case']]],
                 'inputs': [{'path': 'native_research', 'from': str(ASSETS), 'immutable': True},
                            {'path': 'upstream_case.json', 'from': str(owned(self.root, r['case']))},
@@ -259,9 +259,9 @@ class Adapter:
             spec['inputs'].append({'path': 'travelplanner_database', 'from': str(database), 'immutable': True})
         if self.name == 'workbench':
             spec['inputs'].append({'path': 'workbench_world', 'from': str(self.root / 'world'), 'immutable': True})
-        if self.name == 'widesearch':
-            from .wide_runtime import apply as wide_runtime
-            wide_runtime(spec)
+        if self.name in ('travelplanner', 'workbench', 'widesearch'):
+            from .component_runtime import apply
+            apply(self.name, spec)
         return spec
 
     def split(self):
@@ -276,7 +276,7 @@ class Adapter:
                 self.case(r, m)
             return {'present': True, 'root': str(self.root), 'tasks': len(m['records']),
                     'upstream_commit': COMMIT, 'metric': self.metric(m)}
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, DatasetRuntimeUnavailable) as exc:
             return {'present': False, 'root': str(self.root), 'detail': str(exc)}
 
 

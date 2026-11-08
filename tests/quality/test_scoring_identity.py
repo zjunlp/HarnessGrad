@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import policies, scoring_identity as scoring
+from harnessgrad import policies, scoring_identity as scoring, verification_context as vc
 from harnessgrad.records import _curve_point
 from harnessgrad.loops.eval_side import _baseline_block, _resume_mismatch
 from tools import prepare_h0
@@ -110,7 +110,11 @@ def test_eval_resume_checks_identity_without_rewriting_metadata(tmp_path):
     meta.write_text(json.dumps({"evaluated_from": {"run_id": "train", "round": 0},
                                **scoring.fields(identity())}))
     original = meta.read_bytes()
-    args = SimpleNamespace(from_run="train", from_round=0, scoring_identity=identity("judge-b"))
+    synthetic_context = vc.capture([{'task_id': 't'}], {})
+    data = json.loads(meta.read_text()); data['verification_context'] = synthetic_context
+    meta.write_text(json.dumps(data)); original = meta.read_bytes()
+    args = SimpleNamespace(from_run="train", from_round=0, scoring_identity=identity("judge-b"),
+                           verification_context=synthetic_context)
     assert "scoring_identity" in _resume_mismatch(tmp_path, args, "", "sha")
     assert meta.read_bytes() == original
     args.scoring_identity = identity()
@@ -120,37 +124,50 @@ def test_eval_resume_checks_identity_without_rewriting_metadata(tmp_path):
 @pytest.mark.parametrize("dataset", ["appworld", "gsm8k", "memoryagentbench", "personamem_v2", "tau3_bench"])
 def test_unopted_h0_configuration_keeps_scorer_fields_absent(dataset, monkeypatch):
     monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    # Runtime preparation is tested separately; this case isolates scoring opt-in.
+    monkeypatch.setattr(prepare_h0.dataset_runtime_identity, "resolve_h0", lambda *a, **k: None)
+    synthetic_context = vc.capture([{'task_id': 't'}], {})
+    monkeypatch.setattr(prepare_h0, '_verification_preflight', lambda *a, **k: synthetic_context)
+    monkeypatch.setattr(prepare_h0, 'harness_context', lambda *a, **k: {'harness_sha': 'a' * 40})
     args = SimpleNamespace(dataset=dataset, side="train", study_ids=None,
                            model="agent", endpoint="endpoint", trials=1)
-    assert prepare_h0.configuration(args) == {
+    actual = prepare_h0.configuration(args)
+    assert len(actual["harness_sha"]) == 40
+    assert actual == {
         "dataset": dataset, "side": "train", "n_study_ids": 0, "study_ids_sha": None,
         "agent_model": "agent", "agent_backend": "mock", "endpoint": "endpoint", "trials": 1,
-        "sampling": "all"}
+        "sampling": "all", "harness_sha": actual["harness_sha"],
+        "verification_context": synthetic_context}
 
 
 def test_h0_lookup_requires_consistent_payload_metadata_and_curve(tmp_path):
+    synthetic_context = vc.capture([{'task_id': 't'}], {})
     config = {"dataset": "synthetic", "agent_model": "agent", "agent_backend": "mock",
-              "endpoint": "", "sampling": "all", **scoring.fields(identity())}
+              "endpoint": "", "sampling": "all", "verification_context": synthetic_context,
+              **scoring.fields(identity())}
     run = tmp_path / "h0-synthetic-test"
     run.mkdir()
-    payload = {"h0_sha": "sha", "base": {"per_task": {"t": .5}, "invalid": {}, "score": .5},
+    payload = {"h0_sha": "sha", "verification_context": synthetic_context,
+               "base": {"per_task": {"t": .5}, "invalid": {}, "score": .5,
+                        "verification_context": synthetic_context},
                **scoring.fields(identity())}
     (run / "h0.json").write_text(json.dumps(payload))
-    (run / "run_meta.json").write_text(json.dumps({"h0_configuration": config,
+    (run / "run_meta.json").write_text(json.dumps({"h0_configuration": config, "verification_context": synthetic_context,
         "sampling_policy": "all", "config": {"agent": {"model": "agent", "backend": "mock", "base_url": ""},
                                               "run": {"sampling": "all"}}, **scoring.fields(identity())}))
     measured = point(identity())
+    measured['verification_context'] = synthetic_context
     measured.update(measured_by_platform=True, identity={"agent_model": "agent", "agent_backend": "mock"})
     measured["sampling"]["policy"] = "all"
     (run / "curve.jsonl").write_text(json.dumps(measured) + "\n")
     assert prepare_h0.find_existing(config, tmp_path)[0] == run
-    assert prepare_h0.verify(run, None, 1, scoring=identity())["n_tasks"] == 1
+    assert prepare_h0.verify(run, None, 1, scoring=identity(), configuration=config)["n_tasks"] == 1
     assert prepare_h0.find_existing({"dataset": "synthetic", **scoring.fields(identity("b"))}, tmp_path) is None
     del payload["scoring_identity"]
     (run / "h0.json").write_text(json.dumps(payload))
     assert prepare_h0.find_existing(config, tmp_path) is None
     with pytest.raises(SystemExit, match="scoring_identity"):
-        prepare_h0.verify(run, None, 1, scoring=identity())
+        prepare_h0.verify(run, None, 1, scoring=identity(), configuration=config)
 
 
 def test_unopted_driver_can_still_share_h0_after_judge_changes(tmp_path, monkeypatch):

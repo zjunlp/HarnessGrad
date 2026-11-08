@@ -1,0 +1,148 @@
+{
+  "audit_date": "2026-11-07",
+  "decision": {
+    "distribution_license_resolved": false,
+    "next_evidence_required": [
+      "A stable authorized endpoint serving the exact historical pool, verified against its existing SHA-256.",
+      "A provenance record identifying who produced/retained/published that snapshot and under what authority.",
+      "Per-family/content-source licensing and applicable notices, including ACRE and embedded third-party CodeIO material; assess output rights rather than treating all output as generator code."
+    ],
+    "public_snapshot_ready": false
+  },
+  "historical_pool": {
+    "acquisition_authorization": "not established by byte identity",
+    "bytes": 3315981,
+    "earliest_inspected_repository_commit": "a6d36c2",
+    "families": 89,
+    "historical_generation_environment": "not reconstructed",
+    "local_origin": "operator-retained local historical snapshot",
+    "public_distribution_authorization": "unverified",
+    "public_exact_snapshot_url": null,
+    "records": 1780,
+    "sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
+  },
+  "local_import_control": {
+    "check_exit": 0,
+    "copied_rows": 1780,
+    "date": "2026-11-07",
+    "duplicate_import_exit_nonzero": true,
+    "entrypoint": "tools/prepare_reasoning_gym.py",
+    "existing_pool_and_receipt_unchanged_after_duplicate": true,
+    "import_exit": 0,
+    "interpreter_flags": [
+      "-I",
+      "-B"
+    ],
+    "scope": "Real retained local bytes only; no source authenticity, public download authorization or historical generation claim.",
+    "source_bytes_unchanged": true
+  },
+  "package": {
+    "license_expression": "Apache-2.0",
+    "metadata_sha256": "6ae65002f674f8a25326a0f39721ac056e7a41cdc72f63528705fba6e3d041f5",
+    "metadata_url": "https://pypi.org/pypi/reasoning-gym/0.1.25/json",
+    "name": "reasoning-gym",
+    "pool_jsonl_members": [],
+    "sdist_bytes": 6789585,
+    "sdist_member_hashes": {
+      "LICENSE": {
+        "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "README.md": {
+        "sha256": "fd270a3565a0b324aea6ab1bd359a8255fb726745beb2643f42c6590c3462649"
+      },
+      "pyproject.toml": {
+        "sha256": "8b89df41f461e325cddd45c3e4b8b3c13b251713a09e31f1894bc51e45c7af0d"
+      },
+      "reasoning_gym/arc/arc_1d.py": {
+        "sha256": "7180ae709160d07d05b46352d37afd7b3b2a10e9aec6178f554311dcb4b72b61"
+      },
+      "reasoning_gym/code/codeio.py": {
+        "sha256": "c573957be85a68179520b61cc70ebb22ab39027dd0a876b2f4402df9df6be1a2"
+      },
+      "reasoning_gym/code/contrib/bfit/LICENSE.md": {
+        "sha256": "e207b874e65175eb5a08a40a95d3c63e54d4b52c160c6148a78823866c9c4550"
+      },
+      "reasoning_gym/games/contrib/sokoban/LICENSE": {
+        "sha256": "e98308ef3d9f882ab78535ce1a33c70f0e28bc33deeab6fa50cf9dc7557cd13c"
+      },
+      "reasoning_gym/induction/acre/acre.py": {
+        "sha256": "77e2fe8e91d1017002cbb746779765a2c0d1d32a8542e88969720865f893e0a6"
+      },
+      "reasoning_gym/logic/contrib/logic_puzzle/README.md": {
+        "sha256": "799403ec41032899dea2cf011f60688d8a59bd64ce415a4063c4c577e3cdd289"
+      }
+    },
+    "sdist_sha256": "932247c760dd23e09fb14d013d29ec4c8804e62846bd50473f6915dc854adad2",
+    "sdist_url": "https://files.pythonhosted.org/packages/f0/7f/4023ce1f8f961ac1d9bf6c0b054c8c7dd4eceaaa8b064f53208306afe0ca/reasoning_gym-0.1.25.tar.gz",
+    "version": "0.1.25"
+  },
+  "public_observations": [
+    {
+      "assets_count": 0,
+      "release_html_url": "https://github.com/open-thought/reasoning-gym/releases/tag/v0.1.25",
+      "response_sha256": "6634f6c5ee920809c9ad63ade7f8e2497ab0ad222cdec62722ea15f8b0486120",
+      "tag_name": "v0.1.25",
+      "url": "https://api.github.com/repos/open-thought/reasoning-gym/releases/tags/v0.1.25"
+    },
+    {
+      "response_sha256": "21f2cc2606ab19d2c235c1950a0c17adbf7a90e2ec80ec6a80ca081d9b92df2a",
+      "returned_assets_count": 0,
+      "returned_tags": [
+        "v0.1.25",
+        "v0.1.24",
+        "v0.1.23",
+        "v0.1.22",
+        "v0.1.20"
+      ],
+      "url": "https://api.github.com/repos/open-thought/reasoning-gym/releases?per_page=20"
+    },
+    {
+      "observation": "GPL version 3 text at mutable main; corroboration only, not a pinned ancestral-source mapping.",
+      "response_sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "url": "https://raw.githubusercontent.com/WellyZhang/ACRE/main/LICENSE"
+    }
+  ],
+  "schema": "harnessgrad.reasoning-gym-source-license-audit.v1",
+  "scope": "Public package metadata, source archive and selected license/provenance text; no generation, scorer execution or benchmark download.",
+  "selected_license_findings": [
+    {
+      "boundary": "Package declaration is not a component-by-component or generated-output rights determination.",
+      "component": "package",
+      "declared_license": "Apache-2.0",
+      "evidence_member": "LICENSE"
+    },
+    {
+      "boundary": "Do not infer whether generated task text is derivative or what distribution obligations attach without tracing the selected content.",
+      "component": "acre",
+      "declared_license": "GPL-3.0",
+      "evidence_member": "reasoning_gym/induction/acre/acre.py",
+      "source_line": 4
+    },
+    {
+      "component": "bfit",
+      "declared_license": "MIT",
+      "evidence_member": "reasoning_gym/code/contrib/bfit/LICENSE.md"
+    },
+    {
+      "component": "sokoban",
+      "declared_license": "MIT",
+      "evidence_member": "reasoning_gym/games/contrib/sokoban/LICENSE"
+    },
+    {
+      "boundary": "README claim observed; not independent rights verification.",
+      "component": "logic_puzzle",
+      "declared_license": "MIT",
+      "evidence_member": "reasoning_gym/logic/contrib/logic_puzzle/README.md"
+    },
+    {
+      "boundary": "Loads bundled codeio.jsonl.gz and inserts task description/reference code into prompts; individual source/rights chain not established.",
+      "component": "codeio",
+      "evidence_member": "reasoning_gym/code/codeio.py"
+    },
+    {
+      "boundary": "Credits machine-converted Rust generators from optozorax/arc_1d; exact ancestral revisions and generated-output rights not traced.",
+      "component": "arc_1d",
+      "evidence_member": "reasoning_gym/arc/arc_1d.py"
+    }
+  ]
+}

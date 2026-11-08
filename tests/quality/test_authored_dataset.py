@@ -155,3 +155,38 @@ def test_an_exec_bundle_is_refused_rather_than_half_compiled(bundle):
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(authored.BundleError):
         authored.load(bundle.name, authored_root=bundle.parent)
+
+
+def test_generated_adapter_matches_generator():
+    assert (ROOT / 'data/datasets/authored_example_fix_bug.py').read_text() == authored.module_source('example-fix-bug')
+
+
+def test_installer_bytecode_does_not_change_fixture_metadata_or_tasks(tmp_path):
+    import py_compile
+    import shutil
+    copied = tmp_path / 'example-fix-bug'
+    shutil.copytree(EXAMPLE, copied)
+    before = authored.load(copied.name, authored_root=tmp_path)
+    metadata = authored.download_entry(copied.name, authored_root=tmp_path)
+    assert metadata['availability'] == 'ready'
+    for source in copied.rglob('*.py'):
+        py_compile.compile(str(source), doraise=True)
+    assert list(copied.rglob('*.pyc'))
+    assert authored.load(copied.name, authored_root=tmp_path) == before
+    assert authored.download_entry(copied.name, authored_root=tmp_path) == metadata
+    assert not any('__pycache__' in row['path'] or row['path'].endswith(('.pyc', '.pyo'))
+                   for setup in before[1].values() for row in setup['files'])
+    (copied / 'materials/t01/unexpected.bin').write_bytes(b'\x00\xff')
+    assert authored.download_entry(copied.name, authored_root=tmp_path)['availability'] == 'invalid'
+    with pytest.raises(authored.BundleError, match='不是文本文件'):
+        authored.load(copied.name, authored_root=tmp_path)
+
+
+@pytest.mark.parametrize('malformed', [[], {'env': ['files']}, {'env': {'kind': 'files'}, 'tasks': ['bad task']}])
+def test_authored_metadata_marks_malformed_bundle_invalid(tmp_path, malformed):
+    target = tmp_path / 'broken'
+    target.mkdir()
+    (target / 'bundle.json').write_text(json.dumps(malformed))
+    entry = authored.download_entry('broken', authored_root=tmp_path)
+    assert entry['availability'] == 'invalid'
+    assert entry['detail']

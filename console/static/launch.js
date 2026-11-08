@@ -78,9 +78,11 @@
 
   async function preview() {
     const mine = ++seq;
+    $("go").disabled = true;
     const bad = [[t("ls.52"), card.rounds, 0, 20], [t("ls.53"), card.jobs, 1, 64], ["trials", card.trials, 1, 3]]
       .find(([, v, lo, hi]) => !Number.isInteger(v) || v < lo || v > hi);
     if (bad) {
+      $("scope").textContent = "";
       $("cmd").textContent = t("ls.56");
       state("bad", `${bad[0]} ${t("ls.81")} ${bad[2]}..${bad[3]}`); $("go").disabled = true; return;
     }
@@ -94,6 +96,24 @@
       const d = await (await fetch('/api/launch/preview', { method: 'POST',
         headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(previewBody) })).json();
       if (mine !== seq) return;
+      const scope = d.scope || {};
+      const zh = window.HGI18n.language === "zh";
+      const unknown = zh ? "未确定" : "not determined";
+      const solver = scope.solver || {}, editor = scope.editor || {};
+      const labels = zh ? ["任务范围", "任务数", "预算", "Solver（执行任务）", "Editor（改进）", "环境与 judge"]
+        : ["Task scope", "Task count", "Budget", "Solver (task execution)", "Editor (improvement)", "Environment and judge"];
+      const meaning = zh ? "round 0 测量所选任务集；rounds=0 表示无改进轮，不表示只测一题。"
+        : "Round 0 measures the selected task set; rounds=0 means no improvement rounds, not one task.";
+      $("scope").textContent = [
+        `${labels[0]}: ${scope.dataset || unknown} / ${scope.side || unknown} / ${scope.split || unknown} / ${scope.sampling || unknown}`,
+        `${labels[1]}: ${unknown}. ${meaning}`,
+        `${labels[2]}: rounds=${scope.rounds ?? unknown}, trials/task=${scope.trials_per_task ?? unknown}, jobs=${scope.jobs ?? unknown}`,
+        `${labels[3]}: ${solver.backend || unknown} / ${solver.model || unknown}`,
+        `${labels[4]}: ${editor.method || unknown} / ${editor.improver || unknown} / ${editor.model || unknown}` +
+          (editor.active === false ? (zh ? "；0 轮，不执行改进" : "; zero rounds, no improvement") : "") +
+          (editor.kind === "cli" ? (zh ? "；provider 由 CLI 配置" : "; provider configured by CLI") : ""),
+        `${labels[5]}: ${unknown} — ${zh ? "由数据集和运行配置决定；可能产生独立模型调用。" : "resolved from dataset and runtime configuration; may use separate model calls."}`,
+      ].join("\n");
       $("cmd").textContent = (d.argv || []).map((a) => (/[\s"]/.test(a) ? JSON.stringify(a) : a)).join(" ") || t("ls.57");
       const ok = Boolean(d.preflight && d.preflight.ok);
       state(ok ? "ok" : "bad", ok ? t("ls.58")

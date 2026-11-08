@@ -45,7 +45,7 @@ def run(mode, platform, tid, work, *, recordings_root=None, actor_preload=None):
         setup['files'].append({'path': '.control.json', 'content': json.dumps(
             {'mode': mode, 'answers': answers, 'actor_preload': actor_preload or {}})})
         os.environ['HG_AGENT_BACKEND'] = 'mock'
-        os.environ['PATH'] = str(Path(sys.executable).resolve().parent) + os.pathsep + os.environ.get('PATH', '')
+        os.environ['PATH'] = str(Path(sys.executable).absolute().parent) + os.pathsep + os.environ.get('PATH', '')
         result = run_one(harness, task, setup=setup, verifier=dataset.VERIFY[tid], env=dataset.ENV[tid],
                          sandbox=True, run_id='personamem-control-' + uuid.uuid4().hex,
                          trial_id='trial-1', run_seed='0', recordings_root=recordings_root)

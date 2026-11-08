@@ -521,7 +521,10 @@ def execute(args, receipt: QualityReceipt, discovered: list[str]) -> int:
 
     if real:
         print()
-        print(f"{len(real)} file(s) failed even when run alone:")
+        if args.no_rerun:
+            print(f"{len(real)} file(s) failed in the initial run; standalone recheck not performed:")
+        else:
+            print(f"{len(real)} file(s) failed even when run alone:")
         for r in real:
             print(f"  FAIL {r['file']} -> {r['summary']}")
             if r["stderr_tail"]:

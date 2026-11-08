@@ -52,9 +52,30 @@ from contextlib import ExitStack
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-# Native staging supplies this dependency at the task root.
-sys.path.insert(0, str(Path.cwd()))
-from data.scaffolds.scorer_input import add_arguments, run_bound
+# Load only declared source bytes next to the trusted staged entry, never actor cwd
+# or Python bytecode caches. The repository path supports direct offline controls.
+import types
+_entry = Path(__file__).resolve()
+_helper = _entry.parent / "data/scaffolds/scorer_input.py"
+if not _helper.is_file():
+    if tuple(_entry.parts[-5:]) != ("data", "datasets", "spreadsheetbench", "verify", "check.py"):
+        raise FileNotFoundError("trusted SpreadsheetBench scorer helper is missing")
+    _helper = _entry.parents[3] / "scaffolds/scorer_input.py"
+_source = _helper.read_bytes()
+_inputs_module = types.ModuleType("spreadsheetbench_scorer_input")
+_inputs_module.__file__ = str(_helper)
+exec(compile(_source, str(_helper), "exec", dont_inherit=True), _inputs_module.__dict__)
+add_arguments, run_bound = _inputs_module.add_arguments, _inputs_module.run_bound
+_native_source = _entry.parent / "native.py"
+if not _native_source.is_file():
+    if tuple(_entry.parts[-5:]) != ("data", "datasets", "spreadsheetbench", "verify", "check.py"):
+        raise FileNotFoundError("trusted SpreadsheetBench native helper is missing")
+    _native_source = _entry.parents[3] / "scaffolds/spreadsheet_runtime/native.py"
+_native = types.ModuleType("spreadsheetbench_native")
+_native.__file__ = str(_native_source)
+exec(compile(_native_source.read_bytes(), str(_native_source), "exec", dont_inherit=True),
+     _native.__dict__)
+
 
 DEFAULT_REWARD_FILE = "/verifier/reward.txt"
 DEFAULT_EVIDENCE_FILE = "/verifier/evidence.json"
@@ -326,15 +347,11 @@ def compare_workbooks(gt_file, proc_file, instruction_type, answer_position):
 
 
 def soffice_path() -> str | None:
-    """The LibreOffice binary, from `PATH` or the two conventional names."""
-    for candidate in ("soffice", "libreoffice"):
-        found = shutil.which(candidate)
-        if found:
-            return found
-    return None
+    """Legacy inspection only; scoring uses its task-bound native manifest."""
+    return _native.require_runtime()["soffice_binary"]
 
 
-def recalculate(workbook: Path, *, scratch: Path, soffice: str) -> tuple[bool, str]:
+def recalculate(workbook: Path, *, scratch: Path, soffice: str | list[str]) -> tuple[bool, str]:
     """Re-evaluate a private scratch workbook and cache the results, in place.
 
     Conversion alone can preserve stale caches. Force recalculation on OOXML load, remove
@@ -383,9 +400,9 @@ def recalculate(workbook: Path, *, scratch: Path, soffice: str) -> tuple[bool, s
         return False, "no OOXML formula cells available for freshness observation"
     outdir = scratch / "conv"
     outdir.mkdir(parents=True, exist_ok=True)
-    env = dict(os.environ, HOME=str(scratch),
-               TMPDIR=str(scratch))
-    cmd = [soffice, "--headless", "--calc", "--norestore", "--nolockcheck",
+    env = _native.minimal_env()
+    executable = [soffice] if isinstance(soffice, str) else soffice
+    cmd = [*executable, "--headless", "--calc", "--norestore", "--nolockcheck",
            f"-env:UserInstallation={profile.resolve().as_uri()}",
            "--convert-to", "xlsx:Calc MS Excel 2007 XML",
            "--outdir", str(outdir), str(prepared)]
@@ -439,6 +456,7 @@ def parse_args(argv):
     parser.add_argument("--result", default="result.xlsx")
     parser.add_argument("--golden", default="golden.xlsx")
     parser.add_argument("--task", default="task.json")
+    parser.add_argument("--native-manifest")
     parser.add_argument("--reward-file", default=DEFAULT_REWARD_FILE)
     parser.add_argument("--evidence-file", default=DEFAULT_EVIDENCE_FILE)
     add_arguments(parser)
@@ -469,8 +487,14 @@ def write_evidence(path: Path, evidence: dict) -> None:
 
 def main(argv) -> int:
     args = parse_args(argv)
-    return run_bound(args, {args.task: args.workdir / args.task, args.golden: args.workdir / args.golden},
-                     lambda inputs, receipt: _score(args, inputs, receipt))
+    args.reward_file.unlink(missing_ok=True)
+    paths = {args.task: args.workdir / args.task, args.golden: args.workdir / args.golden}
+    if args.native_manifest:
+        paths[args.native_manifest] = args.workdir / args.native_manifest
+    status = run_bound(args, paths, lambda inputs, receipt: _score(args, inputs, receipt))
+    # Bound managed commands distinguish measured zero through the reward contract;
+    # infrastructure failures still exit nonzero. Preserve legacy manual exit codes.
+    return 0 if status == 1 and args.scorer_input_sha256 is not None else status
 
 
 def _score(args, inputs, receipt) -> int:
@@ -496,16 +520,41 @@ def _score(args, inputs, receipt) -> int:
                     answer_position=spec.get("answer_position"),
                     instruction_type=spec.get("instruction_type"))
 
+    if args.native_manifest:
+        try:
+            record = _native.check(inputs[args.native_manifest])
+            evidence["native_runtime"] = {
+                "deployment": record["deployment"], "version": record.get("version"),
+                "manifest_sha256": receipt["files"].get(args.native_manifest),
+                "verified": True, "limitations": record.get("limitations")}
+        except (OSError, ValueError, RuntimeError, TypeError, KeyError, AttributeError) as exc:
+            evidence.update(measured=False, error=f"native runtime unavailable: {exc}; "
+                            "prepare native LibreOffice and select its verified manifest")
+            write_evidence(args.evidence_file, evidence)
+            print(f"check cannot measure: {evidence['error']}", file=sys.stderr)
+            return 3
+
     raw_answer = answer_path.read_text(encoding="utf-8").strip() if answer_path.is_file() else ""
     # The answer is the **name of the workbook** the agent left behind. An empty answer means
     # the conventional name; anything else is taken as a relative path inside the workdir, so a
     # harness cannot name a file outside the task.
     named = raw_answer.splitlines()[0].strip() if raw_answer else ""
     named = named or args.result
-    candidate = (workdir / named).resolve()
+    named_path = workdir / named
+    if named_path.is_symlink():
+        evidence.update(measured=False, error="the result workbook must not be a symbolic link")
+        write_evidence(args.evidence_file, evidence)
+        print(f"check cannot measure: {evidence['error']}", file=sys.stderr)
+        return 3
+    candidate = named_path.resolve()
     if not str(candidate).startswith(str(workdir.resolve()) + os.sep):
         evidence.update(measured=False,
                         error=f"the answer names {named!r}, which is outside the workdir")
+        write_evidence(args.evidence_file, evidence)
+        print(f"check cannot measure: {evidence['error']}", file=sys.stderr)
+        return 3
+    if candidate.relative_to(workdir.resolve()).as_posix() in receipt.get("files", {}):
+        evidence.update(measured=False, error="the answer names a reserved private scorer input")
         write_evidence(args.evidence_file, evidence)
         print(f"check cannot measure: {evidence['error']}", file=sys.stderr)
         return 3
@@ -529,13 +578,16 @@ def _score(args, inputs, receipt) -> int:
         # (INTERFACE.md §2.2), so recalculate's in-place publication must target scratch.
         with ExitStack() as scratch_stack:
             evaluated = candidate
+            _native.reject_active_content(candidate)
             if workbook_has_formulas(candidate):
                 phase = "LibreOffice recalculation"
-                soffice = soffice_path()
-                if soffice is None:
-                    raise RuntimeError("the result workbook holds formulas and no LibreOffice is "
-                                       "installed, so its values cannot be computed; the check "
-                                       "will not score an unevaluated workbook")
+                if not args.native_manifest:
+                    raise RuntimeError("prepare native LibreOffice and select its manifest with "
+                                       "--native-manifest; host PATH fallback is disabled")
+                # Execute only staged trusted source with the task-bound private manifest.
+                # No HG_* environment or mutable external launcher is consulted.
+                soffice = [sys.executable, "-I", "-B", str(_native_source), "launch",
+                           "--manifest", str(inputs[args.native_manifest]), "--"]
                 scratch = Path(scratch_stack.enter_context(
                     tempfile.TemporaryDirectory(prefix="sb-recalc-")))
                 evaluated = scratch / candidate.name

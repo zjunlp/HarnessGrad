@@ -380,8 +380,12 @@ def test_an_unreadable_reply_raises_instead_of_reporting_no_change(monkeypatch):
         def __init__(self, **kw):
             self.chat = type("C", (), {"completions": _Completions()})()
 
-    import openai
-    monkeypatch.setattr(openai, "OpenAI", _Client)
+    import editor
+    def endpoint_client(**kwargs):
+        client = _Client(**kwargs)
+        client.complete = client.chat.completions.create
+        return client
+    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
     with pytest.raises(editor.UnparseableReply) as exc:
         editor.ask("prompt")
     assert "refuse" in str(exc.value), exc.value
@@ -696,8 +700,12 @@ def _capture_messages(monkeypatch, reply='{"no_change": "stub"}'):
         def __init__(self, **kw):
             self.chat = type("C", (), {"completions": _Completions()})()
 
-    import openai
-    monkeypatch.setattr(openai, "OpenAI", _Client)
+    import editor
+    def endpoint_client(**kwargs):
+        client = _Client(**kwargs)
+        client.complete = client.chat.completions.create
+        return client
+    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
     return sent
 
 
@@ -856,8 +864,12 @@ def test_the_methods_own_tokens_reach_the_cost_record(tmp_path, monkeypatch):
         def __init__(self, **kw):
             self.chat = type("C", (), {"completions": _Completions()})()
 
-    import openai
-    monkeypatch.setattr(openai, "OpenAI", _Client)
+    import editor
+    def endpoint_client(**kwargs):
+        client = _Client(**kwargs)
+        client.complete = client.chat.completions.create
+        return client
+    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
 
     editor.reset_spent()
     reply = editor.ask("prompt")

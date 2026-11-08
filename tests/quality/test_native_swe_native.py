@@ -22,8 +22,8 @@ from tools.prepare_native_research import prepare
 
 @pytest.fixture(scope='module')
 def native_fixture(tmp_path_factory):
-    if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_SWE_PYTHON'):
-        pytest.skip('pinned official SWE runtime not provisioned (HG_SWE_SOURCE/HG_SWE_PYTHON)')
+    if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_DATASET_RUNTIME_ROOT'):
+        pytest.skip('pinned official SWE runtime not provisioned (HG_SWE_SOURCE/HG_DATASET_RUNTIME_ROOT)')
     native.official('check')
     context = tmp_path_factory.mktemp('swe-control-image')
     wheels = Path(os.environ.get('HG_SWE_CONTROL_WHEELS', '/tmp/hg-swe-control-wheels'))
@@ -149,7 +149,7 @@ def test_actual_official_grader_reports_missing_execution_without_fabricated_pas
     a model failure scored zero. It requires the installed pinned evaluator but
     no Docker, model, dataset download, or benchmark task.
     """
-    if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_SWE_PYTHON'):
+    if not os.environ.get('HG_SWE_SOURCE') or not os.environ.get('HG_DATASET_RUNTIME_ROOT'):
         pytest.skip('pinned official evaluator not provisioned')
     native.official('check')
     row = {

@@ -380,6 +380,12 @@
     const payload = await response.json();
     if (!response.ok) { alert(`${payload.error || tr("保存失败")}\n${payload.detail || ""}`); return; }
     markDirty(false);
+    const preview = $("trial-preview");
+    const zh = window.HGI18n.language === "zh";
+    preview.textContent = (zh
+      ? "手动试运行：sampling=all 覆盖所选数据集的训练任务，数量未确定；rounds=0 只表示没有改进轮，并不表示只测一题。每题 trials=1、jobs=1（driver 默认）。不执行 editor 改进；solver 使用运行时配置，环境和 judge 仅在数据集需要时使用，可能产生独立模型调用。请在运行前检查配置。\n"
+      : "Manual trial: sampling=all covers the selected dataset's training tasks; the count is not determined. rounds=0 means no improvement rounds, not one task. trials=1 per task and jobs=1 (driver defaults). No editor improvement runs. Solver uses runtime configuration; environment and judge are used only when required by the dataset and may make separate model calls. Check the configuration before running.\n") + (payload.trial || "");
+    preview.hidden = false;
     await loadSources();
     await openSource(name);
   }

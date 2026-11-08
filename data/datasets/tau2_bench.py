@@ -69,6 +69,7 @@ import json
 from pathlib import Path
 import random
 import subprocess
+import os
 
 from harnessgrad.paths import configured_path, dataset_root
 
@@ -190,7 +191,24 @@ def _case(tid: str, row: dict) -> Path:
     return DATASET_ROOT / row["path"]
 
 
+def _execution_runtime():
+    """Resolve and revalidate the selected dependency artifact on every declaration.
+
+    This is an external store reference, not a relocatable copy or a sealed OS.
+    The manager inventories the venv and base executable; host libraries and the
+    base standard library remain compatibility inputs.
+    """
+    from harnessgrad import dataset_runtime
+    selected = dataset_runtime.resolve_execution("tau2_bench")
+    override = os.environ.get("HG_DATA_TAU2_BENCH_RUNTIME")
+    if override and Path(override).resolve() != Path(selected["path"]).resolve():
+        raise ValueError("HG_DATA_TAU2_BENCH_RUNTIME must name the selected managed execution artifact")
+    return selected
+
+
 def _setup(tid: str, row: dict) -> dict:
+    from harnessgrad.dataset_runtime import bind
+    runtime = _execution_runtime()
     public = _case(tid, row).joinpath("public.json").read_bytes()
     if hashlib.sha256(public).hexdigest() != row["public_sha256"]:
         raise ValueError("public task digest mismatch")
@@ -203,7 +221,12 @@ def _setup(tid: str, row: dict) -> dict:
     return {"files": [{"path": "tau2.py", "from": str(ASSETS / "cli/tau2.py")},
                       {"path": "tau2_transport.py", "from": str(TRANSPORT.resolve())},
                       {"path": "tau2_public.json", "content": json.dumps(actor_public)}],
-            "tool_relay": {"program": str(ASSETS / "relay.py"), "python": str(RUNTIME / "bin/python"),
+            "tool_relay": {"program": str(ASSETS / "relay.py"), "python": runtime["python"],
+                           "python_runtime": bind(runtime, "service"),
+                           # Trusted service mounts only: never actor workspace inputs.
+                           'read_paths': [str(ASSETS.resolve()), str(TRANSPORT.resolve().parent),
+                                          str((DATASET_ROOT / 'bundle').resolve()),
+                                          str((DATASET_ROOT / row['path'] / 'private.json').resolve())],
                            "content_flag": "--case-spec", "filename": "case-spec.json",
                            "content": json.dumps({"case": str(_case(tid, row) / "private.json"),
                                                  "sha256": row["private_sha256"],
@@ -214,9 +237,8 @@ def _setup(tid: str, row: dict) -> dict:
                            "max_line_bytes": None}}
 
 
-@lru_cache(maxsize=1)
 def _python_runtime(runtime: str) -> tuple[str, tuple[str, ...]]:
-    """Inspect the selected scorer Python once; the driver may use another runtime."""
+    """Inspect the selected scorer Python afresh; the driver may use another runtime."""
     runtime = Path(runtime)
     if not runtime.is_absolute():
         raise ValueError("tau2 runtime must be an absolute directory")
@@ -256,14 +278,17 @@ def _python_runtime(runtime: str) -> tuple[str, tuple[str, ...]]:
 
 
 def _verify(tid: str, row: dict) -> dict:
-    python, runtime_paths = _python_runtime(RUNTIME)
+    from harnessgrad.dataset_runtime import bind
+    runtime = _execution_runtime()
+    python, runtime_paths = runtime["python"], runtime["runtime_paths"]
     inputs = [{"path": "tau2_code", "from": str(ASSETS), "immutable": True},
               {"path": "tau2_private.json", "from": str(_case(tid, row) / "private.json")},
               {"path": "tau2_transport_runtime", "from": str(TRANSPORT.resolve().parent),
                "immutable": True},
               {"path": "tau2_bundle", "from": str(DATASET_ROOT / "bundle"), "immutable": True}]
     return {"kind": "command",
-            "argv": [python, "-I", "tau2_code/verify/check.py", "--task-id", tid,
+            "python_runtime": bind(runtime, "verifier"),
+            "argv": [python, "-I", "-B", "tau2_code/verify/check.py", "--task-id", tid,
                      "--case-sha256", row["private_sha256"]],
             "runtime_paths": list(runtime_paths), "inputs": inputs,
             "reward_file": "/verifier/reward.txt",
@@ -333,7 +358,9 @@ def provision_status() -> dict:
     import sys
     root = None
     try:
-        root, runtime = str(DATASET_ROOT), str(RUNTIME)
+        root = str(DATASET_ROOT)
+        selected = _execution_runtime()
+        runtime = selected["path"]
         proc = subprocess.run(
             [sys.executable, "-B", str(ASSETS / "prepare.py"), "--check-only",
              "--target", root, "--runtime", runtime],
@@ -345,11 +372,11 @@ def provision_status() -> dict:
             raise ValueError("tau2 readiness receipt manifest mismatch")
         tarball = DATASET_ROOT / "_src" / TARBALL_NAME
         return {"root": root, "present": True, "tasks": checked["tasks"],
-                "runtime": runtime, "bundle": str(DATASET_ROOT / "bundle"),
+                "runtime": runtime, "runtime_id": selected["runtime_id"], "bundle": str(DATASET_ROOT / "bundle"),
                 "tarball": str(tarball) if tarball.is_file() else None,
                 "domains": list(DOMAINS), "user_action_tasks": inventory()["user_action_tasks"],
                 "validation": "pinned-assets-and-runtime-metadata", "model_health_checked": False}
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
         return {"root": root, "present": False, "tasks": 0, "detail": str(exc)}
 
 

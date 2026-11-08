@@ -174,5 +174,6 @@ def test_corrupt_private_plan_refused(prepared, tmp_path):
     fake.write_text('{}')
     spec['case'] = str(fake)
     setup['tool_relay']['content'] = json.dumps(spec)
+    setup['tool_relay']['read_paths'].append(str(fake.resolve()))
     with pytest.raises(RuntimeError, match='digest mismatch'):
         tool_relay.start(setup, context={'task_id': tid, 'run_id': 'corruption', 'trial_id': '1', 'seed': '0'})

@@ -1,0 +1,67 @@
+{
+  "scope": "Source-file identity evidence only; no complete historical distribution inventory reconstructed",
+  "native_manifest_sha256": "ef0be1521477f66baf7859f1a25399211770dc69fdbd82675b130a9956f39939",
+  "packages": {
+    "numpy": {
+      "distribution_version": "1.26.4",
+      "matching_native_source_files": [
+        {
+          "target": "/opt/hg-site-packages/numpy/__init__.py",
+          "sha256": "22cd1535fa14d74ef6f457cca149ffdc80875f460be313b8f895273f78bc402e"
+        },
+        {
+          "target": "/opt/hg-site-packages/numpy/version.py",
+          "sha256": "3932e74a1d0d19f5b22fc56b9c88f435db7f29939397567e903f427fe8d13266"
+        }
+      ]
+    },
+    "jericho": {
+      "distribution_version": "3.3.1",
+      "matching_native_source_files": [
+        {
+          "target": "/opt/hg-site-packages/jericho/__init__.py",
+          "sha256": "0747185b4528e7d29bf9fec5a8e6b10861fedb0423978c721028d702861ee257"
+        },
+        {
+          "target": "/opt/hg-site-packages/jericho/version.py",
+          "sha256": "4c85ea6e167119fa4fda42d14d0ebb001e5e3a7cb39abae7f82b70a80168b471"
+        }
+      ]
+    },
+    "tatsu": {
+      "distribution_version": "5.8.3",
+      "matching_native_source_files": [
+        {
+          "target": "/opt/hg-site-packages/tatsu/__init__.py",
+          "sha256": "0114c8e05fd01c1468ded8969a8f4226cb722a24d801eae4078bc8963f11c9c6"
+        },
+        {
+          "target": "/opt/hg-site-packages/tatsu/_version.py",
+          "sha256": "5210f140fca46a3988bbe6b4ce1cc7370cf8b99fd7f171275dcdaa7b86764faa"
+        }
+      ]
+    },
+    "textworld": {
+      "distribution_version": "1.7.0",
+      "matching_native_source_files": [
+        {
+          "target": "/opt/hg-site-packages/textworld/__init__.py",
+          "sha256": "651106cbb89b93caa81275d75a0f292c66b95f774947a61e573e28b3981e69ba"
+        },
+        {
+          "target": "/opt/hg-site-packages/textworld/version.py",
+          "sha256": "64a8f45f7a249f898ae07897ff550a2ae18ecdc22c91fb4b88710c26881b5186"
+        }
+      ]
+    },
+    "alfworld": {
+      "distribution_version": "0.4.2",
+      "matching_native_source_files": [
+        {
+          "target": "/opt/hg-site-packages/alfworld/__init__.py",
+          "sha256": "4d89c431771807e2abc99b5df152bd9870257e608635e32f393aac56cc0be56e"
+        }
+      ]
+    }
+  }
+}

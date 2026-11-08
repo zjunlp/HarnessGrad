@@ -1,7 +1,7 @@
 """Experiment files are a checked-in command line, so the spellings must be the driver's.
 
 These tests never launch `driver.py` and never write a run directory: they read the
-argparse surface out of `driver.py` as source, and the only files they create are
+argparse surface out of the run parser as source, and the only files they create are
 temporary experiment fixtures under pytest's `tmp_path`.
 """
 from __future__ import annotations
@@ -53,9 +53,9 @@ def _by_flag(argv: list[str]) -> dict[str, str | bool]:
 
 
 def _driver_flags() -> set[str]:
-    """Every flag `driver.py:main()` declares, read as source rather than imported."""
-    tree = ast.parse((ROOT / "driver.py").read_text(encoding="utf-8"),
-                     filename="driver.py")
+    """Every run flag, read from its canonical parser as source."""
+    tree = ast.parse((ROOT / "harnessgrad/entrypoints/run_parser.py").read_text(encoding="utf-8"),
+                     filename="harnessgrad/entrypoints/run_parser.py")
     flags = set()
     for node in ast.walk(tree):
         if not (isinstance(node, ast.Call)

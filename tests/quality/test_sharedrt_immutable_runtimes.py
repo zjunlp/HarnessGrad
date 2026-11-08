@@ -350,20 +350,12 @@ def test_backend_bind_failure_makes_task_invalid(tmp_path, runtime, monkeypatch,
     assert result["exit_code"] is None and "verdict" not in result
 
 
-def test_four_dataset_flags_keep_runtime_paths():
-    """每个"带不可变运行时"的适配器，投影出来的路径集合就是这一个元组。
-
-    **数量是逐数据集的事实，不是一个常数。** 这条断言原本对 agentdojo 和 scienceworld
-    都要求两处 `immutable: True`，但 agentdojo 的 SETUP 一直只有一处
-    （`trusted_runtime`，供 tool relay 的验证方用；agent 那一侧拿到的是 socket，不是
-    运行时目录），所以 agentdojo 那半条从未成立。scienceworld 的两处（SETUP 与 VERIFY
-    各一处，都指向同一个 JRE）是真的。
-    """
+def test_scienceworld_verifier_keeps_its_native_runtime_declaration():
+    """The verifier retains its JRE; the actor now uses a private managed service."""
     import ast
 
     expected = {
-        "agentdojo": [entry(Path("/authored/dataset/runtime"), "trusted_runtime")],
-        "scienceworld": [entry(Path("/authored/jre"), "jre/authored-jre")] * 2,
+        "scienceworld": [entry(Path("/authored/jre"), "jre/authored-jre")],
     }
     for name, want in expected.items():
         path = f"data/datasets/{name}.py"
@@ -377,6 +369,29 @@ def test_four_dataset_flags_keep_runtime_paths():
                      "_LIB": type("AuthoredLibrary", (), {"JRE_RELDIR": "jre", "JRE_DIRNAME": "authored-jre"})}
         actual = [eval(compile(ast.Expression(node), path, "eval"), namespace) for node in marked]
         assert actual == want, name
+
+
+def test_agentdojo_projects_private_code_and_source_only_for_verification(tmp_path, monkeypatch):
+    from data.datasets import agentdojo
+    from harnessgrad import dataset_runtime
+    code, source = tmp_path / 'code', tmp_path / 'source'
+    code.mkdir()
+    source.mkdir()
+    monkeypatch.setattr(agentdojo, 'ASSETS', code)
+    monkeypatch.setattr(agentdojo, 'DATASET_ROOT', tmp_path / 'data')
+    monkeypatch.setattr(agentdojo, '_indices', lambda: [0])
+    monkeypatch.setattr(agentdojo, '_source_root', lambda: source)
+    monkeypatch.setattr(agentdojo, '_execution_runtime',
+                        lambda: {'python': '/authored/python', 'runtime_paths': ['/authored/prefix']})
+    # Artifact admission is covered by the native AgentDojo runtime controls;
+    # this test checks which phase receives each immutable projection.
+    monkeypatch.setattr(dataset_runtime, 'bind', lambda runtime, role: {'role': role})
+    public = agentdojo.SETUP['agentdojo/0']['files']
+    private = agentdojo.VERIFY['agentdojo/0']['inputs']
+    assert projections(public) == ()
+    assert projections(private) == ((code, 'dojo_code'), (source, 'agentdojo_source'))
+    assert str(source) not in json.dumps(public)
+    assert all(item['path'] != 'dojo_code' for item in public)
 
 
 def test_live_runner_keeps_mutable_antitamper_with_shared_runtimes(tmp_path, runtime, monkeypatch):

@@ -45,6 +45,7 @@ from __future__ import annotations
 import argparse
 import ast
 import importlib
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -71,6 +72,7 @@ CONTROLS = ROOT / "tests" / "quality" / "test_dataset_controls.py"
 #: the reading that supports it, which is why it is a literal dict and not a grep at
 #: render time.
 DEVIATIONS: dict[str, str] = {
+    'locomo': 'per-conversation Harbor rewards are preserved; the platform curve is conversation-macro mean, while report.py computes the question-weighted Harbor aggregate',
     'nq': 'upstream short-answer-text EM/F1 on the any-short-answer-or-yes-no subset; not the full official NQ long/short-answer leaderboard metric',
     'supergpqa': 'upstream final_letter_v1 sample-mean accuracy; not official discipline-macro/freeform evaluation',
     'browsecomp': 'upstream corrects simple-evals regex group(0) to group(1); judge model profile is explicit and not universally comparable',
@@ -223,21 +225,29 @@ def _published() -> tuple[str, ...]:
 
 def _import_adapter(name: str):
     """Metadata remains readable before optional runtimes or task pools are installed."""
+    provider = registry.provider(name)
+    if provider is not None:
+        view = _source_adapter(name)
+        # Only the explicit --host report calls this hook. Static documentation
+        # must remain independent of both data and prepared runtime availability.
+        view.provision_status = provider.check
+        return view
     try:
         return importlib.import_module(registry.module_name(name))
     except Exception:
-        # Reuse the download catalog's trusted-source declaration reader. This
-        # view exposes metadata only; it cannot load or report provisioned tasks.
-        from tools.datasets import _source_downloads
+        return _source_adapter(name)
 
-        path = ROOT / "data/datasets" / f"{name}.py"
-        if not path.is_file():
-            raise
-        constants = _module_constants(ast.parse(path.read_text(encoding="utf-8")))
-        downloads = _source_downloads(path, resolve_root=False)
-        if constants.get("KIND") != "dataset" or not callable(downloads):
-            raise
-        return SimpleNamespace(__file__=str(path), downloads=downloads, **constants)
+
+def _source_adapter(name: str):
+    """Read owned metadata without importing a provider's loading dependencies."""
+    from tools.datasets import _source_downloads
+
+    path = ROOT / "data/datasets" / f"{name}.py"
+    constants = _module_constants(ast.parse(path.read_text(encoding="utf-8")))
+    downloads = _source_downloads(path, resolve_root=False)
+    if constants.get("KIND") != "dataset" or not callable(downloads):
+        raise ValueError(f"{name}: no readable dataset metadata")
+    return SimpleNamespace(__file__=str(path), downloads=downloads, **constants)
 
 
 # ------------------------------------------------------------------------ declarations ---
@@ -472,7 +482,10 @@ def _provision(name: str, module, *, refused: bool) -> str:
     if not entries:
         return "unknown (the adapter declares nothing to fetch)"
     if "http" in kinds or "hf-dataset" in kinds or "hf-file" in kinds:
-        return f"`python3 tools/datasets.py --fetch --dataset {name}`"
+        command = f"`python3 tools/datasets.py --fetch --dataset {name}`"
+        if registry.provider(name) is not None:
+            command += f"; then `python tools/prepare_dataset.py --dataset {name}`"
+        return command
     if "authored" in kinds:
         return f"{DASH} the bytes ship with the repository; nothing to fetch"
     if "pip" in kinds:
@@ -618,6 +631,44 @@ def build_rows() -> list[Row]:
     return [row_for(name, controls) for name in sorted(_published())]
 
 
+def runtime_support_rows() -> dict[str, dict]:
+    """Read reviewed role boundaries without loading datasets or probing a host."""
+    inventory = json.loads((ROOT / 'data/runtime-support.json').read_text())
+    if inventory.get('schema') != 'harnessgrad.runtime-support-inventory.v1':
+        raise ValueError('unsupported runtime support inventory')
+    result = {}
+    fields = {'datasets', 'loading_and_preparation', 'trusted_execution', 'verification_scope'}
+    for group in inventory['groups']:
+        if (set(group) != fields or not isinstance(group['datasets'], list)
+                or any(not isinstance(group[key], str) or not group[key]
+                       for key in fields - {'datasets'})):
+            raise ValueError('invalid runtime support group')
+        for name in group['datasets']:
+            if not isinstance(name, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', name) or name in result:
+                raise ValueError('invalid or duplicate runtime support dataset')
+            result[name] = group
+    return result
+
+
+def _runtime_section(rows: list[Row]) -> list[str]:
+    inventory = runtime_support_rows()
+    lines = ['', '## Dependency boundaries and validation scope', '',
+        'This maintained source review separates loading/preparation from trusted execution. '
+        'It is generated from `data/runtime-support.json`, not from imports succeeding or '
+        'runtime manifests merely existing. A synthetic or mock control covers only its named '
+        'path; it does not prove every task, external service, wheel resource or host platform '
+        'is supported. Unknown and pending work remain explicit. Use the selected component\'s '
+        'preparation/check command to inspect your own installation.', '',
+        '| dataset | Loading and preparation | Trusted execution | Verification scope and remaining work |',
+        '| --- | --- | --- | --- |']
+    for row in rows:
+        entry = inventory.get(row.dataset, {})
+        cells = [_cell(entry.get(key, 'Not yet reviewed.')) for key in
+                 ('loading_and_preparation', 'trusted_execution', 'verification_scope')]
+        lines.append(f'| [{row.dataset}](data/datasets/{row.dataset}.py) | ' + ' | '.join(cells) + ' |')
+    return lines + ['']
+
+
 # ------------------------------------------------------------------------ the document ---
 
 
@@ -663,7 +714,7 @@ _HEADER = """\
 
 # Dataset readiness
 
-Every published dataset on one row: what its grade is, whether that grade is the
+Every published dataset has a readiness row: what its grade is, whether that grade is the
 benchmark's own metric, where the oracle's reference came from, how to fetch its bytes,
 and which control and which metric test prove the grade is reachable. It is rendered from
 the adapters and from `tests/quality/test_dataset_controls.py:ROWS`, so `python3
@@ -757,6 +808,7 @@ def render(rows: list[Row], host: dict[str, str] | None = None) -> str:
     `--check` -- which pass none -- can never see it.
     """
     lines = [_HEADER.rstrip("\n"), ""]
+    lines += _runtime_section(rows)
     lines.append(_glance(rows))
     lines += [
         "",

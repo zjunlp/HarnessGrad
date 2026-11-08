@@ -57,7 +57,7 @@ def rows() -> dict[tuple[str, int], dict]:
     against the inner row.
     """
     if not (rg.DATASET_ROOT / rg.POOL).is_file():
-        pytest.skip("reasoning_gym: no pool; run `python3 data/datasets/reasoning_gym/prepare.py`")
+        pytest.skip("reasoning_gym: no pool; import a pin-matching snapshot with `python -m tools.prepare_reasoning_gym --import-pool PATH`")
     return {(r["row"]["family"], r["row"]["index"]): r["row"] for r in rg._SPEC.ensure()}
 
 
@@ -129,9 +129,8 @@ def test_the_adapter_calls_the_library_scorer_and_not_a_copy(rows):
 
 def test_a_gold_with_no_family_is_reported_rather_than_scored():
     """A gold that did not come from this pool must not be scored as if it had."""
-    verdict = rg.score("anything", {"answer": "x"})
-    assert verdict["reward"] == 0.0
-    assert "no family" in verdict["why"]
+    with pytest.raises(ValueError, match="no family"):
+        rg.score("anything", {"answer": "x"})
 
 
 @pytest.mark.parametrize("family", sorted(prepare.FAMILIES))

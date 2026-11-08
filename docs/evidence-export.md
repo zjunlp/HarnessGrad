@@ -148,6 +148,19 @@ task set. An explicit empty protocol map means no additional protocol; an absent
 unknown. Existing writers may omit empty maps, so those receipts conservatively report
 comparability as unavailable rather than silently filling in their provenance.
 
+Current measurements also record a private `verification_context` covering selected
+task/scoring declarations and their source inputs. Changed inputs invalidate cached
+measurements and prevent a comparable label. Historical records without this
+evidence remain readable, but their verification context is unknown.
+
+Those fingerprints can encode low-entropy private answers, so the exporter never
+publishes the fingerprints or their task mapping. Instead it assigns opaque
+`verification-N` equivalence groups within one bundle. Equal groups mean the
+exporter compared equal recorded contexts for the selected tasks; group names have
+no meaning across exports. `--verify` checks that reported comparisons and variation
+agree with these groups, not that the underlying source material is authentic.
+Method/actor inputs and Console explanation prompts do not receive these fingerprints.
+
 The default bundle contains no raw task IDs/text, answers, trajectories, stdout/stderr,
 workspace paths, endpoint URLs, arbitrary metadata or source trees. Task scores/trials are
 exported in sorted source-task order without the task names; a task-set digest binds the

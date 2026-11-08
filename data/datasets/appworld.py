@@ -48,10 +48,16 @@ pre-pilot check and ``docs/network-subnets.md`` has the measurement.
 from __future__ import annotations
 
 import hashlib
+import ctypes
+import errno
+import stat
+import tempfile
 import io
 import json
 import os
 import shlex
+import secrets
+import subprocess
 import shutil
 import zipfile
 from pathlib import Path
@@ -104,25 +110,34 @@ VERIFIER_IMAGE = os.environ.get(
     "HG_APPWORLD_VERIFIER_IMAGE",
     "harnessgrad/appworld-service@sha256:f3cb916b9bdc297d4c73dd9646e9550befb7c6e23827d937b90a0640373e97ca",
 )
+BUNDLE_SHA256 = "fd9f9608c2ec71ed0ac25c3633a738b9129a318a129e31230425b9188e508250"
 POOL_SHA256 = "970c39331bc350ce9d3ed91a75fd32b554c257fc48fc31633dfccdde74164e65"
 WORKDIR = "/app"
 PASSWORD = "WEquKLy##9M@qu"
 SALT = b"Nvx#rYcYQ2%btf"
 
 
-def bundle_zip(bundle_path: Path | str | None = None) -> zipfile.ZipFile:
-    """Decrypt the official bundle in memory using AppWorld's public constants."""
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+def _decrypt(data: bytes, runtime: dict) -> bytes:
+    # Re-admit the current publication before each use; never install implicitly.
+    from harnessgrad.dataset_runtime import resolve_execution
+    admitted = resolve_execution("appworld")
+    if (admitted["runtime_id"], admitted["manifest_path"]) != (runtime["runtime_id"], runtime["manifest_path"]):
+        raise ValueError("appworld preparation runtime changed during selection")
+    worker = Path(__file__).resolve().parent / "appworld" / "decrypt_bundle.py"
+    completed = subprocess.run([admitted["python"], "-I", "-B", str(worker)], input=data,
+                               capture_output=True, timeout=120, check=False,
+                               env={"PATH": os.defpath, "PYTHONNOUSERSITE": "1"})
+    if completed.returncode:
+        raise ValueError("appworld decryption worker failed in the prepared runtime")
+    return completed.stdout
 
+
+def bundle_zip(bundle_path: Path | str | None = None, *, _runtime: dict | None = None) -> zipfile.ZipFile:
+    """Decrypt in the explicitly prepared external runtime, never in platform Python."""
+    from harnessgrad.dataset_runtime import resolve_execution
+    runtime = _runtime if _runtime is not None else resolve_execution("appworld")
     path = Path(bundle_path) if bundle_path else BUNDLE
-    data = path.read_bytes()
-    key = PBKDF2HMAC(
-        algorithm=hashes.SHA256(), length=32, salt=SALT, iterations=100000
-    ).derive(PASSWORD.encode())
-    decryptor = Cipher(algorithms.AES(key), modes.CFB(data[:16])).decryptor()
-    return zipfile.ZipFile(io.BytesIO(decryptor.update(data[16:]) + decryptor.finalize()))
+    return zipfile.ZipFile(io.BytesIO(_decrypt(path.read_bytes(), runtime)))
 
 
 def task_ids(bundle_path: Path | str | None = None) -> list[str]:
@@ -153,54 +168,138 @@ def _db_digest(root: Path) -> str:
     return digest.hexdigest()
 
 
+def _archive_files(archive):
+    """Validate every entry before extraction or comparison."""
+    files = {}
+    for member in archive.infolist():
+        relative = Path(member.filename)
+        if (relative.is_absolute() or not relative.parts or ".." in relative.parts
+                or "\\" in member.filename or member.filename in files):
+            raise ValueError("appworld archive contains an unsafe or duplicate path")
+        mode = member.external_attr >> 16
+        if stat.S_ISLNK(mode) or (stat.S_IFMT(mode) and not (stat.S_ISDIR(mode) or stat.S_ISREG(mode))):
+            raise ValueError("appworld archive contains an unsupported entry")
+        files[member.filename] = member
+    return files
+
+
+def _verify_unpacked(archive, members, root):
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("appworld: unpacked tree is not a real directory")
+    for name, member in members.items():
+        target = root
+        for part in Path(name).parts:
+            target = target / part
+            if target.is_symlink():
+                raise ValueError("appworld: unpacked tree contains a symlink in an official path")
+        if member.is_dir():
+            if not target.is_dir():
+                raise ValueError("appworld: unpacked tree missing official directory")
+        elif not target.is_file() or target.read_bytes() != archive.read(member):
+            raise ValueError("appworld: unpacked tree missing or changed official file")
+
+
+def _publish_unpacked(stage, target):
+    # Linux renameat2 prevents replacing even an empty directory created concurrently.
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, "renameat2", None)
+    if rename is None:
+        raise ValueError("appworld: atomic no-replace publication is unavailable")
+    rename.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+    if rename(-100, os.fsencode(stage), -100, os.fsencode(target), 1) != 0:
+        code = ctypes.get_errno()
+        if code == errno.EEXIST:
+            raise ValueError("appworld: unpacked tree already exists; preserve it")
+        raise OSError(code, os.strerror(code))
+
+
 def prepare() -> Path:
-    """Decrypt/materialize the release and write compact per-task metadata.
+    """Materialize pinned metadata using an admitted, isolated decrypt runtime.
 
-    The heavy task databases stay under the external dataset root.  Importing this adapter
-    reads only ``pool.jsonl``; it does not walk the 14,696-member archive or task trees.
+    Existing official files must match the pinned bundle. Extra user files are retained.
     """
-    UNPACKED.mkdir(parents=True, exist_ok=True)
-    marker = UNPACKED / "data" / "version.txt"
-    if not marker.is_file():
-        with bundle_zip() as archive:
-            for member in archive.infolist():
-                target = UNPACKED / member.filename
-                if member.is_dir():
-                    target.mkdir(parents=True, exist_ok=True)
-                    continue
-                target.parent.mkdir(parents=True, exist_ok=True)
-                with archive.open(member) as source, target.open("wb") as destination:
-                    shutil.copyfileobj(source, destination)
-
-    rows: list[dict] = []
-    declared = split_ids(BUNDLE)
-    for split, ids in declared.items():
-        for task_id in ids:
-            root = UNPACKED / "data" / "tasks" / task_id
-            specs = json.loads((root / "specs.json").read_text())
-            metadata = json.loads((root / "ground_truth" / "metadata.json").read_text())
-            rows.append(
-                {
-                    "task_id": task_id,
-                    "split": split,
-                    "difficulty": metadata["difficulty"],
-                    "num_api_calls": metadata["num_api_calls"],
-                    "num_apps": metadata["num_apps"],
-                    "instruction": specs["instruction"],
-                    "dbs": _db_digest(root),
-                    "released_oracle": (root / "ground_truth" / "api_calls.json").is_file(),
-                }
-            )
+    from harnessgrad.dataset_runtime import resolve_execution
+    runtime = resolve_execution("appworld")
+    worker = Path(__file__).resolve().parent / "appworld" / "decrypt_bundle.py"
+    worker_sha = hashlib.sha256(worker.read_bytes()).hexdigest()
+    raw = BUNDLE.read_bytes()
+    bundle_sha = hashlib.sha256(raw).hexdigest()
+    if bundle_sha != BUNDLE_SHA256:
+        raise ValueError(f"appworld: bundle digest {bundle_sha} != pinned {BUNDLE_SHA256}")
+    # Use the verified bytes, not a second read from a potentially changed source.
+    decrypted = _decrypt(raw, runtime)
+    if hashlib.sha256(worker.read_bytes()).hexdigest() != worker_sha:
+        raise ValueError("appworld preparation worker changed during decryption")
+    with zipfile.ZipFile(io.BytesIO(decrypted)) as archive:
+        entries = _archive_files(archive)
+        members = set(entries)
+        declared = {split: [line.strip() for line in archive.read(
+            f"data/datasets/{split}.txt").decode().splitlines() if line.strip()]
+            for split in SPLIT_SIZES}
+        rows = []
+        for split, ids in declared.items():
+            for task in ids:
+                prefix = f"data/tasks/{task}/"
+                specs = json.loads(archive.read(prefix + "specs.json"))
+                metadata = json.loads(archive.read(prefix + "ground_truth/metadata.json"))
+                digest = hashlib.sha256()
+                dbprefix = prefix + "dbs/"
+                for name in sorted(n for n in members if n.startswith(dbprefix)
+                                   and "/" not in n[len(dbprefix):] and n.endswith(".jsonl")):
+                    digest.update(Path(name).name.encode())
+                    digest.update(archive.read(name))
+                rows.append({"task_id": task, "split": split, "difficulty": metadata["difficulty"],
+                    "num_api_calls": metadata["num_api_calls"], "num_apps": metadata["num_apps"],
+                    "instruction": specs["instruction"], "dbs": digest.hexdigest(),
+                    "released_oracle": prefix + "ground_truth/api_calls.json" in members})
+        pool_bytes = b"".join((json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n").encode()
+                              for row in sorted(rows, key=lambda value: value["task_id"]))
+        pool_sha = hashlib.sha256(pool_bytes).hexdigest()
+        if pool_sha != POOL_SHA256:
+            raise ValueError(f"appworld: pool digest {pool_sha} != pinned {POOL_SHA256}")
+        if POOL.is_symlink() or (POOL.exists() and POOL.read_bytes() != pool_bytes):
+            raise ValueError("appworld: existing pool differs; preserve it and use another dataset root")
+        if SRC_DIR.is_symlink() or not SRC_DIR.is_dir():
+            raise ValueError("appworld: source directory must not be a symlink")
+        if UNPACKED.is_symlink():
+            raise ValueError("appworld: unpacked tree must not be a symlink")
+        reused = UNPACKED.exists()
+        if reused:
+            _verify_unpacked(archive, entries, UNPACKED)
+        else:
+            with tempfile.TemporaryDirectory(prefix=".appworld-stage-", dir=SRC_DIR) as temp:
+                stage = Path(temp) / "unpacked"
+                stage.mkdir()
+                for name, member in entries.items():
+                    target = stage / name
+                    if member.is_dir():
+                        target.mkdir(parents=True, exist_ok=True)
+                    else:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        with archive.open(member) as source, target.open("xb") as destination:
+                            shutil.copyfileobj(source, destination)
+                _verify_unpacked(archive, entries, stage)
+                _publish_unpacked(stage, UNPACKED)
     POOL.parent.mkdir(parents=True, exist_ok=True)
-    with POOL.open("w", encoding="utf-8") as output:
-        for row in sorted(rows, key=lambda value: value["task_id"]):
-            output.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    if not POOL.exists():
+        with POOL.open("xb") as output:
+            output.write(pool_bytes)
+    receipt_dir = DATASET_ROOT / "preparation-receipts"
+    receipt_dir.mkdir(parents=True, exist_ok=True)
+    receipt = {"schema": "harnessgrad.appworld-preparation.v1", "bundle_sha256": bundle_sha,
+               "pool_sha256": pool_sha, "worker_sha256": worker_sha, "runtime": runtime,
+               "reused_unpacked_tree": reused,
+               "unpacked_tree_verified": True,
+               "unpacked_verification_scope": "official archive members; additional files are not authenticated"}
+    with (receipt_dir / (secrets.token_hex(16) + ".json")).open("x", encoding="utf-8") as out:
+        json.dump(receipt, out, sort_keys=True, indent=2)
+    _refresh_loaded_pool()
     return POOL
 
 
 def _pool() -> list[dict]:
     if not POOL.is_file():
-        prepare()
+        raise FileNotFoundError("appworld: pool.jsonl is not prepared; run python -m tools.prepare_appworld after preparing the execution runtime")
     actual = hashlib.sha256(POOL.read_bytes()).hexdigest()
     if actual != POOL_SHA256:
         raise ValueError(f"appworld: pool digest {actual} != pinned {POOL_SHA256}")
@@ -229,11 +328,17 @@ def oracle_files(task: dict) -> dict[str, str]:
             "    exec(requester_call)\n"}
 
 
-ORACLE_COVERAGE = (
-    f"{len(_oracle_ids())} of {TASKS_IN_RELEASE} tasks (released train+dev coverage)"
-)
+try:
+    _pool_rows = _pool()
+    _POOL_ERROR = None
+except FileNotFoundError as exc:
+    _pool_rows = []
+    _POOL_ERROR = str(exc)
 
-_ROWS = {row["task_id"]: row for row in _pool()}
+ORACLE_COVERAGE = (f"{sum(bool(row.get('released_oracle')) for row in _pool_rows)} of "
+                   f"{TASKS_IN_RELEASE} tasks (released train+dev coverage)"
+                   if _POOL_ERROR is None else "unavailable until prepared")
+_ROWS = {row["task_id"]: row for row in _pool_rows}
 _ALL = [row["task_id"] for row in _ROWS.values()]
 
 
@@ -381,6 +486,8 @@ def _setup(task_id: str) -> dict:
 
 
 def load():
+    if _POOL_ERROR is not None:
+        raise ValueError(_POOL_ERROR)
     if _LOAD_ERROR is not None:
         raise ValueError(f"appworld: {_LOAD_ERROR}")
     tasks = [{"task_id": task_id, "goal": _goal(_ROWS[task_id]), "inputs": []}
@@ -407,8 +514,8 @@ SETUP = {
     task_id: _setup(task_id)
     for task_id in _RUN_IDS
 }
-VERIFY = {
-    task_id: {
+def _verifier(task_id):
+    return {
         "kind": "command",
         "scorer_bundle": {"isolation_class": "snapshot-service"},
         "argv": [
@@ -431,8 +538,8 @@ VERIFY = {
         "image": VERIFIER_IMAGE,
         "timeout_s": 900,
     }
-    for task_id in _RUN_IDS
-}
+
+VERIFY = {task_id: _verifier(task_id) for task_id in _RUN_IDS}
 
 DEFAULT_ENV = {
     "kind": "exec",
@@ -468,6 +575,32 @@ DEFAULT_ENV = {
     "verify_timeout_s": 900,
 }
 ENV = {task_id: DEFAULT_ENV for task_id in _RUN_IDS}
+
+
+def _refresh_loaded_pool():
+    """Refresh derived declarations after preparation in the same interpreter."""
+    global _pool_rows, _POOL_ERROR, ORACLE_COVERAGE, _ROWS, _ALL
+    global _STUDY_IDS, _EVAL_IDS, _LOAD_ERROR, _RUN_IDS, SPLIT, OFFICIAL_EVAL
+    global SETUP, VERIFY, ENV
+    rows = _pool()
+    _pool_rows, _POOL_ERROR = rows, None
+    ORACLE_COVERAGE = (f"{sum(bool(row.get('released_oracle')) for row in rows)} of "
+                       f"{TASKS_IN_RELEASE} tasks (released train+dev coverage)")
+    _ROWS = {row["task_id"]: row for row in rows}
+    _ALL = list(_ROWS)
+    try:
+        _STUDY_IDS, _EVAL_IDS = _sides()
+        _LOAD_ERROR = None
+    except Exception as exc:
+        _STUDY_IDS, _EVAL_IDS = [], []
+        _LOAD_ERROR = f"{type(exc).__name__}: {exc}"
+    selected = set(_STUDY_IDS) | set(_EVAL_IDS)
+    _RUN_IDS = [task_id for task_id in _ALL if task_id in selected]
+    SPLIT = {"train": list(_STUDY_IDS), "eval": list(_EVAL_IDS)}
+    OFFICIAL_EVAL = [task_id for task_id in _EVAL_IDS if _ROWS[task_id]["split"] in TEST_SPLITS]
+    SETUP = {task_id: _setup(task_id) for task_id in _RUN_IDS}
+    VERIFY = {task_id: _verifier(task_id) for task_id in _RUN_IDS}
+    ENV = {task_id: DEFAULT_ENV for task_id in _RUN_IDS}
 
 
 def downloads() -> list[dict]:

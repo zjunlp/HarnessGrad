@@ -137,11 +137,11 @@ def prepare(root):
                       "manifest_sha256": digest, "manifest": str(target / "manifest.json")}))
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--fetch", action="store_true", help="download the pinned sparse checkout first")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     root = args.root.resolve()
     platform = Path(__file__).resolve().parents[3]
     if root == platform or platform in root.parents:

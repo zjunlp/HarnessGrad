@@ -315,9 +315,12 @@ def test_r9_the_reference_harness_satisfies_the_contributor_contract():
         entry = root / man.get("path", ".") / man["entrypoint"]
         assert entry.is_file(), f"{name}: entrypoint {entry} does not exist"
 
+    # Managed Loop is statically validated here. Its canonical offline prepare /
+    # read-only admission / sandbox smoke flow is exercised with an authored
+    # dependency wheel in test_python_candidate_smoke (no models or benchmarks).
     proc = subprocess.run(
         [sys.executable, str(ROOT / "tools" / "validate_harness.py"),
-         str(ROOT / "base_harness" / "loop"), "--smoke"],
+         str(ROOT / "base_harness" / "loop")],
         capture_output=True, text=True, timeout=180,
     )
     assert proc.returncode == 0, (

@@ -4,7 +4,7 @@ This port preserves the task text, transcript rendering and scoring of Harbor
 `3e9f14a7c1033896cc600d27de69d6948bcb3410`. It uses the official `locomo10.json`
 from `snap-research/locomo@3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376`;
 `specs/source.json` pins source bytes and the Apache-2.0 Harbor reference files.
-The reference license is in `tests/fixtures/locomo_harbor/LICENSE`.
+The reference license ships alongside this adapter as [LICENSE.harbor](LICENSE.harbor).
 
 There are 10 tasks (complete conversations), 1,986 questions, all five categories.
 Every task supplies `conversation.md` and the full question list immediately.
@@ -39,11 +39,18 @@ import-boundary test is unchanged; dataset inventory additions remain.
 
 ## Run locally
 
-Use a Conda environment with the platform dependencies and
-`pip install -r data/datasets/locomo/requirements-score.txt`.
-This adapter uses the existing native sandbox and local HTTP model route; it does
-not add Python runtime projection or an external HTTPS gateway.
-Put that environment's `bin` directory on PATH (including for the sandbox verifier).
+The platform loader and report aggregation use the standard library. Prepare the
+scorer's pinned dependencies in a separate execution runtime:
+
+```sh
+python -m tools.prepare_dataset --dataset locomo --runtime execution
+python -m tools.prepare_dataset --dataset locomo --runtime execution --check
+```
+
+Preparation may download declared packages; `--check` installs nothing. Scoring
+uses the admitted runtime interpreter and private verifier inputs, without
+installing NLTK into platform Python. See [execution runtime](EXECUTION_RUNTIME.md)
+for the dependency and provenance boundary.
 Set `HG_DATA_LOCOMO` to the directory containing `raw/locomo10.json`.
 
 ```sh

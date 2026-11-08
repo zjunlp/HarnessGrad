@@ -12,11 +12,42 @@ import json
 import pathlib
 
 import pytest
+from unittest.mock import Mock
+
+from test_dataset_runtime import environment
+from test_dataset_execution_runtime import execution
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("prepare_h0", ROOT / "tools" / "prepare_h0.py")
 prepare_h0 = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(prepare_h0)
+
+
+@pytest.fixture(autouse=True)
+def authored_legacy_harness(monkeypatch):
+    """Configuration unit tests use an unopted authored Harness; Loop has real controls."""
+    original=prepare_h0.harness_source
+    def source(args):
+        if getattr(args,'harness_path',None) is None and getattr(args,'harness','loop')=='loop':
+            return ROOT/'tests/fixtures/base_harness/loop_plain'
+        return original(args)
+    monkeypatch.setattr(prepare_h0,'harness_source',source)
+    # Never load a real dataset in unit tests. The context is a synthetic task plan.
+    from harnessgrad import verification_context
+    monkeypatch.setattr(prepare_h0, '_verification_preflight',
+                        lambda dataset, side, ids, split, sampling, environment:
+                        verification_context.create({tid: 'a' * 64 for tid in (ids or ['t1', 't2'])}))
+
+
+
+def _mock_driver(monkeypatch, launch):
+    """Double measurements while leaving source-only Git preflight real."""
+    real_run = prepare_h0.subprocess.run
+    def dispatch(command, **kwargs):
+        if command and str(command[0]) == "git":
+            return real_run(command, **kwargs)
+        return launch(command, **kwargs)
+    monkeypatch.setattr(prepare_h0.subprocess, "run", dispatch)
 
 
 def _args(tmp_path: pathlib.Path, ids: list[str] | None = None, **over):
@@ -45,32 +76,37 @@ def test_a_different_study_set_or_model_is_a_different_h0(tmp_path):
                 json.dumps(c, sort_keys=True)}) == 3
 
 
-def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, sha="abc",
+def _write_run(root: pathlib.Path, name: str, *, per_task: dict, invalid=None, sha=None,
                config=None) -> pathlib.Path:
+    if sha is None:
+        sha = (config or {}).get("harness_sha", "abc")
     run = root / name
     run.mkdir(parents=True)
+    verification = (config or {}).get("verification_context")
     (run / "h0.json").write_text(json.dumps({
-        "h0_sha": sha,
+        "h0_sha": sha, "verification_context": verification,
         "base": {"per_task": per_task, "invalid": invalid or {}, "score": 0.5,
-                 "harness_failed": None}}))
-    metadata = {"h0_configuration": config}
+                 "harness_failed": None, "verification_context": verification}}))
+    metadata = {"h0_configuration": config, "verification_context": verification}
     if config and "agent_backend" in config:
         metadata["sampling_policy"] = config.get("sampling", "all")
         metadata["config"] = {"agent": {"model": config["agent_model"],
                                          "backend": config["agent_backend"],
                                          "base_url": config["endpoint"]},
                               "run": {"sampling": config.get("sampling", "all")}}
-        (run / "curve.jsonl").write_text(json.dumps({"measured_by_platform": True,
+        (run / "curve.jsonl").write_text(json.dumps({"verification_context": verification, "measured_by_platform": True,
             "sampling": {"policy": config.get("sampling", "all")}, "identity": {
-            "agent_model": config["agent_model"], "agent_backend": config["agent_backend"]}}))
+            "agent_model": config["agent_model"], "agent_backend": config["agent_backend"],
+            "harness_sha": sha}}))
     (run / "run_meta.json").write_text(json.dumps(metadata))
     return run
 
 
 def test_a_complete_baseline_is_accepted(tmp_path):
-    run = _write_run(tmp_path, "h0-appworld-1", per_task={"t1": 0.0, "t2": 1.0})
-    summary = prepare_h0.verify(run, None, 2)
-    assert summary == {"score": 0.5, "n_tasks": 2, "h0_sha": "abc"}
+    config = prepare_h0.configuration(_args(tmp_path, ["t1", "t2"]))
+    run = _write_run(tmp_path, "h0-appworld-1", per_task={"t1": 0.0, "t2": 1.0}, config=config)
+    summary = prepare_h0.verify(run, None, 2, configuration=config)
+    assert summary == {"score": 0.5, "n_tasks": 2, "h0_sha": config["harness_sha"]}
 
 
 def test_matching_task_count_with_different_ids_is_refused(tmp_path):
@@ -143,7 +179,7 @@ def test_invalid_study_file_is_refused_before_launch(tmp_path, monkeypatch, cont
     ids.write_text(contents)
     def launch(*args, **kwargs):
         pytest.fail("an invalid study file must not launch the driver")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match=message):
         prepare_h0.main(["--dataset", "demo", "--study-ids", str(ids),
                          "--runs-root", str(tmp_path / "runs")])
@@ -151,14 +187,31 @@ def test_invalid_study_file_is_refused_before_launch(tmp_path, monkeypatch, cont
 
 
 @pytest.mark.parametrize("dataset", ["demo", "appworld", "alfworld"])
-def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, dataset):
+def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, dataset, execution):
     ids = tmp_path / "ids.txt"
     ids.write_text("t1,t2\nt3\tt4\n")
+    # This configuration/CLI control must not load any named adapter's corpus.
+    # Supply a typed preflight result from a genuinely admitted authored artifact;
+    # do not let the fake driver process swallow a managed preflight subprocess.
+    from harnessgrad import dataset_runtime, dataset_runtime_identity
+    _, _, store, _ = execution
+    artifact = dataset_runtime.prepare_execution('control', root=store)
+    binding = dataset_runtime.bind(artifact, 'verifier')
+    task_ids = ['t1', 't2', 't3', 't4']
+    verifiers = {tid: {'python_runtime': binding,
+                       'argv': [binding['python'], '-I', '-B', 'check.py'],
+                       'runtime_paths': list(binding['runtime_paths'])} for tid in task_ids}
+    selected = dataset_runtime_identity.for_evaluation(
+        None, [{'task_id': tid} for tid in task_ids], {}, verifiers)
+    preflight = Mock(return_value=selected)
+    monkeypatch.setattr(prepare_h0.dataset_runtime_identity, 'resolve_h0', preflight)
+    admission = Mock(wraps=dataset_runtime.admit_binding)
+    monkeypatch.setattr(dataset_runtime, 'admit_binding', admission)
     captured = {}
     def launch(command, **kwargs):
         captured.update(command=command, env=kwargs["env"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", dataset, "--study-ids", str(ids),
                          "--runs-root", str(tmp_path / "runs")])
@@ -166,6 +219,9 @@ def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, datase
     assert command[command.index("--tasks") + 1] == "t1,t2,t3,t4"
     assert captured["env"]["HG_APPWORLD_STUDY_IDS"] == str(ids.resolve())
     assert captured["env"]["HG_ALFWORLD_STUDY_IDS"] == str(ids.resolve())
+    assert preflight.call_args.args == (dataset,)
+    assert preflight.call_args.kwargs['task_ids'] == task_ids
+    assert admission.call_count > 0, 'H0 lookup must re-admit the selected artifact before driver launch'
 
 
 def test_without_study_ids_the_driver_keeps_its_side(tmp_path, capsys):
@@ -197,7 +253,7 @@ def test_split_file_identity_uses_contents_instead_of_path(tmp_path):
 def test_missing_split_file_is_refused_before_launch(tmp_path, monkeypatch):
     def launch(*args, **kwargs):
         pytest.fail("a missing split file must not launch the driver")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="no such split file"):
         prepare_h0.main(["--dataset", "demo", "--split", str(tmp_path / "missing.json"),
                          "--runs-root", str(tmp_path / "runs")])
@@ -209,7 +265,7 @@ def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
     def launch(command, **kwargs):
         captured.update(kwargs["env"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", "demo", "--model", "requested-model",
                          "--runs-root", str(tmp_path / "runs")])
@@ -218,6 +274,7 @@ def test_model_override_reaches_the_child_environment(tmp_path, monkeypatch):
 
 def test_configuration_resolves_dotenv_then_environment_then_cli(tmp_path, monkeypatch):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "tests/fixtures/base_harness/loop_plain")
     for name in ("HG_AGENT_MODEL", "HG_AGENT_BACKEND", "HG_AGENT_BASE_URL"):
         monkeypatch.delenv(name, raising=False)
     (tmp_path / ".env").write_text("HG_AGENT_MODEL=file-model\nHG_AGENT_BACKEND=openai\n"
@@ -262,7 +319,7 @@ def test_reuse_hint_includes_the_run_store(tmp_path, capsys, monkeypatch):
     run = _write_run(tmp_path, "h0-appworld-hint", per_task={"t1": .5}, config=config)
     def forbidden_launch(*args, **kwargs):
         pytest.fail("a reusable H0 must not launch a new measurement")
-    monkeypatch.setattr(prepare_h0.subprocess, "run", forbidden_launch)
+    _mock_driver(monkeypatch, forbidden_launch)
     assert prepare_h0.main(["--dataset", "appworld", "--study-ids", str(tmp_path / "ids.txt"),
                             "--model", config["agent_model"], "--endpoint", config["endpoint"],
                             "--runs-root", str(tmp_path)]) == 0
@@ -294,6 +351,7 @@ def test_unverified_curve_cannot_publish_or_reuse_h0(tmp_path, measured):
 @pytest.mark.parametrize("inherited", [None, "environment-judge"])
 def test_opted_scoring_provider_keeps_dotenv_judge_precedence(tmp_path, monkeypatch, inherited):
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.setattr(prepare_h0, "harness_source", lambda args: ROOT / "tests/fixtures/base_harness/loop_plain")
     monkeypatch.delenv("HG_JUDGE_MODEL", raising=False)
     if inherited is not None:
         monkeypatch.setenv("HG_JUDGE_MODEL", inherited)
@@ -352,7 +410,7 @@ def test_relative_runs_root_is_resolved_before_launching_in_another_cwd(tmp_path
     def launch(command, **kwargs):
         captured.update(command=command, cwd=kwargs["cwd"])
         return prepare_h0.subprocess.CompletedProcess(command, 2)
-    monkeypatch.setattr(prepare_h0.subprocess, "run", launch)
+    _mock_driver(monkeypatch, launch)
     with pytest.raises(SystemExit, match="H0 run failed"):
         prepare_h0.main(["--dataset", "demo", "--runs-root", "runs"])
     command = captured["command"]

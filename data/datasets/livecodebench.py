@@ -4,10 +4,8 @@ r"""LiveCodeBench release_v6: 1,055 problems, official **pass@1** by running the
     python3 data/datasets/livecodebench/control.py --oracle --platform
     python3 tools/dataset_lint.py --dataset livecodebench
 
-This adapter was a **refusal** until the platform's authored-reference contract existed; the
-refusal is in the git history and in skill doc round 25. Two things changed and nothing else
-did: the owner authorised platform-authored references that the released tests validate, and
-the tests were shown to decode offline. The metric was never the obstacle.
+The adapter uses authored reference solutions validated against the released tests.
+References are available only for the problems reported in `ORACLE_COVERAGE`.
 
 Where the data is
 -----------------
@@ -46,8 +44,7 @@ is published, the private half is the point of the benchmark.
 
 The oracle is authored, and says so
 -----------------------------------
-The release ships prompts, starter code and tests, and **no reference solution**, so gate 1's
-oracle cannot be derived from the benchmark's data. Under the authored-reference contract this
+The release ships prompts, starter code and tests, and **no reference solution**. This
 adapter declares `ORACLE_SOURCE = "authored"`, names what validates the references (the released
 tests, run by the pinned executor: a reference is accepted only because the tests accept it),
 and reports how much of the pool has one -- `ORACLE_COVERAGE`. The references live in
@@ -57,18 +54,29 @@ from __future__ import annotations
 
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
+from collections.abc import Mapping
 import base64
+import hashlib
 import json
 import pickle
 import zlib
 from pathlib import Path
 
-import numpy as np
+class _LazyNumpy:
+    """Only the upstream metric helpers need NumPy; loading tasks does not."""
+
+    def __getattr__(self, name):
+        import numpy
+        return getattr(numpy, name)
+
+
+np = _LazyNumpy()
 
 from harnessgrad.paths import dataset_root
 
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "livecodebench"
 #: The reference solutions are **ours** and the released tests validate them; see the module
 #: docstring and `data/dataset.schema.json` (`module.oracle_about`).
 ORACLE_SOURCE = "authored"
@@ -87,6 +95,8 @@ TESTS_DIR = "tests"
 UPSTREAM = f"_src/upstream/LiveCodeBench-{UPSTREAM_COMMIT}/lcb_runner/evaluation"
 EXECUTOR = f"{UPSTREAM}/testing_util.py"
 PASS_K = f"{UPSTREAM}/pass_k_utils.py"
+EXECUTOR_SHA256 = "b7cb6a8a69807bb868150a61742e25d7bb5328bbe01d514471b6ec43c9fa9ed2"
+PASS_K_SHA256 = "6af3ee55d40f96fa06fa511bd5e43d94b19604750e82454b4b3c1f45c5199010"
 PACKAGE = Path(__file__).resolve().parent / "livecodebench"
 CHECK_FILE = PACKAGE / "verify" / "check.py"
 REFERENCES = PACKAGE / "references"
@@ -190,7 +200,15 @@ def _raw() -> list[dict]:
     global _RAW
     if _RAW is None:
         rows = []
-        with (DATASET_ROOT / POOL).open(encoding="utf-8") as handle:
+        try:
+            handle = (DATASET_ROOT / POOL).open(encoding="utf-8")
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(
+                f"livecodebench: data_missing: {DATASET_ROOT / POOL}. Fetch the pinned shards with "
+                "`python3 tools/datasets.py --fetch --dataset livecodebench`, then materialize "
+                "the pool with `python3 data/datasets/livecodebench/prepare.py`."
+            ) from exc
+        with handle:
             header = json.loads(handle.readline())
             if header.get("problems") != PROBLEMS:
                 raise ValueError(f"{POOL}: header says {header.get('problems')} problems, this "
@@ -262,10 +280,23 @@ def _setup(row: dict) -> dict:
     ]}
 
 
+def _verifier_runtime():
+    # Resolve the current store selection; the launcher re-admits the binding.
+    from harnessgrad.dataset_runtime import resolve_execution
+    return resolve_execution('livecodebench')
+
+
 def _verify(row: dict) -> dict:
+    for relative, expected in ((EXECUTOR, EXECUTOR_SHA256), (PASS_K, PASS_K_SHA256)):
+        path = DATASET_ROOT / relative
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError(f"LiveCodeBench pinned scorer source changed: {relative}")
+    from harnessgrad.dataset_runtime import bind
+    binding = bind(_verifier_runtime(), 'verifier')
     spec = {
         "kind": "command",
-        "argv": ["python3", "verify/check.py", "--tests", "tests.json",
+        "python_runtime": binding, "runtime_paths": list(binding['runtime_paths']),
+        "argv": [binding['python'], "-I", "-B", "verify/check.py", "--tests", "tests.json",
                  "--solution", "solution.py",
                  "--reward-file", "verifier/reward.txt",
                  "--evidence-file", "verifier/evidence.json"],
@@ -279,10 +310,16 @@ def _verify(row: dict) -> dict:
         ],
         "reward_file": "/verifier/reward.txt",
         "evidence_file": "/verifier/evidence.json",
+        "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
         # Leave room beyond upstream's child budget for check startup and verdict writing.
         "timeout_s": 900,
     }
-    return bind_scorer_input(spec, task_id(row["index"]), ["tests.json"])
+    spec = bind_scorer_input(spec, task_id(row["index"]),
+                             ["tests.json", "testing_util.py", "pass_k_utils.py"])
+    files = spec['scorer_input']['files']
+    if files['testing_util.py'] != EXECUTOR_SHA256 or files['pass_k_utils.py'] != PASS_K_SHA256:
+        raise ValueError('LiveCodeBench pinned scorer source changed while binding')
+    return spec
 
 
 _INDEXED = [{**row, "index": index} for index, row in enumerate(_raw())]
@@ -302,7 +339,27 @@ OFFICIAL_EVAL = None
 SPLIT_SOURCE = "none"
 
 SETUP = {task_id(row["index"]): _setup(row) for row in _INDEXED}
-VERIFY = {task_id(row["index"]): _verify(row) for row in _INDEXED}
+class _Verifiers(Mapping):
+    def __iter__(self):
+        return (task_id(row['index']) for row in _INDEXED)
+
+    def __len__(self):
+        return len(_INDEXED)
+
+    def __getitem__(self, key):
+        if not isinstance(key, str) or not key.startswith('livecodebench/'):
+            raise KeyError(key)
+        try:
+            index = int(key.removeprefix('livecodebench/'))
+            if index < 0 or task_id(index) != key:
+                raise ValueError
+            row = _INDEXED[index]
+        except (ValueError, IndexError) as exc:
+            raise KeyError(key) from exc
+        return _verify(row)
+
+
+VERIFY = _Verifiers()
 
 
 # ----------------------------------------------------------------------------- the oracle ---

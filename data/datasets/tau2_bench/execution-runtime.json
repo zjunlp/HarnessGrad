@@ -1,0 +1,6 @@
+{
+  "schema": "harnessgrad.dataset-execution-runtime.v1",
+  "dataset": "tau2_bench",
+  "python": "3.13",
+  "requirements": "execution-requirements.lock"
+}

@@ -10,6 +10,7 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -154,29 +155,37 @@ def test_office_corpus_is_public_and_separate(tmp_path):
 
 
 def test_math_never_falls_back_to_string_match(tmp_path,monkeypatch):
+    from harnessgrad import dataset_runtime
     adapter=fixture('math500',tmp_path/'data')
     real=importlib.metadata.version
     def absent(name):
         if name=='math-verify':raise importlib.metadata.PackageNotFoundError(name)
         return real(name)
     monkeypatch.setattr(importlib.metadata,'version',absent)
-    with pytest.raises(ConfigMissing,match='exact-match is not a substitute'):adapter.load()
+    tasks, _ = adapter.load()
+    assert tasks  # Loading materialized records does not inspect the driver environment.
+    monkeypatch.setattr(dataset_runtime, '_run', lambda *a, **kw: pytest.fail('must not install or probe'))
+    monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', str(tmp_path/'unprepared-store'))
+    with pytest.raises(dataset_runtime.DatasetRuntimeUnavailable):
+        adapter.getattr('VERIFY')[tasks[0]['task_id']]
     with pytest.raises(importlib.metadata.PackageNotFoundError):score('math500','1/2',{'answer':r'\boxed{\frac{1}{2}}'})
 
 
 @pytest.mark.parametrize('name,answer',[('searchqa','violet'),('nq','red blue'),('bbeh','The answer is: True.'),('supergpqa','A'),('officeqa_pro','<FINAL_ANSWER>42</FINAL_ANSWER>'),
     pytest.param('math500',r'\boxed{0.5}',marks=pytest.mark.skipif(
-        importlib.util.find_spec('math_verify') is None,
-        reason='exact Math-Verify dependency is not installed in this interpreter'))])
+        not os.environ.get('HG_TEST_MATH_RUNTIME_ROOT'),
+        reason='set HG_TEST_MATH_RUNTIME_ROOT to an already prepared execution artifact'))])
 @pytest.mark.parametrize('oracle',[True,False])
 def test_platform_independent_private_verifier(name,answer,oracle,tmp_path,monkeypatch):
     adapter=fixture(name,tmp_path/'data')
     task=adapter.load()[0][0]; record=adapter.records()[0]
+    if name=='math500':
+        monkeypatch.setenv('HG_DATASET_RUNTIME_ROOT', os.environ['HG_TEST_MATH_RUNTIME_ROOT'])
     verifier=adapter.verifier(record)
     if name=='math500':
         private_reference=json.dumps(record['gold']['answer'])[1:-1]
-        assert verifier['argv'][0]==sys.executable
-        assert verifier['runtime_paths']==list(dict.fromkeys([sys.prefix,sys.base_prefix]))
+        assert verifier['argv'][:3]==[verifier['python_runtime']['python'], '-I', '-B']
+        assert verifier['runtime_paths']==verifier['python_runtime']['runtime_paths']
         assert private_reference not in json.dumps(task)
         assert private_reference not in json.dumps(adapter.setup_map())
     source=tmp_path/'source';source.mkdir()
@@ -206,16 +215,50 @@ assert not (w/'gold.json').exists()
         assert result['verdict']['evidence']['scorer_input']['verified'] is True
 
 
+def _synthetic_math_runtime(root):
+    path = root / 'artifact' / 'venv'
+    return {'dataset':'math', 'profile':'execution', 'runtime_id':'a'*64,
+            'manifest_path':str(path.parent / 'artifact.json'), 'path':str(path),
+            'python':str(path / 'bin/python'), 'runtime_paths':[str(path)]}
+
+
+@pytest.mark.parametrize('name',['math','math500'])
+def test_math_selected_verifier_binds_artifact_and_keeps_gold_private(name,tmp_path,monkeypatch):
+    from harnessgrad import dataset_runtime
+    adapter=fixture(name,tmp_path/'data')
+    selected=_synthetic_math_runtime(tmp_path)
+    monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda dataset: selected)
+    tasks,_=adapter.load(); record=adapter.records()[0]
+    verifier=adapter.verifier(record)
+    assert verifier['python_runtime']['dataset']=='math'
+    assert verifier['python_runtime']['role']=='verifier'
+    assert verifier['argv'][:3]==[selected['python'],'-I','-B']
+    assert verifier['runtime_paths']==selected['runtime_paths']
+    assert record['gold']['answer'] not in json.dumps(tasks)
+    assert record['gold']['answer'] not in json.dumps(adapter.setup_map())
+    gold=next(e['content'] for e in verifier['inputs'] if e['path']=='gold.json')
+    assert json.loads(gold)==record['gold']
+    assert hashlib.sha256(gold.encode()).hexdigest()==verifier['scorer_input']['sha256']
+
+
 @pytest.mark.parametrize('name',['math','math500'])
 def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
-    monkeypatch.setattr(sys,'prefix',str(tmp_path))
-    adapter=Dataset(name,tmp_path/'data')
-    with pytest.raises(ConfigMissing,match='venv outside /tmp'):
-        adapter.verifier({'task_id':name+'/test/control','gold':{'answer':r'\boxed{2}'}})
+    from harnessgrad import dataset_runtime
+    from eval.verification import verifier as verification
+    adapter=fixture(name,tmp_path/'data')
+    selected=_synthetic_math_runtime(tmp_path)
+    Path(selected['path']).mkdir(parents=True)
+    monkeypatch.setattr(dataset_runtime,'resolve_execution',lambda dataset:selected)
+    monkeypatch.setattr(dataset_runtime,'admit_binding',lambda *a,**k:selected)
+    monkeypatch.setattr(verification,'_verify_dispatch',lambda *a,**k:pytest.fail('must not execute scorer'))
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(tmp_path/'work'))
+    work=tmp_path/'task';work.mkdir()
+    spec=adapter.verifier(adapter.records()[0])
+    result=verification._verify(work,spec,'answer',sandbox=True,env={'kind':'files'})
+    assert result['score'] is None and result['outcome']=='unmeasured'
+    assert 'runtime_paths' in result['unmeasured']
 
 
-@pytest.mark.skipif(importlib.util.find_spec('math_verify') is None,
-                    reason='exact Math-Verify dependency is not installed in this interpreter')
 @pytest.mark.parametrize('gold,prediction,want',[
     (r'\boxed{\frac{1}{2}}',r'\boxed{0.5}',1),
     (r'\boxed{2}',r'\boxed{1+1}',1),
@@ -224,4 +267,21 @@ def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
     (r'\boxed{2}',r'\boxed{2} then \boxed{',0),
 ])
 def test_math_real_native_equivalence(gold,prediction,want):
-    assert score('math500',prediction,{'answer':gold})['reward']==want
+    store = os.environ.get('HG_TEST_MATH_RUNTIME_ROOT')
+    if store:
+        from harnessgrad import dataset_runtime
+        selected = dataset_runtime.resolve_execution('math', root=Path(store))
+        code = ('import json,sys;sys.path.insert(0,sys.argv[1]);'
+                'from data.scaffolds.native_qa.scoring import score;'
+                'value=json.load(sys.stdin);'
+                'print(json.dumps(score("math500",value["prediction"],{"answer":value["gold"]})))')
+        result = subprocess.run([selected['python'], '-I', '-B', '-c', code, str(ROOT)],
+            input=json.dumps({'gold':gold,'prediction':prediction}), text=True,
+            capture_output=True, timeout=30,
+            env={'PATH':os.defpath,'HG_REVIEWED_ENVIRONMENT_ONLY':'1'})
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)['reward'] == want
+    else:
+        if importlib.util.find_spec('math_verify') is None:
+            pytest.skip('provide a prepared HG_TEST_MATH_RUNTIME_ROOT or an existing Math-Verify interpreter')
+        assert score('math500',prediction,{'answer':gold})['reward']==want

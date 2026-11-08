@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import csv
 from collections import Counter
+from collections.abc import Mapping
 import hashlib
-import importlib.metadata
 import json
 from pathlib import Path
 import re
-import sys
 
 #: The declared-missing-payload signal (`load()` raises it with the prepare command).
 #: Imported here as well as lazily in `missing()` because `getattr` must be able to
@@ -133,6 +132,22 @@ def parse_row(name, row, split):
     raise ValueError('unknown QA dataset')
 
 
+class _Verifiers(Mapping):
+    """Resolve only selected scoring environments, with no process-wide cache."""
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.rows = {row['task_id']: row for row in dataset.records()}
+
+    def __iter__(self):
+        return iter(self.rows)
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __getitem__(self, key):
+        return self.dataset.verifier(self.rows[key])
+
+
 class Dataset:
     def __init__(self,name,root=None):
         self.name=name; self.source=CATALOG[name]
@@ -154,10 +169,6 @@ class Dataset:
         manifest=json.loads(path.read_text(encoding='utf-8'))
         if manifest.get('dataset')!=self.name or manifest.get('source')!=self.source['source'] or manifest.get('revision')!=self.source['revision']:
             raise ValueError(f'{self.name}: source manifest dataset/revision mismatch')
-        if self.name in ('math','math500'):
-            try: available=importlib.metadata.version('math-verify')=='0.9.0'
-            except importlib.metadata.PackageNotFoundError: available=False
-            if not available: missing(f'{self.name}: install math-verify==0.9.0 for the trusted scorer; exact-match is not a substitute')
         files=manifest.get('files')
         if not isinstance(files,list) or not files: raise ValueError('source manifest has no files')
         records=[];seen=set();splits=set()
@@ -252,19 +263,11 @@ class Dataset:
                 'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
                 'timeout_s':30,'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
         if self.name in ('math','math500'):
-            # Use the interpreter whose pinned Math-Verify dependency load has
-            # checked. Preserve the venv executable (not its base-Python target)
-            # and mount both prefixes through the existing verifier contract.
-            roots = list(dict.fromkeys([sys.prefix, sys.base_prefix]))
-            for root in roots:
-                path = Path(root)
-                if (not path.is_absolute() or path == Path('/tmp') or Path('/tmp') in path.parents
-                        or path.resolve() == Path('/tmp') or Path('/tmp') in path.resolve().parents):
-                    missing(f'{self.name}: trusted Math-Verify runtime must use absolute prefixes outside hidden /tmp; provision a venv outside /tmp')
-            if not Path(sys.executable).is_absolute():
-                missing(f'{self.name}: trusted Math-Verify runtime requires an absolute sys.executable')
-            spec['argv'][0] = sys.executable
-            spec['runtime_paths'] = roots
+            from harnessgrad.dataset_runtime import bind, resolve_execution
+            binding = bind(resolve_execution('math'), 'verifier')
+            spec['argv'][:2] = [binding['python'], '-I', '-B']
+            spec['python_runtime'] = binding
+            spec['runtime_paths'] = list(binding['runtime_paths'])
         return spec
 
     def getattr(self,name):
@@ -285,7 +288,10 @@ class Dataset:
         try:
             if name=='_RECORDS': return self.records()
             if name=='SETUP': return self.setup_map()
-            if name=='VERIFY': return {r['task_id']:self.verifier(r)for r in self.records()}
+            if name=='VERIFY':
+                if self.name in ('math', 'math500'):
+                    return _Verifiers(self)
+                return {r['task_id']:self.verifier(r)for r in self.records()}
             if name=='ENV': return {r['task_id']:{'kind':'files'}for r in self.records()}
             if name=='SPLIT':
                 if 'train' not in self.source['splits']: return None

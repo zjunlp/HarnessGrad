@@ -7,22 +7,10 @@ cannot fail. Both are quiet: they produce a plausible number in the right place.
 both are run and both are asserted here, and the same two runs are what the brief asks
 a reader to be able to reproduce.
 
-Two ways to run each control
-----------------------------
-`--oracle`/`--noop` drive the CLI by hand and run the check directly. This needs
-nothing but `pip install alfworld textworld` plus the extracted data, and it is the
-"no Docker" path. The local arm starts the **relay** itself
-(`data/datasets/alfworld/relay.py`): the environment has to live outside the agent's
-working directory, so "drive the CLI" now means "serve the episode on a host socket and
-let the CLI act against it".
-
-`--platform` runs the same episode through the platform's own `eval.run.runner.run_one`
-with an oracle control harness (`data/datasets/alfworld/oracle_harness/`). That exercises
-`SETUP` -> harness -> `VERIFY` end to end on a `files` environment. It is **refused**
-here: the relay belongs to the task's environment, so the *runner* must stage the game
-and start it -- `eval/containers/` does not wire that yet (a separate task). Refusing is
-the honest arm: a `--platform` run without a relay fails every action and would read as
-a measured zero.
+Both legacy `--oracle`/`--noop` and `--platform` use the normal runner,
+managed trusted service and independently sealed native verifier. Dependencies
+must be prepared explicitly; platform Python and the actor CLI remain stdlib.
+`--no-sandbox` selects the runner's weaker diagnostic mode for either spelling.
 
 The oracle is ALFWorld's own: the `walkthrough` array inside the extracted
 `game.tw-pddl`, which is the reference solution the 0.4.2 asset shipped. Verified: all
@@ -31,7 +19,6 @@ The oracle is ALFWorld's own: the `walkthrough` array inside the extracted
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import os
 import shutil
@@ -46,21 +33,6 @@ sys.path.insert(0, str(ROOT))
 import data.datasets.alfworld as alfworld  # noqa: E402
 
 
-def _relay():
-    """`relay.py` loaded by path.
-
-    Not `import data.datasets.alfworld.relay`: `data/datasets/alfworld.py` is a *module*
-    with the same name as this directory, so the directory is not a package and a
-    submodule import cannot resolve. (The same reason the adapter loads `lib/gym_env.py`
-    by path.)
-    """
-    path = Path(__file__).resolve().parent / "relay.py"
-    spec = importlib.util.spec_from_file_location("alfworld_relay_control", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def _relay_dir(workdir: Path) -> Path:
     """The host side of a local episode: a **sibling** of the workdir.
 
@@ -71,11 +43,6 @@ def _relay_dir(workdir: Path) -> Path:
     `host/` (what the relay reads) and `tool/` (what the sandbox would publish).
     """
     return workdir.parent / f"{workdir.name}.relay"
-
-
-def _host_game(workdir: Path) -> Path:
-    """Where the relay's own copy of the game is staged (never in the workdir)."""
-    return _relay_dir(workdir) / "host" / alfworld.GAME_IN_WORKDIR
 
 
 def _published(workdir: Path) -> Path:
@@ -109,15 +76,7 @@ def _walkthrough(record: dict) -> list[str]:
 
 
 def materialize(record: dict, workdir: Path) -> None:
-    """Put the task where `SETUP` would: the CLI and its environment library.
-
-    Exactly `SETUP`'s file list, so a change there cannot drift from what this control
-    exercises. Nothing else goes in the workdir: the **game** is staged into
-    `_host_game(workdir)` from the trusted `VERIFY.inputs` copy, and the transport is
-    *published* into `_published(workdir)` the way `eval/containers/tool_route.py`
-    publishes it into a sandbox -- one fixed pair, `tool_transport.py` and the socket,
-    which is what the CLI imports and calls.
-    """
+    """Stage stdlib client files and a trusted service declaration outside the actor."""
     workdir.mkdir(parents=True, exist_ok=True)
     for entry in alfworld.SETUP[record["task_id"]]["files"]:
         target = workdir / entry["path"]
@@ -127,12 +86,14 @@ def materialize(record: dict, workdir: Path) -> None:
         else:
             shutil.copy2(entry["from"], target)
     (workdir / "alf").chmod(0o755)
-    relay = _relay()
     published = _published(workdir)
     published.mkdir(parents=True, exist_ok=True)
+    _relay_dir(workdir).chmod(0o700)
     shutil.copy2(alfworld.TRANSPORT_SOURCE, published / "tool_transport.py")
-    relay.stage(relay.game_content(alfworld.VERIFY[record["task_id"]]),
-                _host_game(workdir))
+    # Trusted declaration, kept outside the actor's workdir.
+    declaration = _relay_dir(workdir) / "service.json"
+    declaration.write_text(json.dumps(alfworld.SETUP[record["task_id"]]["tool_relay"]))
+    declaration.chmod(0o600)
 
 
 def drive(workdir: Path, actions: list[str], *, budget: int) -> None:
@@ -145,22 +106,26 @@ def drive(workdir: Path, actions: list[str], *, budget: int) -> None:
     environment, because an episode has one step budget: the CLI and the relay refuse to
     act at two different ones.
     """
+    from eval.run import tool_relay
     published = _published(workdir)
-    socket_path = published / "tool.sock"
+    declaration = json.loads((_relay_dir(workdir) / "service.json").read_text())
+    declaration["budget"] = budget
     env = dict(os.environ, HG_ALF_TOOL_DIR=str(published))
-    with _relay().serve(_host_game(workdir), socket_path,
-                        budget=budget) as server:
-        for action in actions[:budget]:
-            subprocess.run([sys.executable, "alf", "--budget", str(budget), "do", action],
-                           cwd=workdir, env=env, check=True, capture_output=True,
-                           text=True, errors="replace")
-        subprocess.run([sys.executable, "alf", "--budget", str(budget), "done"],
-                       cwd=workdir, env=env, check=True, capture_output=True, text=True,
-                       errors="replace")
-        # The episode is over; nothing should have asked for more than its budget.
-        if server.receipt["errors"] or server.receipt["refused"]:
-            raise SystemExit(f"relay reported faults during the episode: "
-                             f"{json.dumps(server.receipt, sort_keys=True)}")
+    with tool_relay.start({"tool_relay": declaration}) as server:
+        socket_path = published / "tool.sock"
+        socket_path.unlink(missing_ok=True)
+        socket_path.symlink_to(server.path)
+        try:
+            for action in actions[:budget]:
+                subprocess.run([sys.executable, "alf", "--budget", str(budget), "do", action],
+                               cwd=workdir, env=env, check=True, capture_output=True,
+                               text=True, errors="replace")
+            subprocess.run([sys.executable, "alf", "--budget", str(budget), "done"],
+                           cwd=workdir, env=env, check=True, capture_output=True, text=True)
+        finally:
+            socket_path.unlink(missing_ok=True)
+    if server.fault():
+        raise RuntimeError(f"control relay failed: {server.fault()}")
 
 
 def run_check(workdir: Path, record: dict, *, budget: int) -> tuple[int, str]:
@@ -172,120 +137,61 @@ def run_check(workdir: Path, record: dict, *, budget: int) -> tuple[int, str]:
     `<workdir>/game.tw-pddl`, and it is why this function does not simply trust the
     copies `materialize()` wrote.
     """
-    verifier = alfworld.VERIFY[record["task_id"]]
-    for entry in verifier["inputs"]:
-        target = workdir / entry["path"]
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if "content" in entry:
-            target.write_text(entry["content"], encoding="utf-8")
-        else:
-            source = Path(entry["from"])
-            if source.is_dir():
-                shutil.copytree(source, target, dirs_exist_ok=True)
-            else:
-                shutil.copy2(source, target)
-    argv = [sys.executable, *verifier["argv"][1:]]
-    argv[argv.index("--budget") + 1] = str(budget)
-    proc = subprocess.run(argv, cwd=workdir, capture_output=True, text=True, errors="replace")
-    reward_path = workdir / alfworld.REWARD_REL
-    reward = int(reward_path.read_text().strip()) if reward_path.is_file() else -1
-    evidence_path = workdir / alfworld.EVIDENCE_REL
-    evidence = (json.loads(evidence_path.read_text())
-                if evidence_path.is_file() else {})
-    verdict = {
-        "returncode": proc.returncode,
-        "reward": reward,
-        "why": evidence.get("why"),
-        "won_at_step": evidence.get("won_at_step"),
-        "actions_replayed": evidence.get("actions_replayed"),
-        "official_game_points": evidence.get("official_game_points"),
-        "stdout": proc.stdout.strip(),
-        "stderr": proc.stderr.strip(),
-    }
+    from copy import deepcopy
+    from eval.verification.verifier import _verify
+    verifier = deepcopy(alfworld.VERIFY[record["task_id"]])
+    verifier["argv"][verifier["argv"].index("--budget") + 1] = str(budget)
+    verdict = _verify(workdir, verifier, "", task_id=record["task_id"],
+                      sandbox=True, env=alfworld.ENV[record["task_id"]])
+    score = verdict.get("score")
+    reward = int(score) if score is not None and not verdict.get("unmeasured") else -1
     return reward, json.dumps(verdict, indent=1, sort_keys=True)
 
 
 def run_local(record: dict, *, oracle: bool, workdir: Path, budget: int) -> int:
-    materialize(record, workdir)
-    if oracle:
-        drive(workdir, _walkthrough(record), budget=budget)
-    reward, detail = run_check(workdir, record, budget=budget)
-    print(f"task    {record['task_id']}")
-    print(f"mode    {'oracle' if oracle else 'do-nothing'}")
-    print(f"reward  {reward}")
-    print(detail)
-    expected = 1 if oracle else 0
-    if reward != expected:
-        print(f"CONTROL FAILED: expected reward {expected}, got {reward}", file=sys.stderr)
-        return 1
-    return 0
+    return run_platform(record, oracle=oracle, workdir=workdir, budget=budget)
 
 
 def run_platform(record: dict, *, oracle: bool, workdir: Path,
-                 sandbox: bool = True) -> int:
-    """The same episode through `eval.run.runner.run_one`, with no Docker and no model.
-
-    **Refused, and the refusal is the measurement.** The agent's CLI is now a client of a
-    host-side environment (`relay.py`), and that environment is the *task's*: the runner
-    stages the stripped game outside the sandbox, starts the relay, and passes its socket
-    to the sandbox as `tool_socket=` so the CLI finds it published at
-    `/run/harnessgrad-tool/tool.sock`. `eval/containers/` does not do that yet (a
-    separate task owns the mount wiring), so a `--platform` run today would fail every
-    `alf do`, leave a log with no actions, and come back as a measured zero -- exactly
-    the number that must never be reported for an unwired platform. The local arm has no
-    such dependency: it publishes the pair itself and starts the relay itself.
-
-    Everything below is kept, unreachable, because it is the arm that has to work once
-    the wiring lands and deleting it would lose the review.
-    """
-    print("CONTROL UNMEASURED: `--platform` needs the runner to stage the game, start "
-          "data/datasets/alfworld/relay.py for the task and pass its socket as "
-          "`tool_socket=`; eval/containers/ does not wire the relay yet (this migration "
-          "also needs PLAN_VERSION 4 -> 5). The local arm "
-          "(`control.py --oracle`, no `--platform`) runs the same episode with the relay "
-          "started here and is the runnable control.", file=sys.stderr)
-    return 2
-
-
-def _run_platform_when_wired(record: dict, *, oracle: bool, workdir: Path,
-                             sandbox: bool = True) -> int:
-    """The `--platform` body, waiting for the runner to own the relay.
-
-    The control harness (`data/datasets/alfworld/oracle_harness/`) replays `.oracle/actions.json`
-    through the CLI and otherwise does nothing, which is exactly what a harness control
-    should be: a fixed program that runs what the dataset hands it.
-
-    The harness is **copied into the work root** before the run, because a real run
-    copies its harness there too, and because the sandbox refuses to run when the
-    subject's tree is inside the platform it must hide. With the sandbox on, this
-    control also proves that the adapter's `VERIFY` works with the namespace in place --
-    including the writable verdict directory the reward-file contract needs.
-    """
+                 sandbox: bool = True, budget: int = alfworld.STEP_BUDGET) -> int:
+    """The control goes through the normal managed service and native scorer route."""
     from eval.run.runner import run_one
 
     tid = record["task_id"]
     task = next(t for t in alfworld.load()[0] if t["task_id"] == tid)
-    setup = {"files": list(alfworld.SETUP[tid]["files"])}
+    from copy import deepcopy
+    setup = deepcopy(alfworld.SETUP[tid])
+    setup["tool_relay"]["budget"] = budget
+    setup["files"].append({"path": ".oracle/budget.json", "content": json.dumps(budget)})
+    verifier = deepcopy(alfworld.VERIFY[tid])
+    verifier["argv"][verifier["argv"].index("--budget") + 1] = str(budget)
     if oracle:
         setup["files"].append({"path": ".oracle/actions.json",
-                               "content": json.dumps(_walkthrough(record))})
-    work_root = workdir / "work"
+                               "content": json.dumps(_walkthrough(record)[:budget])})
+    work_root = workdir.resolve() / "work"
     harness = work_root / "oracle_harness"
     shutil.copytree(ROOT / "data" / "datasets" / "alfworld" / "oracle_harness", harness,
                     dirs_exist_ok=True)
     # The platform reads this to decide what the sandbox may reveal; a real run sets it
     # to a directory outside the platform root.
+    previous_work_root = os.environ.get("HARNESSGRAD_WORK_ROOT")
     os.environ["HARNESSGRAD_WORK_ROOT"] = str(work_root)
-    result = run_one(
-        repo=harness,
-        task=task,
-        setup=setup,
-        verifier=alfworld.VERIFY[tid],
-        env=alfworld.ENV[tid],
-        sandbox=sandbox,
-        run_id="alfworld-control",
-        run_seed="0",
-    )
+    try:
+        result = run_one(
+            repo=harness,
+            task=task,
+            setup=setup,
+            verifier=verifier,
+            env=alfworld.ENV[tid],
+            sandbox=sandbox,
+            run_id="alfworld-control",
+            run_seed="0",
+        )
+    finally:
+        if previous_work_root is None:
+            os.environ.pop("HARNESSGRAD_WORK_ROOT", None)
+        else:
+            os.environ["HARNESSGRAD_WORK_ROOT"] = previous_work_root
     verdict = result.get("verdict") or {}
     print(f"task     {tid}")
     print(f"mode     {'oracle' if oracle else 'do-nothing'} (platform run_one, "
@@ -297,7 +203,7 @@ def _run_platform_when_wired(record: dict, *, oracle: bool, workdir: Path,
         print(f"evidence {json.dumps(verdict['evidence'].get('why'), ensure_ascii=False)}")
     expected = 1.0 if oracle else 0.0
     score = verdict.get("score")
-    if score is None:
+    if score is None or verdict.get("unmeasured") or result.get("exit_code") != 0:
         # No score is not a zero. The platform refused the task, the scorer failed, or
         # the run produced nothing -- each is unmeasured, and an unmeasured do-nothing
         # arm must never be counted as a passing control. Treating `None` as 0.0 here
@@ -319,9 +225,9 @@ def main(argv) -> int:
     mode.add_argument("--noop", action="store_true",
                       help="do nothing, expect reward 0")
     parser.add_argument("--platform", action="store_true",
-                        help="run through eval.runner.run_one instead of by hand")
+                        help="legacy spelling; controls always use the normal managed runner")
     parser.add_argument("--no-sandbox", action="store_true",
-                        help="with --platform, run without the mount namespace (the "
+                        help="run without the mount namespace (the "
                              "weaker mode; the default is the namespace on)")
     parser.add_argument("--task-id", default=None)
     parser.add_argument("--workdir", default=None,
@@ -331,6 +237,8 @@ def main(argv) -> int:
     parser.add_argument("--budget", type=int, default=alfworld.STEP_BUDGET)
     args = parser.parse_args(argv)
 
+    if args.budget < 1:
+        parser.error("--budget must be positive")
     record = _record(args.task_id)
     if args.workdir:
         workdir = Path(args.workdir)
@@ -344,9 +252,9 @@ def main(argv) -> int:
     try:
         if args.platform:
             return run_platform(record, oracle=args.oracle, workdir=workdir,
-                                sandbox=not args.no_sandbox)
-        return run_local(record, oracle=args.oracle, workdir=workdir,
-                         budget=args.budget)
+                                sandbox=not args.no_sandbox, budget=args.budget)
+        return run_platform(record, oracle=args.oracle, workdir=workdir,
+                            sandbox=not args.no_sandbox, budget=args.budget)
     finally:
         if cleanup:
             shutil.rmtree(workdir, ignore_errors=True)

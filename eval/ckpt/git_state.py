@@ -6,7 +6,7 @@ rollback, and identical prefixes are deduplicated for free.
 """
 from __future__ import annotations
 
-from eval.ckpt.source_tree import copy_harness, has_bun_runtime
+from eval.ckpt.source_tree import copy_harness, has_bun_runtime, has_python_runtime
 
 import json
 import os
@@ -69,8 +69,17 @@ IGNORED_HARNESS_STATE = ("_harnessgrad/", "__pycache__/", "*.pyc", ".state/",
                          "*.bak", "*.orig", "*.rej", "*~")
 
 
+def _check_managed_source(root: Path) -> None:
+    # Git initialisation writes .gitignore before runtime preparation. Reject
+    # aliases now, while generated local environments remain outside source.
+    if has_python_runtime(root):
+        from harnessgrad.python_harness_runtime import source_fingerprint
+        source_fingerprint(root)
+
+
 def init_repo(root: Path) -> None:
     """Turn `root` into a git repo with one commit holding its current contents."""
+    _check_managed_source(root)
     if (root / ".git").exists():
         return
     _git(root, "init", "-q")
@@ -81,6 +90,8 @@ def init_repo(root: Path) -> None:
     existing = gi.read_text() if gi.exists() else ""
     # `IGNORED_HARNESS_STATE` states the principle and the measured instances behind it.
     rules = IGNORED_HARNESS_STATE + (("node_modules/", ".opencode-state/") if has_bun_runtime(root) else ())
+    if has_python_runtime(root):
+        rules += (".venv/", "venv/", "node_modules/", "*.pyo")
     for rule in rules:
         if rule not in existing:
             existing = existing.rstrip("\n") + f"\n{rule}\n"
@@ -162,6 +173,7 @@ def stage_workspace(harness_src: Path, work: Path) -> None:
     the harness is about to run in, so a link to a host file is a read of that file. Preserving
     the link keeps both the size and the boundary where the harness author put them.
     """
+    _check_managed_source(harness_src)
     if work.exists():
         shutil.rmtree(work)
     copy_harness(harness_src, work, symlinks=True)

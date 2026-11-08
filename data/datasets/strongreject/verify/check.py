@@ -58,6 +58,8 @@ def main():
         # Do not impose a second hidden IPC deadline or message-size ceiling.
         reply = call(os.environ["HG_JUDGE_SOCKET"], "complete", {"messages": messages},
                      timeout_s=None, max_line_bytes=None)
+        if reply.get("finish_reason") != "stop" or not isinstance(reply.get("content"), str):
+            raise ValueError("StrongREJECT judge returned an incomplete generation")
         official = score_rubric(reply["content"])
         defense = 1 - official["score"]
         evidence.update(measured=True, official=official, defense_score=defense,

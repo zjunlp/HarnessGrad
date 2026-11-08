@@ -48,8 +48,10 @@ relay 声明支持 `program/python/content/content_path/content_flag/filename/bu
 
 服务通过 `--receipt` 写运输回执。不要把 seal/reset/admin 操作暴露给 actor。
 推荐 SIGTERM 只设置退出标志；停止接收请求、完成当前状态封存，然后写 episode 和 receipt 并退出。
-runner 给 SIGTERM 退出阶段最多 15 秒，随后 SIGKILL 同一进程组中的剩余进程，
+runner 给服务的 SIGTERM 退出阶段最多 15 秒，随后 SIGKILL 同一进程组中的剩余进程，
 再最多等待 5 秒回收主进程；启用 `record` 后，无法封存有效记录的运行不会继续正常评分。
+启用下述 `python_runtime` 的服务先向实际服务进程发送 SIGTERM，保留 bubblewrap
+监控进程直到服务退出，避免提前触发父进程死亡时的强制终止。
 
 评分期间，verifier 可读取 `trusted_episode/episode.json`：
 
@@ -356,6 +358,70 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 读取后均校验 `test_fold.json` 中记录的原始归档 SHA256。来源核验测试在未配置
 数据目录或缺少归档时明确跳过；归档已存在但哈希不符、损坏或不可读时失败。
 该归档是可选的来源核验输入，不会由 `--fetch --dataset scienceworld` 自动下载。
+
+<a id="dataset-execution-runtime"></a>
+
+### 5.4 按角色绑定的 Python 执行制品
+
+可信 Python 服务和评分器可显式声明 `python_runtime`，共同复用
+[`harnessgrad.dataset_runtime`](../harnessgrad/dataset_runtime.py) 的准备及内容核验机制。
+当前使用者是 CostBench static/dynamic：两者的服务与评分器共享一个 Python 3.12
+execution 制品，平台 Python 无须安装它的编译依赖。τ³ 保留其已有运行时路径。
+
+静态描述位于 `data/datasets/<name>/execution-runtime.json`，例如：
+
+```json
+{
+  "schema": "harnessgrad.dataset-execution-runtime.v1",
+  "dataset": "costbench",
+  "python": "3.12",
+  "requirements": "requirements.lock"
+}
+```
+
+依赖文件相对此描述解析，使用精确版本。`execution_descriptor` 静态读取声明；
+`prepare_execution` 显式创建或核验制品，`resolve_execution` 只选择已完成且核验通过的制品。
+`check_execution` 只检查制品，scope 为 `dataset-execution-runtime`；它不安装依赖、
+检查数据完整性、启动服务或执行评分。
+
+```bash
+python tools/prepare_dataset.py --dataset costbench --runtime execution
+python tools/prepare_dataset.py --dataset costbench --runtime execution --check --json
+```
+
+`--runtime` 默认为 `provider`，因此 GSM8K 的已有准备命令保持不变。
+`--python` 可指定准备使用的基础解释器；`--runtime-root` 或 `HG_DATASET_RUNTIME_ROOT`
+选择仓库外的存储，默认 `~/.cache/harnessgrad/dataset-runtimes`。
+provider 和 execution 共用存储机制，但声明、索引和制品按 profile 区分。
+完成检查不能推导出数据集已准备或生产实验已获准。
+
+适配器通过 `bind(runtime, "service")` 或 `bind(runtime, "verifier")` 生成绑定。
+绑定 schema 为 `harnessgrad.python-runtime-binding.v1`，字段为
+`schema/dataset/profile/role/runtime_id/manifest_path/python/path/runtime_paths`，其中
+`profile="execution"`。不同角色可引用同一 runtime_id，角色本身仍须匹配执行入口。
+路径记录制品和基础解释器目录的物理绝对路径。registry 调用 `validate_binding` 仅做
+结构检查；启动前的 `admit_binding` 重读绑定指定的 manifest，核验 venv 内容、
+基础解释器、声明、精确依赖和路径，不读取最新索引换环境，不安装或静默回退。
+
+服务在 `SETUP.tool_relay.python_runtime` 放入 service 绑定，`python` 必须与绑定一致，
+并通过 `read_paths` 显式列出可信服务需要的代码和输入。平台以 `-I -B` 启动，
+只读挂载运行时与白名单路径，使用每任务私有的 HOME、临时目录、缓存、配置目录和 cwd，
+不继承宿主凭据或 Python 配置。服务只取得本次生成的 record/context 句柄，
+以及声明模型通道后由本次 broker 创建的 socket；不采用宿主已有的模型 socket。
+网络 namespace 不开放外部网络。白名单不能覆盖可写服务目录；这些可信输入不会因此投影给 actor。
+
+评分器在 `VERIFY.python_runtime` 放入 verifier 绑定，`argv` 须以
+`[binding["python"], "-I", "-B", ...]` 开头，`runtime_paths` 须与绑定完全一致，
+并满足第 5.1 节的只读挂载和执行路线限制。绑定结构无效、制品损坏、角色或解释器不匹配时，
+服务启动失败或评分返回 `unmeasured`，不作为普通零分。
+未声明 `python_runtime` 的服务与评分器沿用原路径。
+
+服务报告的 `runtime_services.tool_relay.python_runtime` 和评分结果的
+`verdict.python_runtime` 保存绑定。CostBench 还在 service receipt 和 scorer evidence
+记录实际解释器、prefix、版本、isolated/readonly 状态、site-packages 及关键包来源，
+以核对真实执行环境。该机制针对可信服务代码的依赖和状态隔离；actor 仍须经过独立沙箱边界。
+制品库存覆盖 venv 与基础解释器文件，不封闭完整标准库或宿主系统库。
+这些显式管理的制品通过第 9.1 节的身份接入 H0、measurement cache 与 resume 比较。
 
 ## 6. 完整重复试验报告
 
@@ -674,6 +740,73 @@ SETUP、VERIFY、ENV 值；仍可检查完整任务及声明键集合，不会�
 
 <a id="scoring-identity"></a>
 
+<a id="dataset-provider-runtime"></a>
+
+### 8.1 独立的数据加载依赖
+
+适配器可通过 `data/datasets/<name>/runtime.json` 显式选择数据 provider。
+当前 GSM8K、TriviaQA、HotpotQA 使用 QA provider。该声明和精确依赖文件可以在平台
+Python 中静态读取；适配器的加载依赖只安装到外部专用环境，平台不导入它们。
+
+```bash
+python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k --check --json
+```
+
+将上述数据集名替换为 `triviaqa` 或 `hotpotqa` 即可准备相应环境；三者均声明
+CPython 3.12 和 `pyarrow==23.0.0`。已有数据目录可以继续使用，但旧的直接加载
+配方也必须补做 provider 准备。平台和接收 JSON 输入的评分器不需要安装 Arrow。
+TriviaQA 的训练采样与源文件行号、HotpotQA 的 answer F1 和 evidence 诊断语义不变。
+运行时身份属于测量身份，历史记录不会自动补写新身份；旧记录不能借新环境复用得分或续跑。
+
+`--fetch` 只下载声明的数据，不安装依赖，并提示显式准备命令。`prepare_dataset.py`
+准备并验证运行时，然后检查数据能否由 provider 加载；`--check` 只检查，不安装或下载。
+此处使用默认的 `--runtime provider`；execution profile 见第 5.4 节。
+`--python` 指定准备使用的基础解释器，`--runtime-root` 或
+`HG_DATASET_RUNTIME_ROOT` 指定仓库外的运行时存储。失败检查在 JSON 模式下同样非零退出。
+
+provider 的 catalog 返回任务及私有评分元数据；resolve 只读取选中任务的
+SETUP/VERIFY/ENV。私有元数据不得写入 actor 的任务 JSON。该加载进程使用已准备的
+解释器，属于可信的平台控制路径，不代表 actor 或评分器的沙箱已经完成执行。
+
+公共入口也使用该边界：`serve_ui` 的 `/api/options`、`split_inventory --host` 和
+`dataset_classes` 通过私有 `inventory` 操作读取实际任务数、划分、环境种类及首个任务的
+公开 setup，不在平台导入适配器，也不生成整池的 verifier。静态 split 清单仍只读源码声明，
+不启动 provider 或准备环境。
+
+`qa/control.py` 的 oracle/noop、本地及 `--platform` 路径通过私有 `control` 操作准备一个
+选中任务。provider 在自己的环境中解析参考答案、结构化 evidence、自定义提交及 noop
+期望；平台接收一次数据快照，继续使用原有 QA CLI、评分器和沙箱。参考数据只属于可信
+控制流和显式 oracle 控制臂，不会进入普通 actor 的任务 JSON。准备好数据及 provider 后，
+从平台环境执行控制命令即可，例如：
+
+```bash
+python data/scaffolds/qa/control.py --dataset gsm8k --oracle
+python data/scaffolds/qa/control.py --dataset gsm8k --noop --platform
+```
+
+两个新增操作复用现有运行时身份和协议回包校验，不改变依赖声明或要求重建已有依赖制品。
+
+`tools/datasets.py --check` 分别报告下载数据和目标运行时依赖的状态，pip 项不会从
+平台 Python 的包目录取版本。`tools/dataset_lint.py --inspect` 对此类适配器仅检查
+静态声明，无须已准备运行时；普通 lint 经 provider 检查 catalog 和执行声明。
+lint 仅跳过明确缺少数据、配置或尚未准备的运行时。身份或协议校验失败、运行时损坏、
+provider 超时及启动故障均使 lint 非零退出，`--allow-unprovisioned` 也不忽略这些故障。
+超时和启动故障的检查回执保留 `unavailable` 及具体 `error_type`，与未准备运行时区分。
+回执中的 scope 区分静态声明、运行时、数据可加载和执行声明检查，均不能推导出
+真实评分已通过或生产实验可运行。未声明 runtime.json 的适配器沿用原有加载路径。
+尚未接入 provider、直接导入适配器的诊断脚本仍使用调用它的解释器，需要在
+具备该适配器依赖的环境执行。`qa/control.py` 对上述已迁移数据集使用前述 provider 路径。
+`tools/datasets.py --check --json` 现在与文本模式一致：任一数据集缺失或未准备时非零退出，
+不再只输出失败状态却返回 0。此退出码修正同样适用于未迁移的适配器。
+
+provider 是可信适配器的依赖执行进程，不是额外的安全沙箱。每次请求冻结数据路径；
+当前 QA 后端不接收模型凭据或模型配置。运行时库存覆盖 venv 内容和基础解释器文件，
+不声称封闭宿主系统库或完整标准库。provider 回执含实际运行时身份。driver 在一次
+有界 loading session 中首次选择环境，随后请求核验同一个 manifest，不随 ready 索引
+变化重新选择。实际加载制品通过第 9.1 节接入 H0、结果缓存和恢复运行比较。
+
 ## 9. 可选评分身份
 
 适配器通过新增 `data/datasets/<name>/scoring_profile.py` 显式启用，文件导出
@@ -693,6 +826,41 @@ H0 查找、`--h0-from`、训练及评测 `--resume` 要求记录与当前身份
 不同身份的冻结基线保留分数，但比较标为不可比，不计算配对提升或能力下限。
 身份两侧均缺失的旧比较保留原有行为。
 
+### 9.1 数据集运行时身份与复用
+
+`harnessgrad/dataset_runtime_identity.py` 将实际 provider 制品与选中任务的
+service/verifier 绑定规范化为 `dataset_runtime_identity`：
+`version/provider/artifacts/tasks/sha256`。共享的执行制品只保存一次，`tasks` 保存
+任务到角色、角色到制品摘要的对应关系；摘要覆盖整个规范 JSON payload。
+内容仅含制品引用、路径及任务 ID，不含题目、答案或凭据。其库存保证仍限于前述
+venv 与基础解释器范围，不等同于整个运行环境或所有数据集依赖的封闭身份。
+
+driver 在选中执行声明解析后记录身份，写入 run metadata、H0 和各轮曲线。
+训练轮次测量子集时，曲线继续保存完整运行计划的身份；measurement cache 与任务
+progress 保存相应任务的投影。改变一个任务的制品不使其他独立任务的缓存失效。
+缓存条目自身也必须带匹配身份；缺失、损坏或不同的条目不能命中。
+
+复用单位是精确制品，不只比较 requirements。当前制品身份包含物理路径；重新构建
+产生新实例时，即使锁定依赖相同，也不默认复用旧测量。一次运行已经固定的制品
+仍完整可用时，ready 索引切换不会替换它；下一次新运行可以选择新的已发布制品。
+
+接受缓存、相同源码整轮复用、H0 或 resume 前仍核验制品的当前内容，不因没有启动
+服务或评分器而跳过 admission。训练及评测续跑要求 metadata、已有曲线和需要复用的
+任务 progress 身份一致；拒绝发生在改写旧 metadata 或恢复旧工作区之前。
+`--resume-across-platforms` 不豁免这个检查。源码检查点格式及 harness 源码 hash 不变，
+环境身份保存在与其关联的运行记录中。冻结基线身份不匹配时保留原始分数，但比较
+不可比，不生成配对提升或能力下限。
+
+`tools/prepare_h0.py` 的配置和查找包含这个身份，并核对 H0 payload、metadata、
+首个曲线点及已保存的 H0 配置。provider 的 `runtime.json` 自动启用预检；执行绑定
+适配器在根模块静态声明 `MANAGED_EXECUTION_RUNTIME = 'costbench'` 这类制品引用，
+供工具在不导入适配器时发现预检需求。该引用不替代逐任务绑定，实际身份仍来自选中
+声明。预检子进程使用驱动器将收到的环境、切分和任务选择，只读取已准备依赖与数据，
+不启动 actor、服务、评分器或安装器；缺少配置、数据或运行时会拒绝受管理数据集的
+H0 预检，包括 `--dry-run`。driver 完成后再次核对实际身份，防止预检与启动间发生切换。
+未迁移适配器保留原有元数据发现和记录形状；历史记录可读，但有管理身份的一侧
+不能与缺失身份的一侧复用或宣称可比。
+
 ## 10. 接口校验参考
 
 接口测试包括可信记录隔离、模型通道、结果约束、重复试验、固定 peer 和任务选择：
@@ -707,6 +875,10 @@ H0 查找、`--h0-from`、训练及评测 `--resume` 要求记录与当前身份
 - `tests/quality/test_judge_model_api.py`
 - `tests/quality/test_observed_workers.py`
 - `tests/quality/test_registry_selection.py`
+- `tests/quality/test_dataset_runtime.py`
+- `tests/quality/test_dataset_execution_runtime.py`
+- `tests/quality/test_python_execution_launch.py`
+- `tests/quality/test_costbench_execution_runtime.py`
 
 运行方式见 [测试说明](test-suite.md)。
 
@@ -752,3 +924,55 @@ Observed Runtime accepts an optional platform-only absolute monotonic `deadline`
 when supplied, image inspection, copying, initialization, kernel observation and
 commands share that deadline. Existing callers retain their per-command behavior
 when it is absent. Cleanup keeps its separate bounded teardown grace and receipt.
+
+## Harness 候选与数据集运行时的边界
+
+Python 依赖按执行角色管理，不按数据集统一装入一个虚拟环境：
+
+| 角色 | 声明与生命周期 |
+| --- | --- |
+| 平台编排 | 平台 Python，标准库运行依赖 |
+| 数据加载 provider | 数据集的 `runtime.json`，在导入 adapter 前准备和绑定 |
+| 可信服务／评分器 | 数据集的 `execution-runtime.json` 和各任务的 `python_runtime`，按角色挂载 |
+| Harness actor | 候选的 `harness.json.runtime.kind="python"` 和完整 lock，在固定候选之后准备 |
+
+Harness 依赖允许随方法编辑变化，因此单独记录 `harness_runtime_identity`；
+不把它并入固定的数据集身份，也不把合理的依赖修改视为数据集变更。
+每个已测 checkpoint 绑定自己的源码和实际制品，缓存、H0 与恢复运行均重新核验。
+依赖构建只发生在候选准备阶段，不在每个任务里安装。任务共享只读制品，
+可写 HOME、临时目录和 `.state` 各自私有，actor 制品不会传给 scorer 或服务。
+
+Harness 默认托管路线支持沙箱中的 native `files`。MiniAgent 使用 CPython 3.12 和完整 lock。
+Loop 进一步显式声明容器 Python 小版本与 lock 的映射，支持 `files` 和 `exec`：
+镜像有 Python 时使用镜像内解释器与独立 venv，没有时使用已绑定的原生解释器制品。
+实际镜像、解释器、源码及依赖进入 Harness 身份，评分器不继承 actor 的挂载。
+其他无声明的 Harness 继续使用原有路径。
+完整声明、准备命令、限制及回执见
+[Harness Python 环境](writing_a_harness.md#21-managed-python-dependencies)。
+
+### Dataset-owned task Python (`ENV.task_python`)
+
+A sandboxed `files` environment may bind an explicitly prepared dataset execution
+artifact with `role: actor`. The declaration uses the existing exact
+`harnessgrad.python-runtime-binding.v1` fields and artifact inventory. `python`
+and `python3` in task shell PATH resolve to that read-only dependency venv. This
+is independent of the harness-owned SDK interpreter, which starts by absolute
+path and keeps its own imports and model routing. There is no package installation
+or ambient platform fallback during dataset loading, launch or reuse.
+
+This route does not support workers, observed backends or exec/container tasks.
+The binding is included in the environment verification_context and the private
+dataset_runtime_identity actor role. Every launch and reuse admission rehashes the
+captured artifact; it does not follow a changed discovery index. Older identities
+remain readable, but cannot be reused for a task that newly requires actor proof;
+start a new run after preparing the declared execution artifact.
+
+Method projections expose `harnessgrad.dataset-runtime-public-summary.v1` with
+scope `dependency-artifacts-without-task-associations`: dataset, runtime_id and
+roles only. They exclude private binding paths, artifact manifests, task mappings,
+the whole-plan digest and verification_context. Individual verifier binding
+summaries use `harnessgrad.python-runtime-public-summary.v1`. Spreadsheet method
+task pages additionally omit native-runtime.json and runtime-context.json. Methods
+must use the public summary for dependency diagnostics; admission/comparison uses
+the unchanged full private identity records. Shipped methods do not depend on the
+previous complete runtime-binding projection.

@@ -62,8 +62,22 @@ or bare choices used during preparation. Changing the choice requires preparing
 matching bindings again. Additional `--runtime` entries are read-only; use them only
 for runtime dependencies, not personal credentials.
 
-Fingerprints cover selected executables, companion Codex binaries, wrapper files,
-relevant package metadata and venv configuration. They do not hash every transitive
-file in directory bindings. Native version admission also does not establish that
-an arbitrary task image provides compatible system libraries or that a model-backed
-task will succeed; validate the selected task environments separately.
+Supported Linux ELF native and exact Node-and-script npm installations now record
+the bytes and modes of their declared runtime contents, including physical link
+targets. Git metadata is excluded. A companion link redirected to equal bytes at
+another physical path requires preparation again. Unknown, script and parameter
+wrappers retain their selected-file checks and are explicitly noncacheable.
+
+Preparation and admission require `NODE_OPTIONS`, `NODE_PATH`, `LD_PRELOAD`,
+`LD_AUDIT` and `LD_LIBRARY_PATH` to be unset or empty. Task CLI children remove
+these ambient loader inputs. Configure dependency bindings with `--runtime`
+instead of relying on undeclared startup modules or library search paths.
+
+Cache lookup, H0, retained checkpoints and progress recovery re-admit the current
+installation and require matching recorded evidence. Old partial records remain
+readable but cannot authorize score reuse. Prepare a new Harness copy and use a
+fresh run ID to measure it; do not rewrite historical manifests or receipts.
+
+The content scope covers declared application/runtime files. Host OS libraries,
+shell tools and compatibility with a task image remain platform capabilities,
+not a hermetic machine image or proof that a model-backed task will succeed.

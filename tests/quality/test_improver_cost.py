@@ -44,12 +44,13 @@ def test_a_cli_improvers_spend_is_unknown_not_zero():
     assert editor.spend_source() == "cli_unreported"
 
 
-def test_an_endpoint_reply_after_a_cli_call_restores_counting():
-    """flag 不能越过它描述的那次调用活下去。"""
+def test_an_endpoint_reply_cannot_fill_an_unreported_cli_cost():
+    """A later measured call cannot supply an earlier CLI call's missing usage."""
     editor._SPENT["source"] = "cli_unreported"
     editor._record_usage(_Usage(1500, 500), "m")
-    assert editor.spend_source() == "endpoint"
-    assert editor.spent_tokens() == 2000
+    assert editor.spend_source() == "cli_unreported"
+    assert editor.spent_tokens() is None
+    assert editor.cache_read_tokens() is None
 
 
 def test_reset_clears_the_flag_too():
@@ -326,3 +327,40 @@ def test_report_many_puts_the_split_on_the_wire(tmp_path, capsys):
         assert payload["claimed_cost"]["method_input_tokens"] == 900
         assert payload["claimed_cost"]["method_spend_source"] == "endpoint"
     assert envelope["steps"] == 2
+
+
+@pytest.mark.parametrize("endpoint_first,cli_reports", [(True, True), (False, False), (True, False)])
+def test_mixed_calls_preserve_any_unreported_usage(monkeypatch, tmp_path, endpoint_first, cli_reports):
+    from types import SimpleNamespace
+    import cli_improver
+    base = tmp_path / "base"; base.mkdir()
+    parent = tmp_path / "parent"; parent.mkdir()
+    transcript = (DASH + '{"input_tokens": 20, "output_tokens": 2, "cache_read_tokens": 3}'
+                  if cli_reports else "no usage")
+    def fake_propose(req, parent_path, **kwargs):
+        return {"candidate": str(pathlib.Path(req["workspace"]) / "candidate"),
+                "files": [], "changed": [], "exit_code": 0, "seconds": 1.0,
+                "note": "no change", "transcript": transcript, "reported": {}}
+    monkeypatch.setattr(cli_improver, "propose", fake_propose)
+    editor.reset_spent()
+    if endpoint_first:
+        editor._record_usage(None, "synthetic")
+        editor._ask_cli("fixture", base, parent, {"name": "dsh"})
+    else:
+        editor._ask_cli("fixture", base, parent, {"name": "dsh"})
+        editor._record_usage(SimpleNamespace(prompt_tokens=10, completion_tokens=2), "synthetic")
+    expected = ("mixed_unreported" if endpoint_first and not cli_reports else
+                "endpoint_unreported" if endpoint_first else "cli_unreported")
+    assert editor.spend_source() == expected
+    assert editor.spent_tokens() is None and editor.cache_read_tokens() is None
+    editor.reset_spent()
+    assert editor.spend_source() is None and editor.spent_tokens() == 0
+
+
+def test_later_reported_endpoint_cannot_erase_unknown_endpoint_usage():
+    editor.reset_spent()
+    editor._record_usage(None, 'synthetic')
+    editor._record_usage(_Usage(1500, 500), 'synthetic')
+    assert editor.spend_source() == 'endpoint_unreported'
+    assert editor.spent_tokens() is None and editor.cache_read_tokens() is None
+    assert editor.spent()['calls'] == 2

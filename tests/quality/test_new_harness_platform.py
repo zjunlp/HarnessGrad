@@ -21,14 +21,18 @@ from eval.observe.tracing import loop_facts
 from eval.run.runner import run_one
 from tools.check_trace_contract import inspect as inspect_trace
 from tools.validate_harness import source_identity
+from harnessgrad import candidate_runtime
+from test_miniagent_harness import managed_miniagent, miniagent_store  # noqa: F401
 
 
 @pytest.mark.parametrize('name,answer', [
     ('miniagent', 'MINIAGENT_MOCK'), ('openclaw', 'OPENCLAW_MOCK'),
 ])
 def test_edited_candidate_runs_readonly_and_is_scored_after_private_inputs_arrive(
-        name, answer, tmp_path, monkeypatch):
+        name, answer, tmp_path, monkeypatch, request):
     """A score must describe the edited tree that actually executed in the sandbox."""
+    if name == 'miniagent':
+        request.getfixturevalue('managed_miniagent')
     source = tmp_path / 'submitted'
     shutil.copytree(ROOT / 'base_harness' / name, source,
                     ignore=shutil.ignore_patterns('__pycache__'))
@@ -71,6 +75,7 @@ except OSError:
     stage_workspace(source, repo)
     edited_tree = content_sha(repo)
     assert edited_tree != base_tree
+    binding = candidate_runtime.prepare(repo)['identity'] if name == 'miniagent' else None
 
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work_root))
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
@@ -99,6 +104,7 @@ except OSError:
         verifier={'kind': 'command', 'argv': ['python3', '-c', verifier_code],
                   'inputs': [{'path': 'private-verifier-token.txt', 'content': private}]},
         run_id='native-adapter-acceptance',
+        harness_runtime_identity=binding,
     )
     assert not result.get('invalid'), result
     assert result['exit_code'] == 0, result.get('stderr')

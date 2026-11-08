@@ -152,15 +152,41 @@ def test_the_engine_stages_the_channel_every_round():
 
 # ------------------------------- 通道:一道题自己的那一页(题面/金标/理由) ---
 
-def _stage(tmp_path, dataset="terminal_bench", task_ids=("build-pmars",)):
-    import data.scaffolds.registry as datasets
-    tasks, setups, verifiers = datasets.load_tasks(dataset)
+AUTHORED_CHECK = (
+    "from pathlib import Path\n"
+    "result = Path('build/output.txt').read_text(encoding='utf-8')\n"
+    "assert result.strip() == 'authored build output', 'the build output must match'\n"
+)
+
+
+def _stage(tmp_path, task_ids=("authored-build",)):
+    """Project authored command tasks with the real directory-input contract.
+
+    These tests exercise the method channel, not Terminal-Bench corpus contents,
+    image lookup or execution. All source bytes live in this test's temp directory.
+    """
+    checks = tmp_path / 'authored-checks'
+    checks.mkdir()
+    (checks / 'test.sh').write_text('python3 /tests/test_outputs.py\n')
+    (checks / 'test_outputs.py').write_text(AUTHORED_CHECK)
+    tasks = [
+        {'task_id': 'authored-build', 'goal':
+         'Build an authored command-line tool that writes the required text to build/output.txt.'},
+        {'task_id': 'authored-unselected', 'goal': 'UNSELECTED_TASK_MUST_NOT_BE_STAGED'},
+    ]
+    setups = {'authored-build': {'files': []}}
+    verifiers = {
+        'authored-build': {'kind': 'command', 'argv': ['bash', '/tests/test.sh'],
+                           'inputs': [{'dst': '/tests', 'from': str(checks)}],
+                           'reward_file': '/verifier/reward.txt'},
+        'authored-unselected': {'kind': 'answer', 'expected': 'UNSELECTED_GOLD_MUST_NOT_BE_STAGED'},
+    }
     verdicts = {t: {"kind": "command", "passed": False, "score": 0.0,
-                    "detail": "reward 0 from /logs/verifier/reward.txt (exit 0)"}
+                    "detail": "reward 0 from /verifier/reward.txt (exit 0)"}
                 for t in task_ids}
     _stage_task_context(tmp_path, tasks, setups, verifiers,
-                               {"per_task": {t: 0.0 for t in task_ids},
-                                "verdicts": verdicts}, list(task_ids))
+                        {"per_task": {t: 0.0 for t in task_ids},
+                         "verdicts": verdicts}, list(task_ids))
     return tmp_path / "_harnessgrad" / "tasks"
 
 
@@ -171,7 +197,7 @@ def test_the_instruction_and_the_gold_are_staged(tmp_path):
     `no_change`,而 `no_change` 是对那份输入而言合理的答案。
     """
     tasks_dir = _stage(tmp_path)
-    entry = json.loads((tasks_dir / "build-pmars.json").read_text(encoding="utf-8"))
+    entry = json.loads((tasks_dir / "authored-build.json").read_text(encoding="utf-8"))
     assert entry["goal"] and len(entry["goal"]) > 40
     assert entry["score"] == 0.0
     assert entry["verifier"]["kind"] == "command"
@@ -185,24 +211,27 @@ def test_the_check_program_is_resolved_not_left_as_a_pointer(tmp_path):
     方法需要的是**程序**,不是指针,所以两种形态都要在这里解析成文本。
     """
     tasks_dir = _stage(tmp_path)
-    entry = json.loads((tasks_dir / "build-pmars.json").read_text(encoding="utf-8"))
+    entry = json.loads((tasks_dir / "authored-build.json").read_text(encoding="utf-8"))
     checks = entry["verifier"]["checks"]
     assert set(checks) == {"test.sh", "test_outputs.py"}, sorted(checks)
-    assert len(checks["test_outputs.py"]) > 500
+    assert checks["test_outputs.py"] == AUTHORED_CHECK
+    assert checks["test.sh"] == "python3 /tests/test_outputs.py\n"
+    assert "authored-checks" not in json.dumps(checks)
 
 
 def test_the_initial_state_says_so_when_it_is_the_image(tmp_path):
     """container 状态下初始状态**就是镜像**,不能显示成空列表让人以为任务从空开始。"""
     tasks_dir = _stage(tmp_path)
-    entry = json.loads((tasks_dir / "build-pmars.json").read_text(encoding="utf-8"))
+    entry = json.loads((tasks_dir / "authored-build.json").read_text(encoding="utf-8"))
     assert entry["initial_state"]["kind"] == "environment"
     assert "environment" in entry["initial_state"]["note"]
 
 
 def test_only_the_runs_own_tasks_are_staged(tmp_path):
     """暂存用的 task_ids 和轨迹用的是同一个收窄集合:不能把这次没评的题递出去。"""
-    tasks_dir = _stage(tmp_path, task_ids=("build-pmars",))
-    assert [p.name for p in tasks_dir.glob("*.json")] == ["build-pmars.json"]
+    tasks_dir = _stage(tmp_path, task_ids=("authored-build",))
+    assert [p.name for p in tasks_dir.glob("*.json")] == ["authored-build.json"]
+    assert "UNSELECTED" not in (tasks_dir / "authored-build.json").read_text()
 
 
 def test_an_inline_input_is_staged_too(tmp_path):

@@ -1,0 +1,5 @@
+# Optional official scorer comparisons and ROUGE diagnostics, not primary runtime.
+-r requirements-prepare.txt
+rouge-score==0.1.2
+editdistance==0.8.1
+numpy==2.5.4

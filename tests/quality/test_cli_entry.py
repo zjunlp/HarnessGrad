@@ -39,8 +39,8 @@ def _cli(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 def _driver_flags() -> list[str]:
-    """The long options `driver.py` declares, read from its source, never hardcoded."""
-    source = DRIVER.read_text(encoding="utf-8")
+    """The long options the run parser declares, read from its source."""
+    source = (ROOT / "harnessgrad/entrypoints/run_parser.py").read_text(encoding="utf-8")
     return re.findall(r"""add_argument\(\s*["'](--[a-z][a-z0-9-]*)["']""", source)
 
 

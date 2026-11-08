@@ -111,7 +111,6 @@ def test_the_critic_is_never_routed_to_a_cli_improver(tmp_path, monkeypatch):
     这条测试用真的 `ask` 跑派发:round.json 里放一个 CLI improver,把 `_ask_cli` 换成
     会抛异常的桩,再把 OpenAI 客户端换掉,断言 critic 仍然走 endpoint。
     """
-    import openai
     import editor
 
     base = _write_harness(tmp_path / "h")
@@ -137,7 +136,11 @@ def test_the_critic_is_never_routed_to_a_cli_improver(tmp_path, monkeypatch):
                 "completions": type("Comp", (), {
                     "create": staticmethod(lambda **_kw: _Resp())})()})()
 
-    monkeypatch.setattr(openai, "OpenAI", _Client)
+    def endpoint_client(**kwargs):
+        client = _Client(**kwargs)
+        client.complete = client.chat.completions.create
+        return client
+    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
     monkeypatch.setenv("HG_METHOD_BASE_URL", "http://stub/v1")
     monkeypatch.setenv("HG_METHOD_API_KEY", "stub")
     monkeypatch.setenv("HG_METHOD_MODEL", "stub-model")

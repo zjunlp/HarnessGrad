@@ -24,6 +24,9 @@ from eval.observe.console import CONSOLE as console
 from eval.run.metrics import ci95
 from eval.run.metrics import mean
 from harnessgrad import scoring_identity as scoring_identity_mod
+from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+from harnessgrad import verification_context as verification_context_mod
+from harnessgrad import candidate_runtime
 from harnessgrad.environments import _env_record
 from eval.observe.tracing import task_file
 from harnessgrad.methods import PlatformTampered
@@ -60,12 +63,26 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
     method_tokens = claimed.get("generation_tokens")
     tokens = (res or {}).get("tokens") or {}
     harness_tokens = None
+    harness_lower_bound = None
     if tokens.get("tasks_reported"):
-        harness_tokens = (tokens.get("input") or 0) + (tokens.get("output") or 0)
+        values = [tokens.get(key) for key in ("input", "output")]
+        reported_values = [tokens.get(key + "_reported", tokens.get(key)) for key in ("input", "output")]
+        harness_lower_bound = sum(value for value in reported_values if type(value) is int and value >= 0)
+        if (all(type(value) is int and value >= 0 for value in values)
+                and not tokens.get("input_tasks_missing") and not tokens.get("output_tasks_missing")):
+            harness_tokens = harness_lower_bound
+    harness_calls = tokens.get("calls") if not tokens.get("calls_tasks_missing") else None
     env = (res or {}).get("env_usage") or {}
     env_tokens = None
+    env_lower_bound = None
     if env.get("services_reported"):
-        env_tokens = (env.get("input") or 0) + (env.get("output") or 0)
+        values = [env.get(key) for key in ("input", "output")]
+        reported_values = [env.get(key + "_reported", env.get(key)) for key in ("input", "output")]
+        env_lower_bound = sum(value for value in reported_values if type(value) is int and value >= 0)
+        if (all(type(value) is int and value >= 0 for value in values)
+                and env.get("usage_complete") is not False
+                and not env.get("input_services_missing") and not env.get("output_services_missing")):
+            env_tokens = env_lower_bound
     return {
         "evaluation_trials": n_tasks if res else 0,
         # Kept because curves recorded before the runner read usage have it, and a
@@ -87,9 +104,26 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
         # count, so it is reported beside it rather than added into it.
         "method_cache_read_tokens": claimed.get("method_cache_read_tokens"),
         "harness_tokens": harness_tokens,
+        "harness_usage_scope": (tokens.get("scope", "partial") if "tasks_total" in tokens
+                                else "legacy_reported_coverage_unknown"),
+        # Known partial spend remains useful evidence, but is never substituted
+        # for a complete total consumed by cost-aware acceptance rules.
+        "harness_tokens_lower_bound": harness_lower_bound,
         "harness_tokens_reported_by_tasks": tokens.get("tasks_reported", 0),
-        "harness_model_calls": tokens.get("calls"),
+        "harness_usage_completeness": {key: tokens[key] for key in
+            ("tasks_total", "input_tasks_known", "input_tasks_missing", "output_tasks_known",
+             "output_tasks_missing", "calls_tasks_known", "calls_tasks_missing") if key in tokens},
+        "harness_model_calls": harness_calls,
+        "harness_model_calls_lower_bound": tokens.get("calls_reported", tokens.get("calls")),
         "env_generation_tokens": env_tokens,
+        "env_usage_scope": (("complete" if env.get("usage_complete") else "partial")
+                            if "services_total" in env else "legacy_reported_coverage_unknown"),
+        "env_generation_tokens_lower_bound": env_lower_bound,
+        "env_usage_completeness": {key: env[key] for key in
+            ("input_services_known", "input_services_missing", "output_services_known", "output_services_missing",
+             "unknown_usage_attempts") if key in env},
+        "env_model_calls": env.get("calls"),
+        "env_model_attempts": env.get("attempts"),
         "env_services_reported": env.get("services_reported", 0),
         "wall_clock_s": round(wall_s, 1),
     }
@@ -291,7 +325,8 @@ def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
                  per_task_trials=None, cached_tasks=None,
                  per_task_test_rate=None, test_rate=None, test_rate_n_tasks=0,
                  tests_passed=0, tests_total=0,
-                 per_task_test_rate_trials=None, per_level=None, scoring_identity=None) -> dict:
+                 per_task_test_rate_trials=None, per_level=None, scoring_identity=None,
+                 dataset_runtime_identity=None, harness_runtime_identity=None, verification_context=None) -> dict:
     isolation_by_task = {tid: (per_task_scorer_isolation or {}).get(tid, "unknown")
                          for tid in task_ids}
     isolation = common_class(isolation_by_task.values())
@@ -300,6 +335,9 @@ def _curve_point(*, run_id, round_index, identity, sampling, scores, task_ids,
         "run_id": run_id, "round": round_index, "label": label,
         "identity": identity,
         **scoring_identity_mod.fields(scoring_identity),
+        **dataset_runtime_identity_mod.fields(dataset_runtime_identity),
+        **verification_context_mod.fields(verification_context),
+        **candidate_runtime.fields(harness_runtime_identity),
         # Which side of the split this point measures, and therefore what `score` *is*.
         #
         # `score` cannot be null on a train run: the method's acceptance rule reads it

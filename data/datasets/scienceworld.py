@@ -119,6 +119,7 @@ from harnessgrad.paths import dataset_root
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`.
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "scienceworld"
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
@@ -402,30 +403,38 @@ def _goal(record: dict) -> str:
     )
 
 
-def _setup(record: dict) -> dict:
-    """What the agent receives before it starts.
+def _setup(record: dict, *, binding=None, world_jar=None) -> dict:
+    """Publish a stdlib client and bind a fixed-task managed service."""
+    import hashlib
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+    binding = binding or bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
+    jar = world_jar or _runtime_payload(binding)
+    task = {'task_name': record['task_name'], 'variation': record['variation'], 'simplifications': ''}
+    java = JRE_STAGED / 'bin/java'
+    context = {'task': task, 'jar': str(jar), 'java_home': str(JRE_STAGED.resolve()),
+               'java_sha256': hashlib.sha256(java.read_bytes()).hexdigest(),
+               'source_sha256': hashlib.sha256((ASSETS/'relay.py').read_bytes()).hexdigest()}
+    return {'files': [
+        {'path': TASK_IN_WORKDIR, 'content': json.dumps(task)},
+        {'path': LOG_IN_WORKDIR, 'content': ''},
+        {'path': 'scw', 'from': str(CLI_DIR/'scw-relay')},
+        {'path': 'scw_client.py', 'from': str(CLI_DIR/'scw_client.py')}],
+        'tool_relay': {'program': str(ASSETS/'relay.py'), 'filename': 'case.json',
+          'content_flag': '--case-spec', 'content': json.dumps(context),
+          'python': binding['python'], 'python_runtime': binding,
+          'read_paths': [str(ASSETS/'relay.py'), str(ASSETS/'runtime.py'), str(LIB_DIR),
+                         str(JRE_STAGED), str(ASSETS.parents[2]/'eval/service')]}}
 
-    The CLI, its library and the JRE travel as `from` references into this repository; the
-    task identity travels as **inline content**, so the world the agent builds is the one
-    the dataset declared and not something it could have edited into a file. The JRE is the
-    directory under `jre/`: it is bound read-only because the verification namespace cannot
-    see the dataset root, and both the agent's CLI and the check need the same JVM.
-    """
-    return {"files": [
-        {"path": TASK_IN_WORKDIR,
-         "content": json.dumps({"task_name": record["task_name"],
-                                "variation": record["variation"],
-                                "simplifications": ""})},
-        {"path": "scw_env.py", "from": str(LIB_DIR / "scw_env.py")},
-        {"path": "scw", "from": str(CLI_DIR / "scw")},
-        # The runtime, as a prepared tree. `lib/scw_env.py::java_home` finds it at
-        # `<workdir>/jre/<dirname>` and sets JAVA_HOME/PATH from it; py4j then launches it
-        # by absolute path (a relative one breaks, because py4j passes its own cwd).
-        {"path": f"{_LIB.JRE_RELDIR}/{_LIB.JRE_DIRNAME}", "from": str(JRE_STAGED), "immutable": True},
-    ]}
+
+def _runtime_payload(binding=None):
+    from harnessgrad.dataset_runtime import resolve_execution
+    spec = importlib.util.spec_from_file_location('scienceworld_runtime_payload', ASSETS/'runtime.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.payload(binding or resolve_execution(MANAGED_EXECUTION_RUNTIME))
 
 
-def _verifier(record: dict) -> dict:
+def _verifier(record: dict, *, world_jar=None) -> dict:
     """The grade: the check, its trusted inputs, and where the verdict goes.
 
     `inputs` use `path` (relative to the workdir), not `dst`: on a `files` environment the
@@ -433,12 +442,7 @@ def _verifier(record: dict) -> dict:
     file, check and shared library are re-materialised at verification time; the JRE
     is shared and bound read-only, so the agent cannot change it in the first place.
     """
-    # Locate package data without importing the JVM wrapper or launching Java.
-    import importlib.util
-    package = importlib.util.find_spec("scienceworld")
-    if package is None or package.origin is None:
-        raise FileNotFoundError("scienceworld package payload is not provisioned")
-    world_jar = Path(package.origin).parent / "scienceworld.jar"
+    world_jar = world_jar or _runtime_payload()
     spec = {
         "kind": "command",
         "argv": [
@@ -482,7 +486,9 @@ def downloads() -> list[dict]:
             "package": "scienceworld",
             "version": "1.2.3",
             "size": "~8 MB",
-            "note": "The environment **is** the package: `setup.py` declares "
+            "note": "Prepare with `python tools/prepare_dataset.py --dataset scienceworld "
+                    "--runtime execution`; platform and actor Python do not need this package. "
+                    "The environment **is** the package: `setup.py` declares "
                     "`package_data={'scienceworld': [JAR_FILE, ...]}` and the wheel ships "
                     "`scienceworld.jar` (7.5 MB), `tasks.json` (4.8 KB) and "
                     "`object_type_ids.tsv`. There is therefore no separate data download. "
@@ -500,8 +506,9 @@ def downloads() -> list[dict]:
             "sha256": _LIB.JRE_SHA256,
             "dst": "_src/" + _LIB.JRE_TARBALL,
             "extract_to": "jre",
-            "note": "Trap: this machine has **no system `java` and no root**, so a runtime "
-                    "is a provisioning step, and the release URL *is* the version. **JDK "
+            "note": "Provision the pinned JRE explicitly; a system Java installation is not "
+                    "a substitute for this runtime identity. The release URL identifies "
+                    "the version. **Java "
                     "17, not the newest**: the JAR is built in 2025 and a newer JDK may "
                     "refuse an older target in a way that does not name Java. Both sides "
                     "need it -- the check replays in a fresh environment, so the agent's CLI "
@@ -568,8 +575,8 @@ def load() -> tuple[list[dict], dict[str, str]]:
     except Exception as exc:  # noqa: BLE001 - the reason is the point
         raise ValueError(
             f"scienceworld: cannot build the task list ({exc}). Provision the runtime "
-            f"with `python3 tools/datasets.py --fetch --dataset scienceworld` and check "
-            f"that `pip show scienceworld` reports 1.2.3.") from exc
+            f"with `python3 tools/datasets.py --fetch --dataset scienceworld` and prepare "
+            f"`python tools/prepare_dataset.py --dataset scienceworld --runtime execution`.") from exc
     if not records:
         raise ValueError("scienceworld: the enumeration returned no tasks")
     tasks = [{"task_id": r["task_id"], "goal": _goal(r), "inputs": []} for r in records]
@@ -611,12 +618,16 @@ class _Lazy:
     def get(self, name: str):
         if name not in self._cache:
             records = _ensure()
-            ids = [r["task_id"] for r in records]
-            self._cache = {
-                "ENV": {tid: {"kind": "files"} for tid in ids},
-                "SETUP": {r["task_id"]: _setup(r) for r in records},
-                "VERIFY": {r["task_id"]: _verifier(r) for r in records},
-            }
+            if name == 'ENV':
+                self._cache[name] = {r['task_id']: {'kind':'files'} for r in records}
+            elif name == 'SETUP':
+                from harnessgrad.dataset_runtime import bind, resolve_execution
+                binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
+                jar = _runtime_payload(binding)
+                self._cache[name] = {r['task_id']: _setup(r, binding=binding, world_jar=jar) for r in records}
+            else:
+                jar = _runtime_payload()
+                self._cache[name] = {r['task_id']: _verifier(r, world_jar=jar) for r in records}
         return self._cache[name]
 
 

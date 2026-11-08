@@ -67,7 +67,7 @@ class Daemon:
         self.calls.append(args)
         if args[:2] == ("network", "create"):
             error = self.create_errors.pop(0) if self.create_errors else ""
-            return _fail(args, error) if error else _ok(args)
+            return _fail(args, error) if error else _ok(args, "a" * 64)
         if args[:2] == ("network", "inspect"):
             if self.existing is None:
                 return _fail(args, "Error response from daemon: network not found")
@@ -96,7 +96,7 @@ def test_every_create_names_a_24_inside_the_base(monkeypatch):
     daemon = _install(monkeypatch, Daemon())
     name = services.create_network("run-1", "s01")
 
-    assert name == "hg-run-1-s01"
+    assert name == "a" * 64
     assert len(daemon.creates) == 1
     argv = daemon.creates[0]
     assert "--subnet" in argv, "no --subnet means the daemon allocates from its default pool"
@@ -106,7 +106,7 @@ def test_every_create_names_a_24_inside_the_base(monkeypatch):
     assert network.prefixlen == netpool.SUBNET_PREFIX
     assert network.subnet_of(ipaddress.ip_network(netpool.DEFAULT_BASE))
     assert "--internal" in argv
-    assert argv[argv.index("--internal") + 1] == "hg-run-1-s01"
+    assert argv[argv.index("--internal") + 1].endswith("-run-1-s01")
     assert "harnessgrad.run=run-1" in argv
     assert "harnessgrad.task=s01" in argv
     assert f"{netpool.SUBNET_LABEL}={subnet}" in argv
@@ -115,13 +115,12 @@ def test_every_create_names_a_24_inside_the_base(monkeypatch):
 
 def test_a_taken_subnet_retries_the_next_candidate(monkeypatch):
     daemon = _install(monkeypatch, Daemon(create=[OVERLAP]))
-    assert services.create_network("run-1", "s01") == "hg-run-1-s01"
+    assert services.create_network("run-1", "s01") == "a" * 64
 
     candidates = list(netpool.allocate("run-1", "s01"))
     assert len(daemon.creates) == 2, "a collision must cost one retry, not the task"
     assert [_subnet_of(call) for call in daemon.creates] == candidates[:2]
-    assert all(call[call.index("--internal") + 1] == "hg-run-1-s01"
-               for call in daemon.creates)
+    assert len({call[call.index("--internal") + 1] for call in daemon.creates}) == 1
 
 
 def test_every_candidate_is_tried_before_the_space_is_called_exhausted(monkeypatch):
@@ -149,39 +148,15 @@ def test_a_small_base_reports_itself_and_its_one_candidate(monkeypatch):
     assert "10.77.0.0/24" in message and netpool.BASE_ENV in message
 
 
-def test_an_existing_network_with_the_same_subnet_is_reused(monkeypatch):
-    """A crashed run reaped badly leaves the name and the subnet the task will ask for."""
-    subnet = netpool.allocate("run-1", "s01").first
-    daemon = _install(monkeypatch, Daemon(
-        create=["Error response from daemon: network with name hg-run-1-s01 already exists"],
-        existing=subnet))
-    assert services.create_network("run-1", "s01") == "hg-run-1-s01"
-    assert len(daemon.creates) == 1, "reuse is decided on the first candidate, not by retrying"
-    assert any(call[:2] == ("network", "inspect") for call in daemon.calls)
-
-
-def test_an_existing_network_with_another_subnet_is_a_failure(monkeypatch):
-    """The harness's gateway address comes from the subnet; reusing a different one lies."""
-    subnet = netpool.allocate("run-1", "s01").first
-    daemon = _install(monkeypatch, Daemon(
-        create=["Error response from daemon: network with name hg-run-1-s01 already exists"],
-        existing="172.19.0.0/16"))
-    with pytest.raises(services.ServiceUnavailable) as exc:
+def test_existing_name_is_never_reused_or_removed(monkeypatch):
+    monkeypatch.setattr(services.secrets, "token_hex", lambda _: "fixed")
+    name = "hg-fixed-run-1-s01"
+    daemon = _install(monkeypatch, Daemon(create=[
+        f"Error response from daemon: network with name {name} already exists"]))
+    with pytest.raises(services.ServiceUnavailable, match="refusing to reuse"):
         services.create_network("run-1", "s01")
     assert len(daemon.creates) == 1
-    message = str(exc.value)
-    assert "172.19.0.0/16" in message and subnet in message
-    assert "docker network rm hg-run-1-s01" in message
-
-
-def test_an_existing_network_whose_subnet_cannot_be_read_is_a_failure(monkeypatch):
-    daemon = _install(monkeypatch, Daemon(
-        create=["Error response from daemon: network with name hg-run-1-s01 already exists"],
-        existing=None))
-    with pytest.raises(services.ServiceUnavailable) as exc:
-        services.create_network("run-1", "s01")
-    assert len(daemon.creates) == 1
-    assert "unknown" in str(exc.value), "'could not read' must not be spelled as a match"
+    assert all(call[:2] != ("network", "rm") for call in daemon.calls)
 
 
 def test_a_failure_that_is_not_a_collision_is_not_retried(monkeypatch):
@@ -339,7 +314,7 @@ def _require_docker() -> None:
 
 
 def _labelled(run_id: str) -> list[str]:
-    proc = container_mod.docker("network", "ls", "--format", "{{.Name}}",
+    proc = container_mod.docker("network", "ls", "--format", "{{.ID}}", "--no-trunc",
                                 "--filter", f"label=harnessgrad.run={run_id}", timeout=60)
     assert proc.returncode == 0, proc.stderr
     return proc.stdout.split()

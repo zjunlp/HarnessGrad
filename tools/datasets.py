@@ -11,6 +11,11 @@ expressed *in the loader*, as a `downloads()` function, and this tool only reads
     python3 tools/datasets.py --fetch     download what is missing into the data root
     python3 tools/datasets.py --write     regenerate DOWNLOADS.md from the loaders
 
+`--check` reports declared bytes separately from admitted provider and execution
+dependency artifacts. Package metadata comes from the selected artifact Python;
+adapters without a managed profile retain an explicit legacy platform-package
+scope. These are read-only provisioning facts, not loader or model/service health.
+
 **DOWNLOADS.md is generated and must never be hand-edited.** A second copy of a
 provisioning list in a document forks, and the fork shows up as "someone followed the
 docs and got different bytes" -- which is why the renderer is this tool and the
@@ -36,29 +41,11 @@ understands the four artifact kinds the loaders use:
     hf-file     GET one pinned repository file into the file-shaped `dst`
     pip         never fetched here -- it is an install, and `--check` reports it
 
-`--file` narrows an entry to a subset of the files it names, which is how a dataset
-with an 8 GB repository and a 7 MB config fetches only what it scores. The endpoint
-defaults to `https://hf-mirror.com` because huggingface.co is unreachable from this
-machine (measured: HTTP 000 after a 30 s timeout); `HG_HF_ENDPOINT` overrides it, so
-the choice is visible at the call site instead of being an implicit convenience.
-`sha256` is verified whenever the entry declares it, and a mismatch deletes the
-partial download rather than leaving bytes on disk that look provisioned.
-
-The same wall has a second door, and it is off by default. `HG_GH_RAW_MIRROR`, set to a
-proxy prefix, rewrites `https://raw.githubusercontent.com/<path>` to
-`<mirror>/https://raw.githubusercontent.com/<path>` before the transfer -- and only that
-host. Measured 2026-11-02: `raw.githubusercontent.com` is reset-blocked from this machine
-(`curl: (35) Recv failure` on every A record) while `github.com` and `hf-mirror.com`
-answer, so a dataset whose provenance *is* a raw file could not be provisioned at all:
-`strongreject` landed 8 of 155 files, and `memoryagentbench`'s pinned `punkt_tab.zip`
-failed the same way. Unset, every URL is exactly what the loader declared; the `--fetch`
-line names the mirror when one was used, so provenance is not lost.
-
-A failed transfer also leaves no directory behind. `_download` records which parents it
-had to create and removes them again, deepest first and only while empty, so an
-"already prepared?" guard is not fooled by a fetch that produced nothing -- measured:
-kumo's `prepare.py` skips its clone when `<root>/upstream` exists, and the empty tree
-left by a blocked fetch made the next sanctioned command die on a missing `.gitignore`.
+`--file` narrows an entry to a subset of its declared files. The Hugging Face
+endpoint defaults to `https://hf-mirror.com`; `HG_HF_ENDPOINT` overrides it.
+`HG_GH_RAW_MIRROR` optionally prefixes only raw.githubusercontent.com URLs; the
+fetch output records its use. Declared SHA256 checksums are verified, and failed
+transfers remove partial files and newly created empty directories.
 """
 from __future__ import annotations
 
@@ -69,6 +56,7 @@ import importlib
 import importlib.metadata
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -82,20 +70,13 @@ ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "DOWNLOADS.md"
 SCHEMA_PATH = ROOT / "data" / "dataset.schema.json"
 
-#: huggingface.co is not reachable from this host; the mirror is. A dataset's `version`
-#: is the revision (commit) either way, so the pin survives the endpoint swap -- which is
-#: the point of pinning a revision rather than a branch.
+#: The pinned revision remains unchanged when the endpoint is overridden.
 DEFAULT_HF_ENDPOINT = os.environ.get("HG_HF_ENDPOINT", "https://hf-mirror.com")
 
-#: The one host `HG_GH_RAW_MIRROR` is allowed to stand in front of. Nothing else: a
-#: mirror that silently rewrote a checksummed URL on another host would surface as a hash
-#: mismatch, which reads like corrupt data rather than the transport choice it is.
+#: Only this host is eligible for the optional raw URL rewrite.
 GH_RAW_HOST = "raw.githubusercontent.com"
 
-#: The opt-in GitHub-raw mirror. `raw.githubusercontent.com` is reset-blocked from this
-#: host (measured 2026-11-02: `curl: (35) Recv failure` on every A record) while
-#: `github.com` answers. Unset means off, and off means the URL is the loader's URL byte
-#: for byte -- the only URL its `sha256` was taken from.
+#: Optional GitHub raw mirror prefix; unset leaves declared URLs unchanged.
 GH_RAW_MIRROR_ENV = "HG_GH_RAW_MIRROR"
 
 sys.path.insert(0, str(ROOT))
@@ -103,6 +84,7 @@ import data.scaffolds.registry as registry  # noqa: E402
 from harnessgrad.paths import env_name  # noqa: E402
 from harnessgrad.paths import DataRootNotConfigured, scorer_paths  # noqa: E402
 from tools.check_dataset_blockers import published_declarations  # noqa: E402
+from harnessgrad import dataset_runtime  # noqa: E402
 
 
 def _schema() -> dict:
@@ -154,8 +136,25 @@ def _source_downloads(path: Path, *, resolve_root: bool = True):
     return namespace.get("downloads")
 
 
+def _execution_runtime_name(name: str) -> str | None:
+    """Find a shared execution profile without importing the adapter."""
+    declared = registry.execution_runtime_name(name)
+    if declared is not None:
+        return declared
+    # Leave validation to check_execution(), which reports malformed declarations
+    # as an invalid component instead of crashing the whole check command.
+    source = dataset_runtime.ROOT / "data" / "datasets" / name / "execution-runtime.json"
+    return name if source.is_file() else None
+
+
 def _download_adapter(name: str):
     """Read provisioning metadata even before optional runtime/data installation."""
+    if (dataset_runtime.descriptor(name) is not None
+            or _execution_runtime_name(name) is not None):
+        fn = _source_downloads(ROOT / "data" / "datasets" / f"{name}.py")
+        values = {key: fn.__globals__[key] for key in ("DATASET_ROOT", "ROOT")
+                  if fn and key in fn.__globals__}
+        return SimpleNamespace(downloads=fn, **values)
     try:
         return importlib.import_module(registry.module_name(name))
     except Exception as exc:
@@ -180,7 +179,8 @@ def datasets_with_downloads(*, source_fallback: bool = False) -> list[tuple[str,
     for name in names:
         try:
             fn = (_source_downloads(ROOT / "data/datasets" / f"{name}.py", resolve_root=False)
-                  if source_fallback else getattr(importlib.import_module(registry.module_name(name)), "downloads", None))
+                  if source_fallback or dataset_runtime.descriptor(name) is not None
+                  else getattr(importlib.import_module(registry.module_name(name)), "downloads", None))
         except Exception as exc:
             raise RuntimeError(f"Cannot read {name} downloads() source declaration") from exc
         if callable(fn):
@@ -196,7 +196,7 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def dataset_root(module) -> Path:
+def dataset_root(module, *, include_status: bool = True) -> Path:
     """Where this dataset's bytes live, for resolving a relative `dst`.
 
     A relative `dst` is relative to the dataset root, not to the platform -- that is
@@ -206,7 +206,7 @@ def dataset_root(module) -> Path:
     right for a dataset whose content really is committed).
     """
     status = getattr(module, "provision_status", None)
-    if callable(status):
+    if include_status and callable(status):
         try:
             root = status().get("root")
             if root:
@@ -220,14 +220,51 @@ def dataset_root(module) -> Path:
     return ROOT
 
 
+def _pip_distribution(entry: dict) -> tuple[str | None, str]:
+    """Accept only a distribution name or an exact pin matching the version field."""
+    package = entry.get("package")
+    if not isinstance(package, str):
+        return None, "unsupported pip package declaration: expected a distribution name or distribution==version"
+    name = package
+    if "==" in package:
+        name, pin = package.split("==", 1)
+        if pin != str(entry.get("version")):
+            return None, f"package requirement {package!r} conflicts with declared version {entry.get('version')!r}"
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.!+_-]*", pin):
+            return None, f"unsupported exact pip version in {package!r}"
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", name):
+        return None, f"unsupported pip package declaration {package!r}: expected a distribution name or distribution==version"
+    return name, ""
+
+
 def check_entry(entry: dict, base: Path) -> dict:
     """Is one download present? Never raises: a provisioning tool that dies on the first
     missing byte cannot report the other nine."""
     kind = entry.get("kind")
     result = {"name": entry.get("name"), "kind": kind, "version": entry.get("version"),
               "present": False, "detail": ""}
+    if kind == "authored":
+        from data.scaffolds.authored import download_entry
+        declared = Path(str(entry.get("path", "")))
+        if declared.is_absolute() or ".." in declared.parts or declared.parts[:2] != ("data", "authored") or len(declared.parts) != 3:
+            result.update(status="invalid", detail="unsafe or missing authored fixture path")
+            return result
+        current = download_entry(declared.name, authored_root=ROOT / "data/authored")
+        state = current["availability"]
+        if state != "ready":
+            result.update(status=state, detail=current["detail"])
+            return result
+        if entry.get("sha256") and entry["sha256"] != current["sha256"]:
+            result.update(status="invalid", detail="authored bundle checksum changed")
+            return result
+        result.update(present=True, status="ready", detail=str(ROOT / declared) + " (authored fixture verified)")
+        return result
     if kind == "pip":
-        package = entry.get("package")
+        result["scope"] = "legacy-platform-package-metadata"
+        package, error = _pip_distribution(entry)
+        if error:
+            result.update(detail=error, status="invalid")
+            return result
         try:
             installed = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
@@ -272,20 +309,110 @@ def check_entry(entry: dict, base: Path) -> dict:
 
 
 def check_dataset(name: str, downloads: list[dict]) -> dict:
+    provider = dataset_runtime.descriptor(name) is not None
+    execution = _execution_runtime_name(name)
+    if provider or execution is not None:
+        return _check_component_downloads(name, downloads, provider=provider, execution=execution)
     module = _download_adapter(name)
-    base = dataset_root(module)
+    base = dataset_root(module, include_status=False)
     entries = [check_entry(entry, base) for entry in downloads]
-    status = {}
+    data = [entry for entry in entries if entry["kind"] != "pip"]
+    # An adapter's status hook can include model/judge configuration or contact a
+    # service. Download checking never invokes it or calls its result data readiness.
+    status = {"scope": "legacy-platform-declared-downloads",
+              "detail": "Declared bytes and legacy platform package metadata only; "
+                        "no managed Python profile is declared; container/native, loader "
+                        "and model health not checked"}
     if hasattr(module, "_adapter_import_error"):
         status["adapter_import_error"] = module._adapter_import_error
-    fn = getattr(module, "provision_status", None)
-    if callable(fn):
-        try:
-            status = fn()
-        except Exception as exc:  # noqa: BLE001
-            status = {"error": f"{type(exc).__name__}: {exc}"}
-    return {"dataset": name, "root": str(base), "entries": entries, "status": status,
-            "present": all(e["present"] for e in entries) if entries else False}
+    return {"dataset": name, "root": str(base), "entries": entries,
+            "data_present": bool(data) and all(entry["present"] for entry in data),
+            "loader_ready": None, "status": status,
+            "present": bool(entries) and all(entry["present"] for entry in entries)}
+
+
+def _runtime_package_versions(runtime_status: dict, packages: list[str]) -> tuple[dict, str]:
+    """Read metadata only in the admitted interpreter, without caller credentials."""
+    if not packages or not runtime_status["present"]:
+        return {}, ""
+    code = ("import importlib.metadata as m,json,sys\nvalues={}\n"
+            "for name in json.loads(sys.argv[1]):\n"
+            " try: values[name]=m.version(name)\n"
+            " except m.PackageNotFoundError: values[name]=None\n"
+            "print(json.dumps(values))")
+    try:
+        process = subprocess.run([runtime_status["runtime"]["python"], "-B", "-I", "-c", code,
+                                  json.dumps(packages)], capture_output=True, text=True,
+                                 errors="replace", timeout=30,
+                                 env={"PATH": os.defpath, "LANG": "C.UTF-8",
+                                      "PYTHONDONTWRITEBYTECODE": "1"})
+        if process.returncode:
+            return {}, process.stderr.strip() or "runtime package check failed"
+        versions = json.loads(process.stdout)
+        if (not isinstance(versions, dict) or set(versions) != set(packages)
+                or any(value is not None and not isinstance(value, str) for value in versions.values())):
+            raise ValueError("runtime package check returned an invalid package map")
+        return versions, ""
+    except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
+        return {}, str(exc)
+
+
+def _check_component_downloads(name: str, downloads: list[dict], *, provider: bool,
+                               execution: str | None) -> dict:
+    """Keep downloaded bytes, provider and service/verifier artifacts separate."""
+    module = _download_adapter(name)
+    base = dataset_root(module, include_status=False)
+    components = {}
+    if provider:
+        components["runtime"] = dataset_runtime.check(name)
+    if execution is not None:
+        components["execution_runtime"] = dataset_runtime.check_execution(execution)
+    # Existing provider requirements describe its loading environment; execution-
+    # only adapters describe the service/verifier environment instead.
+    runtime_status = components["runtime" if provider else "execution_runtime"]
+    packages = [_pip_distribution(entry)[0] for entry in downloads
+                if entry.get("kind") == "pip" and not _pip_distribution(entry)[1]]
+    versions, package_error = _runtime_package_versions(runtime_status, packages)
+    entries = []
+    for entry in downloads:
+        if entry.get("kind") != "pip":
+            entries.append(check_entry(entry, base))
+            continue
+        package, requirement_error = _pip_distribution(entry)
+        expected = str(entry.get("version"))
+        installed = versions.get(package)
+        scope = runtime_status["scope"]
+        detail = (f"{package}=={installed} in {scope}" if installed == expected else
+                  f"{package}: expected {expected}, found {installed or 'not installed'} in {scope}")
+        if requirement_error:
+            detail = requirement_error
+        elif not runtime_status["present"]:
+            detail = runtime_status["detail"]
+        elif package_error:
+            detail = package_error
+        checked = {"name": entry.get("name"), "kind": "pip", "version": entry.get("version"),
+                   "scope": scope,
+                   "present": bool(runtime_status["present"] and not package_error
+                                   and not requirement_error and installed == expected),
+                   "detail": detail}
+        if requirement_error:
+            checked["status"] = "invalid"
+        entries.append(checked)
+    data = [entry for entry in entries if entry["kind"] != "pip"]
+    return {"dataset": name, "root": str(base), "entries": entries, **components,
+            "data_present": bool(data) and all(entry["present"] for entry in data),
+            "loader_ready": None,
+            "status": {"scope": "declared-downloads-and-component-runtimes",
+                       "detail": "Declared bytes and admitted dependency artifacts only; "
+                                 "loader readiness and model/service health not checked"},
+            "present": bool(entries) and all(state["present"] for state in components.values())
+                       and all(entry["present"] for entry in entries)}
+
+
+def _check_provider_downloads(name: str, downloads: list[dict]) -> dict:
+    """Compatibility helper for callers checking opted-in provider declarations."""
+    return _check_component_downloads(name, downloads, provider=True,
+                                      execution=_execution_runtime_name(name))
 
 
 # ------------------------------------------------------------------- fetching ---
@@ -429,6 +556,9 @@ def fetch_entry(entry: dict, base: Path, *, only: list[str] | None = None,
     """
     kind = entry.get("kind")
     name = entry.get("name")
+    if kind == "authored":
+        checked = check_entry(entry, base)
+        return checked["present"], "[authored] " + checked["detail"] + " (read only; no fetch)"
     if kind == "pip":
         return True, f"[pip] {entry.get('package')}=={entry.get('version')} (install separately)"
     if kind not in ("http", "hf-dataset", "hf-file"):
@@ -641,22 +771,11 @@ def render_index(rows: list[dict]) -> str:
         "`python3 tools/datasets.py --check` reports the current server's resolved absolute roots",
         "and which resources are present locally.",
         "",
-        f"**Egress on a walled host.** With `{GH_RAW_MIRROR_ENV}` unset, `--fetch` asks for",
-        "the URL above byte for byte. Set it to a proxy prefix (for example",
-        "`https://ghproxy.example/`) and a `raw.githubusercontent.com` URL is fetched as",
-        "`<mirror>/https://raw.githubusercontent.com/<path>` instead; no other host is",
-        "rewritten, because a mirror in front of a checksummed upstream would turn a",
-        "transport choice into a hash mismatch. Measured 2026-11-02: that host is",
-        "reset-blocked from this machine while `github.com` and `hf-mirror.com` work, which",
-        "is why `strongreject` (155 of 155 URLs) and `memoryagentbench`'s pinned",
-        "`punkt_tab.zip` could not be fetched without one. Re-measured 2026-11-03:",
-        f"`{GH_RAW_MIRROR_ENV}=https://ghproxy.net` served that `punkt_tab.zip` byte for byte",
-        "(`sha256 ok`), so a mirror is the supported route for that host, not a workaround;",
-        "a dataset that also pins preparation packages needs an interpreter of its own, which",
-        "is documented in `docs/dataset-onboarding.md` under the download contract.",
-        "The `--fetch` line names the mirror it used,",
-        "and a failed transfer removes the directories it had to create, so a half-fetched",
-        "dataset does not read as prepared.",
+        f"With `{GH_RAW_MIRROR_ENV}` unset, `--fetch` uses declared raw GitHub URLs.",
+        "Set it to a mirror prefix to fetch `raw.githubusercontent.com` URLs through",
+        "`<mirror>/https://raw.githubusercontent.com/<path>`; other hosts are unchanged.",
+        "The fetch output identifies any mirror used. Declared checksums are verified;",
+        "failed transfers remove partial files and newly created empty directories.",
         "",
     ]
     for row in rows:
@@ -736,6 +855,8 @@ def _main(argv=None) -> int:
                 print(f"  {'ok  ' if ok else 'FAIL'} {message}")
                 if not ok:
                     failed += 1
+            if dataset_runtime.descriptor(name) is not None:
+                print(f"  next: python tools/prepare_dataset.py --dataset {name}")
         return 1 if failed else 0
 
     if args.check:
@@ -743,7 +864,7 @@ def _main(argv=None) -> int:
         if args.json:
             print(json.dumps({"schema_version": _schema()["schema_version"],
                               "datasets": checked}, indent=1, sort_keys=True))
-            return 0
+            return 1 if any(not row["present"] for row in checked) else 0
         failed = 0
         for row in checked:
             mark = "ok  " if row["present"] else "MISS"
@@ -754,6 +875,11 @@ def _main(argv=None) -> int:
             if status and status.get("tasks") is not None:
                 extra = f" ({status.get('tasks')} task(s) loadable)"
             print(f"{mark} {row['dataset']}{extra} (root: {row['root']})")
+            print(f"  scope: {status['scope']}; loader readiness: not checked")
+            for component in ("runtime", "execution_runtime"):
+                if component in row:
+                    state = row[component]
+                    print(f"  {component}: {state['status']} ({state['scope']}) -- {state['detail']}")
             for entry in row["entries"]:
                 flag = "  ok " if entry["present"] else "  -- "
                 print(f"{flag} [{entry['kind']}] {entry['name']} @ {entry['version']}"

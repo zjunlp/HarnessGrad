@@ -31,17 +31,17 @@ copies only public documents separately from private cases and records each file
 digest. The original task/documents layout is preserved. A local data override is
 recorded as local custody, not authenticated acquisition of the upstream release.
 
-Provision an independent Python 3.12/3.13 runtime containing the pinned official
-wheel, `anthropic==0.88.0`, OpenAI SDK, Google SDK and native document dependencies.
-A startup probe checks the evaluator/provider-helper bytes against upstream's
-pinned wheel inventory. Provision `pandoc>=3.5`; DOCX conversion stays native.
-Neither imports nor actor runs install dependencies or download models.
+Prepare the managed dependency artifact and fixed release-wheel source using
+[execution-recipe.md](execution-recipe.md). The platform selects and re-admits the
+exact artifact before each worker launch; platform Python and interpreter overrides
+are not fallback runtimes. Provision `pandoc>=3.5` separately. Neither imports nor
+actor runs install dependencies or download models.
 
 All settings are trusted host environment variables. Their `HG_JUDGE_` prefix is
 removed by the existing HarnessGrad actor environment filter:
 
 ```text
-HG_JUDGE_HARVEY_PYTHON=/absolute/runtime/bin/python
+HG_JUDGE_HARVEY_WHEEL=/absolute/lab_core-1.2.0-py3-none-any.whl
 HG_JUDGE_HARVEY_PANDOC=/absolute/pandoc
 HG_JUDGE_HARVEY_ANTHROPIC_MODEL=claude-<local-provider-model-id>
 HG_JUDGE_HARVEY_ANTHROPIC_BASE_URL=http://127.0.0.1:<port>

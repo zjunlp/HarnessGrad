@@ -1,0 +1,6 @@
+{
+  "schema": "harnessgrad.dataset-execution-runtime.v1",
+  "dataset": "native_qa",
+  "python": "3.12",
+  "requirements": "requirements.lock"
+}

@@ -61,15 +61,19 @@ def metadata_boundary(monkeypatch, adapter_code):
         # `from data.scaffolds import roots` reaches `__import__` as `data.scaffolds`
         # (the package), not as `data.scaffolds.roots`; both spellings are on the list so
         # the guard keeps refusing a *reader* while allowing a path resolver.
-        if name not in {"__future__", "json", "pathlib", "data.scaffolds",
+        if name not in {"__future__", "json", "os", "subprocess", "pathlib", "harnessgrad.paths",
+                        "harnessgrad.dataset_runtime", "data.scaffolds",
                         "data.scaffolds.qa", "data.scaffolds.qa.base",
                         "data.scaffolds.roots"}:
             denied("non-metadata import")()
         return original_import(name, *args, **kwargs)
 
+    import harnessgrad.paths as paths
+    import harnessgrad.dataset_runtime
     # No real QA dependency, provisioned pool, runtime or verifier is imported.
     # Restore the guards before pytest renders results or tears fixtures down.
     with monkeypatch.context() as guard:
+        guard.setattr(paths, "dataset_root", lambda name: ROOT / ".scratch/metadata-codex180/source")
         guard.setitem(sys.modules, "data.scaffolds.qa.base", dependency)
         for owner, label in ((builtins, "builtins"), (io, "io"), (os, "os")):
             guard.setattr(owner, "open", denied(f"{label}.open"))
@@ -91,6 +95,11 @@ def metadata_boundary(monkeypatch, adapter_code):
         guard.setattr(module, "_indices", lambda: list(range(5)))
         guard.setattr(module, "DATASET_ROOT", ROOT / ".scratch/metadata-codex180/source")
         guard.setattr(module, "ASSETS", ROOT / ".scratch/metadata-codex180/assets")
+        runtime = ROOT / '.scratch/metadata-codex180/artifact/venv'
+        guard.setattr(module, '_execution_runtime', lambda: {
+            'dataset': 'agentdojo', 'profile': 'execution', 'runtime_id': 'a' * 64,
+            'manifest_path': str(runtime.parent / 'artifact.json'), 'path': str(runtime),
+            'python': str(runtime / 'bin/python'), 'runtime_paths': [str(runtime)]})
         yield module, attempts, guard
 
 
@@ -122,21 +131,20 @@ def test_selected_lookup_has_only_fixed_metadata(name, index, monkeypatch, adapt
                 {"path": "dojo.py", "from": str(module.ASSETS / "cli/dojo")},
             ]
             relay = metadata["tool_relay"]
-            assert set(relay) == {"program", "python", "content_flag", "filename", "content_path"}
+            assert set(relay) == {"program", "python", "python_runtime", "read_paths", "content_flag", "filename", "content"}
             assert relay["content_flag"] == "--case"
-            assert relay["content_path"].endswith("/case.json")
+            assert "/case.json" in relay["content"]
+            assert relay["python_runtime"]["role"] == "service"
         else:
             # Check metadata identities and selected paths, leaving argv opaque.
-            assert set(metadata) == {"kind", "argv", "inputs", "reward_file", "evidence_file"}
+            assert set(metadata) == {"kind", "argv", "inputs", "reward_file", "evidence_file",
+                                     "python_runtime", "runtime_paths", "result_contract"}
             assert metadata["kind"] == "command"
-            assert metadata["inputs"] == [
-                {"path": "verify/check.py", "from": str(module.ASSETS / "verify/check.py")},
-                {"path": "verify/bridge.py", "from": str(module.ASSETS / "bridge.py")},
-                {"path": "verify/case.json",
-                 "from": str(module.DATASET_ROOT / module.PREPARED / str(index) / "case.json")},
-                {"path": "trusted_runtime", "from": str(module.DATASET_ROOT / "runtime"),
-                 "immutable": True},
-            ]
+            assert {entry['path'] for entry in metadata['inputs']} == {
+                'dojo_code', 'verify/case.json', 'agentdojo_source'}
+            assert 'trusted_runtime' not in str(metadata['inputs'])
+            assert metadata['argv'][1:3] == ['-I', '-B']
+            assert metadata['python_runtime']['role'] == 'verifier'
             assert metadata["reward_file"] == "/verifier/reward.txt"
             assert metadata["evidence_file"] == "/verifier/evidence.json"
         assert attempts == []

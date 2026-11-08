@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Stdlib client for the trusted Jericho tool relay."""
+import argparse
+import json
+from pathlib import Path
+import sys
+
+SOCKET = '/run/harnessgrad-tool/tool.sock'
+
+
+def main(argv=None, *, transport=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--workdir', default='.')
+    parser.add_argument('--log', default=None)
+    parser.add_argument('--rom-dir', default=None)
+    parser.add_argument('command', choices=['look', 'do', 'score', 'inventory', 'done', 'help'])
+    parser.add_argument('action', nargs='*')
+    args = parser.parse_args(argv)
+    if args.command == 'help':
+        parser.print_help(); return 0
+    # The trusted service owns the selected ROM. Retain the historical path flag
+    # so existing harnesses can pass their former ROM directory unchanged.
+    log = Path(args.log) if args.log else Path(args.workdir) / 'jer_actions.jsonl'
+    records = []
+    if log.is_file():
+        for line in log.read_text(errors='replace').splitlines():
+            try:
+                row = json.loads(line)
+                if isinstance(row, dict): records.append(row)
+            except ValueError:
+                pass
+    actions = [str(row['action']) for row in records
+               if row.get('kind') == 'action' and isinstance(row.get('action'), str)]
+    if args.command == 'done':
+        if not any(row.get('kind') == 'done' for row in records):
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with log.open('a') as out: out.write(json.dumps({'kind':'done', 'step':len(actions)}) + '\n')
+        print('Noted. The episode is marked done.'); return 0
+    if transport is None:
+        sys.path.insert(0, '/run/harnessgrad-tool')
+        from tool_transport import call as transport
+    action = ' '.join(args.action).strip()
+    if args.command == 'do' and not action:
+        parser.error('do requires an action')
+    request = {'actions': actions}
+    if args.command == 'do': request['action'] = action
+    result = transport(SOCKET, args.command, request, timeout_s=None, max_line_bytes=None)
+    if args.command == 'do':
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open('a') as out:
+            out.write(json.dumps({'kind':'action', 'step':len(actions), 'action':action}, ensure_ascii=False) + '\n')
+    if args.command in ('look', 'do'):
+        print(result['text']); print()
+        print(f"[jer] move {result['moves']}; score {result['score']}/{result['maximum']}" +
+              ('; the game is over' if result.get('done') else ''))
+    elif args.command == 'score':
+        print(f"score {result['score']}/{result['maximum']}; moves {result['moves']}; actions logged {result['actions']}")
+    else:
+        print(result['text'])
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

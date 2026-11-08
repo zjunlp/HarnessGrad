@@ -87,7 +87,7 @@ def test_changed_runtime_remeasures_and_keeps_both_cache_entries(control):
     assert control.calls == ["t", "t"]
 
 
-def test_same_identity_reuses_cache_after_manifest_relocation(control, tmp_path):
+def test_manifest_relocation_changes_declared_verification_context(control, tmp_path):
     cache = {}
     control.evaluate(control.a, cache)
     relocated = dict(control.a)
@@ -95,8 +95,10 @@ def test_same_identity_reuses_cache_after_manifest_relocation(control, tmp_path)
     path.write_bytes(Path(control.a["manifest"]).read_bytes())
     relocated["manifest"] = str(path)
     result = control.evaluate(relocated, cache)
-    assert result["cached_tasks"] == ["t"] and control.calls == ["t"]
-    assert len(cache) == 1 and len(control.admissions) == 2
+    # Runtime identity still admits the same pinned bytes, but the full verifier
+    # declaration includes the changed source locator. Measure the new context.
+    assert result["cached_tasks"] == [] and control.calls == ["t", "t"]
+    assert len(cache) == 2 and len(control.admissions) == 2
 
 
 @pytest.mark.parametrize("field", ["missing", "verified", "sha256", "dataset", "identity", "host", "mechanism"])

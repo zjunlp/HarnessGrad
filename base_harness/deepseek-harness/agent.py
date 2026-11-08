@@ -47,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -93,6 +94,14 @@ def runtime(env: dict | None = None) -> dict:
     HG_AGENT_DSH_ROOT as well when the wrapper needs this adapter's plugin farm.
     """
     env = os.environ if env is None else env
+    harness = Path(__file__).resolve().parent
+    manifest = json.loads((harness / 'harness.json').read_text(encoding='utf-8'))
+    if '_dsh_runtime' in manifest:
+        spec = importlib.util.spec_from_file_location('_task_dsh_runtime', harness / 'dsh_runtime.py')
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        selected = helper.resolve(harness, env)
+        return {**selected, 'root': Path(selected['root'])}
     wrapper = shlex.split(env.get("HG_AGENT_DSH_COMMAND", ""))
     declared = _declared_paths()
     explicit_root = env.get("HG_AGENT_DSH_ROOT")
@@ -534,6 +543,8 @@ def run(task: dict, workdir: Path) -> int:
     # cannot run without it.
     Path(env.get("TMPDIR") or "/tmp").mkdir(parents=True, exist_ok=True)
     selected = runtime(env)
+    for name in ('NODE_OPTIONS', 'NODE_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'LD_LIBRARY_PATH'):
+        env.pop(name, None)
     farm_links = _install_profile(home, selected["root"]) if selected["root"] is not None else None
     # DSH's own name for the key the platform gives the agent. Never logged, never written.
     if env.get("HG_AGENT_API_KEY") and not env.get("DEEPSEEK_API_KEY"):

@@ -17,22 +17,11 @@ or run `python3 tools/datasets.py --list --json --dataset <name>` for full decla
 `python3 tools/datasets.py --check` reports the current server's resolved absolute roots
 and which resources are present locally.
 
-**Egress on a walled host.** With `HG_GH_RAW_MIRROR` unset, `--fetch` asks for
-the URL above byte for byte. Set it to a proxy prefix (for example
-`https://ghproxy.example/`) and a `raw.githubusercontent.com` URL is fetched as
-`<mirror>/https://raw.githubusercontent.com/<path>` instead; no other host is
-rewritten, because a mirror in front of a checksummed upstream would turn a
-transport choice into a hash mismatch. Measured 2026-11-02: that host is
-reset-blocked from this machine while `github.com` and `hf-mirror.com` work, which
-is why `strongreject` (155 of 155 URLs) and `memoryagentbench`'s pinned
-`punkt_tab.zip` could not be fetched without one. Re-measured 2026-11-03:
-`HG_GH_RAW_MIRROR=https://ghproxy.net` served that `punkt_tab.zip` byte for byte
-(`sha256 ok`), so a mirror is the supported route for that host, not a workaround;
-a dataset that also pins preparation packages needs an interpreter of its own, which
-is documented in `docs/dataset-onboarding.md` under the download contract.
-The `--fetch` line names the mirror it used,
-and a failed transfer removes the directories it had to create, so a half-fetched
-dataset does not read as prepared.
+With `HG_GH_RAW_MIRROR` unset, `--fetch` uses declared raw GitHub URLs.
+Set it to a mirror prefix to fetch `raw.githubusercontent.com` URLs through
+`<mirror>/https://raw.githubusercontent.com/<path>`; other hosts are unchanged.
+The fetch output identifies any mirror used. Declared checksums are verified;
+failed transfers remove partial files and newly created empty directories.
 
 ## `agentdojo`
 
@@ -49,16 +38,7 @@ dataset does not read as prepared.
 - **Extract to:** `<HG_DATA_ROOT>/agentdojo/_src`
 - **SHA256:** `d7e0ee021be27a69e7e66647979b5a5e0dd10030d38d04ce4102e18a76a228d8`
 
-> Package 0.1.35 and suite v1.2.2 are different version axes. Provision isolated runtime and tool-only runtime using data/datasets/agentdojo/prepare.py; never expose full task/ground_truth modules to the agent. Registered ignore_previous attack only; fresh prepared-ignore_previous snapshots required.
-
-### AgentDojo isolated runtime
-
-- **Type:** `pip`
-- **Version (pinned):** `0.1.35`
-- **Size:** ~200 MB with SDK dependencies
-- **Package:** `agentdojo==0.1.35`
-
-> Install only inside dataset runtime venv. Exact installed dependency versions are recorded in _src/runtime-requirements.lock; no model API calls are used by tools, gold audit or predicate evaluation.
+> Package 0.1.35 and suite v1.2.2 are different version axes. The distribution is not installed into the execution artifact: its dependencies are pinned in execution-requirements.lock, while AgentDojo itself is loaded from this separately verified source archive. Prepare the managed execution profile with `python3 tools/prepare_dataset.py --dataset agentdojo --runtime execution` and clean source with data/datasets/agentdojo/prepare.py; never expose full task/ground_truth modules to the actor. Registered ignore_previous attack only; pinned prepared-ignore_previous snapshots required.
 
 ## `aime`
 
@@ -330,7 +310,7 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/costbench/source.tar.gz`
 - **SHA256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
 
-> Run costbench/prepare.py using Python 3.12 and requirements.lock. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
+> Run costbench/prepare.py --install to prepare data with the managed Python 3.12 execution artifact. Static sequence5, seed42, no full-chain tool; train-only enum and 7-digit ID compatibility. Gold audit executes every task; generated search databases stay outside git.
 
 ## `costbench_dynamic`
 
@@ -346,7 +326,7 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/costbench/source.tar.gz`
 - **SHA256:** `b61cc4923662e63b0756a309aa2988487350036cecea93d674e3defc62404844`
 
-> Prepare static costbench first, then run costbench_dynamic/prepare.py. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
+> Prepare static costbench first, then run costbench_dynamic/prepare.py --install with the shared managed execution artifact. Four fixed modes, one intervention, sequence5, seed42; same-split preference replacement and declared training compatibility. No model calls during preparation.
 
 ## `deepsearchqa`
 
@@ -506,7 +486,7 @@ dataset does not read as prepared.
 - **Size:** ~40 MB
 - **Package:** `pyarrow==23.0.0`
 
-> Reads the parquet files the pinned revision ships. The check runs inside the verification namespace and must not need the HuggingFace `datasets` package, which pulls `pandas`, `requests` and a cache layout; `pyarrow` is one import and no network.
+> Reads the pinned Parquet task pool in the dedicated dataset provider runtime. Run `python tools/prepare_dataset.py --dataset gsm8k` after fetching. The platform Python and the JSON-input scorer do not need pyarrow or the HuggingFace `datasets` package.
 
 ## `harvey_lab`
 
@@ -558,6 +538,15 @@ dataset does not read as prepared.
 | `fullwiki/validation-00000-of-00001.parquet` | `78933c0a31a5f7b420d4effdf4cd4eed573b28c6a3da6179dcf7a02b39e51d03` |
 
 > Trap 1: `hotpot_qa` has two configs and they are different benchmarks -- `distractor` ships ten candidate paragraphs per question, `fullwiki` ships the whole-Wikipedia setting. Trap 2: only the `fullwiki/validation` file is fetched; `fullwiki/train` alone is 330 MB and the `distractor` config another 360 MB, none of it scored. Trap 3: the `supporting_facts` column is the gold evidence a future answer contract would need -- it is here, the answer channel is what does not exist.
+
+### pyarrow
+
+- **Type:** `pip`
+- **Version (pinned):** `23.0.0`
+- **Size:** ~40 MB
+- **Package:** `pyarrow==23.0.0`
+
+> Reads the pinned Parquet task pool in the dedicated dataset provider runtime. Run `python tools/prepare_dataset.py --dataset hotpotqa` after fetching. The platform Python and JSON-input scorer do not need pyarrow or the HuggingFace `datasets` package.
 
 ## `jericho`
 
@@ -948,7 +937,7 @@ dataset does not read as prepared.
 - **Size:** ~1 MB, with its own dependency tree
 - **Package:** `reasoning-gym==0.1.25`
 
-> The tasks are **generated**, so there is no dataset file to fetch: the pin is this package version plus the seed and the item count in `data/datasets/reasoning_gym/prepare.py`. Install it into the platform interpreter -- the check imports it inside the verification namespace. The pool itself is not a download either: `prepare.py` writes it from this version plus the seed, and `POOL_SHA256` in `data/datasets/reasoning_gym.py` pins the result, so the only declared dependency is this package. Trap 1: the extras (`reasoning-gym[scoring]`) pull an LLM-judge cascade; the 89 families used here are exactly the ones whose scorer is deterministic and offline in this version, measured rather than assumed (see `prepare.py`). Trap 2: installing it pins `click>=8.3`, while a `ray 2.52.1` in this interpreter wants `click!=8.3.*` -- a warning only, and nothing this platform imports uses either.
+> Prepare the separate execution runtime with tools/prepare_dataset.py --dataset reasoning_gym --runtime execution. Import an independently acquired pin-matching pool with python -m tools.prepare_reasoning_gym --import-pool PATH. The retained generation recipe is diagnostic because package version, seed and family sizes do not reproduce the historical bytes reliably. Scoring uses the library's score_answer; scoring extras are not selected.
 
 ## `scienceworld`
 
@@ -962,7 +951,7 @@ dataset does not read as prepared.
 - **Size:** ~8 MB
 - **Package:** `scienceworld==1.2.3`
 
-> The environment **is** the package: `setup.py` declares `package_data={'scienceworld': [JAR_FILE, ...]}` and the wheel ships `scienceworld.jar` (7.5 MB), `tasks.json` (4.8 KB) and `object_type_ids.tsv`. There is therefore no separate data download. Trap: the package is Python *around a JVM*; it does not run without Java, which is why the JRE below is part of this dataset. Version 1.3.0 changes physics trajectories and gold paths (its README), so the pin is 1.2.3 and scores are not comparable across it.
+> Prepare with `python tools/prepare_dataset.py --dataset scienceworld --runtime execution`; platform and actor Python do not need this package. The environment **is** the package: `setup.py` declares `package_data={'scienceworld': [JAR_FILE, ...]}` and the wheel ships `scienceworld.jar` (7.5 MB), `tasks.json` (4.8 KB) and `object_type_ids.tsv`. There is therefore no separate data download. Trap: the package is Python *around a JVM*; it does not run without Java, which is why the JRE below is part of this dataset. Version 1.3.0 changes physics trajectories and gold paths (its README), so the pin is 1.2.3 and scores are not comparable across it.
 
 ### Temurin JRE 17 (Adoptium)
 
@@ -974,7 +963,7 @@ dataset does not read as prepared.
 - **Extract to:** `<HG_DATA_ROOT>/scienceworld/jre`
 - **SHA256:** `0b2b640e3046b64c8ec504de0ab9d91bb5610182bda21fad454681ce54d45a62`
 
-> Trap: this machine has **no system `java` and no root**, so a runtime is a provisioning step, and the release URL *is* the version. **JDK 17, not the newest**: the JAR is built in 2025 and a newer JDK may refuse an older target in a way that does not name Java. Both sides need it -- the check replays in a fresh environment, so the agent's CLI and the check must resolve the same JVM; a JVM only one of them can find is a check that fails for a reason nothing records.
+> Provision the pinned JRE explicitly; a system Java installation is not a substitute for this runtime identity. The release URL identifies the version. **Java 17, not the newest**: the JAR is built in 2025 and a newer JDK may refuse an older target in a way that does not name Java. Both sides need it -- the check replays in a fresh environment, so the agent's CLI and the check must resolve the same JVM; a JVM only one of them can find is a check that fails for a reason nothing records.
 
 ## `searchqa`
 
@@ -1032,16 +1021,7 @@ dataset does not read as prepared.
 - **Extract to:** `<HG_DATA_ROOT>/spreadsheetbench`
 - **SHA256:** `10ef893dd29cb13ab97143ea787e68cdc9574a13873ab9a54e50b31dc03fc949`
 
-> Trap 1: this is a **tarball on the Hub**, not a git repository, so the pin is the revision sha plus this digest. Trap 2: the official evaluator reads **cached** formula values (`data_only=True`), so a workbook whose formulas were never evaluated has no values at all -- the check recalculates with LibreOffice, which is what the repository's own `open_spreadsheet.py` exists to do, and `soffice` must be installed for any formula-using task. Trap 3: the `verified_400` release ships **one** variant per task, while the paper's `soft`/`hard` numbers aggregate three; a score here is not that aggregate.
-
-### openpyxl
-
-- **Type:** `pip`
-- **Version (pinned):** `3.1.2`
-- **Size:** ~250 KB
-- **Package:** `openpyxl==3.1.2`
-
-> The library the official scorer uses to read both workbooks, and the one the agent is expected to edit with. Both sides use the same version so a round-trip difference is not a scoring difference.
+> Trap 1: this is a **tarball on the Hub**, not a git repository, so the pin is the revision sha plus this digest. Trap 2: the official evaluator reads **cached** formula values (`data_only=True`), so a workbook whose formulas were never evaluated has no values at all -- the check recalculates with LibreOffice, which is what the repository's own `open_spreadsheet.py` exists to do; select an explicitly prepared native LibreOffice manifest for formula-using tasks (see spreadsheetbench/runtime.md). Trap 3: the `verified_400` release ships **one** variant per task, while the paper's `soft`/`hard` numbers aggregate three; a score here is not that aggregate.
 
 ## `spreadsheetbench2`
 
@@ -1058,24 +1038,6 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/spreadsheetbench2/_src`
 
 > Pinned v2 workbook bytes. Run prepare.py to extract only supported categories; no Visualization proxy is loaded.
-
-### official workbook evaluator openpyxl
-
-- **Type:** `pip`
-- **Version (pinned):** `3.1.2`
-- **Size:** ~250 KB
-- **Package:** `openpyxl==3.1.2`
-
-> Workbook reader used by the unchanged official v2 evaluator; pinned to the control-tested runtime.
-
-### official workbook evaluator tqdm
-
-- **Type:** `pip`
-- **Version (pinned):** `4.66.4`
-- **Size:** ~80 KB
-- **Package:** `tqdm==4.66.4`
-
-> Imported by the unchanged official evaluator and native LibreOffice helper; pinned to the control-tested runtime.
 
 ## `strategyqa`
 
@@ -2897,7 +2859,7 @@ dataset does not read as prepared.
 - **Data root:** `<HG_DATA_ROOT>/tau-bench`
 - **Root override:** `HG_DATA_TAU_BENCH`
 
-### tau-bench checkout (regenerates the committed assets)
+### tau-bench checkout (source of external prepared assets)
 
 - **Type:** `http`
 - **Version (pinned):** `59a200c6d575d595120f1cb70fea53cef0632f6b`
@@ -2906,7 +2868,7 @@ dataset does not read as prepared.
 - **Destination:** `<HG_DATA_ROOT>/tau-bench`
 - **Extract to:** `<HG_DATA_ROOT>/tau-bench`
 
-> Only needed to REGENERATE `data/datasets/tau_bench/`: the adapter reads the committed assets, which are already in git. Pinned to the commit in PROVENANCE.json -- never a branch.
+> External preparation is required. Import the pinned legacy asset root with tau_bench/prepared.py. PROVENANCE.json retains original source pins.
 
 ## `terminal_bench`
 
@@ -2969,7 +2931,7 @@ dataset does not read as prepared.
 - **Size:** ~40 MB
 - **Package:** `pyarrow==23.0.0`
 
-> Reads the parquet files the pinned revision ships. The check runs inside the verification namespace and must not need the HuggingFace `datasets` package.
+> Reads the pinned Parquet task pool in the dedicated dataset provider runtime. Run `python tools/prepare_dataset.py --dataset triviaqa` after fetching. The platform Python and JSON-input scorer do not need pyarrow or the HuggingFace `datasets` package.
 
 ## `twowikimultihopqa`
 

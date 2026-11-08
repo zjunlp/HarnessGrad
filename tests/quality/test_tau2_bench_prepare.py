@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -69,7 +70,7 @@ def test_check_only_is_read_only_and_does_not_import_official_code(payload, monk
     monkeypatch.setattr(prepare, "check_runtime", lambda runtime: {"version": [3, 13]})
     monkeypatch.setattr(prepare, "write", lambda *a: pytest.fail("check-only wrote a file"))
     monkeypatch.setattr(prepare, "_constructor", lambda *a: pytest.fail("check-only initialized tau2"))
-    assert prepare.check_only(root)["tasks"] == 1
+    assert prepare.check_only(root, root / "runtime")["tasks"] == 1
     assert snapshot(root) == before
 
 
@@ -234,18 +235,20 @@ def test_failed_reproduction_never_overwrites_existing(payload, monkeypatch):
 def test_check_only_cli_requires_no_source_and_reports_failures(tmp_path):
     proc = subprocess.run([sys.executable, "-B", str(ROOT / "data/datasets/tau2_bench/prepare.py"),
                            "--check-only", "--target", str(tmp_path / "absent")],
-                          capture_output=True, text=True, timeout=10)
+                          capture_output=True, text=True, timeout=10,
+                          env={**os.environ, "HG_DATASET_RUNTIME_ROOT": str(tmp_path / "absent-runtime-store")})
     assert proc.returncode == 1
-    assert "tau2 preparation failed" in proc.stderr and "manifest.json" in proc.stderr
+    assert "tau2 preparation failed" in proc.stderr and "--runtime execution" in proc.stderr
     assert not (tmp_path / "absent").exists()
 
 
 def test_real_prepared_payload_is_read_only_when_available():
     try:
         root = Path(prepare.dataset.DATASET_ROOT)
-        runtime = Path(prepare.dataset.RUNTIME)
+        from harnessgrad.dataset_runtime import resolve_execution
+        runtime = Path(resolve_execution("tau2_bench")["path"])
     except Exception:
-        pytest.skip("dataset storage is not configured")
+        pytest.skip("dataset storage or managed execution artifact is not configured")
     if not (root / "bundle/manifest.json").is_file() or not (runtime / "bin/python").is_file():
         pytest.skip("tau2 payload/runtime are not provisioned")
     proc = subprocess.run([sys.executable, "-B", str(ROOT / "data/datasets/tau2_bench/prepare.py"),

@@ -248,3 +248,39 @@ def test_check_output_keeps_real_paths_while_index_uses_logical_paths(tmp_path, 
     document = datasets.render_index([{"dataset": "kumo", "entries": [download]}])
     assert "**Destination:** `<HG_DATA_ROOT>/kumo/upstream`" in document
     assert str(physical_root) not in document
+
+
+def test_authored_check_and_fetch_are_read_only_and_report_missing_invalid(tmp_path, monkeypatch):
+    import shutil
+    from data.scaffolds import authored
+    fixture = tmp_path / 'data/authored/example-fix-bug'
+    shutil.copytree(ROOT / 'data/authored/example-fix-bug', fixture)
+    monkeypatch.setattr(datasets, 'ROOT', tmp_path)
+    entry = authored.download_entry('example-fix-bug', authored_root=fixture.parent)
+    monkeypatch.setattr(datasets, '_download', lambda *a, **kw: pytest.fail('authored must not download'))
+    snapshot = {str(path.relative_to(tmp_path)): path.read_bytes() for path in tmp_path.rglob('*') if path.is_file()}
+    assert datasets.check_entry(entry, tmp_path)['present']
+    assert datasets.fetch_entry(entry, tmp_path, force=True)[0]
+    assert snapshot == {str(path.relative_to(tmp_path)): path.read_bytes() for path in tmp_path.rglob('*') if path.is_file()}
+    (fixture / 'bundle.json').write_text('{invalid')
+    result = datasets.check_entry(entry, tmp_path)
+    assert result['status'] == 'invalid' and not result['present']
+    assert not datasets.fetch_entry(entry, tmp_path)[0]
+    (fixture / 'bundle.json').unlink()
+    result = datasets.check_entry(entry, tmp_path)
+    assert result['status'] == 'missing' and not result['present']
+
+
+def test_missing_authored_declaration_does_not_abort_other_catalog_rows(tmp_path, monkeypatch):
+    from data.scaffolds.authored import module_source
+    adapters = tmp_path / 'data/datasets'
+    adapters.mkdir(parents=True)
+    (adapters / 'authored_example_fix_bug.py').write_text(module_source('example-fix-bug'))
+    (adapters / 'neighbor.py').write_text('KIND="dataset"\ndef downloads():\n return [{"kind":"http","name":"neighbor","dst":"missing"}]\n')
+    monkeypatch.setattr(datasets, 'ROOT', tmp_path)
+    rows = dict(datasets.datasets_with_downloads(source_fallback=True))
+    assert set(rows) == {'authored_example_fix_bug', 'neighbor'}
+    authored_row = datasets.check_entry(rows['authored_example_fix_bug'][0], tmp_path)
+    assert authored_row['status'] == 'missing'
+    assert not authored_row['present']
+    assert not datasets.check_entry(rows['neighbor'][0], tmp_path)['present']

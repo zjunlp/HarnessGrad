@@ -7,6 +7,8 @@ JSON --config is the native benchmark configuration. A data_path is required unl
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 import shutil
 import sys
@@ -17,7 +19,22 @@ from data.scaffolds.native_research.native import activate, benchmark
 from data.scaffolds.native_research.profiles import COMMIT, PROFILES
 
 
-def prepare(name, output, config, *, fetch=False, judge_model=None):
+def _publish_manifest(path, manifest):
+    """Publish complete bytes atomically without replacing any existing entry."""
+    path = Path(path)
+    fd, temporary = tempfile.mkstemp(prefix='.manifest-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            json.dump(manifest, stream, ensure_ascii=False, indent=2)
+            stream.write('\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.link(temporary, path)  # Atomic no-replace publication on the same filesystem.
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def _prepare(name, output, config, *, fetch=False, judge_model=None, preparation_runtime=None):
     if not isinstance(config, dict):
         raise ValueError('native configuration must be an object')
     if not fetch and not config.get('data_path'):
@@ -27,6 +44,13 @@ def prepare(name, output, config, *, fetch=False, judge_model=None):
     output = Path(output).resolve()
     if output.exists() and any(output.iterdir()):
         raise ValueError('use a fresh output directory; never replace prepared evidence')
+    output.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Claim a fresh destination before reading/converting source or writing files.
+    # The reservation is permanent, including after success. It is not a live lock:
+    # a contender that passed the empty-directory check earlier must still fail.
+    claim = output / '.prepare.claim'
+    with claim.open('x'):
+        pass
     native = benchmark(name, config)
     original_source = dict(type(native).metadata)
     wide_gold = {}
@@ -115,8 +139,23 @@ def prepare(name, output, config, *, fetch=False, judge_model=None):
                          'note': 'Local file hashes bind actual inputs; they do not authenticate an upstream release.'},
         'configuration': {k: v for k, v in config.items() if k not in ('judge',)},
         'judge_model': judge_model, 'records': rows, 'files': files}
-    (output / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+    if preparation_runtime is not None:
+        manifest['preparation_runtime'] = preparation_runtime
+    _publish_manifest(output / 'manifest.json', manifest)
     return manifest
+
+
+def prepare(name, output, config, *, fetch=False, judge_model=None):
+    # Local stdlib readers need no dependency environment. Acquisition and the
+    # dataframe-backed native converters run only in an admitted component.
+    if not isinstance(config, dict):
+        raise ValueError('native configuration must be an object')
+    source = Path(config.get('data_path') or '')
+    parquet = source.suffix.lower() == '.parquet' or (source.is_dir() and any(source.rglob('*.parquet')))
+    if not fetch and not parquet and name not in ('travelplanner', 'widesearch'):
+        return _prepare(name, output, config, fetch=fetch, judge_model=judge_model)
+    from data.scaffolds.native_research.preparation import prepare_component
+    return prepare_component(name, output, config, fetch=fetch, judge_model=judge_model)
 
 
 def main():

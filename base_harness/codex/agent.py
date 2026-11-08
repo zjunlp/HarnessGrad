@@ -159,7 +159,8 @@ def run(task: dict, workdir: Path) -> int:
     # provider, credentials or profile. CODEX_HOME is supplied privately below.
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("HG_METHOD_", "HG_ENV_", "HG_JUDGE_", "OPENAI_", "CODEX_"))
-           and k not in ("ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY")}
+           and k not in ("ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "NODE_OPTIONS", "NODE_PATH",
+                         "LD_PRELOAD", "LD_AUDIT", "LD_LIBRARY_PATH")}
     env["PATH"] = os.pathsep.join(dict.fromkeys([*selected["path"],
                                                *env.get("PATH", os.defpath).split(os.pathsep)]))
     # **Stop before the environment kills the container.** `HG_AGENT_DEADLINE_S` is the

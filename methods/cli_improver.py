@@ -358,7 +358,7 @@ def _seed_dsh_home(workspace: Path, env: dict) -> Path:
 #: logs; the proxy variables because a deployment behind one would otherwise watch the
 #: improver fail to reach its own endpoint and read it as a method bug.
 _ENV_KEEP = ("PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
-             "TERM", "SHELL", "USER", "LOGNAME", "NODE_OPTIONS", "NODE_PATH",
+             "TERM", "SHELL", "USER", "LOGNAME",
              "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy")
 
 
@@ -371,17 +371,20 @@ def _restrict_env(env: dict, improver: dict) -> list[str]:
     forbidden models, no other endpoints" rested on it not trying. This makes that structural
     rather than aspirational.
 
-    **Only for an entry that declares `api_key_env`** -- one that has opted into naming the
-    single credential it needs. codex does not, and its provider config can name any variable,
-    so it keeps the environment it has always had; narrowing it here would be a change nobody
-    asked for, made in the one place least able to notice.
+    Full credential narrowing applies only to entries declaring `api_key_env`.
+    Other entries keep their credential/home/configuration environment, except
+    Node and dynamic-linker startup variables that could inject unrecorded code.
 
     Returns the names dropped. The round records them, so the boundary is visible in the
     receipt instead of being an invisible difference between two improvers.
     """
     declared = str(improver.get("api_key_env") or "")
     if not declared:
-        return []
+        withheld = sorted(name for name in ('NODE_OPTIONS', 'NODE_PATH', 'LD_PRELOAD',
+                                           'LD_AUDIT', 'LD_LIBRARY_PATH') if name in env)
+        for name in withheld:
+            del env[name]
+        return withheld
     kept = [name for name in _ENV_KEEP if name in env]
     withheld = sorted(name for name in env if name not in kept and name != declared)
     for name in withheld:
@@ -606,8 +609,8 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
         "files_changed": changed,
         "note": summary,
         # What the boundary withheld, so a reader can tell two improvers apart by what they
-        # *could* reach and not only by what they did. Empty for an improver that declares no
-        # `api_key_env`, which is every improver that has not opted into being narrowed.
+        # *could* reach and not only by what they did. Generic entries retain
+        # credentials/configuration; only ambient loader names are withheld there.
         "env_withheld": withheld,
     }
     return {"candidate": candidate, "changed": changed, "files": changed,

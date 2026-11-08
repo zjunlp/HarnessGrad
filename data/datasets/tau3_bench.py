@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import random
 import subprocess
+import os
 
 from harnessgrad.paths import configured_path, dataset_root
 
@@ -91,7 +92,24 @@ def model_spec(role, tools=None):
     return spec
 
 
+def _execution_runtime():
+    """Resolve and revalidate the selected dependency artifact on every declaration.
+
+    This is an external store reference, not a relocatable copy or a sealed OS.
+    The manager inventories the venv and base executable; host libraries and the
+    base standard library remain compatibility inputs.
+    """
+    from harnessgrad import dataset_runtime
+    selected = dataset_runtime.resolve_execution("tau3_bench")
+    override = os.environ.get("HG_DATA_TAU3_BENCH_RUNTIME")
+    if override and Path(override).resolve() != Path(selected["path"]).resolve():
+        raise ValueError("HG_DATA_TAU3_BENCH_RUNTIME must name the selected managed execution artifact")
+    return selected
+
+
 def _setup(tid, row):
+    from harnessgrad.dataset_runtime import bind
+    runtime = _execution_runtime()
     public = (DATASET_ROOT / row['path'] / 'public.json').read_bytes()
     if hashlib.sha256(public).hexdigest() != row['public_sha256']:
         raise ValueError('public task digest mismatch')
@@ -99,7 +117,12 @@ def _setup(tid, row):
     return {'files': [{'path': 'tau3.py', 'from': str(ASSETS / 'cli/tau3.py')},
                       {'path': 'tau3_transport.py', 'from': str(TRANSPORT.resolve())},
                       {'path': 'tau3_public.json', 'content': public.decode()}],
-            'tool_relay': {'program': str(ASSETS / 'relay.py'), 'python': str(RUNTIME / 'bin/python'),
+            'tool_relay': {'program': str(ASSETS / 'relay.py'), 'python': runtime['python'],
+                           'python_runtime': bind(runtime, 'service'),
+                           # Trusted service mounts only: never actor workspace inputs.
+                           'read_paths': [str(ASSETS.resolve()), str(TRANSPORT.resolve().parent),
+                                          str((DATASET_ROOT / 'bundle').resolve()),
+                                          str((DATASET_ROOT / row['path'] / 'private.json').resolve())],
                            'content_flag': '--case-spec', 'filename': 'case-spec.json',
                            'content': json.dumps({'case': str(DATASET_ROOT / row['path'] / 'private.json'),
                                                  'sha256': row['private_sha256'], 'bundle': str(DATASET_ROOT / 'bundle'),
@@ -108,9 +131,8 @@ def _setup(tid, row):
                            'max_calls': None, 'deadline_s': None, 'max_line_bytes': None}}
 
 
-@lru_cache(maxsize=1)
 def _python_runtime(runtime):
-    """Inspect the selected scorer Python once; the driver may use another runtime."""
+    """Inspect the selected scorer Python afresh; the driver may use another runtime."""
     runtime = Path(runtime)
     if not runtime.is_absolute():
         raise ValueError('tau3 runtime must be an absolute directory')
@@ -135,12 +157,15 @@ def _python_runtime(runtime):
 
 
 def _verify(tid, row):
-    python, runtime_paths = _python_runtime(RUNTIME)
+    from harnessgrad.dataset_runtime import bind
+    runtime = _execution_runtime()
+    python, runtime_paths = runtime["python"], runtime["runtime_paths"]
     inputs = [{'path': 'tau3_code', 'from': str(ASSETS), 'immutable': True},
               {'path': 'tau3_private.json', 'from': str(DATASET_ROOT / row['path'] / 'private.json')},
               {'path': 'tau3_transport_runtime', 'from': str(TRANSPORT.resolve().parent), 'immutable': True},
               {'path': 'tau3_bundle', 'from': str(DATASET_ROOT / 'bundle'), 'immutable': True}]
-    result = {'kind': 'command', 'argv': [python, '-I', 'tau3_code/verify/check.py', '--task-id', tid,
+    result = {'kind': 'command', 'python_runtime': bind(runtime, 'verifier'),
+              'argv': [python, '-I', '-B', 'tau3_code/verify/check.py', '--task-id', tid,
                                        '--case-sha256', row['private_sha256']],
               'runtime_paths': list(runtime_paths),
               'inputs': inputs, 'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
@@ -173,10 +198,32 @@ def downloads():
 
 
 def provision_status():
+    """Read-only package/source/case checks; never start an episode or model."""
+    root = None
     try:
-        return {'root': str(DATASET_ROOT), 'present': (RUNTIME / 'bin/python').is_file(), 'tasks': len(roster())}
-    except (OSError, ValueError, KeyError) as exc:
-        return {'root': str(DATASET_ROOT), 'present': False, 'detail': str(exc)}
+        root = str(DATASET_ROOT)
+        runtime = _execution_runtime()
+        # Clear the discovery cache: readiness must observe same-path mutations.
+        roster.cache_clear()
+        rows = roster()
+        for row in rows.values():
+            for half in ('public', 'private'):
+                path = DATASET_ROOT / row['path'] / (half + '.json')
+                if path.is_symlink():
+                    raise ValueError('tau3 prepared case must be a regular file')
+                raw = path.read_bytes()
+                if hashlib.sha256(raw).hexdigest() != row[half + '_sha256']:
+                    raise ValueError('tau3 prepared case digest mismatch')
+        probe = ("import sys; sys.path.insert(0, sys.argv[1]); "
+                 "from bootstrap import bootstrap; bootstrap(sys.argv[2])")
+        subprocess.run([runtime['python'], '-I', '-B', '-c', probe,
+                        str(ASSETS / 'lib'), str(DATASET_ROOT / 'bundle')],
+                       check=True, capture_output=True, text=True, timeout=30)
+        return {'root': root, 'present': True, 'tasks': len(rows),
+                'runtime': runtime['path'], 'runtime_id': runtime['runtime_id'],
+                'model_health_checked': False}
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
+        return {'root': root, 'present': False, 'detail': str(exc)}
 
 
 def __getattr__(name):

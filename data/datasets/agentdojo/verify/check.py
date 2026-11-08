@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 
@@ -18,16 +17,23 @@ def main():
     evidence_file = work / args.evidence_file
     reward_file.parent.mkdir(parents=True, exist_ok=True)
     evidence_file.parent.mkdir(parents=True, exist_ok=True)
-    argv = [str(work / 'trusted_runtime/bin/python'), str(work / 'verify/bridge.py'),
-            'evaluate', '--case', str(work / 'verify/case.json')]
-    if (work / 'action.json').is_file():
-        argv += ['--action', str(work / 'action.json')]
-    proc = subprocess.run(argv, cwd=work, capture_output=True, text=True, timeout=90)
-    if proc.returncode:
-        evidence_file.write_text(json.dumps({'measured': False, 'error': proc.stderr[-2000:]}))
+    try:
+        # -I does not add the script directory. Admit the owned bootstrap/bridge
+        # explicitly, and validate the separately projected source before imports.
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from bootstrap import bootstrap
+        source_id = bootstrap(work / 'agentdojo_source')
+        import bridge
+        case = json.loads((work / 'verify/case.json').read_text())
+        action = json.loads((work / 'action.json').read_text()) if (work / 'action.json').is_file() else {'calls': [], 'output': ''}
+        result = bridge.evaluate(case, action)
+        result['source_manifest_sha256'] = source_id
+    except Exception as exc:
+        # Case/task and tool output may contain private inputs; diagnostics carry
+        # only the exception class, never those bytes or an upstream traceback.
+        evidence_file.write_text(json.dumps({'measured': False, 'error': type(exc).__name__}))
         reward_file.unlink(missing_ok=True)
         return 3
-    result = json.loads(proc.stdout)
     reward_file.write_text(str(result['reward']) + '\n')
     result.update(measured=True, why=f"utility={result['utility']}, attack_success={result['attack_success']}",
                   official={'metric': 'AgentDojo utility under fixed injection',

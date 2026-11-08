@@ -78,8 +78,7 @@ def _check_module():
 def jericho():
     import data.datasets.jericho as module
     if not module._RECORDS:
-        pytest.skip(f"no Jericho games under {module.games_dir()}; run "
-                    f"`python3 tools/datasets.py --fetch --dataset jericho`")
+        pytest.skip("Jericho games are not provisioned for this explicit control")
     return module
 
 

@@ -19,6 +19,7 @@ from pathlib import Path
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+MANAGED_EXECUTION_RUNTIME = "locomo"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
 ASSETS = Path(__file__).resolve().parent / "locomo"
@@ -88,10 +89,15 @@ def gold_record(tid):
 
 
 def _verify(tid, row):
+    from harnessgrad.dataset_runtime import bind, resolve_execution
+    binding = bind(resolve_execution('locomo'), 'verifier')
     content = canonical(gold_record(tid))
     digest = hashlib.sha256(content.encode()).hexdigest()
+    scorer_sha = hashlib.sha256((ASSETS / "lib/scoring.py").read_bytes()).hexdigest()
     gold_path = "locomo_verify/gold.json"
-    return {"kind": "command", "argv": ["python3", "-I", "locomo_verify/check.py",
+    return {"kind": "command", "python_runtime": binding, "runtime_paths": list(binding['runtime_paths']),
+            "argv": [binding['python'], "-I", "-B", "locomo_verify/check.py",
+             "--scoring-sha256", scorer_sha,
              "--task-id", tid, "--gold-sha256", digest, "--gold", gold_path,
              "--answers", "answers.json", "--reward-file", "verifier/reward.txt",
              "--evidence-file", "verifier/evidence.json"],
@@ -100,6 +106,7 @@ def _verify(tid, row):
                        {"path": "locomo_verify/scoring.py", "from": str(ASSETS / "lib/scoring.py")}],
             "scorer_input": {"task_id": tid, "path": gold_path, "sha256": digest},
             "reward_file": "/verifier/reward.txt", "evidence_file": "/verifier/evidence.json",
+            "result_contract": {"version": 1, "score_range": [0, 1], "require_exit_zero": True},
             "timeout_s": 120}
 
 

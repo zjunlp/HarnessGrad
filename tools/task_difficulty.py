@@ -19,18 +19,11 @@ A **state** is one measured curve point: a run, a round, and the harness and age
 produced it. `perf` is therefore "how often did the things we have measured pass this task",
 and a task every state passes has difficulty 0.
 
-Three honest limits
--------------------
-* **A state is not a harness.** The states available today mix agent models (a local 9B and
-  `deepseek-flash`), and a task is hard *for a model* as much as for a harness. The report
-  records which models contributed and `--model` narrows to one, so the number is never
-  quoted without knowing what it is a number about.
-* **`n_states` is small.** Most tasks on this machine have one or two states. A task with one
-  state has a difficulty of exactly 0 or 1 and no evidence behind either; the report carries
-  `n_states` beside every number rather than hiding the difference.
-* **It is a snapshot, not a constant.** Re-running the tool after more runs land changes the
-  numbers, which is the point. The file records the runs it was built from so a stale table
-  can be recognised.
+Interpretation limits
+---------------------
+States may mix harnesses and models; `--model` restricts the input. A task with few
+states has limited evidence, so the report includes `n_states`. The output is a
+snapshot of the recorded runs, not an intrinsic constant of the dataset.
 
 Where the answer goes
 ---------------------
@@ -55,11 +48,7 @@ DATA = ROOT / "data" / "datasets"
 sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as registry   # noqa: E402
 
-#: Models whose measurements are **not evidence**, so they never enter a number by default.
-#: `deepseek-v4-pro` was withdrawn and must not be used; `runs/strong-model-1` still carries
-#: three states from it, and without this they would quietly contribute to terminal_bench's
-#: difficulty. Dropped **loudly** -- the report says how many -- because a silent filter is
-#: how a corrupted input becomes an invisible one.
+#: Withdrawn model measurements are excluded by default and counted in the report.
 FORBIDDEN_MODELS = ("deepseek-v4-pro",)
 
 
@@ -126,11 +115,8 @@ def analyse(states: list[dict], *, model: str | None = None) -> tuple[dict, list
     used = [s for s in states if model is None or s.get("model") == model]
     per_task: dict[str, list[float]] = {}
     contributed: dict[str, set] = {}
-    # Per model as well as pooled. **A pooled difficulty is mostly a statement about whichever
-    # model contributed the most states**, and on this machine that is `qwen3.5-9b-local` by
-    # 162 to 15 -- so the pooled number answers "how hard is this for qwen" while looking like
-    # it answers "how hard is this". Keeping both lets a curriculum use the model it is
-    # actually training with instead of inheriting the mix.
+    # Report per-model values as well as the pooled value: the latter is weighted
+    # by the number of recorded states each model contributes.
     by_model: dict[str, dict[str, list[float]]] = {}
     for state in used:
         key = (state["run_id"], state["round"])

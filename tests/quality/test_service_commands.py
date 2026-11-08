@@ -87,7 +87,7 @@ def test_service_resources_reach_launch_and_record(tmp_path, monkeypatch, resour
 
     def docker(*args, **kwargs):
         calls.append(args)
-        return subprocess.CompletedProcess(args, 0, "cid\n" if args[0] == "run" else "", "")
+        return subprocess.CompletedProcess(args, 0, ("b" * 64 + "\n") if args[0] == "run" else (("a" * 64 + "\n") if args[:2] == ("network", "create") else ""), "")
 
     monkeypatch.setattr(container, "docker", docker)
     running = services.start(resolved["t"]["services"], recordings_root=tmp_path,
@@ -120,13 +120,14 @@ def test_start_keeps_launch_arguments_and_privacy_boundaries(tmp_path, monkeypat
 
     def docker(*args, **kwargs):
         calls.append(args)
-        stdout = "cid\n" if args[0] == "run" else ""
+        stdout = ("b" * 64 + "\n") if args[0] == "run" else (("a" * 64 + "\n") if args[:2] == ("network", "create") else "")
         return subprocess.CompletedProcess(args, 0, stdout, "")
 
     monkeypatch.setattr(container, "docker", docker)
     running = services.start([_service(**overrides)], recordings_root=tmp_path,
                              run_id="launch", task_id="t", run_seed="0")
-    assert calls[0][:4] == ("network", "create", "--internal", "hg-launch-t")
+    assert calls[0][:3] == ("network", "create", "--internal")
+    assert calls[0][3].endswith("-launch-t")
     cmd = next(call for call in calls if call[0] == "run")
     image_at = cmd.index(PIN)
     assert list(cmd[image_at + 1:]) == overrides.get("command", [])
@@ -141,9 +142,9 @@ def test_start_keeps_launch_arguments_and_privacy_boundaries(tmp_path, monkeypat
         f"type=bind,src={tmp_path / 't/api'},dst=/recordings/api")
     assert services.mounts_for("harness", running.services, running.recordings) == []
     assert services.mounts_for("verifier", running.services, running.recordings)
-    assert next(call for call in calls if call[0] == "exec") == ("exec", "cid", "true")
+    assert next(call for call in calls if call[0] == "exec") == ("exec", "b" * 64, "true")
     assert running.stop() == []
-    assert calls[-2:] == [("rm", "--force", "cid"), ("network", "rm", running.network)]
+    assert calls[-2:] == [("rm", "--force", "b" * 64), ("network", "rm", running.network)]
 
 
 def test_failed_explicit_launcher_cleans_up_network(tmp_path, monkeypatch):
@@ -151,14 +152,14 @@ def test_failed_explicit_launcher_cleans_up_network(tmp_path, monkeypatch):
 
     def docker(*args, **kwargs):
         calls.append(args)
-        return subprocess.CompletedProcess(args, int(args[0] == "run"), "", "not found")
+        return subprocess.CompletedProcess(args, int(args[0] == "run"), "a" * 64 if args[:2] == ("network", "create") else "", "not found")
 
     monkeypatch.setattr(container, "docker", docker)
     with pytest.raises(services.ServiceUnavailable) as exc:
         services.start([_service(command=["/missing-server"])], recordings_root=tmp_path,
                        run_id="failed", task_id="t", run_seed="0")
     assert exc.value.stage == "start" and exc.value.service == "api"
-    assert calls[-1] == ("network", "rm", "hg-failed-t")
+    assert calls[-1] == ("network", "rm", "a" * 64)
 
 
 def test_appworld_declares_absolute_launcher_without_reading_task_pool():

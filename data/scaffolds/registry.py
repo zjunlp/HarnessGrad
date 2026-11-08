@@ -19,6 +19,8 @@ import importlib
 import json
 import math
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 #: **What a module in `data/` is for.** A dataset declares `KIND = "dataset"`; anything that
@@ -38,6 +40,93 @@ KIND_FIXTURE = "fixture"
 # Fixtures keep their historical module names; adapters have no old-path shims.
 _FIXTURE_NAMES = frozenset({"demo", "probe_set", "broken_service",
                             "verify_demo", "verify_exec", "verify_service"})
+
+# Only the trusted provider worker enters this scope. A process environment flag
+# must not turn off runtime selection for ordinary platform callers.
+_LOCAL_PROVIDER = ContextVar("harnessgrad_local_dataset_provider", default=False)
+_PROVIDER_SESSION = ContextVar("harnessgrad_dataset_provider_session", default=None)
+
+
+@contextmanager
+def provider_session():
+    """Keep one selected provider artifact within a single platform operation."""
+    token = _PROVIDER_SESSION.set({})
+    try:
+        yield
+    finally:
+        _PROVIDER_SESSION.reset(token)
+
+
+def provider_runtime(name):
+    """The artifact that actually served this session, without selecting another."""
+    session = _PROVIDER_SESSION.get()
+    client = (session or {}).get(name)
+    return None if client is None or client.runtime is None else dict(client.runtime)
+
+
+def execution_runtime_name(name):
+    """Read the adapter's literal execution profile without importing its code or data."""
+    if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", name):
+        raise ValueError("invalid dataset name")
+    root = Path(__file__).resolve().parents[1]
+    path = root / (f"{name}.py" if name in _FIXTURE_NAMES else f"datasets/{name}.py")
+    if not path.is_file():
+        return None
+    declarations = []
+    for node in ast.parse(path.read_bytes()).body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "MANAGED_EXECUTION_RUNTIME"
+                for target in node.targets):
+            try:
+                value = ast.literal_eval(node.value)
+            except (ValueError, TypeError) as exc:
+                raise ValueError("MANAGED_EXECUTION_RUNTIME must be a literal name") from exc
+            if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", value):
+                raise ValueError("MANAGED_EXECUTION_RUNTIME must name its execution artifact")
+            declarations.append(value)
+    if len(declarations) > 1:
+        raise ValueError("MANAGED_EXECUTION_RUNTIME must be declared only once")
+    return declarations[0] if declarations else None
+
+
+def managed_runtime(name):
+    """Static opt-in discovery for preparation tools; does not load an adapter."""
+    from harnessgrad.dataset_runtime import descriptor
+    if descriptor(name) is not None:
+        return True
+    return execution_runtime_name(name) is not None
+
+
+@contextmanager
+def _local_provider():
+    """Resolve adapter code locally inside its already-selected Python runtime."""
+    token = _LOCAL_PROVIDER.set(True)
+    try:
+        yield
+    finally:
+        _LOCAL_PROVIDER.reset(token)
+
+
+def provider(name: str):
+    """An opt-in provider discovered without importing the adapter, or ``None``.
+
+    Older adapters and platform fixtures keep their existing execution path.
+    A declared but unprepared runtime is an error, never a host-Python fallback.
+    """
+    if (_LOCAL_PROVIDER.get() or name in _FIXTURE_NAMES
+            or not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", name)):
+        return None
+    session = _PROVIDER_SESSION.get()
+    if session is not None and name in session:
+        return session[name]
+    from harnessgrad.dataset_runtime import descriptor
+    if descriptor(name) is None:
+        return None
+    from harnessgrad.dataset_provider import DatasetProvider
+    client = DatasetProvider(name, freeze_runtime=session is not None)
+    if session is not None:
+        session[name] = client
+    return client
 
 
 def module_name(name: str) -> str:
@@ -106,6 +195,9 @@ def provision_status(name: str) -> dict | None:
     dataset only through this module (the import-boundary rule in
     `tests/quality/test_boundaries.py`).
     """
+    remote = provider(name)
+    if remote is not None:
+        return remote.check()
     module = importlib.import_module(module_name(name))
     status = getattr(module, "provision_status", None)
     if not callable(status):
@@ -119,6 +211,10 @@ def load(name: str) -> tuple[list[dict], dict[str, str]]:
     A root declaration can serve preparation tools while runtime tasks come from
     committed assets. Its presence alone does not make it a loading dependency.
     """
+    remote = provider(name)
+    if remote is not None:
+        catalog = remote.catalog()
+        return catalog["tasks"], catalog["scorable"]
     module = importlib.import_module(module_name(name))
     return module.load()
 
@@ -135,6 +231,16 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
     split the *run* supplies is a different thing and is validated by `validate_split`
     with only the run's own side required; see that function for why.
     """
+    remote = provider(name)
+    if remote is not None:
+        catalog = remote.catalog()
+        tasks, scorable = catalog["tasks"], catalog["scorable"]
+        split = catalog["metadata"].get("SPLIT")
+        groups = catalog["metadata"].get("SPLIT_GROUPS")
+        if groups is not None:
+            groups = _validate_split_groups(name, tasks, groups)
+        return tasks, scorable, (None if split is None else validate_split(
+            name, tasks, split, split_groups=groups))
     tasks, scorable = load(name)
     module = importlib.import_module(module_name(name))
     split = getattr(module, "SPLIT", None)
@@ -168,8 +274,12 @@ def load_split_groups(name: str, tasks: list[dict]) -> dict[str, str] | None:
     The adapter hashes its private grouping key once and declares only that digest.
     Neither the grouping key nor this mapping is added to the actor's tasks.
     """
-    module = importlib.import_module(module_name(name))
-    groups = getattr(module, "SPLIT_GROUPS", None)
+    remote = provider(name)
+    if remote is not None:
+        groups = remote.catalog()["metadata"].get("SPLIT_GROUPS")
+    else:
+        module = importlib.import_module(module_name(name))
+        groups = getattr(module, "SPLIT_GROUPS", None)
     return None if groups is None else _validate_split_groups(name, tasks, groups)
 
 
@@ -306,6 +416,10 @@ def oracle_source(name: str) -> tuple[str | None, str | None]:
     authored oracle that exists for three tasks proves the check is reachable on three tasks,
     and a reader who cannot see that would read the control as covering the whole pool.
     """
+    remote = provider(name)
+    if remote is not None:
+        metadata = remote.catalog()["metadata"]
+        return metadata.get(ORACLE_SOURCE_ATTR), metadata.get("ORACLE_COVERAGE")
     module = importlib.import_module(module_name(name))
     return (getattr(module, ORACLE_SOURCE_ATTR, None),
             getattr(module, "ORACLE_COVERAGE", None))
@@ -327,6 +441,16 @@ def official_split(name: str, tasks: list[dict]) -> dict:
     and is refused rather than guessed, because a guessed evaluation set produces a number
     that looks official and is not.
     """
+    remote = provider(name)
+    if remote is not None:
+        metadata = remote.catalog()["metadata"]
+        if OFFICIAL_EVAL_ATTR not in metadata:
+            raise ValueError(f"dataset {name!r} does not declare {OFFICIAL_EVAL_ATTR}")
+        declared = metadata[OFFICIAL_EVAL_ATTR]
+        ids = [t["task_id"] for t in tasks]
+        eval_ids = list(ids) if declared is None else list(declared)
+        eval_set = set(eval_ids)
+        return {"train": [i for i in ids if i not in eval_set], "eval": eval_ids}
     module = importlib.import_module(module_name(name))
     if not hasattr(module, OFFICIAL_EVAL_ATTR):
         raise ValueError(
@@ -359,7 +483,7 @@ PLACEMENTS = ("inside", "beside")
 #: mistyped `work_dir` that silently did nothing would leave a task running in the
 #: wrong place while the dataset said otherwise.
 ENV_FIELDS = ("kind", "image", "workdir", "network", "placement", "services", "web",
-              "state", "cpus", "memory_mb", "agent_timeout_s", "verify_timeout_s", "agent_runtime")
+              "state", "cpus", "memory_mb", "agent_timeout_s", "verify_timeout_s", "agent_runtime", "task_python")
 
 #: Where a task's state lives (INTERFACE.md §2.5.9). `mount` is a host directory bound
 #: at `workdir`; `container` is the container's own filesystem, snapshotted after the
@@ -446,7 +570,7 @@ def _check_env(spec, tid: str, name: str) -> None:
             f"and the failure would look like the harness's. Not supported yet.")
 
     if kind == "files":
-        extra = set(spec) - {"kind", "network", "agent_timeout_s", "verify_timeout_s", "agent_runtime"}
+        extra = set(spec) - {"kind", "network", "agent_timeout_s", "verify_timeout_s", "agent_runtime", "task_python"}
         if extra:
             raise ValueError(
                 f"dataset {name!r}: ENV[{tid!r}] is kind 'files' but carries "
@@ -455,6 +579,9 @@ def _check_env(spec, tid: str, name: str) -> None:
                 f"read as though it had asked for a container.")
         if "network" in spec and spec["network"] != "none":
             raise ValueError("files network policy must be 'none' or omitted")
+        if "task_python" in spec:
+            from harnessgrad.task_python import validate
+            validate(spec)
         if "agent_runtime" in spec:
             runtime = spec["agent_runtime"]
             if not isinstance(runtime, dict) or set(runtime) != {"package_dir", "files"} \
@@ -464,6 +591,8 @@ def _check_env(spec, tid: str, name: str) -> None:
                 raise ValueError("files agent_runtime needs an absolute package_dir and nonempty files")
         return
 
+    if "task_python" in spec:
+        raise ValueError("task_python requires a files environment")
     if "agent_runtime" in spec:
         raise ValueError("agent_runtime package projections require a files environment")
 
@@ -635,7 +764,7 @@ def _normalize_env(spec: dict) -> dict:
     """The canonical form, so two spellings of one environment compare equal."""
     if spec.get("kind", "files") == "files":
         return {"kind": "files", **{key: spec[key] for key in
-                ("network", "agent_timeout_s", "verify_timeout_s", "agent_runtime") if key in spec}}
+                ("network", "agent_timeout_s", "verify_timeout_s", "agent_runtime", "task_python") if key in spec}}
     services = []
     for svc in spec.get("services") or []:
         services.append({
@@ -688,6 +817,12 @@ def load_envs(name: str, *, task_ids=None) -> dict[str, dict]:
     declaration keys but never materializes environments for unselected tasks.
     The result remains an ordinary dict.
     """
+    remote = provider(name)
+    if remote is not None:
+        resolved = remote.resolve(task_ids)
+        for tid, spec in resolved["envs"].items():
+            _check_env(spec, tid, name)
+        return resolved["envs"]
     tasks, _ = load(name)
     selected = _selected_tasks(name, tasks, task_ids)
     module = importlib.import_module(module_name(name))
@@ -752,6 +887,16 @@ def _check_no_secrets(task: dict, name: str) -> None:
 def _check_setup(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: SETUP[{tid!r}] must be a dict")
+    relay = spec.get("tool_relay") or {}
+    if "python_runtime" in relay:
+        from harnessgrad.dataset_runtime import validate_binding
+        if not isinstance(relay.get("python"), str):
+            raise ValueError("bound Python service requires an explicit interpreter")
+        validate_binding(relay["python_runtime"], "service", python=relay["python"])
+        paths = relay.get("read_paths")
+        if (not isinstance(paths, list) or not paths
+                or any(not isinstance(path, str) or not Path(path).is_absolute() for path in paths)):
+            raise ValueError("bound Python service requires absolute read_paths")
     if ((spec.get("tool_relay") or {}).get("record")) is not None:
         from data.scaffolds.runtime_extensions import validate_record
         validate_record(spec["tool_relay"]["record"])
@@ -796,6 +941,14 @@ def _check_setup(spec, tid: str, name: str) -> None:
 def _check_verifier(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
+    if "python_runtime" in spec:
+        from harnessgrad.dataset_runtime import validate_binding
+        argv = spec.get("argv")
+        if not isinstance(argv, list) or len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
+            raise ValueError("bound Python verifier requires isolated, bytecode-free startup")
+        validate_binding(spec["python_runtime"], "verifier", python=argv[0])
+        if spec.get("runtime_paths") != spec["python_runtime"]["runtime_paths"]:
+            raise ValueError("verifier runtime_paths differ from the bound Python runtime")
     from data.scaffolds.scorer_isolation import declared_class
     declared_class(spec)
     if 'native_benchmark' in spec:
@@ -902,6 +1055,17 @@ def load_tasks(name: str, *, task_ids=None) -> tuple[list[dict], dict[str, dict]
     the platform did before verifiers existed. The equivalence is deliberate, so that
     adding this layer changed nothing for the datasets that already worked.
     """
+    remote = provider(name)
+    if remote is not None:
+        resolved = remote.resolve(task_ids)
+        tasks, setups, verifiers = (resolved[key] for key in ("tasks", "setups", "verifiers"))
+        for task in tasks:
+            _check_no_secrets(task, name)
+        for tid, spec in setups.items():
+            _check_setup(spec, tid, name)
+        for tid, spec in verifiers.items():
+            _check_verifier(spec, tid, name)
+        return tasks, setups, verifiers
     tasks, scorable = load(name)
     module = importlib.import_module(module_name(name))
     selected = _selected_tasks(name, tasks, task_ids)

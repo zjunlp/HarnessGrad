@@ -1,6 +1,7 @@
 """Resource checks and bounded pinned archive restoration; no network requests."""
 import hashlib
 import io
+from pathlib import Path
 import zipfile
 
 import pytest
@@ -141,3 +142,110 @@ def test_lock_cannot_expand_archive_member_selection(tmp_path, monkeypatch):
     lock["files"][0]["archive_member"] = "../../escape"
     with pytest.raises(ValueError, match="exactly the four"):
         resources.provision(tmp_path)
+
+
+def test_explicit_local_import_retains_member_provenance(tmp_path, monkeypatch):
+    lock, zipped, encoding = fixture(monkeypatch)
+    source = tmp_path / "source"
+    with zipfile.ZipFile(io.BytesIO(zipped)) as archive:
+        for entry in lock["files"]:
+            path = source / entry["path"].removeprefix("resources/")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(archive.read(entry["archive_member"]) if "archive_member" in entry else encoding)
+    destination = tmp_path / "destination"
+    result = resources.provision(destination, from_resources=source)
+    assert result["restored_files"] == 5
+    assert len(result["verified_local_sources"]) == 5
+    assert all(item["source"].startswith(str(source)) for item in result["verified_local_sources"])
+    assert not (destination / "downloads/punkt_tab.zip").exists()
+    assert resources.provision(destination)["restored_files"] == 0
+
+
+def test_local_import_bad_member_publishes_nothing(tmp_path, monkeypatch):
+    lock, _, _ = fixture(monkeypatch)
+    source = tmp_path / "source"
+    target = source / lock["files"][0]["path"].removeprefix("resources/")
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"not the locked bytes")
+    destination = tmp_path / "destination"
+    with pytest.raises(ValueError, match="resource_hash_mismatch"):
+        resources.provision(destination, from_resources=source)
+    assert not destination.exists()
+
+
+def test_offline_archive_receipt_records_exact_members(tmp_path, monkeypatch):
+    lock, zipped, encoding = fixture(monkeypatch)
+    archive = tmp_path / 'retained-punkt.zip'
+    archive.write_bytes(zipped)
+    root = tmp_path / 'resources'
+    write_encoding(root, encoding)
+    receipt = resources.provision(root, archive=archive)
+    provenance = receipt['verified_archive_source']
+    assert provenance['kind'] == 'local_archive'
+    assert provenance['path'] == str(archive.resolve())
+    assert provenance['declared_source_url'] == lock['nltk_archive_url']
+    assert 'acquisition_url' not in provenance
+    assert 'cache_destination' not in provenance
+    assert provenance['sha256'] == lock['nltk_archive_sha256']
+    assert provenance['bytes'] == len(zipped)
+    assert len(provenance['members']) == 4
+    for member in provenance['members']:
+        entry = next(row for row in lock['files'] if row['path'] == member['path'])
+        assert member['archive_member'] == entry['archive_member']
+        assert member['sha256'] == entry['sha256']
+        assert member['bytes'] == entry['bytes']
+    assert resources.provision(root)['verified_archive_source'] is None
+
+
+def test_differential_rejects_unpinned_upstream_before_execution(tmp_path):
+    import runpy
+    control = runpy.run_path(str(Path(resources.__file__).parent / 'verify/tokenizer_differential.py'))
+    module = tmp_path / 'untrusted.py'
+    module.write_text('raise RuntimeError("must never execute")')
+    with pytest.raises(ValueError, match='checksum mismatch'):
+        control['upstream_function'](module, None, None)
+
+
+def test_real_locked_tokenizer_upstream_differential_when_explicitly_provided():
+    import os
+    resource_root = os.environ.get('MAB_DIFFERENTIAL_RESOURCES')
+    upstream = os.environ.get('MAB_DIFFERENTIAL_CHUNK_MODULE')
+    if not resource_root or not upstream:
+        pytest.skip('explicit original-lock resources and pinned upstream chunk module required')
+    import json
+    import subprocess
+    import sys
+    file = Path(resources.__file__).parent / 'verify/tokenizer_differential.py'
+    result = subprocess.run([os.environ.get('MAB_DIFFERENTIAL_PYTHON', sys.executable), '-I', '-B', str(file),
+                             '--resources', resource_root, '--upstream-module', upstream],
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    receipt = json.loads(result.stdout)
+    assert receipt['author_owned_text_only'] and receipt['model_calls'] == 0
+    assert len(receipt['results']) == 6
+    assert all(row['sentence_equal'] and row['bpe_ids_equal'] and row['upstream_chunks_equal']
+               for row in receipt['results'])
+
+
+@pytest.mark.parametrize('corrupt_cache', [False, True])
+def test_download_archive_provenance_does_not_claim_cached_input(tmp_path, monkeypatch, corrupt_cache):
+    lock, zipped, encoding = fixture(monkeypatch)
+    cache = tmp_path / 'downloads/punkt_tab.zip'
+    if corrupt_cache:
+        cache.parent.mkdir()
+        cache.write_bytes(b'corrupt previous cache')
+    calls = []
+    def fetch(url):
+        calls.append(url)
+        return zipped if url == lock['nltk_archive_url'] else encoding
+    monkeypatch.setattr(resources, '_fetch', fetch)
+    receipt = resources.provision(tmp_path, download=True)
+    provenance = receipt['verified_archive_source']
+    assert provenance['kind'] == 'download'
+    assert provenance['acquisition_url'] == lock['nltk_archive_url']
+    assert provenance['declared_source_url'] == lock['nltk_archive_url']
+    assert provenance['cache_destination'] == str(cache)
+    assert 'path' not in provenance
+    assert provenance['sha256'] == lock['nltk_archive_sha256']
+    assert calls.count(lock['nltk_archive_url']) == 1
+    assert cache.read_bytes() == zipped

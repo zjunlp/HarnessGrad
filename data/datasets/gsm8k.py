@@ -243,10 +243,10 @@ def _downloads() -> list[dict]:
             "package": "pyarrow",
             "version": "23.0.0",
             "size": "~40 MB",
-            "note": "Reads the parquet files the pinned revision ships. The check runs "
-                    "inside the verification namespace and must not need the HuggingFace "
-                    "`datasets` package, which pulls `pandas`, `requests` and a cache "
-                    "layout; `pyarrow` is one import and no network.",
+            "note": "Reads the pinned Parquet task pool in the dedicated dataset provider "
+                    "runtime. Run `python tools/prepare_dataset.py --dataset gsm8k` after "
+                    "fetching. The platform Python and the JSON-input scorer do not need "
+                    "pyarrow or the HuggingFace `datasets` package.",
         },
     ]
 

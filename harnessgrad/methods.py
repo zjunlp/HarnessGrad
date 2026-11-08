@@ -25,6 +25,12 @@ from eval.run.integrity import snapshot
 from harnessgrad import PLATFORM_ROOT
 import eval.containers.sandbox as sandbox
 
+def _script_argument(part: str) -> str | None:
+    """Return a Python script value, including --option=path, without changing argv."""
+    value = part.partition("=")[2] if part.startswith("-") and "=" in part else part
+    return value if value.endswith(".py") else None
+
+
 def _check_method_entrypoint(argv: list[str]) -> str | None:
     """Reject relative script paths that fail from the harness worktree.
 
@@ -39,13 +45,14 @@ def _check_method_entrypoint(argv: list[str]) -> str | None:
     """
     for part in argv:
         # Inspect script-like arguments anywhere: interpreter, -m, or wrapper.
-        if not part.endswith(".py"):
+        script = _script_argument(part)
+        if script is None:
             continue
-        if Path(part).is_absolute():
-            if not Path(part).is_file():
-                return f"method entrypoint script does not exist: {part!r}"
+        if Path(script).is_absolute():
+            if not Path(script).is_file():
+                return f"method entrypoint script does not exist: {script!r}"
             continue
-        resolved = Path(part)
+        resolved = Path(script)
         hint = ""
         if resolved.exists():
             # A path present in the current directory may be absent in the worktree.
@@ -97,7 +104,14 @@ def _method_sandbox_plan(work: Path, argv: list[str], scratch: Path,
     # Its own script, wherever it is -- a test fixture's method lives outside the
     # platform, and a method that cannot be read cannot start.
     for arg in argv:
-        candidate = Path(arg)
+        script = _script_argument(arg)
+        if script is not None:
+            value = script
+        elif arg.startswith("--base="):
+            value = arg.partition("=")[2]
+        else:
+            value = arg if not arg.startswith("-") else ""
+        candidate = Path(value)
         if candidate.is_absolute() and candidate.is_file():
             visible.append(candidate.parent)
     # **The improver's trees**, bound read-only like the method's own program. Two

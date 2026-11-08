@@ -48,34 +48,41 @@ compile failure, `-1` on a timeout), and it must not look like a broken platform
 """
 from __future__ import annotations
 
+import sys
+
+if __name__ == '__main__' and not sys.flags.isolated:
+    raise SystemExit('LiveCodeBench checks require Python isolated mode (-I)')
+
 import argparse
 import json
 import multiprocessing
-import sys
 from pathlib import Path
+from types import ModuleType
 
-# Native staging supplies this dependency at the task root.
-sys.path.insert(0, str(Path.cwd()))
-from data.scaffolds.scorer_input import add_arguments, run_bound
+
+def _trusted_search_path():
+    """Keep interpreter/runtime imports away from actor-owned task paths."""
+    task = Path.cwd().resolve()
+    script = Path(__file__).resolve().parent
+    clean = []
+    for entry in sys.path:
+        path = Path(entry or '.').resolve()
+        if path == task or path.is_relative_to(task) or path == script or path.is_relative_to(script):
+            continue
+        clean.append(entry)
+    sys.path[:] = clean
+
+
+def _source_module(name: str, path: Path):
+    """Compile the selected source bytes directly; never consult package caches."""
+    module = ModuleType(name)
+    module.__file__ = str(path)
+    exec(compile(path.read_bytes(), str(path), 'exec', dont_inherit=True), module.__dict__)
+    return module
+
 
 #: Upstream's per-test budget (`testing_util.run_test(..., timeout=6)`).
 PER_TEST_TIMEOUT = 6
-
-
-def _workdir_on_path() -> None:
-    """Put the workdir on `sys.path`, where the platform materialized the pinned files.
-
-    This check lives in `verify/` (so `sys.path[0]` is `verify/`) while `testing_util.py` and
-    `pass_k_utils.py` are `VERIFY.inputs` at the workdir root. DS-1000 has the same layout and
-    solves it by launching its runner from a scratch directory that holds `execution.py`; here
-    the two directories are one `sys.path` entry apart, which is cheaper. Measured, because the
-    platform arm failed on exactly this: by hand the control sets `PYTHONPATH`, and under
-    `eval.verification.verifier` it does not, so `import testing_util` raised `ModuleNotFoundError` only in
-    the sandbox run.
-    """
-    work = str(Path.cwd())
-    if work not in sys.path:
-        sys.path.insert(0, work)
 
 
 def _json_scalar(value):
@@ -85,15 +92,19 @@ def _json_scalar(value):
     return bool(value) if isinstance(value, bool) else value
 
 
-def _child(tests_text: str, solution: str, queue) -> None:
+def _child(tests_text: str, solution: str, queue, source_dir: str | None = None) -> None:
     """`run_test` in its own process: it mutates process-global state (`reliability_guard`
     nulls `os.system`, `os.remove`, `builtins.quit` and `os.environ` itself) and it executes
     the candidate, so nothing it does may reach the check's own interpreter. Upstream makes the
     same choice, for the same reason, in `compute_code_generation_metrics.py`."""
-    _workdir_on_path()
+    _trusted_search_path()
     sys.set_int_max_str_digits(50000)          # upstream sets this for huge test integers
     try:
-        from testing_util import run_test
+        if source_dir is None:
+            # Kept for the isolated scalar unit control; production always supplies a directory.
+            from testing_util import run_test
+        else:
+            run_test = _source_module('_lcb_testing_util', Path(source_dir) / 'testing_util.py').run_test
     except Exception as exc:                   # noqa: BLE001 - reported as unmeasurable
         queue.put({"error": f"the pinned executor will not import: {type(exc).__name__}: {exc}"})
         return
@@ -145,20 +156,28 @@ def _cannot_measure(args, why: str) -> int:
 
 
 def main() -> int:
+    if not sys.flags.isolated:
+        raise SystemExit('LiveCodeBench checks require Python isolated mode (-I)')
+    _trusted_search_path()
+    helper = _source_module('_lcb_scorer_input', Path('data/scaffolds/scorer_input.py'))
     parser = argparse.ArgumentParser()
     parser.add_argument("--tests", required=True, help="the problem's released tests")
     parser.add_argument("--solution", required=True)
     parser.add_argument("--reward-file", default="verifier/reward.txt")
     parser.add_argument("--evidence-file", default="verifier/evidence.json")
-    add_arguments(parser)
+    helper.add_arguments(parser)
     args = parser.parse_args()
-    return run_bound(args, {args.tests: Path(args.tests)},
+    return helper.run_bound(args, {args.tests: Path(args.tests),
+                            'testing_util.py': Path('testing_util.py'),
+                            'pass_k_utils.py': Path('pass_k_utils.py')},
                      lambda inputs, receipt: _score(args, inputs, receipt))
 
 
 def _score(args, inputs, receipt) -> int:
     args.scorer_input_receipt = receipt
-    _workdir_on_path()
+    # Import the authenticated copies, not the mutable staged originals.
+    source_dir = str(inputs['testing_util.py'].parent)
+    _trusted_search_path()
 
     tests_path = inputs[args.tests]
     if not tests_path.is_file():
@@ -182,7 +201,8 @@ def _score(args, inputs, receipt) -> int:
 
     cap = (PER_TEST_TIMEOUT + 1) * total + 5
     queue: multiprocessing.Queue = multiprocessing.Queue()
-    process = multiprocessing.Process(target=_child, args=(tests_text, solution, queue))
+    process = multiprocessing.Process(target=_child, args=(
+        tests_text, solution, queue, source_dir))
     process.start()
     process.join(cap)
     if process.is_alive():                     # upstream kills and marks every test failed
@@ -204,7 +224,8 @@ def _score(args, inputs, receipt) -> int:
     # recorded beside it because a binary reward hides partial progress (the register's M4:
     # one task scored 0 in twelve measurements while passing four of five tests nine times).
     try:
-        from pass_k_utils import compute_metrics_from_results
+        compute_metrics_from_results = _source_module(
+            '_lcb_pass_k_utils', Path(source_dir) / 'pass_k_utils.py').compute_metrics_from_results
         reward = float(compute_metrics_from_results({"task": [results]}, k_list=[1])["pass@1"])
     except Exception as exc:                    # noqa: BLE001
         return _cannot_measure(args, f"cannot score the executor's verdict: "

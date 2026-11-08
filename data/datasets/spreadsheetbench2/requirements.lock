@@ -1,0 +1,4 @@
+# Official requirements.txt pins, plus openpyxl's complete Python dependency closure.
+openpyxl==3.1.2
+et-xmlfile==2.0.0
+tqdm==4.66.4

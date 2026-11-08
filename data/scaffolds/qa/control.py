@@ -35,6 +35,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
@@ -42,7 +43,21 @@ sys.path.insert(0, str(ROOT))
 import data.scaffolds.qa.base as base  # noqa: E402
 
 
-def _adapter(name: str):
+def _adapter(name: str, task_id=None):
+    from data.scaffolds import registry
+    provider = registry.provider(name)
+    if provider is not None:
+        snapshot = provider.control(task_id)
+        if snapshot.get('refused'):
+            return SimpleNamespace(__name__=registry.module_name(name), REFUSED=snapshot['refused'])
+        # These callbacks read one provider data snapshot. The adapter's code
+        # and reference-building callbacks execute only in its loading process.
+        return SimpleNamespace(__name__=registry.module_name(name),
+            control_task=lambda _id: snapshot['record'], task_for=lambda _record: snapshot['task'],
+            setup_for=lambda _record: snapshot['setup'], verify_for=lambda _record: snapshot['verifier'],
+            DEFAULT_ENV=snapshot['env'], NOOP_EXPECTED=snapshot['noop_expected'],
+            ORACLE_SUBMISSION=lambda _gold: snapshot['submission'],
+            control_prediction=lambda _record: snapshot['prediction'])
     return importlib.import_module(f"data.datasets.{name}")
 
 
@@ -110,6 +125,9 @@ def _gold_text(record: dict) -> str:
 
 
 def _oracle_prediction(module, record: dict) -> dict | None:
+    prepared = getattr(module, 'control_prediction', None)
+    if callable(prepared):
+        return prepared(record)
     if not getattr(module, "EVIDENCE_AWARE", False):
         return None
     gold = record["gold"]
@@ -249,11 +267,8 @@ def run_local(module, record: dict, *, oracle: bool, workdir: Path) -> int:
     return 0
 
 
-def run_platform(module, record: dict, *, oracle: bool, workdir: Path,
-                 sandbox: bool = True) -> int:
-    """The same episode through `eval.run.runner.run_one`, with no Docker and no model."""
-    from eval.run.runner import run_one
-
+def task_specs(module, record: dict) -> tuple[dict, dict, dict, dict]:
+    """Freeze the selected control's declarations in its loading environment."""
     tid = record["task_id"]
     if callable(getattr(module, "control_task", None)):
         task_builder = getattr(module, "task_for", None)
@@ -270,6 +285,16 @@ def run_platform(module, record: dict, *, oracle: bool, workdir: Path,
         setup_spec = module.SETUP[tid]
         verifier = module.VERIFY[tid]
         env = module.ENV[tid]
+    return task, setup_spec, verifier, env
+
+
+def run_platform(module, record: dict, *, oracle: bool, workdir: Path,
+                 sandbox: bool = True) -> int:
+    """The same episode through `eval.run.runner.run_one`, with no Docker and no model."""
+    from eval.run.runner import run_one
+
+    tid = record['task_id']
+    task, setup_spec, verifier, env = task_specs(module, record)
     setup = {"files": list(setup_spec["files"])}
     if oracle:
         submission = _oracle_submission(module, record)
@@ -340,7 +365,7 @@ def main(argv) -> int:
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
-    module = _adapter(args.dataset)
+    module = _adapter(args.dataset, args.task_id)
     refused = getattr(module, "REFUSED", None)
     if refused:
         # A refusal means there is no task and no check, so there is nothing for a control

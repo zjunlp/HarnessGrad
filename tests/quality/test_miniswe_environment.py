@@ -76,3 +76,26 @@ def test_missing_dependencies_do_not_guess_a_user_site(monkeypatch):
     monkeypatch.setattr(site, "getusersitepackages", lambda: pytest.fail("guessed a user-site directory"))
     with pytest.raises(SystemExit, match="tools/configure_harness.py"):
         agent._site_for_child()
+
+
+def test_managed_cli_preserves_task_python_configuration_and_private_state(tmp_path):
+    parent={'PATH':'/image/venv/bin:/image/tools:/usr/bin','VIRTUAL_ENV':'/image/venv',
+            'CONDA_PREFIX':'/image/conda','PYTHONPATH':'/image/modules',
+            'PYTHONHOME':'/image/python','PYTHONUSERBASE':'/image/users',
+            'PYTHONNOUSERSITE':'','PYTHONDONTWRITEBYTECODE':'',
+            'MSWEA_MINI_CONFIG_PATH':'/daily/mini.yaml','HG_METHOD_API_KEY':'daily-secret'}
+    child=agent.child_environment(parent,tmp_path,managed=True)
+    for name,value in parent.items():
+        if name.startswith('PYTHON') or name in ('PATH','VIRTUAL_ENV','CONDA_PREFIX'):
+            assert child[name]==value
+    assert 'MSWEA_MINI_CONFIG_PATH' not in child and 'HG_METHOD_API_KEY' not in child
+    assert Path(child['MSWEA_GLOBAL_CONFIG_DIR']).is_relative_to(tmp_path)
+
+
+def test_managed_missing_dependency_refuses_legacy_package_fallback(monkeypatch,tmp_path):
+    (tmp_path/'minisweagent').mkdir()
+    (tmp_path/'minisweagent/__init__.py').write_text('raise AssertionError("legacy fallback")')
+    monkeypatch.setattr(agent,'_importable',lambda _:False)
+    monkeypatch.setattr(agent,'_manifest',lambda:{'runtime':{'kind':'python'},'runtime_paths':[str(tmp_path)]})
+    with pytest.raises(SystemExit,match='bound Python environment'):
+        agent._site_for_child()

@@ -240,6 +240,13 @@ validating examples/bash-harness
 [exit 0]
 ```
 
+For managed Python (including `base_harness/loop`), use the prepared-artifact
+workflow in [writing a harness](writing_a_harness.md#21-managed-python-dependencies), then run
+`python tools/validate_harness.py /path/to/harness --smoke --work-root /external/validation-work`.
+This uses the native sandbox, the bound interpreter, a mock backend and no network;
+`--check-runtime` admits dependencies read-only. It never installs or uses platform
+SDKs. The examples and host-interpreter description below apply to legacy harnesses.
+
 `--smoke` runs it, on a two-field task (`"Write the word ok into answer.txt."`) in a throwaway
 directory, and checks the answer file exists:
 

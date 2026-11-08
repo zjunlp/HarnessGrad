@@ -262,6 +262,14 @@ def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
     harness_tokens, ht_rounds = _sum_field(points, "cost", "harness_tokens")
     method_tokens, mt_rounds = _sum_field(points, "cost", "method_generation_tokens")
     total_rounds = len(points)
+    explicit_unknown_tokens = any(
+        isinstance(point.get("cost"), dict) and "harness_tokens_lower_bound" in point["cost"]
+        and point["cost"].get("harness_tokens") is None
+        and point["cost"].get("evaluation_trials", 0) > 0 for point in points)
+    explicit_unknown_calls = any(
+        isinstance(point.get("cost"), dict) and "harness_model_calls_lower_bound" in point["cost"]
+        and point["cost"].get("harness_model_calls") is None
+        and point["cost"].get("evaluation_trials", 0) > 0 for point in points)
 
     calls = None
     if harness_calls is not None or method_calls is not None:
@@ -279,13 +287,23 @@ def cost_totals(points: list[dict], side: str | None, notes: list[str]) -> dict:
     if tokens is not None and mt_rounds and mt_rounds < total_rounds:
         notes.append(f"cost: method token counts cover {mt_rounds} of {total_rounds} rounds, "
                      "so the tokens total is a lower bound")
-    if tokens is None:
+    if tokens is not None and ht_rounds and ht_rounds < total_rounds:
+        notes.append(f"cost: harness token counts cover {ht_rounds} of {total_rounds} rounds, "
+                     "so the tokens total is a lower bound")
+    if tokens is None and not explicit_unknown_tokens:
         cumulative = _num(_dig(points[-1], "cumulative", "generation_tokens"))
         if cumulative is not None:
             tokens = cumulative
             notes.append("cost: tokens are the last recorded cumulative.generation_tokens; "
                          "no per-round token breakdown exists")
 
+    if explicit_unknown_tokens:
+        tokens = None
+        notes.append("cost: harness token usage is incomplete; canonical tokens total is unknown; "
+                     "reported lower bounds remain in curve cost records")
+    if explicit_unknown_calls:
+        calls = None
+        notes.append("cost: completed model-call coverage is incomplete; canonical calls total is unknown")
     scope = None
     if calls is not None or tokens is not None:
         has_harness = harness_calls is not None or harness_tokens is not None

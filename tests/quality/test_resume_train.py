@@ -15,6 +15,11 @@ from types import SimpleNamespace
 import pytest
 
 from driver import ResumeNothingToDo, ResumeRefused, _resume_train_state
+from harnessgrad import verification_context
+
+
+def _ctx():
+    return verification_context.capture([{"task_id": "t1"}], {"t1": "synthetic"})
 
 
 def _state(tmp_path: Path, name: str, body: str) -> Path:
@@ -73,10 +78,10 @@ def _run(tmp_path: Path, *, rounds: tuple[int, ...] = (0, 1),
     points = [{"round": r, "score": 0.5,
                "identity": {"harness_sha": addresses[r]},
                "sampling": {"trials": 1, "task_ids": ["t1"]},
-               "per_task": {"t1": 0.5}} for r in rounds]
+               "per_task": {"t1": 0.5}, "verification_context": _ctx()} for r in rounds]
     (run_dir / "curve.jsonl").write_text(
         "\n".join(json.dumps(p) for p in points) + "\n")
-    meta = {"split_sha": split_sha}
+    meta = {"split_sha": split_sha, "verification_context": _ctx()}
     if platform:
         meta["platform_content_sha"] = platform
     (run_dir / "run_meta.json").write_text(json.dumps(meta))
@@ -87,7 +92,7 @@ def _run(tmp_path: Path, *, rounds: tuple[int, ...] = (0, 1),
 
 
 def _args(rounds: int = 3) -> SimpleNamespace:
-    return SimpleNamespace(rounds=rounds)
+    return SimpleNamespace(rounds=rounds, verification_context=_ctx())
 
 
 def test_refuses_without_a_curve(tmp_path: Path) -> None:
@@ -195,9 +200,10 @@ def test_the_restaged_tree_keeps_the_recorded_content_address(tmp_path: Path) ->
     sha = commit_state(state, "round 1")
     (run_dir / "curve.jsonl").write_text("\n".join(
         json.dumps({"round": r, "score": 0.5, "identity": {"harness_sha": sha},
-                    "sampling": {"trials": 1}, "per_task": {"t1": 0.5}})
+                    "sampling": {"trials": 1, "task_ids": ["t1"]}, "per_task": {"t1": 0.5},
+                    "verification_context": _ctx()})
         for r in (0, 1)) + "\n")
-    (run_dir / "run_meta.json").write_text(json.dumps({"split_sha": None}))
+    (run_dir / "run_meta.json").write_text(json.dumps({"split_sha": None, "verification_context": _ctx()}))
     traces = run_dir / "round0_traces"
     traces.mkdir()
     (traces / "t1.jsonl").write_text("{}\n")
@@ -279,3 +285,100 @@ def test_run_meta_keeps_the_platform_the_curve_began_on(tmp_path: Path) -> None:
     assert meta["rounds_measured"] == 3
     # ...and the tree that is running now is still on the record, under `platform`.
     assert meta["platform"]["content_sha"]
+
+
+def test_bad_saved_state_preserves_workspace_and_receipts(tmp_path, monkeypatch):
+    import driver
+    run_dir = _run(tmp_path, platform="old")
+    monkeypatch.setattr(driver, "_platform_content_sha", lambda: "new")
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "original").write_bytes(b"keep")
+    before = {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob("*") if p.is_file()}
+    (run_dir / "state_after_round1" / "agent.py").write_text("tampered")
+    before = {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob("*") if p.is_file()}
+    args = _args()
+    args.resume_across_platforms = "reviewed"
+    with pytest.raises(ResumeRefused):
+        _resume_train_state(args, run_dir, None, work)
+    assert (work / "original").read_bytes() == b"keep"
+    assert before == {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob("*") if p.is_file()}
+    assert not list(tmp_path.glob(".resume-*"))
+
+
+@pytest.mark.parametrize("failure", ["configuration", "sandbox"])
+def test_driver_preflight_refusal_preserves_resume_receipts(tmp_path, monkeypatch, failure, capsys):
+    import sys
+    import driver
+    from harnessgrad import config
+    from eval.observe.console import CONSOLE
+
+    run_dir = _run(tmp_path, platform=None, split_sha=None)
+    work = tmp_path / "work" / run_dir.name / "workspace"
+    work.mkdir(parents=True)
+    (work / "sentinel").write_bytes(b"original workspace")
+    (run_dir / "events.jsonl").write_bytes(b'{"seq": 1, "kind": "old"}\n')
+    before_run = {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob("*") if p.is_file()}
+    before_work = {p.relative_to(work): p.read_bytes() for p in work.rglob("*") if p.is_file()}
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    synthetic_context = _ctx()
+    monkeypatch.setattr(driver.verification_context, "capture", lambda *a, **k: synthetic_context)
+    monkeypatch.setattr(driver, "load_env", lambda *_: {})
+    monkeypatch.setattr(driver, "_probe_tool_calls", lambda *a, **k: pytest.fail("model call"))
+    if failure == "configuration":
+        check = SimpleNamespace(required=True, ok=False)
+        monkeypatch.setattr(driver.readiness, "configuration_checks", lambda *_: [check])
+        monkeypatch.setattr(driver.readiness, "render", lambda *_: "synthetic failure")
+    else:
+        monkeypatch.setattr(driver.readiness, "configuration_checks", lambda *_: [])
+        monkeypatch.setattr(driver.sandbox, "self_check", lambda *_: {"ok": False, "detail": "synthetic failure"})
+    monkeypatch.setattr(sys, "argv", ["driver.py", "--dataset", "demo", "--harness", "loop",
+        "--sampling", "all", "--rounds", "3", "--improver", "none", "--resume",
+        "--method-entrypoint", f"{sys.executable} {driver.PLATFORM_ROOT / 'methods/noop/run.py'}",
+        "--run-id", run_dir.name, "--runs-root", str(tmp_path / "runs"),
+        "--work-root", str(tmp_path / "work"), "--gpu-budget-dir", str(tmp_path / "slots")])
+    CONSOLE.close()
+    config.reset()
+    try:
+        assert driver.main() == 2
+    finally:
+        CONSOLE.close()
+        config.reset()
+    captured = capsys.readouterr()
+    assert "synthetic failure" in captured.out + captured.err
+    assert before_run == {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob("*") if p.is_file()}
+    assert before_work == {p.relative_to(work): p.read_bytes() for p in work.rglob("*") if p.is_file()}
+    assert not list(work.parent.glob(".resume-*"))
+
+
+def test_resume_events_append_without_overwriting(tmp_path):
+    from eval.observe.console import Console
+    path = tmp_path / 'events.jsonl'
+    original = b'{"seq": 8, "kind": "old"}\n'
+    path.write_bytes(original)
+    console = Console()
+    console.attach(path, append=True)
+    console.emit('resume')
+    console.close()
+    content = path.read_bytes()
+    assert content.startswith(original)
+    assert json.loads(content[len(original):])['seq'] == 9
+
+
+@pytest.mark.parametrize('mode', ['missing', 'changed'])
+def test_resume_refuses_unproven_verification_context_without_side_effects(tmp_path, mode):
+    run_dir = _run(tmp_path, platform=None)
+    work = tmp_path / 'work'; work.mkdir(); (work / 'sentinel').write_bytes(b'original')
+    meta_path = run_dir / 'run_meta.json'
+    metadata = json.loads(meta_path.read_text())
+    if mode == 'missing':
+        metadata.pop('verification_context')
+    else:
+        metadata['verification_context'] = verification_context.capture([{'task_id':'t1'}], {'t1':'changed'})
+    meta_path.write_text(json.dumps(metadata))
+    before = {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob('*') if p.is_file()}
+    with pytest.raises(ResumeRefused, match='verification'):
+        _resume_train_state(_args(), run_dir, None, work)
+    assert (work / 'sentinel').read_bytes() == b'original'
+    assert before == {p.relative_to(run_dir): p.read_bytes() for p in run_dir.rglob('*') if p.is_file()}
+    assert not list(work.parent.glob('.resume-*'))

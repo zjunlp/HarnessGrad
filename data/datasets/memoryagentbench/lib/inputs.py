@@ -106,7 +106,6 @@ def initialize(resources):
     lock = validate_resources(resources)
     from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
     from nltk.tabdata import PunktDecoder
-    import tiktoken
     params, decoder = PunktParameters(), PunktDecoder()
     for filename, attribute, decode in (
         ("collocations.tab", "collocations", lambda f: set(decoder.tab2tups(f))),
@@ -117,6 +116,24 @@ def initialize(resources):
         with (resources / "nltk/tokenizers/punkt_tab/english" / filename).open(encoding="utf-8") as stream:
             setattr(params, attribute, decode(stream))
     sentence_tokenizer = PunktSentenceTokenizer(params)
+    return sentence_tokenizer, initialize_encoding(resources)
+
+
+def initialize_encoding(resources):
+    """Verify and construct only BPE; this does not establish sentence readiness."""
+    resources = Path(resources).resolve()
+    policy = read_spec("chunk-policy.json")
+    for name in ("tiktoken", "regex"):
+        if installed_version(name) != policy["dependencies"][name]:
+            raise ValueError("encoding_dependency_mismatch:" + name)
+    lock = read_spec("resources.lock.json")
+    entry = next(e for e in lock["files"] if e["path"].startswith("resources/tiktoken/"))
+    path = resources / Path(entry["path"]).relative_to("resources")
+    if not path.is_file():
+        raise ValueError("resource_missing:" + entry["path"])
+    if path.stat().st_size != entry["bytes"] or file_sha256(path) != entry["sha256"]:
+        raise ValueError("resource_hash_mismatch:" + entry["path"])
+    import tiktoken
     encoding_path = next(e["path"] for e in lock["files"] if e["path"].startswith("resources/tiktoken/"))
     ranks = {}
     with (resources / Path(encoding_path).relative_to("resources")).open("rb") as stream:
@@ -131,7 +148,7 @@ def initialize(resources):
     ])
     encoding = tiktoken.Encoding(name="o200k_base", pat_str=pattern, mergeable_ranks=ranks,
                                  special_tokens={"<|endoftext|>": 199999, "<|endofprompt|>": 200018})
-    return sentence_tokenizer, encoding
+    return encoding
 
 
 def split_context(context, sentence_tokenizer, encoding):

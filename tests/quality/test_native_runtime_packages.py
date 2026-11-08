@@ -558,3 +558,60 @@ def test_py4j_legacy_jar_location_is_not_a_gateway_ready_package(captured_py4j_r
     assert result.returncode != 0 and 'Could not find py4j jar' in result.stderr
     observed = json.loads(result.stdout)
     assert observed['captured_jar_exists'] and observed['found_jar'] == ''
+
+
+def test_inventory_of_empty_store_is_readonly_and_names_launcher(authored):
+    result = store.inventory_package(authored.binding, authored.root)
+    assert not authored.root.exists()
+    assert result['verified'] is False
+    assert len(result['missing']) == result['required_blobs'] == 4
+    assert sum(row['size'] for row in result['missing']) == result['required_bytes']
+    assert sum(row['launcher'] for row in result['missing']) == 1
+    store.import_package(authored.binding, authored.archive, authored.root)
+    assert store.inventory_package(authored.binding, authored.root)['missing'] == []
+
+
+def test_assembly_can_recover_shared_bytes_from_foreign_dataset_ledger(authored):
+    legacy = deepcopy(authored.legacy)
+    legacy['dataset'] = 'jericho'
+    authored.ledger.write_text(json.dumps(legacy))
+    assert store.assemble_package(authored.binding, source_manifests=[authored.ledger],
+                                  root=authored.root)['verified']
+
+
+def test_assembly_rejects_source_ledger_parent_traversal(authored):
+    legacy = deepcopy(authored.legacy)
+    next(iter(legacy['files'].values()))['source'] = '../private-source'
+    authored.ledger.write_text(json.dumps(legacy))
+    with pytest.raises(store.StoreError, match='unsafe.*locator'):
+        store.assemble_package(authored.binding, source_manifests=[authored.ledger], root=authored.root)
+
+
+def test_publish_does_not_replace_racing_empty_directory(authored, monkeypatch):
+    real_cdll = store.ctypes.CDLL
+    final = store.package_path(authored.manifest, authored.binding['sha256'], authored.root)
+
+    class RacingRename:
+        def __call__(self, *args):
+            final.mkdir()
+            return real_cdll(None, use_errno=True).renameat2(*args)
+
+    class Library:
+        renameat2 = RacingRename()
+
+    monkeypatch.setattr(store.ctypes, 'CDLL', lambda *args, **kwargs: Library())
+    with pytest.raises(FileNotFoundError):
+        store.import_package(authored.binding, authored.archive, authored.root)
+    assert final.is_dir()
+    assert list(final.iterdir()) == []
+
+
+def test_inventory_cli_reports_empty_store_without_writes(authored, capsys):
+    from tools.prepare_native_runtime import main
+    assert main(['inventory', '--dataset', 'bird_minidev',
+                 '--manifest', authored.binding['manifest'], '--sha256', authored.binding['sha256'],
+                 '--root', str(authored.root)]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result['verified'] is False
+    assert len(result['missing']) == 4
+    assert not authored.root.exists()

@@ -44,9 +44,6 @@ def _positive(value, label, *, integer=False):
 def settings(env=None):
     """Resolve trusted host settings; the returned object contains secrets."""
     env = os.environ if env is None else env
-    python = Path(env.get('HG_JUDGE_HARVEY_PYTHON') or sys.executable)
-    if not python.is_absolute() or not python.is_file():
-        _missing('HG_JUDGE_HARVEY_PYTHON must name a provisioned absolute Python executable')
     request = {'parallel': int(env.get('HG_JUDGE_HARVEY_PARALLEL', '6')),
                'timeout': float(env.get('HG_JUDGE_HARVEY_TIMEOUT_S', '1800'))}
     _positive(request['parallel'], 'parallel', integer=True)
@@ -79,7 +76,9 @@ def settings(env=None):
     pandoc = env.get('HG_JUDGE_HARVEY_PANDOC') or shutil.which('pandoc', path=env.get('PATH'))
     if not pandoc or not Path(pandoc).is_file():
         _missing('pandoc >=3.5 must be provisioned; set HG_JUDGE_HARVEY_PANDOC if outside PATH')
-    return python, Path(pandoc).resolve(), request
+    from .special_runtime import binding, admit
+    python = admit(binding('harvey_lab'))
+    return Path(python), Path(pandoc).resolve(), request
 
 
 def _child_environment(pandoc, env=None):
@@ -89,6 +88,8 @@ def _child_environment(pandoc, env=None):
     keep = ('PATH','SYSTEMROOT','WINDIR','PATHEXT','LANG','SSL_CERT_FILE','SSL_CERT_DIR')
     child = {name:env[name] for name in keep if name in env}
     child['PATH'] = str(pandoc.parent) + os.pathsep + child.get('PATH','/usr/bin:/bin')
+    if env.get('HG_JUDGE_HARVEY_WHEEL'):
+        child['HG_JUDGE_HARVEY_WHEEL'] = env['HG_JUDGE_HARVEY_WHEEL']
     child['PYTHONDONTWRITEBYTECODE'] = '1'
     child['PYTHONNOUSERSITE'] = '1'
     return child
@@ -98,10 +99,15 @@ def readiness(manifest=None, *, timeout_s=30):
     """No network/model call. Refuse only absent/invalid actual prerequisites."""
     python, pandoc, request = settings()
     deadline = time.monotonic() + _positive(float(timeout_s), 'readiness timeout')
+    from .special_runtime import binding, admit, fingerprint
+    selected = binding('harvey_lab')
+    python = admit(selected)
+    identity = fingerprint(selected, {'worker': ROOT/'harvey_worker.py', 'bootstrap': ROOT/'special_runtime.py',
+        'grader': ROOT/'vendor/flashrsi/integrations/_harvey_lab_grade.py'})
     result = subprocess.run([str(python), '-I', '-B', str(ROOT/'harvey_worker.py'), '--probe'],
         env=_child_environment(pandoc), capture_output=True, text=True, errors='replace', timeout=timeout_s)
     if result.returncode:
-        _missing('provision Python 3.12/3.13, lab-core==1.2.0 with the pinned evaluator bytes, anthropic==0.88.0, and native document dependencies')
+        _missing('managed worker probe failed; see data/datasets/harvey_lab/execution-recipe.md for fixed wheel and execution preparation')
     try:
         runtime = json.loads(result.stdout)
     except (ValueError, TypeError):
@@ -111,7 +117,7 @@ def readiness(manifest=None, *, timeout_s=30):
     match = re.match(r'pandoc (\d+)\.(\d+)', version.stdout)
     if version.returncode or not match or tuple(map(int,match.groups())) < (3,5):
         _missing('native document processing requires pandoc >=3.5')
-    runtime.update(python=str(python), pandoc=str(pandoc), pandoc_version=match.group(0),
+    runtime.update(execution_identity=identity, python=str(python), pandoc=str(pandoc), pandoc_version=match.group(0),
         judges=[request[p]['model_name'] for p in ('anthropic','openai')],
         judge_profile='lab-standard-dual-v1' if tuple(request[p]['model_name'] for p in ('anthropic','openai')) == STANDARD_MODELS else 'custom-dual',
         upstream_revision=UPSTREAM, official_wheel_sha256=WHEEL_SHA256)
@@ -219,6 +225,13 @@ def run(spec, artifact_root, *, task_id, run_id, trial_id, timeout_s):
         shutil.copytree(output,destination)
         # -I ignores cwd/PYTHONPATH. The worker adds only the fixed HG native
         # package, then the upstream installed wheel imports its own helpers.
+        from .special_runtime import admit, fingerprint
+        selected = runtime['execution_identity']['binding']
+        python = admit(selected)
+        current = fingerprint(selected, {'worker': ROOT/'harvey_worker.py', 'bootstrap': ROOT/'special_runtime.py',
+            'grader': ROOT/'vendor/flashrsi/integrations/_harvey_lab_grade.py'})
+        if current != runtime['execution_identity']:
+            raise ValueError('Harvey worker source identity changed')
         proc = subprocess.Popen([str(python),'-I','-B',str(ROOT/'harvey_worker.py'),str(root)],
             cwd=root, env=_child_environment(pandoc), stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -240,7 +253,8 @@ def run(spec, artifact_root, *, task_id, run_id, trial_id, timeout_s):
                 or result['all_pass'] != float(result['all_pass_rate']==1)):
             raise ValueError('native Harvey dual aggregate is malformed')
         value = result['all_pass_rate']
-        evidence = {'measured':True,'metrics':result,'native_runtime':runtime,
+        from .special_runtime import public_harvey_runtime
+        evidence = {'measured':True,'metrics':result,'native_runtime':public_harvey_runtime(runtime),
                     'task_id':task_id,'run_id':run_id,'trial_id':trial_id,
                     'metric_identity':'harvey-lab-v1.2.0.'+runtime['judge_profile']}
         return {**verdict,'score':value,'passed':value==1.0,'outcome':'measured','evidence':evidence,

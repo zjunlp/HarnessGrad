@@ -446,12 +446,21 @@ def test_both_of_a_check_s_streams_reach_the_verdict():
     assert _check_output_detail("  \n", "") == ""
 
 
-def test_the_terminal_bench_tasks_declare_where_their_report_lands():
+def test_the_terminal_bench_tasks_declare_where_their_report_lands(tmp_path, monkeypatch):
     """判分报告是任务的 `test.sh` 写的,所以由数据集声明,平台不能猜。"""
-    import data.datasets.terminal_bench as tb
-    spec = tb.VERIFY["cancel-async-tasks"]
-    assert spec["evidence_file"] == tb.CHECK_REPORT
-    assert spec["reward_file"] == tb.REWARD_FILE
+    import runpy
+    import harnessgrad.paths
+    task = tmp_path / 'authored-report-task'
+    task.mkdir()
+    (task / 'task.toml').write_text('[environment]\ndocker_image = "authored:no-pull"\n')
+    (task / 'instruction.md').write_text('Authored task; no container is started.')
+    monkeypatch.setattr(harnessgrad.paths, 'dataset_root', lambda name: tmp_path)
+    monkeypatch.delenv('HG_TB_TASKS', raising=False)
+    monkeypatch.delenv('HG_TB_ORACLE', raising=False)
+    adapter = runpy.run_path(str(ROOT / 'data/datasets/terminal_bench.py'))
+    spec = adapter['VERIFY'][task.name]
+    assert spec['evidence_file'] == adapter['CHECK_REPORT']
+    assert spec['reward_file'] == adapter['REWARD_FILE']
 
 
 def test_a_configured_egress_proxy_reaches_the_check_and_only_the_check(monkeypatch):

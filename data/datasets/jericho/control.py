@@ -69,7 +69,7 @@ def _copy_entry(entry: dict, workdir: Path) -> None:
 
 
 def materialize(record: dict, workdir: Path) -> None:
-    """Put the task where `SETUP` would: the game identity, the ROM, the CLI, its library."""
+    """Materialize the public game identity, stdlib client and empty action log."""
     workdir.mkdir(parents=True, exist_ok=True)
     # --keep preserves the directory, not an earlier episode or a log symlink.
     (workdir / jericho.LOG_FILE).unlink(missing_ok=True)
@@ -79,7 +79,8 @@ def materialize(record: dict, workdir: Path) -> None:
 
 def drive(workdir: Path, actions: list[str], *, timeout_s: float = 300) -> int:
     """Act through the CLI exactly as an agent would. Returns how many commands ran."""
-    from eval.policy.runtime_policy import phase_timeout, stage_agent_runtime
+    from eval.policy.runtime_policy import phase_timeout
+    from eval.run.tool_relay import start
     from eval.containers import sandbox
 
     workdir = workdir.resolve()
@@ -89,8 +90,9 @@ def drive(workdir: Path, actions: list[str], *, timeout_s: float = 300) -> int:
                  "TMPDIR": "/tmp", "LANG": "C.UTF-8", "PYTHONNOUSERSITE": "1",
                  "PYTHONDONTWRITEBYTECODE": "1"}
     deadline = time.monotonic() + phase_timeout(timeout_s)
-    with tempfile.TemporaryDirectory(prefix="jericho-agent-runtime-") as runtime:
-        package = stage_agent_runtime(jericho._env()["agent_runtime"], Path(runtime))
+    game = json.loads((workdir / jericho.GAME_FILE).read_text())
+    snapshot = jericho.command_control(game["task_id"])
+    with start(snapshot["setup"]) as relay:
         for args in [*[['do', action] for action in actions], ['done']]:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -98,7 +100,7 @@ def drive(workdir: Path, actions: list[str], *, timeout_s: float = 300) -> int:
             proc = sandbox.run([sys.executable, "jer", *args], cwd=workdir,
                                platform=ROOT, work_root=control_root, repo=control_root,
                                task_dir=workdir, env=child_env, timeout_s=remaining,
-                               network="none", package_overlays=(package,))
+                               network="none", tool_socket=relay.path)
             if proc.returncode != 0:
                 raise RuntimeError(f"Jericho CLI exited {proc.returncode}: {proc.stderr[-400:]}")
     return len(actions)
@@ -168,7 +170,7 @@ def run_platform(module, record: dict, *, oracle: bool, workdir: Path,
 
     tid = record["task_id"]
     task = {"task_id": tid, "goal": module._goal(record), "inputs": []}
-    setup = {"files": list(module.SETUP[tid]["files"])}
+    setup = {**module.SETUP[tid], "files": list(module.SETUP[tid]["files"])}
     if oracle:
         setup["files"].append({"path": ".oracle/actions.json",
                                "content": json.dumps(record["walkthrough"])})
@@ -209,6 +211,38 @@ def run_platform(module, record: dict, *, oracle: bool, workdir: Path,
     return 0
 
 
+def run_managed(snapshot: dict, *, oracle: bool, workdir: Path, sandbox: bool) -> int:
+    """Run the provider-selected task through the normal runner and relay."""
+    from eval.run.runner import run_one
+    setup = {**snapshot["setup"], "files": list(snapshot["setup"].get("files", []))}
+    if oracle:
+        setup["files"].extend({"path": path, "content": content}
+                              for path, content in snapshot["oracle_files"].items())
+    work_root = workdir.resolve() / "work"
+    harness = work_root / "oracle_harness"
+    shutil.copytree(Path(__file__).resolve().parent / "oracle_harness", harness,
+                    dirs_exist_ok=True)
+    previous = os.environ.get("HARNESSGRAD_WORK_ROOT")
+    os.environ["HARNESSGRAD_WORK_ROOT"] = str(work_root)
+    try:
+        result = run_one(repo=harness, task=snapshot["task"], setup=setup,
+                         verifier=snapshot["verifier"], env=snapshot["env"],
+                         sandbox=sandbox, timeout_s=jericho.AGENT_TIMEOUT_S,
+                         verify_timeout_s=jericho.VERIFY_TIMEOUT_S,
+                         run_id="jericho-control", run_seed="0")
+    finally:
+        if previous is None:
+            os.environ.pop("HARNESSGRAD_WORK_ROOT", None)
+        else:
+            os.environ["HARNESSGRAD_WORK_ROOT"] = previous
+    verdict = result.get("verdict") or {}
+    print(json.dumps({"task_id": snapshot["task"]["task_id"],
+                      "mode": "oracle" if oracle else "noop", "verdict": verdict}, indent=2))
+    expected = 1.0 if oracle else snapshot["noop_expected"]
+    return int(result.get("exit_code") != 0 or verdict.get("score") != expected
+               or (verdict.get("evidence") or {}).get("measured") is not True)
+
+
 def main(argv) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     mode = parser.add_mutually_exclusive_group(required=True)
@@ -222,7 +256,8 @@ def main(argv) -> int:
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
-    record = _record(args.task_id)
+    from harnessgrad.dataset_provider import DatasetProvider
+    snapshot = DatasetProvider("jericho", freeze_runtime=True).control(args.task_id)
     if args.workdir:
         workdir = Path(args.workdir)
         if workdir.exists() and not args.keep:
@@ -234,10 +269,8 @@ def main(argv) -> int:
         cleanup = True
     started = time.time()
     try:
-        if args.platform:
-            return run_platform(jericho, record, oracle=args.oracle, workdir=workdir,
-                                sandbox=not args.no_sandbox)
-        return run_local(jericho, record, oracle=args.oracle, workdir=workdir)
+        return run_managed(snapshot, oracle=args.oracle, workdir=workdir,
+                           sandbox=not args.no_sandbox)
     finally:
         print(f"elapsed {time.time() - started:.1f}s")
         if cleanup:

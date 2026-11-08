@@ -297,10 +297,11 @@ def prepared_driver(monkeypatch, tmp_path, context):
 
 
 @pytest.mark.parametrize("stage", ["diagnostic", "pilot_10pct"])
-def test_driver_selects_before_runtime_with_frozen_eligible_pool(monkeypatch, prepared_driver, stage):
+def test_driver_selects_before_runtime_with_frozen_eligible_pool(monkeypatch, prepared_driver, stage, tmp_path):
     driver, path = prepared_driver
     monkeypatch.setattr("sys.argv", ["driver.py", "--dataset", "demo", "--sampling", stage,
-                                    "--policy-evidence", str(path)])
+                                    "--policy-evidence", str(path), "--runs-root", str(tmp_path / "runs"),
+                                    "--work-root", str(tmp_path / "work")])
     class SelectionObserved(Exception):
         pass
     loaded = []
@@ -327,7 +328,8 @@ def test_driver_preserves_plan_on_interruption_and_refuses_resume(monkeypatch, p
     driver, path = prepared_driver
     runs = tmp_path / "runs"
     monkeypatch.setattr("sys.argv", ["driver.py", "--dataset", "demo", "--policy-evidence", str(path),
-                                    "--run-id", "unit-preflight", "--runs-root", str(runs)])
+                                    "--run-id", "unit-preflight", "--runs-root", str(runs),
+                                    "--work-root", str(tmp_path / "work")])
     class BeforeRuntime(Exception):
         pass
     def stop(*a, **k):
@@ -367,11 +369,15 @@ def test_eval_side_records_failure_or_pending_lifecycle_before_refusing_curve(
                                   cleanup=attestation("unknown"), snapshot=attestation("unknown"))
         policy.write_receipt(tmp_path / "diagnostic_receipt.json", row)
         return row["coverage"]["measured_trials"] == len(selected)
+    from harnessgrad import verification_context
+    planned_tasks = [dict(task_id=selected[0])]
+    planned_context = verification_context.capture(planned_tasks, {}, {}, {}, {})
     code = eval_side._run_eval_side(
         work=tmp_path, man={}, run_id="unit-eval", run_dir=tmp_path,
-        tasks=[dict(task_id=selected[0])], scorable={}, setups={}, verifiers={}, envs={},
+        tasks=planned_tasks, scorable={}, setups={}, verifiers={}, envs={},
         side_ids=selected, split=None, args=SimpleNamespace(
-            from_run="unit-train", sandbox=True, trials=1, jobs=1, dataset="demo"),
+            from_run="unit-train", sandbox=True, trials=1, jobs=1, dataset="demo",
+            verification_context=planned_context),
         eval_from=None, after_evaluation=persist)
     assert code == 2
     row = json.loads((tmp_path / "diagnostic_receipt.json").read_text())

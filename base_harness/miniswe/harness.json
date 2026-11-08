@@ -1,17 +1,30 @@
 {
   "name": "miniswe",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
-  "install": "requirements.txt",
+  "install": "requirements.lock",
+  "runtime": {
+    "kind": "python",
+    "python": "3.12",
+    "requirements": "requirements.lock",
+    "exec": {
+      "requirements": {
+        "3.10": "requirements-py310.lock",
+        "3.11": "requirements-py311.lock",
+        "3.12": "requirements.lock",
+        "3.13": "requirements.lock"
+      }
+    }
+  },
   "env_kinds": [
     "files",
     "exec"
   ],
   "runtime_paths": [],
   "role": "harness",
-  "notes": "mini-SWE-agent 2.4.6 with LiteLLM 1.75.9. Dependencies are provisioned for the executing interpreter through requirements.txt. Ordinary exec validated with the pinned AppWorld Python 3.11 actor and ABI-matched overlay; other images and observed workers need separate validation. Each task uses private HOME, mini configuration and XDG state while preserving the platform-provided dependency overlay.",
+  "notes": "mini-SWE-agent 2.4.6 with LiteLLM 1.75.9. Native files uses managed CPython 3.12; exec uses an image-owned locked venv or the bound native fallback when Python is absent. The native mini CLI uses the bound interpreter with isolated startup, while task shell commands retain the image's Python and tool configuration. Each task uses private HOME, mini configuration and XDG state. Observed/cooperative workers and unsandboxed execution remain unsupported.",
   "components": {
     "control": [
       "harness.json"
@@ -22,6 +35,9 @@
     "unattributed": [
       "mock_model.py",
       "requirements.txt",
+      "requirements.lock",
+      "requirements-py310.lock",
+      "requirements-py311.lock",
       "README.md"
     ]
   }

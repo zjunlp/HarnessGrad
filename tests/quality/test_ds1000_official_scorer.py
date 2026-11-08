@@ -102,7 +102,7 @@ def _run_check_directly(index: int, tmp_path: Path) -> tuple[float, dict]:
                                       encoding="utf-8")
     env = dict(os.environ,
                PYTHONPATH=str(work) + os.pathsep + os.environ.get("PYTHONPATH", ""))
-    proc = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=work,
+    proc = subprocess.run(verifier["argv"], cwd=work,
                           capture_output=True, text=True, env=env, timeout=300)
     reward_path = work / command_control.REWARD_REL
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0

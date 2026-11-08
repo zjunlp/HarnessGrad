@@ -5,7 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from harnessgrad.paths import dataset_root
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -22,6 +22,14 @@ PREPARED_ROOT = DATASET_ROOT / "prepared"
 def rows():
     from data.datasets.personamem_v2.lib.storage import pool
     return pool(PREPARED_ROOT)
+
+
+def _refresh_catalog():
+    # One authenticated pool read per selection; factories reuse that snapshot.
+    clear = getattr(rows, "cache_clear", None)
+    if clear is not None:
+        clear()
+    return rows()
 
 
 def instruction(row):
@@ -43,6 +51,7 @@ def instruction(row):
 
 
 def load():
+    _refresh_catalog()
     from data.datasets.personamem_v2.lib.protocol import METRIC
     return ([{"task_id": tid, "goal": instruction(row), "inputs": []} for tid, row in rows().items()],
             {tid: METRIC for tid in rows()})
@@ -114,11 +123,12 @@ def __getattr__(name):
         raise AttributeError(name)
     try:
         from data.datasets.personamem_v2.lib.protocol import SPLITS
+        _refresh_catalog()
         native = {split: [tid for tid, row in rows().items() if row["split"] == split]
                   for split in SPLITS}
     except (OSError, ValueError, KeyError) as exc:
         raise AttributeError(
-            f"personamem_v2: {name} needs the prepared pool under {PREPARED_ROOT}: {exc}"
+            f"personamem_v2: {name} needs a prepared pool: {exc}"
         ) from exc
     if name == "NATIVE_SPLITS":
         return native
@@ -129,12 +139,17 @@ def __getattr__(name):
 
 def provision_status():
     try:
-        return {"present": True, "root": str(DATASET_ROOT), "tasks": len(rows()),
+        root = str(DATASET_ROOT)
+    except DataRootNotConfigured as exc:
+        return {"root": None, "present": False, "status": "config_missing", "detail": str(exc)}
+    try:
+        _refresh_catalog()
+        return {"present": True, "root": root, "tasks": len(rows()),
                 "questions": sum(r["question_count"] for r in rows().values()),
                 "original_questions": sum(r["original_question_count"] for r in rows().values()),
                 "excluded_questions": sum(len(r["excluded_questions"]) for r in rows().values())}
     except (OSError, ValueError, KeyError) as exc:
-        return {"present": False, "root": str(DATASET_ROOT), "detail": str(exc)}
+        return {"present": False, "root": root, "detail": str(exc)}
 
 
 def downloads():

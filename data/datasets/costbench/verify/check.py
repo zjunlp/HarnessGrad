@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
 from bootstrap import bootstrap
+from execution import observation
 from scoring import METRIC, score
 
 
@@ -40,7 +42,7 @@ def main():
                 or payload['case_sha256'] != args.case_sha256
                 or str(payload['seed']) != str(binding['seed'])):
             raise ValueError('trusted CostBench episode identity mismatch')
-        bootstrap('costbench_bundle', 'costbench_runtime', split=config['split'])
+        bootstrap('costbench_bundle', split=config['split'])
         result = score_episode(config, payload)
         evidence.update(measured=True, official=result, revision=config['revision'], binding=binding,
                         scorer_input={'task_id': args.task_id, 'sha256': args.case_sha256, 'verified': True})
@@ -49,6 +51,7 @@ def main():
     except Exception as exc:
         evidence.update(error=type(exc).__name__, detail=str(exc)[:1000])
         print(f'{type(exc).__name__}: {str(exc)[:1000]}', file=sys.stderr)
+    evidence['python_runtime'] = observation()
     (output / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, allow_nan=False))
     return code
 

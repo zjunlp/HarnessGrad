@@ -64,8 +64,7 @@ provider/runtime failures cannot become normal zero scores.
   exit. Unlabelled official test rows are refused. Conversion model/profile is
   explicit; native default is `gpt-4-1106-preview`.
 - **WideSearch**: native query/evaluation schema and private gold CSV are retained.
-  Install pandas/numpy/dateparser/loguru/datasets and prepare the original gold
-  directory. Judge exceptions caught by the upstream evaluator are re-raised as
+  Prepare its managed execution artifact and the original gold directory. Judge exceptions caught by the upstream evaluator are re-raised as
   measurement failures. Metrics retain the native table definitions.
 - **LiveMathBench**: one platform trial is one native solver sample and one judge
   label. The curve is named single-sample-label accuracy. Run the declared number
@@ -100,3 +99,32 @@ event remain unacceptable substitutes.
 
 See `docs/dataset-reviews/transfer-review.md` for all 20 new entries, aliases,
 runtime gaps and the complete control/readiness distinction.
+
+
+Native dataframe dependencies now require managed execution artifacts for
+`travelplanner`, `workbench`, and `widesearch`; prepare them explicitly with
+`python -m tools.prepare_dataset --dataset NAME --runtime execution`.
+Source fetches and Parquet conversion use an admitted preparation worker
+(`native_qa`, or the WideSearch component). Local JSON/JSONL/CSV standard-library
+readers remain dependency-free. Native WorkBench services and all three scorers
+carry exact runtime bindings; platform packages and legacy WideSearch interpreter
+overrides cannot supply missing artifacts. See each component's `runtime.md`
+for dependency selection and its validation limits.
+
+Dependency audit: BrowseComp decryption, DeepSearchQA counting, HLE prompt/schema,
+and LiveMathBench extraction/label scoring use only the standard library plus
+the trusted judge transport. Their Hub readers (datasets/huggingface_hub) and
+Parquet reader run in the preparation component. TravelPlanner's official
+pandas/numpy/requests database APIs run in its verifier component; WorkBench's
+pandas/numpy native tools and replay grader run in its service/verifier component;
+WideSearch's dataframe/date-normalization evaluator and CSV conversion run in its
+own component. Harvey and SWE retain separate native lifecycle protocols and
+source manifests; see their component documentation.
+
+Preparation reserves a fresh destination before conversion. The `.prepare.claim`
+reservation remains permanently after success or failure; it is not a running
+process lock. A failed attempt also keeps its partial evidence; retry into a new
+directory. The complete manifest, including the selected preparation runtime
+binding, is published once
+using an atomic no-replace link. Concurrent attempts cannot replace an existing
+manifest or reuse another attempt's claimed destination.

@@ -45,7 +45,10 @@ def score(name, case, prediction, complete):
         # Preserve upstream's documented group(1) repair, rather than upstream's
         # always-zero group(0) typo. This profile is explicitly recorded in docs.
         match = re.search(r'correct: (yes|no)', text)
-        value = float(bool(match and match.group(1) == 'yes'))
+        # An absent verdict is missing measurement evidence, not an observed no.
+        if match is None:
+            raise ValueError('invalid BrowseComp judge label')
+        value = float(match.group(1) == 'yes')
         metrics = {'accuracy': value}
     elif name == 'deepsearchqa':
         from flashrsi.benchmarks.deepsearchqa._official import counts, metrics as rate, prompt
@@ -77,7 +80,11 @@ def score(name, case, prediction, complete):
             raise ValueError('malformed LiveMathBench native case')
         text = complete([{'role': 'user', 'content': template.format(
             question=question, gold_answer=answer, answer=math_postprocess_v2(prediction))}])
-        value = float(extract_judge_label(text) == 'yes')
+        label = extract_judge_label(text)
+        # Preserve valid native labels; malformed judge output remains unmeasured.
+        if label not in ('yes', 'no'):
+            raise ValueError('invalid LiveMathBench judge label')
+        value = float(label == 'yes')
         metrics = {'accuracy': value}
     elif name == 'travelplanner':
         from pathlib import Path

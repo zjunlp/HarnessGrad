@@ -141,33 +141,48 @@ def _published() -> tuple[str, ...]:
 
 def _import_adapter(name: str):
     """Runtime adapter, or source declarations when external data is unavailable."""
+    if registry.provider(name) is not None:
+        return _source_adapter(name, provider=True)
     try:
         return importlib.import_module(registry.module_name(name))
     except Exception as exc:
-        # Some legacy adapters construct task pools at import. A split catalog
-        # still reads their declarations without configuring or opening storage.
-        path = ROOT / "data/datasets" / f"{name}.py"
-        tree = ast.parse(path.read_bytes())
+        return _source_adapter(name, error=exc)
 
-        def unavailable(error=exc):
-            raise error
 
-        values = {"__file__": str(path), "load": unavailable,
-                  "_lazy_declarations": any(isinstance(node, ast.FunctionDef)
-                      and node.name == "__getattr__" for node in tree.body)}
-        for node in tree.body:
-            if not isinstance(node, ast.Assign):
+def _source_adapter(name: str, *, provider=False, error=None):
+    # Some legacy adapters construct task pools at import. A split catalog
+    # still reads their declarations without configuring or opening storage.
+    path = ROOT / "data/datasets" / f"{name}.py"
+    tree = ast.parse(path.read_bytes())
+
+    def unavailable():
+        raise error or RuntimeError('static declarations cannot load task payloads')
+
+    values = {"__file__": str(path), "load": unavailable,
+              "_lazy_declarations": any(isinstance(node, ast.FunctionDef)
+                  and node.name == "__getattr__" for node in tree.body)}
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        for target in node.targets:
+            if not isinstance(target, ast.Name) or target.id not in {
+                    "SPLIT_SOURCE", "OFFICIAL_EVAL", "REFUSED"}:
                 continue
-            for target in node.targets:
-                if not isinstance(target, ast.Name) or target.id not in {
-                        "SPLIT_SOURCE", "OFFICIAL_EVAL", "REFUSED"}:
-                    continue
-                try:
-                    values[target.id] = ast.literal_eval(node.value)
-                except (ValueError, TypeError):
-                    if target.id == "OFFICIAL_EVAL":
-                        values[target.id] = _MISSING
-        return SimpleNamespace(**values)
+            try:
+                values[target.id] = ast.literal_eval(node.value)
+            except (ValueError, TypeError):
+                if target.id == "OFFICIAL_EVAL":
+                    values[target.id] = _MISSING
+    if provider:
+        # Construct QASpec without calling build or rows: only declared policy.
+        from tools.datasets import _source_downloads
+        downloads = _source_downloads(path, resolve_root=False)
+        spec = downloads.__globals__.get('_SPEC') if downloads else None
+        if spec is not None:
+            values['SPLIT_SOURCE'] = 'declared' if spec.study else 'none'
+            values['OFFICIAL_EVAL'] = (_MISSING if spec.study else
+                                      None if spec.pool_is == 'eval' else [])
+    return SimpleNamespace(**values)
 
 
 def _load(module):
@@ -305,7 +320,18 @@ def _host_row(name: str) -> Row:
         return Row(dataset=name, state="refused", source=DASH, tasks=DASH,
                    train=DASH, eval=DASH, official=DASH)
     try:
-        tasks, _scorable = _load(module)
+        provider = registry.provider(name)
+        if provider is not None:
+            snapshot = provider.inventory()
+            module = SimpleNamespace(**snapshot['metadata'])
+            source = _source_cell(_attribute(module, 'SPLIT_SOURCE'))
+            count = snapshot['tasks']
+            if _refused(module):
+                return Row(dataset=name, state='refused', source=DASH, tasks=DASH,
+                           train=DASH, eval=DASH, official=DASH)
+        else:
+            tasks, _scorable = _load(module)
+            count = len(tasks)
     except Exception as exc:  # noqa: BLE001 - the absence is the answer here, not a crash
         return Row(dataset=name, state="not provisioned", source=source, tasks=DASH,
                    train=DASH, eval=DASH, official=DASH,
@@ -316,7 +342,7 @@ def _host_row(name: str) -> Row:
         state, train, eval_ = "none", DASH, DASH
     else:
         state, train, eval_ = "declared", str(len(split["train"])), str(len(split["eval"]))
-    return Row(dataset=name, state=state, source=source, tasks=str(len(tasks)),
+    return Row(dataset=name, state=state, source=source, tasks=str(count),
                train=train, eval=eval_, official=_official_cell(official))
 
 

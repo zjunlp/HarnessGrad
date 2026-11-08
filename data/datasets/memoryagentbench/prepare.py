@@ -23,6 +23,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from harnessgrad.paths import configured_path, dataset_root
+from data.datasets.memoryagentbench.lib.dependencies import validate_preparation
 from data.datasets.memoryagentbench.lib.inputs import (INTERPRETER_ENV, SPEC_SHA256, initialize,
     read_spec, render_question, split_context)
 from data.datasets.memoryagentbench.lib.storage import (DATASET_REVISION, canonical_sha256, file_sha256,
@@ -114,6 +115,7 @@ def prepare(raw, resources, output, selected_task_ids=None):
         selected = {validate_task_id(value) for value in selected_list}
     source = validate_raw(raw)
     sentence_tokenizer, encoding = initialize(resources)
+    preparation_environment = validate_preparation()
     import pyarrow.parquet as pq
     rows = []
     for relative in sorted(source["files"]):
@@ -142,9 +144,11 @@ def prepare(raw, resources, output, selected_task_ids=None):
         (temporary / "entity2id.json").chmod(0o600)
         _write(temporary / "pool.json", {"schema": "hg-mab-pool-v1", "dataset_revision": DATASET_REVISION, "tasks": tasks})
         artifacts = {str(p.relative_to(temporary)): file_sha256(p) for p in sorted(temporary.rglob("*.json"))}
-        code = [Path(__file__), Path(__file__).parent / "lib/inputs.py", Path(__file__).parent / "lib/storage.py"]
+        code = [Path(__file__), Path(__file__).parent / "lib/inputs.py", Path(__file__).parent / "lib/storage.py",
+                Path(__file__).parent / "lib/dependencies.py"]
         manifest = {"schema": "hg-mab-manifest-v1", "dataset_revision": DATASET_REVISION,
                     "upstream_revision": source["upstream_revision"], "artifacts": artifacts,
+                    "preparation_environment": preparation_environment,
                     "source_files": source["files"], "spec_sha256": SPEC_SHA256,
                     "implementation_sha256": {str(p.relative_to(Path(__file__).parent)): file_sha256(p) for p in code},
                     "resources": read_spec("resources.lock.json")["files"],

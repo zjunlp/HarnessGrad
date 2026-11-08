@@ -54,6 +54,7 @@ require_api = protocol.require_api                           # noqa: E402
 # 'eval'`) while passing every test that calls the editor directly. Measured, in a real
 # run. The platform keeps its own copy in `eval/candidate.py`, and that one is the judge.
 candidate = _siblings.load("apply")
+endpoint_client = _siblings.load("endpoint_client")
 
 #: The framework<->method channel. Gitignored, so committing it cannot mint a sha.
 CHANNEL = "_harnessgrad"
@@ -945,7 +946,7 @@ _SPENT: dict = {"input": 0, "output": 0, "calls": 0, "model": None,
                 # and was recorded as `generation_tokens: 0` -- a claim that the improver
                 # spent nothing, when the truth is "nobody counted". `None` is the honest
                 # value and the platform already distinguishes it from zero.
-                "source": None}
+                "source": None, "unknown_endpoint_usage": False, "unknown_cli_usage": False, "unknown_transport_attempts": 0}
 
 
 #: The last CLI improver run's own account, attached to whichever step the method
@@ -996,12 +997,21 @@ def improver_run() -> dict:
 
 
 def spend_source() -> str | None:
-    """Who reported the spend: `None` (nobody yet) or `cli_unreported`.
+    """Identify the reporting source, retaining any unknown usage in this window.
 
+    `mixed_unreported` means both CLI and endpoint calls omitted usage.
     Kept out of `spent()` on purpose: that mapping is the four numbers and the model, and
     a caller comparing it to the numbers it recorded should not have to filter a string
     out of it.
     """
+    cli_unknown = _SPENT.get("unknown_cli_usage") or _SPENT.get("source") == "cli_unreported"
+    endpoint_unknown = _SPENT.get("unknown_endpoint_usage") or _SPENT.get("source") == "endpoint_unreported"
+    if cli_unknown and endpoint_unknown:
+        return "mixed_unreported"
+    if cli_unknown:
+        return "cli_unreported"
+    if endpoint_unknown:
+        return "endpoint_unreported"
     return _SPENT.get("source")
 
 
@@ -1018,7 +1028,7 @@ def spent() -> dict:
 
 def cache_read_tokens() -> int | None:
     """Prompt tokens the provider served from cache, or `None` when nobody reported any."""
-    if _SPENT.get("source") == "cli_unreported":
+    if spend_source() in ("cli_unreported", "endpoint_unreported", "mixed_unreported"):
         return None
     return _SPENT["cache_read"]
 
@@ -1031,7 +1041,7 @@ def spent_tokens() -> int | None:
     tokens", which is a different and false statement -- and one a cost-aware rule would
     act on.
     """
-    if _SPENT.get("source") == "cli_unreported":
+    if spend_source() in ("cli_unreported", "endpoint_unreported", "mixed_unreported"):
         return None
     return _SPENT["input"] + _SPENT["output"]
 
@@ -1046,7 +1056,9 @@ def reset_spent() -> None:
     """
     # `cache_read` resets with the rest: a per-phase window that kept the previous phase's
     # cache reads would report a split that belongs to a different call.
-    _SPENT.update(input=0, output=0, calls=0, model=None, source=None, cache_read=0)
+    _SPENT.update(input=0, output=0, calls=0, model=None, source=None, cache_read=0,
+                  unknown_endpoint_usage=False, unknown_cli_usage=False,
+                  unknown_transport_attempts=0)
 
 
 def _cached_prompt_tokens(usage) -> int:
@@ -1086,11 +1098,12 @@ def _cached_prompt_tokens(usage) -> int:
 def _record_usage(usage, model: str | None) -> None:
     """Add one reply's usage. One call is counted whether or not the provider reported it."""
     _SPENT["calls"] += 1
-    # An endpoint reply that arrives means the spend *is* being counted, whatever an
-    # earlier CLI call in the same process concluded. Without this the flag set by
-    # `_ask_cli` outlives the call it described and turns a later, reported spend into
-    # `None`.
-    _SPENT["source"] = "endpoint"
+    # Later reported usage cannot fill a gap from an earlier call in this window.
+    if _SPENT.get("source") == "cli_unreported":
+        _SPENT["unknown_cli_usage"] = True
+    if usage is None:
+        _SPENT["unknown_endpoint_usage"] = True
+    _SPENT["source"] = "endpoint_unreported" if _SPENT["unknown_endpoint_usage"] else "endpoint"
     _SPENT["model"] = getattr(usage, "model", None) or model or _SPENT["model"]
     if usage is None:
         return
@@ -1404,6 +1417,7 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
         **({"usage": usage} if usage else {}),
     })
     if not usage:
+        _SPENT["unknown_cli_usage"] = True
         _SPENT["source"] = "cli_unreported"
     edits: list[dict] = []
     for rel in result["files"]:
@@ -1482,6 +1496,7 @@ def _record_endpoint_call(prompt: str, system: str, reply: str, model: str,
             "reply": reply,
             "prompt_chars": len(prompt),
             "reply_chars": len(reply),
+            "transport_attempts": getattr(resp, "transport_attempts", None),
             "usage": None if usage is None else {
                 "input": getattr(usage, "prompt_tokens", None),
                 "output": getattr(usage, "completion_tokens", None),
@@ -1546,12 +1561,12 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         tree = Path(parent) if parent is not None else Path(base)
         return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli)
 
-    from openai import OpenAI
-
     base_url, api_key, model = model_settings()
-    client = OpenAI(base_url=base_url, api_key=api_key,
-                    timeout=float(os.environ.get("HG_METHOD_TIMEOUT_S", "180")),
-                    max_retries=2)
+    try:
+        timeout = float(os.environ.get("HG_METHOD_TIMEOUT_S", "180"))
+    except (ValueError, OverflowError):
+        raise endpoint_client.EndpointError("invalid method endpoint timeout") from None
+    client = endpoint_client.Client(base_url=base_url, api_key=api_key, timeout=timeout)
     attempts = max(1, int(os.environ.get("HG_METHOD_PARSE_RETRIES", "2")))
     system = system + FORMAT_HINT
     if base is not None:
@@ -1580,11 +1595,25 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
                 prompt = block + "\n\n" + prompt
     last = ""
     for _ in range(attempts):
-        resp = client.chat.completions.create(
-            model=model, temperature=0.0,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": prompt}],
-        )
+        try:
+            resp = client.complete(
+                model=model, temperature=0.0,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": prompt}],
+            )
+        except endpoint_client.EndpointError as exc:
+            if exc.attempts:
+                _SPENT["unknown_endpoint_usage"] = True
+                _SPENT["unknown_transport_attempts"] += exc.attempts
+                _SPENT["source"] = "endpoint_unreported"
+                _SPENT["model"] = model or _SPENT["model"]
+                if exc.response_received:
+                    _record_usage(None, model)
+            raise
+        unknown_attempts = getattr(resp, "unknown_transport_attempts", 0)
+        if unknown_attempts:
+            _SPENT["unknown_endpoint_usage"] = True
+            _SPENT["unknown_transport_attempts"] += unknown_attempts
         last = resp.choices[0].message.content or ""
         # Counted before the reply is judged. A retry that produced unparseable JSON is
         # still a call the method paid for, and a parse failure is exactly when someone
@@ -1837,7 +1866,8 @@ def report(req: dict, *, method: str, harness_dir: Path, changed: bool,
                              # so; without it a reader cannot tell a free round from an
                              # invisible one.
                              "method_spend_source": spend_source(),
-                             "method_cache_read_tokens": cache_read_tokens()},
+                             "method_cache_read_tokens": cache_read_tokens(),
+                             "method_unknown_transport_attempts": _SPENT["unknown_transport_attempts"] or None},
             "method_reported": {"score": None, **_reported_with_improver(method_reported)},
         }],
         "trajectory_shape": "sequence",
@@ -1937,7 +1967,8 @@ def _step_payload(*, harness_dir, label, edit_kind, changed, tokens_now,
                          # one. It is also what makes the nulls above *provable* rather
                          # than a gap in the record.
                          "method_spend_source": spend_source(),
-                         "method_cache_read_tokens": cache_read_tokens()},
+                         "method_cache_read_tokens": cache_read_tokens(),
+                         "method_unknown_transport_attempts": _SPENT["unknown_transport_attempts"] or None},
         "method_reported": {"score": None,
                             **_reported_with_improver(method_reported,
                                                       improver=improver)},

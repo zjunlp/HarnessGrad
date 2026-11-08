@@ -32,7 +32,8 @@ def _runtime_directory(path: Path, label: str) -> None:
         raise ValueError(f"{label} must not contain or lie within the hidden platform checkout: {path}")
 
 
-def configure(harness: Path, dsh_root: Path, node: str = "node") -> dict:
+def configure(harness: Path, dsh_root: Path, node: str = "node", *,
+              runtime_paths: tuple[Path, ...] = ()) -> dict:
     harness = harness.expanduser().resolve()
     path = harness / "harness.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -50,7 +51,20 @@ def configure(harness: Path, dsh_root: Path, node: str = "node") -> dict:
     _runtime_directory(selected["root"], "DSH root")
     _runtime_directory(node_root, "Node installation")
     bindings = list(dict.fromkeys([str(selected["root"]), str(executable), str(node_root)]))
+    for extra in runtime_paths:
+        value = str(extra.expanduser().resolve(strict=True))
+        if value not in bindings:
+            bindings.append(value)
+    runtime_spec = importlib.util.spec_from_file_location(
+        '_configured_dsh_identity', ROOT / 'base_harness/deepseek-harness/dsh_runtime.py')
+    runtime_helper = importlib.util.module_from_spec(runtime_spec)
+    runtime_spec.loader.exec_module(runtime_helper)
+    runtime_helper.require_clean_startup(os.environ)
+    record = runtime_helper.installation(harness, selected, bindings, entries,
+                                          forbidden=(ROOT, harness))
+    runtime_helper.check(record)
     manifest["runtime_paths"] = bindings
+    manifest[runtime_helper.RECORD] = record
     # Validation finishes before writing; replace one complete manifest so a
     # failing preparation never leaves partially written JSON behind.
     temporary = None
@@ -66,7 +80,7 @@ def configure(harness: Path, dsh_root: Path, node: str = "node") -> dict:
             temporary.unlink(missing_ok=True)
     return {"harness": str(harness), "dsh_root": str(selected["root"]),
             "cli": selected["cli"], "node": selected["node"],
-            "farm_targets": len(entries), "runtime_paths": bindings}
+            "farm_targets": len(entries), "runtime_paths": bindings, "identity": record}
 
 
 def main(argv=None) -> int:
@@ -74,9 +88,11 @@ def main(argv=None) -> int:
     parser.add_argument("harness", type=Path)
     parser.add_argument("--dsh-root", required=True, type=Path)
     parser.add_argument("--node", default="node", help="Node executable, resolved once during preparation")
+    parser.add_argument("--runtime", type=Path, action="append", default=[],
+                        help="dedicated external dependency file or directory (repeatable)")
     args = parser.parse_args(argv)
     try:
-        receipt = configure(args.harness, args.dsh_root, args.node)
+        receipt = configure(args.harness, args.dsh_root, args.node, runtime_paths=tuple(args.runtime))
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(json.dumps(receipt, indent=2))

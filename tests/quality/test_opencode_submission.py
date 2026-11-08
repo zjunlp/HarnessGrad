@@ -170,8 +170,10 @@ def test_failed_completion_keeps_usage_and_never_claims_submission(adapter, tmp_
     assert len(usage) == 1 and usage[0]["input_tokens"] == 85
 
 
-def test_livecodebench_declares_only_public_output_path(monkeypatch):
+def test_livecodebench_declares_only_public_output_path(monkeypatch, tmp_path):
     # Replace only eager private-data loading; execute the adapter's real load/goal.
+    monkeypatch.setenv('HG_DATA_LIVECODEBENCH', str(tmp_path / 'livecodebench'))
+    monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
     from data.scaffolds import scorer_input
     row = {"question_id": "synthetic", "question_content": "A fabricated question.",
            "question_title": "Fixture", "platform": "fixture", "contest_id": "fixture",

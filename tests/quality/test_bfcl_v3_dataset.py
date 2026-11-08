@@ -1,18 +1,8 @@
-"""BFCL-v3's contract: the official data shape, the name-only metric, and its limits.
+"""Authored BFCL JSONL loader, name-only proxy and schema controls.
 
-Three things carry the weight here.
-
-* `test_the_data_is_the_official_tag_not_the_hugging_face_copy` pins **where the data comes
-  from**. Measured: the HuggingFace dataset's `BFCL_v3_simple.json` at its current revision is
-  answer-only (`{"id", "ground_truth"}`) and byte-identical to its `possible_answer/` copy, so
-  a loader pinned to it would grade itself. The tag `v1.3` has both files, and this test asserts
-  the fields that only the real question file has.
-* `test_only_names_are_scored_and_the_record_says_so` pins the metric's **limit**: the official
-  BFCL score needs argument values, and the answer file gives them as free-form acceptable-value
-  lists, so no scorer can enumerate them. A record that reported a name-only number *as* the
-  official score would be the §1 error.
-* `test_irrelevance_gold_is_the_empty_set` pins the subset that tests the decision rather than
-  the arguments -- calling anything at all there is a miss.
+Default tests use synthetic files, not released BFCL data. The tag/download
+pin is inspected independently of payload identity. HG_TEST_BFCL_DATA_ROOT
+explicitly enables the existing-release pool check; no test downloads it.
 """
 from __future__ import annotations
 
@@ -26,24 +16,64 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
-@pytest.fixture(scope="module")
-def bfcl():
-    import data.datasets.bfcl_v3 as module
-    if not module._RECORDS:
-        pytest.skip(f"no BFCL data under {module.DATASET_ROOT}; run "
-                    f"`python3 tools/datasets.py --fetch --dataset bfcl_v3`")
+@pytest.fixture
+def bfcl(tmp_path):
+    """Authored JSONL through the real loader; no released BFCL payload."""
+    from stdlib_authored_fixture_helpers import adapter_at
+    module = adapter_at('bfcl_v3', tmp_path)
+    module.N_SIMPLE, module.N_IRRELEVANCE = 2, 1
+    def write(relative, rows):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('\n'.join(json.dumps(row) for row in rows) + '\n')
+    def row(identifier, function):
+        return {'id': identifier, 'question': [[{'role':'user','content':'Authored request.'}]],
+                'function': [{'name':function, 'description':'Authored function.',
+                              'parameters':{'type':'dict','properties':{'x':{'type':'float'}}}}]}
+    write(module.SIMPLE, [row('authored-0','lookup'),
+                          row('authored-1','restaurant_search.find_closest')])
+    write(module.SIMPLE_ANSWERS, [
+        {'id':'authored-0','ground_truth':[{'lookup':{'x':['fictional value','']}}]},
+        {'id':'authored-1','ground_truth':[{'find_closest':{'x':[1,2]}}]}])
+    write(module.IRRELEVANCE, [row('authored-irrelevant','unneeded')])
+    tasks, _ = module.load()
+    assert len(tasks) == 3
     return module
+
+
+@pytest.fixture
+def released_bfcl():
+    """Explicit, read-only integration source; never choose HG_DATA_ROOT implicitly."""
+    import os
+    from stdlib_authored_fixture_helpers import adapter_at
+    selected = os.environ.get('HG_TEST_BFCL_DATA_ROOT')
+    if not selected:
+        pytest.skip('released BFCL opt-in: set HG_TEST_BFCL_DATA_ROOT to an existing pinned data root')
+    root = Path(selected).expanduser()
+    module = adapter_at('bfcl_v3', root)
+    missing = [str(root / item) for item in (module.SIMPLE, module.SIMPLE_ANSWERS, module.IRRELEVANCE)
+               if not (root / item).is_file()]
+    if missing:
+        pytest.skip('released BFCL opt-in missing files: ' + ', '.join(missing))
+    module.load()  # Present but invalid data must fail, not become a skip.
+    return module
+
+
+def test_released_pool_shape_when_explicitly_selected(released_bfcl):
+    module = released_bfcl
+    assert len(module._RECORDS) == module.N_SIMPLE + module.N_IRRELEVANCE
+    assert all(r['user_request'] and r['function_names'] for r in module._RECORDS)
 
 
 # ------------------------------------------------------------- the data source ---
 
 
-def test_the_data_is_the_official_tag_not_the_hugging_face_copy(bfcl):
-    """The question files carry `question` **and** `function`; the answer file carries neither.
+def test_loader_keeps_question_and_answer_files_independent(bfcl):
+    """Authored question files carry `question` and `function`; answers carry neither.
 
-    This is the measurement that decided the pin. Asserting it here means a future
-    "simplification" to the HF dataset fails loudly rather than loading an answer file and
-    scoring every task against itself.
+    This authored shape exercises the same boundary as the historical HF answer-file
+    confusion. Release provenance is checked separately through the explicit root;
+    generating these bytes cannot establish the identity of an upstream dataset.
     """
     simple = bfcl.DATASET_ROOT / bfcl.SIMPLE
     answers = bfcl.DATASET_ROOT / bfcl.SIMPLE_ANSWERS
@@ -58,6 +88,15 @@ def test_the_data_is_the_official_tag_not_the_hugging_face_copy(bfcl):
         "file and the gold is not independent of the task")
     assert simple.read_bytes() != answers.read_bytes(), (
         "the question and answer files must differ")
+
+
+def test_loader_refuses_answer_rows_used_as_questions(bfcl):
+    """Exercise the historical HF question/answer confusion through the loader."""
+    (bfcl.DATASET_ROOT / bfcl.SIMPLE).write_bytes(
+        (bfcl.DATASET_ROOT / bfcl.SIMPLE_ANSWERS).read_bytes())
+    bfcl._RECORDS = []
+    with pytest.raises(ValueError, match='no user message'):
+        bfcl.load()
 
 
 def test_the_tag_and_the_download_are_both_pinned(bfcl):
@@ -91,7 +130,7 @@ def test_only_names_are_scored_and_the_record_says_so(bfcl):
 
 
 def test_the_argument_values_are_free_form_lists(bfcl):
-    """Why the official metric is unreachable: measured on the answer file.
+    """The name-only proxy keeps argument alternatives in the authored source file.
 
     Each argument maps to a list of acceptable values (`unit: ["units", ""]`), so "the correct
     call" is a set of alternatives with no enumerable candidate set.
@@ -165,7 +204,7 @@ def test_each_question_carries_its_own_functions(bfcl):
 
 
 def test_the_one_namespaced_gold_row_is_handled(bfcl):
-    """`simple_363`: gold `find_closest`, schema `restaurant_search.find_closest`.
+    """Authored namespaced row mirrors the historical `simple_363` shape.
 
     A scorer comparing the strings directly would mark a correct answer wrong on this row, and
     the row count is small enough that the error would look like a model failure.

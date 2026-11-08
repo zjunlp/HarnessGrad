@@ -27,13 +27,9 @@ See [dataset storage](../../../README.md#dataset-storage) for `.env` configurati
 and worktree sharing. `HG_DATA_MEMORYAGENTBENCH_PREPARED` can
 independently select a prepared pool (default `$HG_DATA_MEMORYAGENTBENCH/prepared`). Imports do
 not read the corpus. The four upstream splits are capability partitions, not
-train/test divisions. The default declared split uses HarnessGrad's deterministic
-task-ID hash rule, approximately 2:1 train/eval, with each complete episode kept
-on one side. The full release yields **100 train episodes / 2,069 questions** and
-**46 eval episodes / 1,602 questions**. This is a platform study split, not an
-official upstream division; the ratio applies to episodes, not questions.
-`--split official --side eval` selects the complete pool and includes the training
-episodes, so it is not a held-out evaluation after studying the declared train side.
+train/test divisions. The adapter declares no learning/evaluation division:
+`SPLIT` and `OFFICIAL_EVAL` are `None`. An explicitly selected platform hash split
+is a study convention, not an official held-out benchmark split.
 
 Preparation needs `nltk`/`regex`/`tiktoken` at three exact versions plus `pyarrow`, in a
 separate environment. These dependencies are needed for preparation and official
@@ -65,15 +61,41 @@ HG_MAB_PYTHON=/tmp/hg-mab-venv/bin/python python data/datasets/memoryagentbench/
   --raw "$HG_MAB_DATA/raw" --resources "$HG_MAB_DATA/resources" --output "$HG_MAB_DATA/prepared"
 ```
 
-The tracked `requirements-prepare.txt` also lists the official differential-test
-dependencies and pins `nltk==3.10.4` (the first release outside GHSA-8mgp-746c-j5xp's
-`<= 3.10.3` range); the gate's `3.10.3` is what reproduces the frozen tables, so install
-the three versions above rather than that file wholesale.
+`requirements-prepare.txt` installs exactly the frozen tokenizer pins and the
+Parquet reader. `requirements-differential.txt` adds the optional reference scorer
+and ROUGE dependencies. The frozen NLTK version is deliberately unchanged;
+upgrading it requires review of the frozen input comparison, not a silent pin edit.
+No NLTK downloader is invoked. These identities are separate from the serving
+interpreter: the relay, primary local scorer and judge transport need no third-party
+packages. Optional ROUGE diagnostics do need `rouge-score`, NLTK and explicitly
+provisioned sentence resources. A successful import or matching package metadata
+does not establish corpus preparation, model availability or runtime readiness.
 
-The pinned `punkt_tab.zip` is on `raw.githubusercontent.com`, which is reset-blocked from
-this host; `HG_GH_RAW_MIRROR=<proxy>` on `tools/datasets.py --fetch` is the supported route,
-and `prepare_resources.py --archive` then restores the four English tables offline from the
-verified zip.
+New prepared manifests record the actual preparation executable, Python version
+and required distribution versions under `preparation_environment`. Existing
+manifests remain readable. `HG_MAB_PYTHON` selects preparation only and does not
+select or install the platform runtime interpreter. Runtime deployment identity
+must be recorded by the platform separately. Loader calls revalidate the prepared
+pool rather than retaining an unchecked in-process copy after corruption/recovery.
+
+The pinned `punkt_tab.zip` is on `raw.githubusercontent.com`. Earlier local TLS
+failures were transient: a later bounded request returned the exact original
+archive digest and all four original English tables passed verification. Where
+that host remains blocked, `HG_GH_RAW_MIRROR=<proxy>` on `tools/datasets.py --fetch`
+is an explicit route; `prepare_resources.py --archive` restores the four English
+tables offline from the verified zip. If the original archive is unavailable but an existing local resource
+root contains original-lock-matching files, explicitly import them with
+`prepare_resources.py --resources DEST --from-resources SOURCE`. SOURCE and DEST
+both use the `nltk/` and `tiktoken/` layout. Every imported member must match its
+original size and SHA before any writes occur; the JSON receipt lists its absolute
+source path and hash. This does not assert possession of the original archive or
+fabricate an archive checksum. Retain that receipt and the source licenses beside
+the external resource store. Missing files still fail unless independently
+provided or restored through the explicit archive/download options. Archive
+restoration receipts also identify the consumed archive path, byte count, original
+SHA and each restored member; unchanged resource checks do not claim a new import.
+See [the tokenizer acceptance record](TOKENIZER_ACCEPTANCE.md) for reproducible
+offline restoration and author-owned-text upstream differential controls.
 
 Preparation refuses an existing output, verifies all raw and resource hashes,
 and checks every prepared chunk/query sequence against the frozen official
@@ -220,3 +242,20 @@ call structure are defined under Model judges. UTF-8 decoding, ordered access,
 idempotent request IDs and complete-episode scoring are required.
 A resource limit or service failure produces an unmeasured result,
 not an ordinary zero score. Material follows the official 4,096-token chunking policy.
+
+### Offline tokenizer microepisode
+
+Run the explicit smoke command with the isolated preparation interpreter:
+
+```sh
+/tmp/hg-mab-venv/bin/python -I data/datasets/memoryagentbench/verify/tokenizer_smoke.py \
+  --resources /absolute/external/resources > /absolute/external/tokenizer-receipt.json
+```
+
+This executes the real locked BPE encoder, an ordered synthetic service episode
+and primary scoring. It records source/license hashes, distribution versions,
+Python ABI and the native tiktoken extension hash. If Punkt tables are missing,
+it explicitly uses one synthetic sentence boundary and reports
+`full_tokenizer_ready: false`; that result cannot establish frozen sentence
+segmentation or full dataset readiness. Corrupt resources fail. No downloader,
+benchmark corpus or model is invoked.

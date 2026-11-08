@@ -287,6 +287,7 @@ harnessgrad_work/
 # publish it, and a public page cannot be hidden by accident. INTERFACE.md, at the
 # repository root, is the contract and is public.
 /docs/*
+!/docs/getting-started.md
 !/docs/resume-design.md
 !/docs/writing_a_harness.md
 !/docs/adapter-spec.md
@@ -499,3 +500,4 @@ data/candidates/
 # The reviewer-facing evidence pack: cited by the manifest format tests and by
 # README's measurement section, so a clone that lacks it has a dangling reference.
 !/docs/evidence-export.md
+!/docs/wheel-console.md

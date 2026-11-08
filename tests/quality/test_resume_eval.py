@@ -14,6 +14,10 @@ from pathlib import Path
 
 import pytest
 
+from harnessgrad import verification_context as vc
+
+CONTEXT = vc.capture([{'task_id':'a'}, {'task_id':'b'}], {})
+
 from harnessgrad.loops.eval_side import (
     _merge_prior,
     _progress_results,
@@ -32,6 +36,7 @@ def _progress(run_dir: Path, task_id: str, *, score=None, outcome="completed",
 
 def _meta(run_dir: Path, **fields) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
+    fields.setdefault("verification_context", CONTEXT)
     (run_dir / "run_meta.json").write_text(json.dumps(fields))
 
 
@@ -138,6 +143,7 @@ def test_resume_refuses_a_different_state_or_pool(tmp_path: Path) -> None:
           env={"pool": "valid_unseen"})
 
     class Args:
+        verification_context = CONTEXT
         from_run = "rsi10-x-train"
         from_round = 3
 
@@ -157,6 +163,7 @@ def test_resume_refuses_without_run_meta(tmp_path: Path) -> None:
     _progress(run_dir, "a", score=1.0)
 
     class Args:
+        verification_context = CONTEXT
         from_run = "x"
         from_round = 0
 
@@ -171,6 +178,7 @@ def test_resume_refuses_when_evaluated_from_is_absent(tmp_path: Path) -> None:
     _meta(run_dir, env={"pool": "valid_unseen"})     # no evaluated_from
 
     class Args:
+        verification_context = CONTEXT
         from_run = "rsi10-x-train"
         from_round = 3
 
@@ -183,14 +191,15 @@ def test_bun_resume_requires_matching_runtime_for_every_trial(tmp_path, monkeypa
     from eval.containers import bun_runtime
     current = {"kind": "bun", "responses_overlay": {"sha256": "current"}}
     monkeypatch.setattr(bun_runtime, "identity", lambda _: current)
-    prior = {"a": {"n_trials": 2, "runtime_services": [{"bun": {"identity": current}}]}}
-    assert _resume_runtime_mismatch(tmp_path, prior)
+    prior = {"a": {"n_trials": 2, "verification_context": vc.project(CONTEXT, ['a']),
+                   "runtime_services": [{"bun": {"identity": current}}]}}
+    assert _resume_runtime_mismatch(tmp_path, prior, verification_context=CONTEXT)
     prior["a"]["runtime_services"] *= 2
-    assert _resume_runtime_mismatch(tmp_path, prior) is None
-    prior["b"] = {"n_trials": 1, "runtime_services": [{"bun": {"identity": {"kind": "bun"}}}]}
-    assert _resume_runtime_mismatch(tmp_path, prior)
-    prior["b"] = {"n_trials": 1}
-    assert _resume_runtime_mismatch(tmp_path, prior)
+    assert _resume_runtime_mismatch(tmp_path, prior, verification_context=CONTEXT) is None
+    prior["b"] = {"n_trials": 1, "verification_context": vc.project(CONTEXT, ['b']), "runtime_services": [{"bun": {"identity": {"kind": "bun"}}}]}
+    assert _resume_runtime_mismatch(tmp_path, prior, verification_context=CONTEXT)
+    prior["b"] = {"n_trials": 1, "verification_context": vc.project(CONTEXT, ['b'])}
+    assert _resume_runtime_mismatch(tmp_path, prior, verification_context=CONTEXT)
 
 
 def test_resumed_result_preserves_runtime_identity_and_capture():
@@ -200,3 +209,13 @@ def test_resumed_result_preserves_runtime_identity_and_capture():
     merged = _merge_prior({}, prior)
     assert merged["harness_runtime"] == [{"bun": identity}]
     assert merged["runtime_diagnostics"]["a"] == services
+
+
+def test_resume_refuses_legacy_missing_context_without_modifying_metadata(tmp_path):
+    run_dir = tmp_path / 'run'; run_dir.mkdir()
+    meta = run_dir / 'run_meta.json'
+    meta.write_text(json.dumps({'evaluated_from': {'run_id': 'train', 'round': 0}}))
+    before = meta.read_bytes()
+    args = type('Args', (), {'from_run': 'train', 'from_round': 0, 'verification_context': CONTEXT})()
+    assert 'verification context missing' in _resume_mismatch(run_dir, args, '', 'sha')
+    assert meta.read_bytes() == before

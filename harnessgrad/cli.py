@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import importlib.metadata
 import importlib.util
+from importlib import resources
+import re
 import runpy
 import sys
 from pathlib import Path
@@ -35,12 +37,15 @@ _HELP = """\
 
 usage:
   {program} run [driver arguments ...]   run driver.py with those arguments
+  {program} run --preset quickstart ...  use a bundled experiment recipe
+  {program} preset path NAME             print a bundled recipe path
   {program} split create|check ...      create or validate an experiment partition
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
 `{program} run --help` prints driver.py's own help: the driver owns its command line and
 this command forwards it unchanged rather than keeping a second copy of the flags.
+Bundled presets may require separately provisioned datasets, split files and runtimes.
 
 options:
   -h, --help     show this help and exit
@@ -148,6 +153,42 @@ def _run(argv: list[str]) -> int:
     return 0
 
 
+def _preset_path(name: str) -> Path:
+    """Resolve a packaged, explicitly named recipe without consulting the cwd."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name):
+        raise ValueError("preset name must contain only letters, digits, underscores or hyphens")
+    resource = resources.files("experiments").joinpath(name + ".json")
+    if not resource.is_file():
+        raise ValueError(f"unknown bundled preset: {name}")
+    # Wheels are installed unpacked; driver receives a real path, preserving --config behavior.
+    return Path(str(resource))
+
+
+def _expand_preset(argv: list[str]) -> list[str]:
+    result = []
+    preset = None
+    index = 0
+    while index < len(argv):
+        value = argv[index]
+        if value == "--preset" or value.startswith("--preset="):
+            if preset is not None:
+                raise ValueError("--preset may be supplied only once")
+            if value == "--preset":
+                index += 1
+                if index >= len(argv):
+                    raise ValueError("--preset requires a name")
+                preset = argv[index]
+            else:
+                preset = value.split("=", 1)[1]
+            result.extend(["--config", str(_preset_path(preset))])
+        else:
+            result.append(value)
+        index += 1
+    if preset is not None and sum(x == "--config" or x.startswith("--config=") for x in result) != 1:
+        raise ValueError("--preset cannot be combined with --config")
+    return result
+
+
 def _print_help(stream=None) -> None:
     print(_HELP, end="", file=stream or sys.stdout)
 
@@ -174,7 +215,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{PROGRAM} {version()}")
         return 0
     if command == "run":
-        return _run(_driver_argv(rest))
+        try:
+            resolved = _expand_preset(_driver_argv(rest))
+        except ValueError as exc:
+            print(f"{PROGRAM}: {exc}", file=sys.stderr)
+            return 2
+        return _run(resolved)
+    if command == "preset":
+        if len(rest) != 2 or rest[0] != "path":
+            print(f"{PROGRAM}: usage: {PROGRAM} preset path NAME", file=sys.stderr)
+            return 2
+        try:
+            print(_preset_path(rest[1]))
+        except ValueError as exc:
+            print(f"{PROGRAM}: {exc}", file=sys.stderr)
+            return 2
+        return 0
     if command == 'split':
         from harnessgrad.splits import main as split_main
         return split_main(rest)

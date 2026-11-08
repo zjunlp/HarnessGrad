@@ -1,0 +1,17 @@
+beautifulsoup4
+chardet
+datasets
+docker
+ghapi<2
+GitPython
+huggingface_hub>=1.20
+modal
+pre-commit
+python-dotenv
+PyYAML
+requests
+rich
+typer
+tenacity
+tqdm
+unidiff

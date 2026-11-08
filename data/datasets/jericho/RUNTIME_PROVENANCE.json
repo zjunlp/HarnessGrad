@@ -1,0 +1,49 @@
+{
+  "package": "jericho",
+  "version": "3.3.1",
+  "source_archive": "jericho-3.3.1.tar.gz",
+  "sha256": "032dde60a155dd9984d6db05b2c6ac22897446fb13a6a248cff8086001185571",
+  "sha256_sources": [
+    "https://pypi.tuna.tsinghua.edu.cn/simple/jericho/",
+    "https://mirrors.aliyun.com/pypi/simple/jericho/"
+  ],
+  "official_source_check": "unavailable: TLS/network connection failure",
+  "license": "GPL-2.0-or-later",
+  "license_file": "LICENSE.upstream",
+  "requirements_lock": "requirements.lock",
+  "requirements_resolution": "uv pip compile --python-version 3.12 against Tsinghua PyPI simple; exact transitive versions",
+  "spacy_model": "not provided; legacy supported interaction avoids template-action generation; other paths unverified",
+  "local_control": {
+    "artifact_scope": "execution",
+    "artifact_runtime_id": "10397dda2b90882408d1121c18d338527c76489e2a42f1798a70c5151b635b19",
+    "result": "Python 3.12 isolated import Jericho 3.3.1 and NumPy 2.5.4, dlopen libfrotz; no ROM",
+    "spacy_imported_at_import": false
+  },
+  "native_source_comparison": {
+    "scope": "seven package Python files in source archive match the already pinned scorer manifest; locally built libfrotz matches that manifest",
+    "native_scorer_manifest_sha256": "66980eb3446bddfa1f27dec7664ce18d0e1161d572a0fb6c1c70b24aa9e93e4f",
+    "not_claimed": "official PyPI hash independently verified, released-ROM execution or portability to another build host"
+  },
+  "license_sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+  "authored_native_control": {
+    "test": "tests/quality/test_jericho_authored_engine.py",
+    "scope": "original minimal Z-machine v3 byte program; actual libfrotz reset/step compared with historical public projection at seed zero",
+    "fully_supported": false,
+    "benchmark_measured": false,
+    "limits": "zero score/moves, no player object; inventory failure sanitized; no released game, reference walkthrough or native scorer completion"
+  },
+  "supported_authored_native_control": {
+    "test": "tests/quality/test_jericho_supported_native.py",
+    "source": "authored_story.py",
+    "license": "CC0-1.0",
+    "engine": "unmodified Jericho 3.3.1 libfrotz; public TextWorld ABI",
+    "fully_supported": true,
+    "scope": "original v5 story; native object inventory/state/score/done, real relay/client and shipped task-bound scorer replay",
+    "native_score": 2,
+    "maximum": 2,
+    "moves": 2,
+    "released_benchmark_measured": false,
+    "sealed_native_scorer_verified": false,
+    "guide": "NATIVE_CONTROL.md"
+  }
+}

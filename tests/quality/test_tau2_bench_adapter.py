@@ -35,8 +35,11 @@ def selected_case(tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, "roster", lambda: {tid: row})
     monkeypatch.setattr(config, "current", lambda: config.load({
         "HG_ENV_MODEL": "fixture-user", "HG_JUDGE_MODEL": "fixture-judge"}))
-    monkeypatch.setattr(dataset, "_python_runtime", lambda runtime: (
-        str(runtime / "bin/python"), (str(runtime),)))
+    runtime = tmp_path / "runtime"
+    monkeypatch.setattr(dataset, "_execution_runtime", lambda: {
+        "dataset": "tau2_bench", "profile": "execution", "runtime_id": "a" * 64,
+        "manifest_path": str(tmp_path / "artifact.json"), "path": str(runtime),
+        "python": str(runtime / "bin/python"), "runtime_paths": [str(runtime)]})
     return SimpleNamespace(tid=tid, row=row, folder=folder, public=public)
 
 
@@ -95,6 +98,8 @@ def test_directories_alone_do_not_claim_provisioning(tmp_path, monkeypatch):
     (tmp_path / "bundle").mkdir()
     monkeypatch.setattr(dataset, "DATASET_ROOT", tmp_path)
     monkeypatch.setattr(dataset, "RUNTIME", tmp_path / "runtime")
+    monkeypatch.setattr(dataset, "_execution_runtime", lambda: {
+        "path": str(tmp_path / "runtime"), "runtime_id": "a" * 64})
     status = dataset.provision_status()
     assert status["present"] is False
     assert status["tasks"] == 0

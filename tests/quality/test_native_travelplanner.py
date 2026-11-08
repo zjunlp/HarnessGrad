@@ -103,3 +103,36 @@ def test_prepared_adapter_conversion_and_hash_custody(planning, tmp_path, monkey
     (target / 'database/flights/clean_Flights_2022.csv').write_text('changed')
     with pytest.raises(ValueError, match='digest mismatch'):
         adapter.load()
+
+
+def test_managed_native_constraint_controls(planning, tmp_path):
+    """Same authored native constraint controls in the admitted component Python."""
+    import subprocess
+    from harnessgrad.dataset_runtime import resolve_execution, DatasetRuntimeUnavailable
+    try:
+        runtime = resolve_execution('travelplanner')
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('managed TravelPlanner execution artifact is not provisioned')
+    database, row, plan = planning
+    assets = Path(__file__).resolve().parents[2] / 'data/scaffolds/native_research'
+    script = '''import json,sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from native import activate
+activate()
+from flashrsi.integrations._travelplanner_grade import score
+row,plan,database=json.load(sys.stdin)
+good=score(row,plan,Path(database))
+plan[1]['breakfast']='Unknown restaurant, Beta'
+bad=score(row,plan,Path(database))
+print(json.dumps([good,bad]))
+'''
+    proc = subprocess.run([runtime['python'], '-I', '-B', '-c', script, str(assets)],
+        input=json.dumps([row, plan, str(database)]), text=True, capture_output=True,
+        cwd=tmp_path, timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    good, bad = json.loads(proc.stdout.splitlines()[-1])
+    assert good['final_pass_rate'] == 1.
+    assert bad['final_pass_rate'] == 0.

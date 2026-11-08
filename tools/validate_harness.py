@@ -58,6 +58,11 @@ DOCUMENTATION_ONLY = ("notes",)
 #: the platform's own files into a measured tree.
 _NOT_SOURCE = (".git", "__pycache__", "_harnessgrad", "node_modules", ".state")
 
+_MANAGED_PYTHON_SMOKE_UNSUPPORTED = (
+    'managed Python smoke is not supported by the legacy validate API; '
+    'use tools/validate_harness.py <dir> --smoke --work-root <external-dir> '
+    'with its native sandbox and prepared bound runtime')
+
 
 def _resolve(path: Path) -> Path:
     """Normalize old pathlib's loop RuntimeError into a refused input."""
@@ -104,12 +109,12 @@ def _tree_files(root: Path, ignored=(), *, boundary: Path | None = None) -> list
     return sorted(files, key=lambda item: item[0].encode('utf-8'))
 
 
-#: Bytecode is the one thing excluded from a source identity. It is *derived* from sources
+#: Bytecode is excluded from the legacy submission identity. It is *derived* from sources
 #: that are hashed anyway, and it appears or disappears depending on whether the tree has
 #: ever been imported -- measured 2026-11-01: a `base_harness/loop` copy gained a
 #: `__pycache__/` when the test suite loaded its `agent.py`, and the same submission then
-#: hashed differently. Everything else stays in, including Bun state, because that is what
-#: actually ran.
+#: hashed differently. Legacy/Bun input keeps everything else. Managed Python uses its
+#: source-only copying policy: generated environments and runtime state are not inputs.
 _BYTECODE = '__pycache__'
 
 
@@ -121,7 +126,8 @@ def source_identity(root: Path) -> dict:
     `entries` counts these file paths; directories contribute no entry. Safe
     in-tree links use their logical path and target bytes; escaping, broken or
     cyclic links are refused. Bytecode (`__pycache__/`, `*.pyc`) is excluded -- see
-    `_BYTECODE`; every other input file is included, including Bun state.
+    `_BYTECODE`; every other legacy input file is included, including Bun state.
+    Managed Python also excludes generated environments/state using its source-copy policy.
 
     **This is the submission contract's `path\\0content` hash, not a Git tree hash.** The
     platform records two identities for an external harness and they are different
@@ -131,8 +137,17 @@ def source_identity(root: Path) -> dict:
     actually ran -- the same name and the same function the curve point carries.
     """
     root = _resolve(Path(root))
-    files = [(name, path) for name, path in _tree_files(root, ignored=(_BYTECODE,))
-             if not name.endswith('.pyc')]
+    ignored, bytecode = (_BYTECODE,), ('.pyc',)
+    try:
+        manifest = json.loads((root / 'harness.json').read_bytes())
+    except (OSError, ValueError):
+        manifest = {}
+    runtime = manifest.get('runtime') if isinstance(manifest, dict) else None
+    if isinstance(runtime, dict) and runtime.get('kind') == 'python':
+        from eval.ckpt.source_tree import PYTHON_BYTECODE, PYTHON_GENERATED
+        ignored, bytecode = PYTHON_GENERATED, PYTHON_BYTECODE
+    files = [(name, path) for name, path in _tree_files(root, ignored=ignored)
+             if not name.endswith(bytecode)]
     digest = hashlib.sha256()
     for name, path in files:
         digest.update(name.encode('utf-8') + b'\0')
@@ -349,13 +364,21 @@ def check(root: Path) -> list[dict]:
     if role not in ROLES:
         problem('manifest-invalid', f"role {role!r} is not one of {list(ROLES)}", 'role')
 
-    from eval.ckpt.source_tree import BUN_GENERATED, runtime_spec
+    from eval.ckpt.source_tree import BUN_GENERATED, PYTHON_GENERATED, runtime_spec
     try:
         runtime = runtime_spec(root)
     except (OSError, ValueError) as exc:
         problem('manifest-invalid', str(exc), 'runtime')
         runtime = None
-    ignored = BUN_GENERATED if runtime else _NOT_SOURCE
+    ignored = (PYTHON_GENERATED if runtime and runtime["kind"] == "python"
+               else BUN_GENERATED if runtime else _NOT_SOURCE)
+    if runtime and runtime["kind"] == "python":
+        try:
+            from harnessgrad.python_harness_runtime import descriptor, source_fingerprint
+            descriptor(root)
+            source_fingerprint(root)
+        except (OSError, ValueError) as exc:
+            problem('manifest-invalid', str(exc), 'runtime')
     try:
         # Check links throughout the source, not only the declared entrypoint.
         _tree_files(root, ignored)
@@ -383,6 +406,9 @@ def validate(root: Path, smoke: bool) -> list[str]:
     if unknown:
         print(f"  note: extra manifest keys ignored by the platform: {unknown}")
     if smoke:
+        runtime = man.get('runtime')
+        if isinstance(runtime, dict) and runtime.get('kind') == 'python':
+            return [_MANAGED_PYTHON_SMOKE_UNSUPPORTED]
         base = root / man.get('path', '.')
         errs.extend(_smoke(base, base / man['entrypoint']))
 
@@ -421,15 +447,19 @@ def _smoke_temporary(parent, prefix, io_budget=None):
             io_budget(-reserved)
 
 
-def _smoke_copy(source, target, charge, *, root):
+def _smoke_copy(source, target, charge, *, root, managed=False):
     mode = source.lstat().st_mode
     if stat.S_ISDIR(mode):
         charge(4096)
         target.mkdir()
         for child in source.iterdir():
+            if managed:
+                from eval.ckpt.source_tree import PYTHON_GENERATED, PYTHON_BYTECODE
+                if child.name in PYTHON_GENERATED or child.name.endswith(PYTHON_BYTECODE):
+                    continue
             if source == root and child.name == '.state':
                 continue  # State is per-task tmpfs, never the uploaded cache contents.
-            _smoke_copy(child,target/child.name,charge,root=root)
+            _smoke_copy(child,target/child.name,charge,root=root,managed=managed)
     elif stat.S_ISREG(mode):
         charge(4096)
         with source.open('rb') as incoming, target.open('xb') as output:
@@ -485,6 +515,19 @@ def _smoke(base: Path, entry: Path, *, runner=None, temp_root=None, io_budget=No
     return errs
 
 
+def prepared_dependency_binding(root: Path) -> dict:
+    """Read-only template source/dependency check, not actor-source admission.
+
+    Installed templates may contain installer-generated bytecode. Only the later
+    source-only snapshot is admitted as executable candidate source.
+    """
+    from harnessgrad import python_exec_runtime, python_harness_runtime
+    if python_exec_runtime.descriptor(root) is not None:
+        return python_exec_runtime.prepare(root, build=False,
+            envs={'smoke': {'kind': 'files'}})['identity']
+    return python_harness_runtime.identity(root)
+
+
 def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> list[dict]:
     """Shared smoke contract in the existing sandbox, with no host fallback.
 
@@ -493,6 +536,7 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
     This is an interface probe, not a benchmark measurement.
     """
     from eval.containers import sandbox
+    from harnessgrad import candidate_runtime, python_exec_runtime
 
     root, platform, work_root = Path(root).resolve(), Path(platform).resolve(), Path(work_root).resolve()
     if (work_root == platform or work_root.is_relative_to(platform)
@@ -502,16 +546,45 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
     problems = check(root)
     if problems:
         return problems
+    man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
+    runtime = man.get('runtime')
+    managed = isinstance(runtime, dict) and runtime.get('kind') == 'python'
+    binding = None
+    if managed:
+        try:
+            # Check prepared dependencies before allocating any smoke workspace.
+            binding = prepared_dependency_binding(root)
+        except (OSError, ValueError, candidate_runtime.RuntimeUnavailable) as exc:
+            return [{'code': 'service-not-ready', 'detail': str(exc)}]
     state = root/'.state'
     if state.is_symlink() or (state.exists() and not state.is_dir()):
         return [{'code':'smoke-failed','detail':'.state must be an ordinary directory'}]
-    man = json.loads((root/'harness.json').read_text(encoding='utf-8'))
     env = {'PATH': '/usr/bin:/bin', 'HOME': '/tmp', 'TMPDIR': '/tmp',
            'HG_AGENT_BACKEND': 'mock', 'PYTHONDONTWRITEBYTECODE': '1'}
     limits = sandbox.configured_limits()
 
+    def admit_copy():
+        try:
+            candidate_runtime.admit(copy_root, binding, envs={'smoke': {'kind': 'files'}}, sandbox=True)
+        except ValueError as exc:
+            # Classify malformed runtime/source declarations at their own boundary.
+            # Caller quota failures can also inherit ValueError and must propagate.
+            raise sandbox.SandboxUnavailable(str(exc)) from exc
+
     def run(argv, task_dir):
         try:
+            runtime_paths = ()
+            visible_paths = ()
+            if managed:
+                admit_copy()
+                artifact = python_exec_runtime.placement(binding)['artifact']
+                runtime_paths = tuple(Path(path) for path in artifact['runtime_paths'])
+                hidden = sandbox.hidden_trees(work_root, platform)
+                visible_paths = tuple(path for path in runtime_paths
+                                      if any(path.is_relative_to(tree) for tree in hidden))
+                entry = Path(man.get('path', '.')) / man['entrypoint']
+                argv = python_exec_runtime.actor_argv(binding, {'kind': 'files'}, copy_root, entry) + argv[2:]
+
             # Check infrastructure with trusted code before interpreting subject exit.
             try:
                 ready = sandbox.run(['/bin/true'], platform=platform, work_root=work_root,
@@ -522,10 +595,17 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
             if ready.returncode:
                 raise sandbox.SandboxUnavailable('smoke namespace could not start: '
                                                  + _smoke_tail(ready.stdout, ready.stderr))
-            return sandbox.run(argv, platform=platform, work_root=work_root,
+            if managed:
+                admit_copy()
+            result = sandbox.run(argv, platform=platform, work_root=work_root,
                                task_dir=task_dir, env=env, repo=copy_root,state_dirs=(state,),
                                timeout_s=_SMOKE_TIMEOUT, cwd=task_dir, network='none',
-                               limits=limits)
+                               limits=limits, runtime_paths=runtime_paths,
+                               visible_paths=visible_paths, platform_interpreter=not managed,
+                               opaque_source_dirs=('.git', '_harnessgrad', '.opencode-state', '.state') if managed else ())
+            if managed:
+                admit_copy()
+            return result
         except OSError as exc:
             raise sandbox.SandboxUnavailable(f'smoke sandbox could not start: {exc}') from exc
 
@@ -533,15 +613,18 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
         _smoke_work_root(work_root,io_budget)
         with _smoke_temporary(work_root,'hg-smoke-source-',io_budget) as (temporary,charge):
             copy_root = temporary/'harness'
-            _smoke_copy(root,copy_root,charge,root=root)
+            _smoke_copy(root,copy_root,charge,root=root,managed=managed)
             state = copy_root/'.state'
             charge(4096)
             state.mkdir()
             env['HARNESSGRAD_STATE'] = str(state)
+            if managed:
+                artifact = python_exec_runtime.placement(binding)['artifact']
+                env = python_exec_runtime.actor_environment(env, artifact)
             base = copy_root/man.get('path','.')
             errors = _smoke(base, base/man['entrypoint'],runner=run,
                             temp_root=work_root.parent,io_budget=io_budget)
-    except (sandbox.SandboxUnavailable, OSError) as exc:
+    except (sandbox.SandboxUnavailable, OSError, candidate_runtime.RuntimeUnavailable) as exc:
         return [{'code': 'service-not-ready', 'detail': str(exc)}]
     return [{'code': 'smoke-failed', 'detail': error} for error in errors]
 
@@ -549,18 +632,36 @@ def smoke(root: Path, *, platform: Path, work_root: Path, io_budget=None) -> lis
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("harness")
+    ap.add_argument("--work-root", type=Path, help="external writable root required for managed sandbox smoke")
+    ap.add_argument("--check-runtime", action="store_true", help="read-only template source/prepared dependency check; not actor-source admission")
     ap.add_argument("--smoke", action="store_true",
                     help="also run the harness on a trivial task")
     args = ap.parse_args()
 
     root = Path(args.harness)
     print(f"validating {root}")
-    errs = validate(root, args.smoke)
+    from harnessgrad import candidate_runtime
+    managed = candidate_runtime.has_python(root) if not check(root) else False
+    errs = validate(root, args.smoke and not managed)
+    if not errs and args.check_runtime:
+        if not managed:
+            errs = ['--check-runtime requires a managed Python harness']
+        else:
+            try:
+                prepared_dependency_binding(root)
+            except (OSError, ValueError, RuntimeError) as exc:
+                errs = [str(exc)]
+    if not errs and args.smoke and managed:
+        if args.work_root is None:
+            errs = ['managed Python smoke requires --work-root outside source/platform; prepare with tools/configure_harness.py first']
+        else:
+            errs = [item['detail'] for item in smoke(root, platform=ROOT, work_root=args.work_root)]
     if errs:
         for e in errs:
             print(f"  FAIL  {e}")
         return 1
     print(f"  OK    harness.json valid"
+          + (", prepared source/dependencies checked (actor source not admitted)" if args.check_runtime else "")
           + (", smoke run produced an answer" if args.smoke else ""))
     return 0
 

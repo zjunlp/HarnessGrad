@@ -1,0 +1,9 @@
+{
+  "source_repository": "https://github.com/zjunlp/HarnessGrad",
+  "source_commit": "853828b283d5a8429d4989c743884ea64e88e576",
+  "source_path": "data/scaffolds/qa/base.py",
+  "fixture_path": "qa_base.py",
+  "sha256": "3482024468ba85bda8c3e436e088077903c731d46f9216bfd36bd1060bc1808a",
+  "license": "MIT",
+  "purpose": "Reviewed ChessBench native scorer source bytes retained for synthetic admission tests."
+}

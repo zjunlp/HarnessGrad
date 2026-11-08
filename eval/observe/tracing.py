@@ -19,6 +19,7 @@ import os
 import shutil
 import signal
 import sys
+import tempfile
 from pathlib import Path
 
 from eval.containers.immutable_runtime import projections
@@ -214,7 +215,13 @@ def loop_facts(trace_text: str) -> dict:
         "output_clipped_events": clipped_events,
         "output_clipped_chars": clipped_chars,
         "history_dropped": history_dropped,
-        "tokens": (usage.get("input_tokens") or 0) + (usage.get("output_tokens") or 0),
+        "tokens": (usage["input_tokens"] + usage["output_tokens"]
+                   if all(type(usage.get(key)) is int for key in ("input_tokens", "output_tokens"))
+                   and not (usage.get("scope") != "session_including_auxiliary"
+                            and type(usage.get("reported_steps")) is int and type(usage.get("completed_steps")) is int
+                            and usage["reported_steps"] < usage["completed_steps"]) else None),
+        "tokens_reported": sum(usage.get(key, 0) for key in ("input_tokens", "output_tokens")
+                               if type(usage.get(key)) is int),
         "ended": _ended(usage, answers, parse_errors, commands, steps),
     }
 
@@ -289,6 +296,75 @@ def _last_identity(trace: str) -> dict | None:
         if isinstance(event, dict) and isinstance(event.get("harness_identity"), dict):
             found = event["harness_identity"]      # last one wins
     return found
+def harness_usage_totals(by_task, *, trials=1):
+    """Canonical totals require every task/trial; *_reported are lower bounds.
+
+    tasks_reported retains its historical meaning: tasks with any usage object.
+    A complete session total can cover missing individual OpenCode step records.
+    """
+    total = {"tasks_total": len(by_task), "tasks_reported": 0,
+             "trials_total": len(by_task) * trials, "trials_reported": 0}
+    for key in ("input", "output", "calls"):
+        total[key + "_reported"] = total[key + "_tasks_known"] = 0
+    for reports in by_task.values():
+        reports = list(reports)
+        total["tasks_reported"] += any(isinstance(report, dict) for report in reports)
+        total["trials_reported"] += sum(isinstance(report, dict) for report in reports)
+        for key, field in (("input", "input_tokens"), ("output", "output_tokens"), ("calls", "calls")):
+            complete = len(reports) == trials
+            for report in reports:
+                report = report if isinstance(report, dict) else {}
+                value = report.get(field)
+                valid = type(value) is int and value >= 0
+                if valid:
+                    total[key + "_reported"] += value
+                reported, completed = report.get("reported_steps"), report.get("completed_steps")
+                partial_steps = (key != "calls" and report.get("scope") != "session_including_auxiliary"
+                                 and type(reported) is int and type(completed) is int and reported < completed)
+                complete = complete and valid and not partial_steps
+            total[key + "_tasks_known"] += bool(complete)
+    for key in ("input", "output", "calls"):
+        total[key + "_tasks_missing"] = total["tasks_total"] - total[key + "_tasks_known"]
+        total[key] = total[key + "_reported"] if not total[key + "_tasks_missing"] else None
+    total["scope"] = "partial" if any(total[key + "_tasks_missing"] for key in ("input", "output", "calls")) else "complete"
+    return total
+
+
+def environment_usage_totals(reports):
+    """Aggregate service coverage without confusing missing usage with zero."""
+    total = {"services_reported": 0, "services_total": 0, "coverage_unknown": False}
+    dimensions = (("input", "input_tokens"), ("output", "output_tokens"),
+                  ("calls", "calls"), ("attempts", "attempts"),
+                  ("unknown_usage_attempts", "unknown_usage_attempts"))
+    for key, _ in dimensions:
+        total[key + "_reported"] = total[key + "_services_known"] = 0
+    for report in reports:
+        report = report or {}
+        count = report.get("services_total", report.get("services_reported", 0))
+        total["services_total"] += count
+        total["services_reported"] += report.get("services_reported", 0)
+        total["coverage_unknown"] |= bool(report.get("coverage_unknown"))
+        for key, field in dimensions:
+            value = report.get(field)
+            reported = report.get(field + "_reported", value)
+            if type(reported) is int and reported >= 0:
+                total[key + "_reported"] += reported
+            known = report.get(key + "_services_known")
+            if known is None:
+                complete = type(value) is int and value >= 0
+                if key in ("input", "output"):
+                    complete = complete and report.get("usage_complete") is not False
+                known = count if complete else 0
+            total[key + "_services_known"] += known
+    for key, _ in dimensions:
+        total[key + "_services_missing"] = total["services_total"] - total[key + "_services_known"]
+        total[key] = (total[key + "_reported"] if not total[key + "_services_missing"]
+                      and not total["coverage_unknown"] else None)
+    total["usage_complete"] = (not total["coverage_unknown"] and
+                               not any(total[key + "_services_missing"] for key in ("input", "output")))
+    return total
+
+
 def _last_usage(trace: str) -> dict | None:
     """The `usage` block a harness wrote into its trace, if it wrote one.
 
@@ -323,13 +399,33 @@ def _clear_tree(target: Path) -> None:
 
     `chmod` first (a directory that cannot be traversed cannot be emptied), then remove.
     """
+    if target.is_symlink():
+        target.unlink()
+        return
     if not target.exists():
         return
     for root, dirs, _files in os.walk(target):
         os.chmod(root, 0o755)
         for name in dirs:
-            os.chmod(Path(root) / name, 0o755)
+            child = Path(root) / name
+            if not child.is_symlink():
+                os.chmod(child, 0o755)
     shutil.rmtree(target, ignore_errors=True)
+
+
+def _materialize_file(target: Path, *, content=None, source=None) -> None:
+    """Replace a destination inode without writing through actor-created aliases."""
+    descriptor, temporary = tempfile.mkstemp(prefix=".hg-input-", dir=target.parent)
+    staged = Path(temporary)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            if source is None:
+                stream.write(str(content))
+        if source is not None:
+            shutil.copy2(source, staged)
+        os.replace(staged, target)
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 def _materialize(workdir: Path, entries, platform_root: Path,
@@ -351,8 +447,11 @@ def _materialize(workdir: Path, entries, platform_root: Path,
 
     Paths are refused rather than clamped if they escape `workdir`: a `../` silently
     turning into `.` would set up a task whose inputs are not where the dataset said.
+    Symbolic destination paths are refused. File restoration replaces the inode so
+    private inputs cannot overwrite another task artifact through a hard link.
     """
     written: list[str] = []
+    root = workdir.resolve()
     for entry in entries or []:
         projections([entry])
         if entry.get("immutable") is True:
@@ -363,13 +462,17 @@ def _materialize(workdir: Path, entries, platform_root: Path,
         rel = str(entry.get("path") or "")
         if not rel:
             continue
-        target = (workdir / rel).resolve()
-        if not str(target).startswith(str(workdir.resolve()) + os.sep) \
-                and target != workdir.resolve():
+        target = Path(os.path.abspath(root / rel))
+        if not target.is_relative_to(root):
             raise ValueError(f"setup path {rel!r} escapes the working directory")
+        current = target
+        while current != root:
+            if current.is_symlink():
+                raise ValueError(f"setup path {rel!r} uses a symbolic link")
+            current = current.parent
         if "content" in entry and entry["content"] is not None:
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(str(entry["content"]))
+            _materialize_file(target, content=entry["content"])
         elif "from" in entry:
             source = Path(str(entry["from"]))
             if not source.is_absolute():
@@ -381,7 +484,7 @@ def _materialize(workdir: Path, entries, platform_root: Path,
                 shutil.copytree(source, target, dirs_exist_ok=True)
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
+                _materialize_file(target, source=source)
         else:
             continue
         written.append(rel)
@@ -466,7 +569,11 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                     measured: list[dict], unmeasured: dict | None,
                     *, diagnostic: dict | None = None,
                     enforcement: dict | None = None,
-                    trial_evidence: list[dict] | None = None) -> None:
+                    usage_records: list[dict] | None = None,
+                    trial_evidence: list[dict] | None = None,
+                    dataset_runtime_identity: dict | None = None,
+                    harness_runtime_identity: dict | None = None,
+                    verification_context: dict | None = None) -> None:
     """Write one task's result the moment it exists, not at the end of the round.
 
     **Measured, twice, and the second time cost two hours.** A round's results were
@@ -493,13 +600,25 @@ def _write_progress(progress_dir, round_no: int, tid: str,
     """
     if progress_dir is None:
         return
+    from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
+    from harnessgrad import candidate_runtime
+    from harnessgrad import verification_context as verification_context_mod
+    runtime_fields = {**dataset_runtime_identity_mod.fields(dataset_runtime_identity),
+                      **candidate_runtime.fields(harness_runtime_identity),
+                      **verification_context_mod.fields(verification_context)}
     try:
         dest = Path(progress_dir) / "progress" / f"round-{round_no}"
         dest.mkdir(parents=True, exist_ok=True)
+        cost_records = usage_records if usage_records is not None else [
+            {"usage": _last_usage(result.get("trace") or ""), "env_usage": result.get("env_usage") or {}}
+            for result in measured]
         if unmeasured is not None:
             record = {"task_id": tid, "round": round_no, "invalid": unmeasured,
+                      **runtime_fields,
                       "exit_code": None,
-                      "process_outcome": unmeasured.get("outcome")}
+                      "process_outcome": unmeasured.get("outcome"),
+                      "trial_usage": [result["usage"] for result in cost_records],
+                      "trial_env_usage": [result["env_usage"] for result in cost_records]}
             if enforcement is not None:
                 record["enforcement"] = enforcement
             if trial_evidence is not None:
@@ -567,6 +686,7 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                 break
         _write_progress_record(task_file(dest, f"{tid}.json"), json.dumps({
             "task_id": tid, "round": round_no,
+            **runtime_fields,
             **({"runtime_services": [r.get("runtime_services") for r in measured]}
                if any(r.get("runtime_services") for r in measured) else {}),
             "score": sum(scores) / len(scores) if scores else None,
@@ -574,6 +694,8 @@ def _write_progress(progress_dir, round_no: int, tid: str,
             "scorer_isolation_comparable": isolation != "unknown",
             "trial_scorer_isolation": [observed_class(r.get("verdict")) for r in measured],
             "trial_scores": scores, "n_trials": len(scores),
+            "trial_usage": [result["usage"] for result in cost_records],
+            "trial_env_usage": [result["env_usage"] for result in cost_records],
             "passed": last.get("passed"), "kind": last.get("kind"),
             "detail": last.get("detail"),
             "tests": last.get("tests"),

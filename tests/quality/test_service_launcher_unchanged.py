@@ -300,3 +300,38 @@ def test_the_verifier_call_site_still_gets_no_envelope():
         keywords = {keyword.arg for keyword in call.keywords}
         assert "limits" not in keywords, (
             "the verifier's fresh container must keep `command()`'s default envelope")
+
+
+@pytest.mark.parametrize("gateway", ["web", "model"])
+def test_gateway_failure_cleans_only_its_instance_network(launched, tmp_path, monkeypatch, gateway):
+    """Exercise runner finally with mocked Docker and gateway start failures."""
+    import eval.run.runner as runner_mod
+    from eval.service import services as service_mod
+
+    ids = iter(["a" * 64, "b" * 64])
+    allocated, removed = [], []
+    def create(*_args):
+        value = next(ids)
+        allocated.append(value)
+        return value
+    monkeypatch.setattr(service_mod, "create_network", create)
+    monkeypatch.setattr(service_mod, "remove_network", lambda value: removed.append(value) or [])
+    monkeypatch.setattr(service_mod, "gateway_ip", lambda _value: "127.0.0.1")
+    def failure(*_args, **_kwargs):
+        raise RuntimeError("synthetic gateway failure")
+    repo = _repo(tmp_path)
+    env = _env(services=[])
+    if gateway == "web":
+        env["web"] = {"search": True}
+        monkeypatch.setattr(runner_mod.web_gateway_mod, "WebGateway", failure)
+    else:
+        monkeypatch.setenv("HG_AGENT_BACKEND", "openai")
+        monkeypatch.setenv("HG_AGENT_BASE_URL", "http://127.0.0.1:8000/v1")
+        monkeypatch.setattr(runner_mod.modelgate_mod, "ModelGateway", failure)
+    for _ in range(2):
+        try:
+            _run(repo, env)
+        except RuntimeError as exc:
+            assert str(exc) == "synthetic gateway failure"
+    assert allocated == ["a" * 64, "b" * 64]
+    assert removed == allocated

@@ -215,7 +215,9 @@ location and against inputs the harness cannot modify**:
    the harness's artifacts mounted **read-only**.
 3. **Its inputs are re-materialized at verification time.** If the task ships tests,
    they are written again before the check runs, overwriting whatever the harness
-   left. Without this, editing the tests is the cheapest way to score.
+   left. File restoration replaces the destination inode, so a hard link cannot
+   transfer private reference bytes into an actor artifact. Symbolic destination
+   paths are refused. Without restoration, editing the tests is the cheapest way to score.
 4. **The result is one score per task, produced by the platform.**
 
 **Exit code and score are independent.** The harness's exit code says whether the
@@ -823,9 +825,8 @@ kinds of zero plus the real scores.
 
 `none` (default) → no network. `services` → an **`--internal` network shared by the services, the
 harness and the check**, so the services are reachable by name and the internet is not.
-`bridge` → the internet as well. Measured on this host: on an `--internal` network a peer is
-reachable by name, `1.1.1.1` is unreachable and DNS fails; under `network: none` the service is
-unreachable.
+`bridge` → the internet as well. On an `--internal` network peers are reachable by name;
+under `network: none` the service is unreachable.
 
 An exec task may declare `web: {"search": true, "fetch": true}`. The host starts the gateway on
 the task network and exports `HG_SVC_WEB_URL`; an undeclared task receives no such variable. The
@@ -1171,16 +1172,9 @@ container that was not running, and a verifier with no network while all 89 real
 install their own test dependencies at verify time). The third would have made every
 Terminal-Bench task score zero for a reason nothing recorded.
 
-**And the oracle is available per task, not per dataset**, which is a property of the
-benchmark rather than of this platform. Measured on five tasks whose solutions looked
-tractable: two passed, and the other three failed for reasons outside the platform —
-`build-pmars` pins `dpkg-dev=1.22.21`, which has left the Ubuntu archive;
-`configure-git-webserver` expects an `sshd_config` its image does not have;
-`count-dataset-tokens` downloads from `huggingface.co`, which the host running the
-measurement could not reach. In all three the check ran, read its reward, and told the
-truth. What that means is narrow and worth stating in any write-up: **a score of 0 on a
-task whose oracle has not been shown to pass is uninterpretable**, and which tasks those
-are cannot be worked out by reading the dataset — it has to be measured.
+**The oracle must be checked per task**, because a reference or its dependencies may fail
+for reasons specific to that task. A score of 0 on a task whose oracle has not been shown
+to pass is uninterpretable; record the control result and its environment.
 
 **A reference the platform wrote carries its own provenance.** Some benchmarks ship the tests
 and not the solution: LiveCodeBench's release carries public and private test cases but no
@@ -1913,10 +1907,8 @@ The split is now explicit:
 
 What lands on every curve point is `identity.improver`: `name`, `version`, `sha256`,
 `model`, `requested`, `modified`, `path`. The version and the hash are the load-bearing
-part, and the reason is measured: **three codex builds coexist on the development machine**
-(`0.125.0` with its native binary missing so `--version` crashes, `0.139.0`, `0.156.1`).
-Without this field, "the improver was upgraded" and "the method got better" are the same
-curve.
+part: recording them distinguishes an improver upgrade from a change in the method's
+performance.
 
 ##### `latest` is a request, not an identity
 
@@ -1934,8 +1926,8 @@ never "do not record".
 Two consequences follow, and both are implemented in `tools/improver.py`:
 
 * **`PATH` is not consulted as an authority.** The resolver enumerates candidates and
-  verifies each by executing `--version`; on the development machine `PATH` resolves to the
-  broken install, so "first on PATH" would be a wrong answer. `--list` prints every
+  verifies each by executing `--version`; the first candidate on `PATH` may be broken.
+  `--list` prints every
   candidate with the reason it was rejected.
 * **A version that cannot be honoured is a refusal, not a substitution.** Asking for
   `0.156.1` on a machine that only has `0.139.0` fails with the candidate list, because a

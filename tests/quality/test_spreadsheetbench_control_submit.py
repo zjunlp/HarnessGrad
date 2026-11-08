@@ -46,7 +46,11 @@ def control_record(tmp_path, monkeypatch):
     return control, record
 
 
-def test_materialized_oracle_submits_and_scores_one(control_record, tmp_path, capfd):
+def test_materialized_oracle_submits_and_scores_one(control_record, tmp_path, capfd, monkeypatch):
+    runtime_root = os.environ.get("HG_SPREADSHEETBENCH_TEST_RUNTIME_ROOT")
+    if not runtime_root or not os.environ.get("HG_SPREADSHEET_NATIVE_MANIFEST"):
+        pytest.skip("explicit external Python artifact and prepared native manifest required")
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", runtime_root)
     control, record = control_record
     workdir = tmp_path / "work"
 
@@ -79,6 +83,12 @@ def test_failed_submission_prints_both_streams(control_record, tmp_path, capfd):
 
 
 def test_authored_formula_control_preserves_input_and_scores_private_copy(tmp_path):
+    from harnessgrad import dataset_runtime
+    runtime_root = os.environ.get("HG_SPREADSHEETBENCH_TEST_RUNTIME_ROOT")
+    native_manifest = os.environ.get("HG_SPREADSHEET_NATIVE_MANIFEST")
+    if not runtime_root or not native_manifest:
+        pytest.skip("explicit external Python artifact and prepared native manifest required")
+    artifact = dataset_runtime.resolve_execution("spreadsheetbench", root=runtime_root)
     unshare = shutil.which("unshare")
     ip = shutil.which("ip", path=os.pathsep.join((os.environ.get("PATH", os.defpath),
                                                  "/usr/sbin", "/sbin")))
@@ -101,8 +111,8 @@ def test_authored_formula_control_preserves_input_and_scores_private_copy(tmp_pa
              "os.execv(sys.executable,[sys.executable,*sys.argv[2:]])")
     work = tmp_path / "authored-formulas"
     control = ROOT / "tests/fixtures/hg_spreadrt/synthetic_control.py"
-    result = subprocess.run([*namespace, sys.executable, "-c", setup, ip,
-                             str(control), str(work)], cwd=ROOT, env=env,
+    result = subprocess.run([*namespace, artifact["python"], "-I", "-B", "-c", setup, ip,
+                             str(control), str(work), native_manifest], cwd=ROOT, env=env,
                             capture_output=True, text=True, timeout=90)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "synthetic_control=PASSED" in result.stdout

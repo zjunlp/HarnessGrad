@@ -1,170 +1,80 @@
-# Clean installation: no-model reproducibility validation
+# Installation validation
 
-## Scope and result
+The [first-use guide](getting-started.md) is the user-facing Linux source workflow.
+An installation control verifies execution and records using synthetic tasks and
+mock responses. It is not a benchmark or evidence of model quality.
 
-Audited from `348953cdf61512a7731e160d5b086059992bf23e` in registered worktree
-`/tmp/hg-clean-install-20261104`, branch `codex/clean-install-20261104`.
-No README, driver, H0 or base-harness source was changed. No operator experiments
-were imported or run. This is a synthetic repository fixture check, **not a
-benchmark, production H0 authorization, or evidence of model quality**.
+## Source installation acceptance
 
-A noneditable offline installation initially printed help but failed the mock demo
-with exit 2: `no such harness: loop`. Namespace discovery excluded `base_harness`.
-After including it and its manifests, a sandboxed run reached all four tasks but
-failed with `FileNotFoundError: .../data/aggregation_policies.json`. Packaging now
-includes JSON contracts, Markdown skills/prompts, YAML configuration and harness
-requirements files through a curated explicit path allowlist (not wildcard data
-collection). The installer also now reports its actual Python floor (3.12,
-not the stale 3.10 error). No runtime dependencies were added.
-
-Final installed `demo-smoke` run (`clean-verified`) exited **0**, with Bubblewrap
-active, 4/4 train tasks, one trial each, zero improvement rounds, and `COMPLETE`.
-The mock emits no correct answers: score **0.000** is expected; task execution and
-measurement completion, not score improvement, is the installation assertion.
-
-## Follow-up wheel review
-
-Independent review found two omitted declared components: DeepSeek Harness's
-`dsh_farm.tsv` and MiniAgent's `LICENSE.upstream`. Both now ship. The extensionless
-`methods/dsh-improver` launcher also ships with executable permissions; it was
-inspected but **not executed** (its external DSH/model dependencies remain untested).
-
-Broad package-data globs were replaced by explicit reviewed resource paths with
-`include-package-data = false`. This avoids collecting ignored/untracked JSON,
-Markdown or YAML such as local credentials/receipts. The wheel regression injects
-12 synthetic local-secret files into a disposable source copy and verifies none
-ship, verifies every tracked local component/entrypoint/install file declared by
-each shipped harness manifest, and checks the launcher executable bit. Absolute
-runtime paths and generated/untracked outputs are not shipping obligations. The
-build itself requires no Git; only the test uses Git to construct its fixture.
-**The sandboxed installed execution validated here is the demo.** A separate offline
-installed-wheel test exercises synthetic GSM8K setup, submission and scoring; it does
-not run released dataset rows or a sandboxed benchmark. See the bounded
-[adapter resource inventory](wheel-adapter-resource-inventory.md).
-This curated list does not ship all adapter assets or `data/runtimes/*-native.json`:
-the wheel cannot run affected external adapters as a complete platform deployment.
-For those, use a reviewed checkout and their own provisioning/readiness gates;
-catalog visibility is not install support or authorization. No native manifest
-hashes were changed or repinned. In particular, inspection found these local
-resource consumers (not executed during this audit):
-
-- `data.runtimes.NATIVE_PINS` refers to scienceworld/chessbench/alfworld/jericho
-  native manifests; these are not included.
-- `data/scaffolds/native_research/swe_official.py` reads
-  `SWE_EVALUATOR_SOURCE.json`; native Harbor reads its runtime `PROVENANCE.json`.
-- Kumo/CostBench read `source-files.json`; MemoryAgentBench reads
-  `specs/source.json` and `specs/resources.lock.json`; JobBench/DeepSWE/SWE-bench
-  Pro preparation reads `SOURCE.json`. These adapter resources are not included.
-
-These are concrete omissions, not a complete inventory of adapter requirements.
-Other extensionless dataset CLIs likewise remain outside this demo-install scope.
-No external adapter execution was attempted, and no general fail-closed behavior
-for missing assets was proved.
-
-The sentinel exclusion guarantee applies **only to non-Python package data**.
-Namespace discovery still includes ignored/untracked Python modules beneath the
-included package roots. The regression separately demonstrates this with a benign
-ignored `data/local_ignored_module/__init__.py` in its disposable copy, without
-importing it. Build release wheels only from a clean reviewed/exported source tree;
-the explicit data allowlist is not a general dirty-checkout security boundary.
-
-After the allowlist refinement, the integrated tree was installed again offline into a
-fresh isolated venv with a separate empty HOME and no dataset/model configuration. The
-sandboxed `demo-smoke` mock loop exited 0, with four of four train tasks executed and
-`COMPLETE`; the expected score was 0.000. Bubblewrap was active, but the clean environment
-had no user systemd bus, so the resource-envelope warning remained. The temporary venv and
-run files were removed after the check; the command output was retained separately in
-`/tmp/hg-quality-final-clean-install.log`. This remains demo-only evidence, not support for
-external adapters or a production authorization.
-
-## Historical environment and reproduction template
-
-The host's available Python 3.12.4 interpreter created fresh venvs with no system
-site packages; Python's interpreter/stdlib still originate from that host. This is
-not a claim of portable interpreter provisioning. Build-only setuptools 84.0.0 was
-available as a cached wheel (818 kB), copied into the isolated venv by pip; the
-installed runtime does not import a personal checkout or user site packages.
-No package downloads, paid endpoints, model calls, or external dataset data were
-needed. `HG_DATA_ROOT` and all model credentials are absent through `env -i`.
-
-For reproduction, use a provisioned Python >=3.12 as `python3` and set `REPO`,
-`VENV` and `BUILD_WHEEL` to absolute local paths. Choose a fresh venv directory
-outside `/tmp`, the checkout and the run/work directories so the sandbox can
-mount its interpreter. Keep `TMPDIR` outside the checkout. The template below
-substitutes these local choices for the historical host locations.
+Use a clean checkout and a fresh external venv. Prepare the declared Loop runtime
+explicitly, as shown in the first-use guide. Preparation may download locked wheels;
+the subsequent control does not install packages, download data or contact models.
 
 ```bash
-: "${REPO:?Set REPO to the absolute checkout path}"
-: "${VENV:?Set VENV to a fresh absolute environment directory outside /tmp and the checkout}"
-: "${BUILD_WHEEL:?Set BUILD_WHEEL to an absolute local setuptools wheel path}"
-INSTALL_WORK=$(mktemp -d "${TMPDIR:-/tmp}/hg-clean-install.XXXXXX")
-HOME_TMP="$INSTALL_WORK/home"
-mkdir "$HOME_TMP"
-python3 -m venv "$VENV"
-env -i HOME="$HOME_TMP" PATH="$VENV/bin:/usr/bin:/bin" \
-  PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 \
-  python -m pip install --no-index "$BUILD_WHEEL"
-# Run outside the source checkout, with fresh run and work roots.
-(
-  cd "$INSTALL_WORK"
-  env -i HOME="$HOME_TMP" PATH="$VENV/bin:/usr/bin:/bin" \
-    PIP_CONFIG_FILE=/dev/null PIP_NO_INDEX=1 PYTHONNOUSERSITE=1 \
-    HG_AGENT_BACKEND=mock TMPDIR="$INSTALL_WORK" \
-    REPO="$REPO" INSTALL_WORK="$INSTALL_WORK" /bin/bash -xc \
-    'python -m pip install --no-index --no-build-isolation --no-deps --force-reinstall "$REPO" && harnessgrad run --scenario demo-smoke --harness loop --improver none --run-id "clean-verified-$$" --runs-root "$INSTALL_WORK/runs" --work-root "$INSTALL_WORK/work" --fail-on-incomplete'
-)
+python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
-Choose a **fresh run ID** on reproduction. Provision your own Python >=3.12 and
-local setuptools wheel. The results above describe the historical environment;
-the template does not provision its interpreter or wheel. Offline `--no-build-isolation` requires the
-build backend to have been installed first. A plain fresh Python 3.12 venv contains
-pip but need not contain setuptools. Online build isolation was not tested.
+Use `--runtime-root /path/to/prepared-store` if preparation used a custom store.
+The checker refuses an absent or invalid artifact before launching a task. It
+keeps logs and a JSON report in a new directory; existing attempts are not reused.
 
-Installed `harnessgrad --help`, `--version`, `run --help`, the dataset catalog
-(`data.scaffolds.registry.published()`), and embedded demo task loading all passed.
-Catalog listing is not a claim that any external dataset is provisioned. The demo
-fixture is embedded in `data/demo.py`; scenario defaults are shipped in
-`scenarios/demo-smoke.json`. Explicit `--improver none` and rounds=0 avoid an editor
-model even though the solver uses mock.
+The check covers native sandbox execution, explicit mock identity, preserved
+records on duplicate IDs, consumption of a matching prepared reservation, and
+result inspection and evidence export through its own temporary Console. It does
+not start or stop an existing Console, and the temporary handler exposes only
+its required read/export routes.
 
-## Unsupported layouts and limitations
+The venv and base Python must stay outside the checkout and `/tmp`, and work
+roots must stay outside the platform. Working Bubblewrap user namespaces are
+required. A resource-envelope warning is a separate limitation: namespace
+isolation alone does not establish resource containment.
 
-The first venv under `/tmp/hg-clean-install-runtime-20261104/venv` correctly refused
-the sandboxed loop with exit 2: `Python environment ... is under a hidden sandbox
-tree; create the venv outside /tmp and outside the platform/work directory`.
-That is an unsupported installation layout, **not a successful sandbox smoke**.
-Moving the isolated venv to the visible external path above resolved it. No
-`--no-sandbox` fallback was used. The final host supports Bubblewrap user namespaces.
-Other hosts may legitimately refuse: retain their exact diagnostic, do not weaken
-the sandbox or claim success.
+## Packaging regression
 
-The clean environment has no user systemd bus (`DBUS_SESSION_BUS_ADDRESS` and
-`XDG_RUNTIME_DIR` absent). The driver warned that the sandbox has **no resource
-envelope**. Namespace isolation passed; cgroup/resource containment was not proved.
-The loop declares `requirements.txt`, so the host-interpreter dependency warning
-also appears; mock execution needs no third-party runtime packages. No real-model
-requirements, dataset provisioning, other harness execution, sdist installation,
-or full suite were validated.
-
-## Regression and evidence
-
-`tests/quality/test_clean_install_contract.py` copies tracked packaging inputs,
-builds a wheel offline, installs into a fresh venv, removes the source copy, and
-checks CLI help/version/scenario, catalog/demo loading and required resource paths
-from an unrelated working directory. It never runs a model. The build/test
-interpreter needs pip, setuptools >=64 and pytest already provisioned. Its `/tmp`
-venv is deliberately not used for sandbox execution; that check is the explicit
-host audit above, not a skipped test represented as a pass.
+The focused packaging tests build and install a wheel from reviewed inputs, then
+check its CLI and declared resources from an unrelated working directory. They
+need Python 3.12+, pip, setuptools and pytest in the test environment. They do not
+prove every external adapter is provisioned or executable.
 
 ```bash
 python3 -m pytest tests/quality/test_clean_install_contract.py \
   tests/quality/test_cli_entry.py tests/quality/test_install_sh.py \
-  --basetemp=/tmp/hg-clean-install-pytest-20261104 -q
+  tests/quality/test_check_first_use.py tests/quality/test_wheel_console.py \
+  tests/quality/test_wheel_recipe_assets.py \
+  --basetemp=/tmp/hg-clean-install-pytest -q
 ```
 
-Machine-local exact stdout/stderr, commands and failed intermediate receipts are
-preserved in `/tmp/hg-clean-install-evidence-20261104/`; the handoff report is
-`/tmp/hg-clean-install-report.txt`. Preserve those receipts before removing the
-two venvs, temporary HOME/cache, mock workspaces and pytest basetemp. Retain the
-registered worktree for parent review, rather than removing its unmerged commit.
+See the [adapter resource inventory](wheel-adapter-resource-inventory.md) for
+current packaging coverage and [wheel Console guide](wheel-console.md) for
+observation without a source checkout. Build wheels from a clean reviewed source tree: an
+explicit package-data allowlist does not exclude untracked Python modules.
+External datasets, models and large runtime artifacts are prepared separately.
+
+## Installed-wheel execution acceptance
+
+Install a wheel into a fresh external CPython 3.12 venv, then run from an unrelated
+directory with the build source removed. With the matching Loop runtime already
+prepared in an external store, the same control is available as a module:
+
+```bash
+python -m tools.check_first_use --runtime-root /path/to/prepared-store \
+  --output-root "$HOME/.local/share/harnessgrad/wheel-checks"
+```
+
+This exercises sandboxed mock execution, namespace preservation, Console
+inspection and verified evidence export from installed code. The bundled
+`quickstart` recipe is also available through `harnessgrad run --preset quickstart`;
+use `--improver none`, a new run ID, and external result/work roots for its
+scripted control. See [installed usage](wheel-console.md) for the commands.
+
+Keep build/install logs, the wheel digest, source commit and control reports with
+the validation record. An installed mock run does not establish support for all
+adapters, all host platforms, or system resource containment.
+
+## Historical validation
+
+The earlier 2026-11-04 audit is preserved at published commit
+`b87be212e901d26262a1d3cc1b6356847899d19e`, path
+`docs/clean-install-validation.md`. Its reported results apply to that environment
+and fixture. Repeat the current workflow to validate a later version; historical
+passes and skipped tests do not establish current installation support.

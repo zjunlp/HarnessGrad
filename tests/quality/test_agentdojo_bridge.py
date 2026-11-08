@@ -7,6 +7,7 @@ official gold/noop utility and trusted replay semantics.
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -132,17 +133,26 @@ def test_verifier_measures_without_the_agent_visible_snapshot(tmp_path, runtime)
     `dojo.initial.json` there. Both halves are asserted here so a change to one side
     cannot silently break the other.
     """
+    from data.datasets import agentdojo as adapter
+    try:
+        selected = adapter._execution_runtime()
+        source = adapter._source_root()
+        spec = importlib.util.spec_from_file_location('dojo_source_gate', adapter.ASSETS / 'bootstrap.py')
+        gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gate)
+        gate.validate_source(source)
+    except (OSError, ValueError, RuntimeError):
+        pytest.skip('explicit managed execution artifact and clean pinned source required')
     case = json.loads((DATA / '_src/cases.json').read_text())[0]
     work = tmp_path / 'verify-only'
     (work / 'verify').mkdir(parents=True)
-    shutil.copy2(ROOT / 'data/datasets/agentdojo/verify/check.py', work / 'verify/check.py')
-    shutil.copy2(ROOT / 'data/datasets/agentdojo/bridge.py', work / 'verify/bridge.py')
+    shutil.copytree(adapter.ASSETS, work / 'dojo_code')
+    shutil.copytree(source, work / 'agentdojo_source')
     case_path = work / 'verify/case.json'
     case_path.write_text(json.dumps(case))
     (work / 'action.json').write_text(json.dumps(run_bridge('oracle', case_path)))
-    (work / 'trusted_runtime').symlink_to(DATA / 'runtime')
     assert not (work / 'dojo.initial.json').exists()
-    proc = subprocess.run(['python3', 'verify/check.py',
+    proc = subprocess.run([selected['python'], '-I', '-B', 'dojo_code/verify/check.py',
                            '--reward-file', 'verifier/reward.txt',
                            '--evidence-file', 'verifier/evidence.json'],
                           cwd=work, capture_output=True, text=True, timeout=120)

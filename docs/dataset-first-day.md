@@ -36,10 +36,9 @@ is different. The internal benchmark survey (kept outside this repository) marks
 primary source, and its correction notes name the ones it got wrong; the same directory states
 which of its pins were read only through a mirror.
 
-Two machine facts worth knowing before the first download on this host: `huggingface.co` and
-`raw.githubusercontent.com` are unreachable, while `hf-mirror.com` and `codeload.github.com`
-work. A pin verified only through a mirror is **mirror-verified**, and the record has to say
-so rather than claiming the canonical host agreed.
+Check access to each upstream source in your own environment. A pin verified only
+through a mirror is **mirror-verified**; record the mirror rather than claiming the
+canonical host was checked.
 
 **Choose a shared directory for the data.** Adapters and preparation tools use
 `harnessgrad.paths.dataset_root()`. Set `HG_DATA_ROOT` for the whole collection
@@ -47,7 +46,7 @@ so rather than claiming the canonical host agreed.
 as `HG_DATA_GSM8K` to override it. Only the `HG_DATA_` spellings are read.
 See [dataset storage](../README.md#dataset-storage) for defaults, `.env` precedence,
 directory naming and linked-worktree behavior.
-`python3 tools/datasets.py --check --dataset gsm8k` reports the actual server paths
+`python3 tools/datasets.py --check --dataset gsm8k` reports the resolved local paths
 and resource status; `DOWNLOADS.md` displays portable logical paths.
 
 ### 1.2 Find the function that computes the number

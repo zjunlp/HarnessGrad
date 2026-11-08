@@ -99,7 +99,7 @@ def _count(point, name):
     return len(values) if isinstance(values, (dict, list)) else None
 
 
-def _point(point):
+def _point(point, verification_groups=None):
     tasks = _object(point.get('per_task'))
     numeric = all(evidence.finite_number(v) for v in tasks.values())
     result = {
@@ -113,6 +113,9 @@ def _point(point):
         'task_scores': [tasks[k] for k in sorted(tasks)] if numeric else None,
         'sampling': _fields(point.get('sampling'), ('dataset', 'policy', 'seed')),
         'scoring_identity_sha256': _scalar(_object(point.get('scoring_identity')).get('sha256')),
+        'verification_context': evidence_stats.public_verification_context(point, verification_groups),
+        'dataset_runtime': evidence_stats.dataset_runtime(point),
+        'harness_runtime': evidence_stats.actor_runtime(point),
         'environment': _fields(point.get('env'), ('kind', 'image_digest', 'placement')),
         'measured_by_platform': point.get('measured_by_platform') is True,
         'measurement_problems': measurement_problems(point),
@@ -132,6 +135,8 @@ def _point(point):
 def _metadata(meta):
     meta = meta or {}
     return {**_fields(meta, ('run_id', 'dataset', 'harness', 'agent_model', 'agent_backend')),
+            'dataset_runtime': evidence_stats.dataset_runtime(meta),
+            'harness_runtime': evidence_stats.actor_runtime(meta),
             'platform': _fields(meta.get('platform'), ('content_sha', 'git_sha', 'git_commit')),
             'config': _config(meta),
             'completion': _fields(meta.get('completion'), ('status', 'requested_rounds', 'completed_rounds', 'coverage_complete'))}
@@ -311,9 +316,10 @@ def build_export(document, run_root, *, max_bytes=DEFAULT_MAX_BYTES, max_runs=No
         if findings:
             raise evidence.EvidenceError(findings[0]['code'])
         units = []
+        verification_groups = {}
         for name, run in runs.items():
             projected = {'run_meta': _metadata(run['meta']),
-                         'curve': [_point(p) for _, p in sorted(run['points'].items())],
+                         'curve': [_point(p, verification_groups) for _, p in sorted(run['points'].items())],
                          'patches': [_patch(store, name, number) for number in sorted(run['points'])]}
             units.append({'run_id': name, 'source_sha256': run['hashes'],
                           'missing': run['missing'], 'problems': run['problems'],
@@ -418,6 +424,16 @@ def check_export(bundle):
             comparison = comparisons[name]
             if comparison.get('score_delta') != expected:
                 return ['export_delta_mismatch']
+            if 'verification_context' in a or 'verification_context' in b:
+                ac, bc = a.get('verification_context', {}), b.get('verification_context', {})
+                if ac.get('status') != 'recorded' or bc.get('status') != 'recorded' or ac != bc:
+                    if comparison.get('comparable') is not False:
+                        return ['export_verification_context_mismatch']
+            if 'dataset_runtime' in a and 'dataset_runtime' in b:
+                ar, br = a['dataset_runtime'], b['dataset_runtime']
+                if ar != br or ar.get('status') == 'invalid':
+                    if comparison.get('comparable') is not False:
+                        return ['export_runtime_comparison_mismatch']
             expected_config = _diff(units[base['baseline_run']]['projection']['run_meta']['config'],
                                     units[result['run_id']]['projection']['run_meta']['config'])
             if (comparison.get('diff') != base.get('diff')
@@ -427,6 +443,15 @@ def check_export(bundle):
                 return ['export_diff_mismatch']
         for run in units.values():
             for point in run['projection']['curve']:
+                context = point.get('verification_context')
+                if context is not None and (not isinstance(context, dict)
+                        or context.get('status') not in ('recorded', 'unrecorded', 'invalid')
+                        or (context.get('status') == 'recorded' and (
+                            set(context) != {'status', 'equivalence_group'}
+                            or not isinstance(context.get('equivalence_group'), str)
+                            or not re.fullmatch(r'verification-[1-9][0-9]*', context['equivalence_group'])))
+                        or (context.get('status') != 'recorded' and set(context) != {'status'})):
+                    return ['export_verification_context_mismatch']
                 summary = point['trial_variation']
                 if summary.get('status') != 'available':
                     continue
@@ -444,6 +469,23 @@ def check_export(bundle):
             if group.get('status') != 'available':
                 continue
             selected = [points[(s['run_id'], s['round'])] for s in group['states']]
+            contexts = [p.get('verification_context') for p in selected]
+            if any(context is not None for context in contexts) and (
+                    any(context is None or context.get('status') != 'recorded' for context in contexts)
+                    or len({canonical(context) for context in contexts}) != 1):
+                return ['export_run_variation_mismatch']
+            actors = [p.get('harness_runtime') for p in selected]
+            if all(actor is not None for actor in actors):
+                if any(actor.get('status') != 'unrecorded' for actor in actors) and (
+                        any(actor.get('status') != 'recorded' for actor in actors)
+                        or len({actor.get('dependencies_sha256') for actor in actors}) != 1
+                        or len({actor.get('source_sha256') for actor in actors}) != 1):
+                    return ['export_run_variation_mismatch']
+            datasets = [p.get('dataset_runtime') for p in selected]
+            if all(item is not None for item in datasets) and (
+                    len({canonical(item) for item in datasets}) != 1
+                    or any(item.get('status') == 'invalid' for item in datasets)):
+                return ['export_run_variation_mismatch']
             attempt_status = {a['run_id']: a['status'] for a in bundle['manifest']['attempts']}
             if (len({s['run_id'] for s in group['states']}) != len(selected)
                     or any(attempt_status[s['run_id']] != 'measured' for s in group['states'])

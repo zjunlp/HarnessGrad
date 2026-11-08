@@ -32,8 +32,9 @@ relay offers exactly two ops, ``tools`` and ``call``, and there is no op that re
 environment, a state dump, or a ``model_dump``. The action log (``action.json``) stays
 agent-side because it is the replay transcript the verifier consumes. ``dojo_runtime`` left ``SETUP`` together with the snapshot: the client is
 standard-library-only, so the tool-only AgentDojo package is no longer on the agent's disk
-(``prepare.py`` still builds it; nothing projects it). ``VERIFY`` is untouched -- it never read
-the snapshot, and ``check.py`` re-derives the environment from ``case.json`` with
+(``prepare.py`` no longer builds it; nothing projects it). ``VERIFY`` uses
+the managed execution Python and pinned sources; it never reads the snapshot.
+``bridge.evaluate`` re-derives the environment from ``case.json`` with
 ``load_and_inject_default_environment``.
 
 **What still has to happen outside this adapter.** The platform must start the relay for the
@@ -45,6 +46,8 @@ wired here; the relay prints its receipt on shutdown for the runner to read.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 from harnessgrad.paths import dataset_root
@@ -124,6 +127,16 @@ def oracle_files(task):
     return {'action.json': (DATASET_ROOT / PREPARED / index / 'oracle.json').read_text()}
 
 
+def _execution_runtime():
+    from harnessgrad.dataset_runtime import resolve_execution
+    return resolve_execution('agentdojo')
+
+
+def _source_root():
+    return Path(os.environ.get('HG_AGENTDOJO_SOURCE_ROOT') or
+                DATASET_ROOT / '_src' / ('agentdojo-' + COMMIT) / 'src')
+
+
 def __getattr__(name):
     if name == 'TASK_COUNT':
         return len(records())
@@ -137,6 +150,9 @@ def __getattr__(name):
     if name == 'ENV':
         return {f'agentdojo/{i}': {'kind': 'files'} for i in _indices()}
     if name == 'SETUP':
+        from harnessgrad.dataset_runtime import bind
+        runtime = _execution_runtime()
+        source = _source_root()
         # One agent-visible program and no data. The interaction environment is served over the
         # socket the platform publishes; the transport beside it is the platform's, not a copy.
         #
@@ -148,25 +164,33 @@ def __getattr__(name):
             'files': [{'path': 'dojo.py', 'from': str(ASSETS / 'cli/dojo')}],
             'tool_relay': {
                 'program': str(ASSETS / 'relay.py'),
-                'python': str(DATASET_ROOT / 'runtime/bin/python'),
+                'python': runtime['python'],
+                'python_runtime': bind(runtime, 'service'),
                 'content_flag': '--case',
                 'filename': 'case.json',
                 # A path, not the text: `SETUP` must not read a task's case file (that is an
                 # existing invariant, pinned by test_agentdojo_metadata_privacy). The runner
                 # reads it when it stages the relay, for the one task it is about to run.
-                'content_path': str(DATASET_ROOT / PREPARED / str(i) / 'case.json'),
+                'content': json.dumps({'case_path': str(DATASET_ROOT / PREPARED / str(i) / 'case.json'),
+                                       'source_root': str(source)}),
+                'read_paths': [str(ASSETS.resolve()), str(ASSETS.parents[2] / 'eval'),
+                               str(source), str(DATASET_ROOT / PREPARED / str(i) / 'case.json')],
             },
         } for i in _indices()}
     if name == 'VERIFY':
+        from harnessgrad.dataset_runtime import bind
+        runtime = _execution_runtime()
         return {f'agentdojo/{i}': {
-            'kind': 'command', 'argv': ['python3', 'verify/check.py', '--reward-file', REWARD_REL,
+            'kind': 'command', 'python_runtime': bind(runtime, 'verifier'),
+            'runtime_paths': runtime['runtime_paths'],
+            'argv': [runtime['python'], '-I', '-B', 'dojo_code/verify/check.py', '--reward-file', REWARD_REL,
                                       '--evidence-file', EVIDENCE_REL],
             'inputs': [
-                {'path': 'verify/check.py', 'from': str(ASSETS / 'verify/check.py')},
-                {'path': 'verify/bridge.py', 'from': str(ASSETS / 'bridge.py')},
+                {'path': 'dojo_code', 'from': str(ASSETS), 'immutable': True},
                 {'path': 'verify/case.json', 'from': str(DATASET_ROOT / PREPARED / str(i) / 'case.json')},
-                {'path': 'trusted_runtime', 'from': str(DATASET_ROOT / 'runtime'), 'immutable': True},
+                {'path': 'agentdojo_source', 'from': str(_source_root()), 'immutable': True},
             ], 'reward_file': '/'+REWARD_REL, 'evidence_file': '/'+EVIDENCE_REL,
+            'result_contract': {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True},
         } for i in _indices()}
     raise AttributeError(name)
 
@@ -178,17 +202,28 @@ def downloads():
          'size': '~200 KB compressed source', 'dst': '_src/agentdojo.tar.gz',
          'sha256': 'd7e0ee021be27a69e7e66647979b5a5e0dd10030d38d04ce4102e18a76a228d8',
          'extract_to': '_src',
-         'note': 'Package 0.1.35 and suite v1.2.2 are different version axes. Provision isolated runtime and tool-only runtime using data/datasets/agentdojo/prepare.py; never expose full task/ground_truth modules to the agent. Registered ignore_previous attack only; fresh prepared-ignore_previous snapshots required.'},
-        {'kind': 'pip', 'name': 'AgentDojo isolated runtime', 'package': 'agentdojo', 'version': '0.1.35',
-         'size': '~200 MB with SDK dependencies',
-         'note': 'Install only inside dataset runtime venv. Exact installed dependency versions are recorded in _src/runtime-requirements.lock; no model API calls are used by tools, gold audit or predicate evaluation.'},
+         'note': 'Package 0.1.35 and suite v1.2.2 are different version axes. The distribution is not installed into the execution artifact: its dependencies are pinned in execution-requirements.lock, while AgentDojo itself is loaded from this separately verified source archive. Prepare the managed execution profile with `python3 tools/prepare_dataset.py --dataset agentdojo --runtime execution` and clean source with data/datasets/agentdojo/prepare.py; never expose full task/ground_truth modules to the actor. Registered ignore_previous attack only; pinned prepared-ignore_previous snapshots required.'},
     ]
 
 
 def provision_status():
-    rows = records()
-    needed = [DATASET_ROOT / '_src/cases.json', DATASET_ROOT / 'runtime/bin/python']
-    needed += [DATASET_ROOT / PREPARED / str(i) / name
-               for i in range(len(rows)) for name in ('case.json', 'oracle.json')]
-    return {'root': str(DATASET_ROOT), 'split_dir': str(DATASET_ROOT),
-            'present': bool(rows) and all(p.is_file() for p in needed), 'tasks': len(rows)}
+    """Fresh read-only artifact/source checks; no task replay or model call."""
+    root = None
+    try:
+        root = str(DATASET_ROOT)
+        runtime = _execution_runtime()
+        probe = ("import json,sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); "
+                 "from bootstrap import validate_source,validate_prepared; "
+                 "print(json.dumps({'source_id':validate_source(Path(sys.argv[2])),"
+                 "'tasks':validate_prepared(Path(sys.argv[3]))}))")
+        proc = subprocess.run([runtime['python'], '-I', '-B', '-c', probe,
+                               str(ASSETS), str(_source_root()), root],
+                              check=True, capture_output=True, text=True, timeout=60)
+        checked = json.loads(proc.stdout)
+        source_id, count = checked['source_id'], checked['tasks']
+        return {'root': root, 'split_dir': root, 'present': True, 'tasks': count,
+                'runtime_id': runtime['runtime_id'], 'source_manifest_sha256': source_id,
+                'model_health_checked': False}
+    except (OSError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as exc:
+        return {'root': root, 'present': False, 'tasks': 0, 'detail': ('AgentDojo read-only source/preparation check failed'
+                           if isinstance(exc, subprocess.CalledProcessError) else str(exc))}

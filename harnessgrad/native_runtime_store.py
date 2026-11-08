@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from copy import deepcopy
+import ctypes
+import errno
 import fcntl
 import hashlib
 import io
@@ -70,6 +72,35 @@ def entries(manifest: dict) -> dict[str, dict]:
         if target not in manifest['files']:
             raise StoreError(f'native runtime missing entry: {target}')
     return blobs
+
+
+def missing_inventory(manifest: dict, names=None) -> list[dict]:
+    blobs = entries(manifest)
+    return [{'sha256': blobs[name]['sha256'], 'size': blobs[name]['size'],
+             'targets': [target for target, entry in manifest['files'].items()
+                         if entry['source'] == name],
+             'launcher': manifest['launcher']['source'] == name}
+            for name in sorted(blobs if names is None else names)]
+
+
+def inventory_package(binding: dict, root: Path | None = None) -> dict:
+    """Read-only byte availability report, including absent installations."""
+    raw, manifest = load_manifest(binding)
+    package = package_path(manifest, binding['sha256'], root)
+    if package.parent.is_symlink() or package.is_symlink():
+        raise StoreError('linked native runtime package directory')
+    missing = []
+    for name, entry in entries(manifest).items():
+        try:
+            with source_path(package, name).open('rb') as source:
+                _copy_checked(source, _Discard(), entry)
+        except FileNotFoundError:
+            missing.append(name)
+    return {'dataset': manifest['dataset'], 'sha256': binding['sha256'],
+            'package': str(package), 'missing': missing_inventory(manifest, missing),
+            'required_blobs': len(entries(manifest)),
+            'required_bytes': sum(e['size'] for e in entries(manifest).values()),
+            'verified': False}
 
 
 def portable_manifest(legacy: dict, launcher_size: int) -> dict:
@@ -202,7 +233,19 @@ def _publish(stage: Path, final: Path, raw: bytes, binding: dict, root: Path | N
     if final.exists() or final.is_symlink():
         # A corrupt existing installation requires explicit operator repair.
         return verify_package(binding, root)
-    stage.rename(final)
+    # Linux renameat2 refuses even an empty destination directory created by
+    # a non-cooperating preparer between the existence check and publication.
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, 'renameat2', None)
+    if rename is None:
+        raise StoreError('atomic no-replace publication requires Linux renameat2')
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(stage), -100, os.fsencode(final), 1):
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            return verify_package(binding, root)
+        raise OSError(error, os.strerror(error), str(final))
     return verify_package(binding, root)
 
 
@@ -293,7 +336,10 @@ def assemble_package(binding: dict, *, source_manifests=(), archives=(), remaps=
                 name = by_hash.get(entry['sha256'])
                 if name is None or name in found:
                     continue
-                path = Path(entry.get('source', entry.get('path')))
+                locator = entry.get('source', entry.get('path'))
+                if not isinstance(locator, str) or not locator or '..' in Path(locator).parts:
+                    raise StoreError('unsafe native runtime source ledger locator')
+                path = Path(locator)
                 if not path.is_absolute():
                     path = Path(source_root) / path
                 for old, new in sorted(remaps, key=lambda pair: len(str(pair[0])), reverse=True):
@@ -330,9 +376,6 @@ def assemble_package(binding: dict, *, source_manifests=(), archives=(), remaps=
                                 shutil.copyfileobj(saved, output)
                             found.add(name)
         if found != wanted.keys():
-            missing = [{'sha256': wanted[name]['sha256'], 'size': wanted[name]['size'],
-                        'targets': [target for target, entry in manifest['files'].items()
-                                    if entry['source'] == name]}
-                       for name in sorted(wanted.keys() - found)]
+            missing = missing_inventory(manifest, wanted.keys() - found)
             raise MissingBlobs(missing)
         return _publish(stage, final, raw, binding, root)

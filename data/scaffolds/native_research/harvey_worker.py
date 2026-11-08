@@ -9,6 +9,9 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
+from special_runtime import harvey_source
+SOURCE_COPY = harvey_source()
+sys.path.insert(0, SOURCE_COPY.name)
 from native import activate
 activate()
 from flashrsi.integrations import _harvey_lab_grade

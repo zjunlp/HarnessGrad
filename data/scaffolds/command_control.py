@@ -130,6 +130,17 @@ def run_check(module, task: dict, workdir: Path) -> tuple[float, str]:
     the copies it could see.
     """
     verifier = module.VERIFY[task["task_id"]]
+    argv = verifier["argv"]
+    if "python_runtime" in verifier:
+        from harnessgrad.dataset_runtime import admit_binding
+        if not isinstance(argv, list) or len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
+            raise ValueError("bound verifier requires isolated, bytecode-free Python startup")
+        admitted = admit_binding(verifier["python_runtime"], "verifier", python=argv[0])
+        if verifier.get("runtime_paths") != admitted["runtime_paths"]:
+            raise ValueError("verifier runtime_paths differ from the admitted binding")
+        command = [admitted["python"], *argv[1:]]
+    else:
+        command = [sys.executable, *argv[1:]]
     for entry in verifier.get("inputs") or []:
         rel = entry.get("path") or entry.get("dst")
         target = workdir / rel.lstrip("/")
@@ -144,18 +155,41 @@ def run_check(module, task: dict, workdir: Path) -> tuple[float, str]:
                 shutil.copy2(source, target)
     env = dict(os.environ, PYTHONPATH=str(workdir) + os.pathsep
                + os.environ.get("PYTHONPATH", ""))
-    proc = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=workdir,
+    # Do not accept an actor-written or earlier control's score as a fresh result.
+    for rel in (REWARD_REL, EVIDENCE_REL):
+        (workdir / rel).unlink(missing_ok=True)
+    proc = subprocess.run(command, cwd=workdir,
                           capture_output=True, text=True, errors="replace", env=env)
     reward_path = workdir / REWARD_REL
     reward = float(reward_path.read_text().strip()) if reward_path.is_file() else -1.0
     evidence_path = workdir / EVIDENCE_REL
     evidence = (json.loads(evidence_path.read_text())
                 if evidence_path.is_file() else {})
+    unmeasured = None
+    if verifier.get("scorer_input") is not None:
+        from eval.verification.verifier import _enforce_scorer_input
+        checked = _enforce_scorer_input({"evidence": evidence, "score": reward}, verifier["scorer_input"])
+        if checked.get("score") is None:
+            reward = -1.0
+            unmeasured = checked.get("unmeasured")
+    contract = verifier.get("result_contract")
+    if contract is not None:
+        from eval.verification.result_contract import apply
+        verdict = apply({"score": reward, "evidence": evidence,
+                         "unmeasured": ("verifier exited nonzero" if
+                             contract.get("require_exit_zero") and proc.returncode != 0 else None)},
+                        contract)
+        if verdict.get("score") is None:
+            reward = -1.0
+            unmeasured = unmeasured or verdict.get("unmeasured")
+    elif evidence.get("measured") is False:
+        reward = -1.0
+        unmeasured = evidence.get("error") or "scorer explicitly reported measured=false"
     detail = {
         "returncode": proc.returncode,
         "reward": reward,
-        "measured": evidence.get("measured"),
-        "why": evidence.get("why") or evidence.get("error"),
+        "measured": False if unmeasured else evidence.get("measured"),
+        "why": unmeasured or evidence.get("why") or evidence.get("error"),
         "stderr": proc.stderr[-400:],
     }
     return reward, json.dumps(detail, indent=1, sort_keys=True)
@@ -178,7 +212,8 @@ def run_platform(module, task: dict, *, oracle: bool, workdir: Path,
     from eval.run.runner import run_one
 
     tid = task["task_id"]
-    setup = {"files": list(module.SETUP[tid]["files"])}
+    setup = dict(module.SETUP[tid])
+    setup["files"] = list(setup.get("files") or [])
     if oracle:
         # The harness copies these into place and names them -- see
         # `data/scaffolds/command_oracle_harness/`. They arrive under `.oracle/` so the check's

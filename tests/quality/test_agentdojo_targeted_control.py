@@ -8,6 +8,15 @@ import pytest
 from data.datasets import agentdojo
 from data.scaffolds import command_control
 
+@pytest.fixture(autouse=True)
+def selected_runtime(monkeypatch, tmp_path):
+    venv = tmp_path / 'artifact/venv'
+    monkeypatch.setattr(agentdojo, '_execution_runtime', lambda: {
+        'dataset': 'agentdojo', 'profile': 'execution', 'runtime_id': 'a' * 64,
+        'manifest_path': str(venv.parent / 'artifact.json'), 'path': str(venv),
+        'python': str(venv / 'bin/python'), 'runtime_paths': [str(venv)]})
+
+
 def test_explicit_control_uses_only_its_prepared_case(tmp_path, monkeypatch):
     case = tmp_path / agentdojo.PREPARED / '7/case.json'; case.parent.mkdir(parents=True)
     case.write_text(json.dumps({'suite':'banking','user':'user_task_0','injection':'injection_task_0','prompt':'synthetic'}))

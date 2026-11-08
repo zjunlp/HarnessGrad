@@ -102,7 +102,7 @@ def test_preparation_records_paths_used_by_the_sandbox_and_all_farm_links(agent,
     assert agent._install_profile(home, root) == -2
 
 
-def test_explicit_cli_and_node_override_the_prepared_installation(agent, monkeypatch, tmp_path, installation):
+def test_prepared_installation_refuses_overrides_until_reprepared(agent, monkeypatch, tmp_path, installation):
     first = tmp_path / "first"
     first.mkdir()
     harness, first_root, _, node = installation(first)
@@ -111,6 +111,9 @@ def test_explicit_cli_and_node_override_the_prepared_installation(agent, monkeyp
     second.mkdir()
     _, root, cli, other_node = installation(second)
     _use_copy(agent, monkeypatch, harness)
+    with pytest.raises(ValueError, match='differs from the prepared'):
+        agent.runtime({"HG_AGENT_DSH": str(cli), "HG_AGENT_NODE": str(other_node)})
+    configure(harness, root, str(other_node))
     selected = agent.runtime({"HG_AGENT_DSH": str(cli), "HG_AGENT_NODE": str(other_node)})
     assert selected["root"] == root
     assert selected["argv"] == [str(other_node), str(cli)]
@@ -408,6 +411,11 @@ raise SystemExit(agent.run({{'goal': 'Use the venv wrapper.'}}, Path({str(work)!
 def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(agent, monkeypatch, tmp_path, installation):
     harness, root, cli, node_b = installation(tmp_path)
     configure(harness, root, str(node_b))
+    # Legacy unbound diagnostics still support opaque/direct wrapper overrides.
+    manifest_path = harness / 'harness.json'
+    legacy = json.loads(manifest_path.read_text())
+    legacy.pop('_dsh_runtime')
+    manifest_path.write_text(json.dumps(legacy))
     _use_copy(agent, monkeypatch, harness)
     node_a = tmp_path / "different-node-install/bin/node-a"
     node_a.parent.mkdir(parents=True)
@@ -443,6 +451,11 @@ def test_direct_node_command_uses_its_interpreter_for_launch_dump_and_loader(age
 def test_opaque_wrapper_with_explicit_root_keeps_farm_but_does_not_guess_node(agent, monkeypatch, tmp_path, installation):
     harness, root, _, node_b = installation(tmp_path)
     configure(harness, root, str(node_b))
+    # Legacy unbound diagnostics still support opaque/direct wrapper overrides.
+    manifest_path = harness / 'harness.json'
+    legacy = json.loads(manifest_path.read_text())
+    legacy.pop('_dsh_runtime')
+    manifest_path.write_text(json.dumps(legacy))
     _use_copy(agent, monkeypatch, harness)
     wrapper = tmp_path / "opaque.py"
     wrapper.write_text("print('OPAQUE_ANSWER')\n")
@@ -545,3 +558,131 @@ def test_unprepared_harness_explains_required_configuration(agent):
 def test_loader_diagnostic_records_missing_configuration_without_raising(agent, tmp_path):
     result = agent._loader_probe(tmp_path, {"PATH": ""})
     assert "DSH is not configured" in result["probe_error"]
+
+
+@pytest.mark.parametrize('part', ['source', 'node', 'farm'])
+def test_prepared_content_mutation_refuses_before_launch(agent, monkeypatch, tmp_path, installation, part):
+    harness, root, cli, node = installation(tmp_path)
+    configure(harness, root, str(node))
+    _use_copy(agent, monkeypatch, harness)
+    if part == 'source':
+        target = root / 'apps/cli/node_modules/one/changed.js'
+        target.write_text('first')
+        configure(harness, root, str(node))
+        before = target.stat()
+        target.write_text('other')
+        os.utime(target, ns=(before.st_atime_ns, before.st_mtime_ns))
+    elif part == 'node':
+        node.write_text(node.read_text() + '# changed runtime bytes\n')
+    else:
+        (harness / 'dsh_farm.tsv').write_text('other\tapps/cli/node_modules/one\n')
+    with pytest.raises(ValueError, match='changed'):
+        agent.runtime({'PATH': ''})
+
+
+def test_external_dependency_requires_explicit_binding_and_is_content_pinned(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    external = root.parent / 'external-dependency'
+    external.mkdir()
+    dependency = external / 'runtime.js'
+    dependency.write_text('first module')
+    (root / 'external-link').symlink_to(external, target_is_directory=True)
+    original = (harness / 'harness.json').read_bytes()
+    with pytest.raises(ValueError, match='explicit --runtime'):
+        configure(harness, root, str(node))
+    assert (harness / 'harness.json').read_bytes() == original
+    configure(harness, root, str(node), runtime_paths=(external,))
+    _use_copy(agent, monkeypatch, harness)
+    assert agent.runtime({})['root'] == root
+    dependency.write_text('other module')
+    with pytest.raises(ValueError, match='contents changed'):
+        agent.runtime({})
+
+
+def test_prepared_symlink_retarget_same_bytes_changes_identity(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    first, second = root / 'first.js', root / 'second.js'
+    first.write_text('same bytes')
+    second.write_bytes(first.read_bytes())
+    link = root / 'selected.js'
+    link.symlink_to(first)
+    configure(harness, root, str(node))
+    _use_copy(agent, monkeypatch, harness)
+    link.unlink()
+    link.symlink_to(second)
+    with pytest.raises(ValueError, match='contents changed'):
+        agent.runtime({})
+
+
+def test_prepared_resolver_uses_trusted_forbidden_roots(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    configure(harness, root, str(node))
+    spec = importlib.util.spec_from_file_location('_dsh_trusted_test', SOURCE / 'dsh_runtime.py')
+    helper = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(helper)
+    with pytest.raises(ValueError, match='overlaps'):
+        helper.resolve(harness, {}, forbidden=(root,))
+
+
+def test_preparation_runs_no_cli_or_model(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: pytest.fail('preparation executed a process'))
+    receipt = configure(harness, root, str(node))
+    assert receipt['identity']['inventory']['files'] >= 2
+
+
+def test_prepared_bare_node_override_must_resolve_to_fixed_interpreter(agent, monkeypatch, tmp_path, installation):
+    harness, root, cli, node = installation(tmp_path)
+    configure(harness, root, str(node))
+    _use_copy(agent, monkeypatch, harness)
+    selected = agent.runtime({'PATH': str(node.parent), 'HG_AGENT_NODE': 'node',
+                              'HG_AGENT_DSH_COMMAND': shlex.join(['node', str(cli)])})
+    assert selected['argv'] == [str(node), str(cli)]
+    different = node.parent.parent.parent / 'other-node-bin'
+    different.mkdir()
+    (different / 'node').write_bytes(node.read_bytes())
+    (different / 'node').chmod(0o755)
+    with pytest.raises(ValueError, match='differs from the prepared'):
+        agent.runtime({'PATH': str(different), 'HG_AGENT_NODE': 'node'})
+
+
+
+def test_prepared_script_node_is_not_claimed_cacheable(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    receipt = configure(harness, root, str(node))
+    assert receipt['identity']['cacheable'] is False
+    assert 'host OS libraries' in receipt['identity']['scope']
+    _use_copy(agent, monkeypatch, harness)
+    assert agent.runtime({})['cacheable'] is False
+
+
+def test_prepared_elf_node_has_explicit_content_scope(agent, monkeypatch, tmp_path, installation):
+    harness, root, _, node = installation(tmp_path)
+    shutil.copyfile('/bin/true', node)
+    node.chmod(0o755)
+    receipt = configure(harness, root, str(node))
+    assert receipt['identity']['cacheable'] is True
+    _use_copy(agent, monkeypatch, harness)
+    assert agent.runtime({})['cacheable'] is True
+
+
+@pytest.mark.parametrize('variable', ['NODE_OPTIONS', 'NODE_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'LD_LIBRARY_PATH'])
+@pytest.mark.parametrize('node_kind', ['elf', 'script'])
+def test_prepared_dsh_refuses_ambient_loader_without_exposing_value(agent, monkeypatch, tmp_path, installation, variable, node_kind):
+    harness, root, _, node = installation(tmp_path)
+    if node_kind == 'elf':
+        shutil.copyfile('/bin/true', node)
+        node.chmod(0o755)
+    configure(harness, root, str(node))
+    before = (harness / 'harness.json').read_bytes()
+    _use_copy(agent, monkeypatch, harness)
+    value = 'authored-private-loader-value'
+    monkeypatch.setenv(variable, value)
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: pytest.fail('started DSH or a model'))
+    with pytest.raises(ValueError) as refusal:
+        configure(harness, root, str(node))
+    assert variable in str(refusal.value) and value not in str(refusal.value)
+    with pytest.raises(ValueError) as refusal:
+        agent.runtime({variable: value})
+    assert variable in str(refusal.value) and value not in str(refusal.value)
+    assert (harness / 'harness.json').read_bytes() == before

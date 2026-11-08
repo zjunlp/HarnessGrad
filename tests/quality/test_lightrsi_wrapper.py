@@ -171,3 +171,10 @@ def test_the_tree_digest_ignores_the_channel_and_sees_real_edits(tmp_path):
     assert module.tree_digest(harness) == first, "the channel is not part of the artifact"
     (harness / "agent.py").write_text("print('edited')\n")
     assert module.tree_digest(harness) != first
+
+
+def test_manifest_declares_base_without_imposing_an_editor():
+    """The wrapper inherits requirements from the chosen base, not every base is an editor."""
+    manifest = json.loads(RUN.with_name('method.json').read_text(encoding='utf-8'))
+    assert manifest['requires']['base_method'] is True
+    assert not manifest['requires'].get('editor_model', False)

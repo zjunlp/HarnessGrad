@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from test_miniswe_managed_runtime import managed_miniswe, miniswe_store  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -46,6 +47,14 @@ def native_harness(tmp_path):
     harness = tmp_path / "work/miniswe"
     shutil.copytree(HARNESS, harness, ignore=shutil.ignore_patterns("__pycache__"))
     return harness
+
+
+@pytest.fixture
+def legacy_harness(native_harness):
+    manifest=native_harness/'harness.json'
+    value=json.loads(manifest.read_text());value.pop('runtime')
+    value['install']='requirements.txt';manifest.write_text(json.dumps(value))
+    return native_harness
 
 
 def _required_overlay(harness):
@@ -75,30 +84,21 @@ def test_the_manifest_satisfies_the_contributor_contract():
     assert validator.validate(HARNESS, smoke=False) == []
 
 
-def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path, native_harness):
+def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path, native_harness,managed_miniswe):
     """The whole entrypoint, as the platform invokes it: argv, cwd, exit code, artifacts."""
-    from eval.containers import harness_runtime
+    from harnessgrad import candidate_runtime
+    from eval.run import runner
 
     if shutil.which("bwrap") is None:
         pytest.skip("bubblewrap is unavailable")
     harness = native_harness
-    overlay = _required_overlay(harness)
-    work = tmp_path / "task"
-    work.mkdir()
-    (work / "task.json").write_text(json.dumps({
-        "task_id": "t-mock", "goal": "Write the word alpha into answer.txt."}))
-    env = {**os.environ, **harness_runtime.env_for(overlay), "HG_AGENT_BACKEND": "mock"}
-    command = _native_command(harness, work, overlay, env,
-        [sys.executable, str(harness / "agent.py"), "--task", str(work / "task.json"),
-         "--workdir", str(work)])
-    proc = subprocess.run(
-        command, env=env, cwd=work,
-        capture_output=True, text=True, errors="replace", timeout=300)
-    assert proc.returncode == 0, proc.stderr[-1200:]
-    assert (work / "answer.txt").read_text().strip() == "MINISWE_MOCK"
-
-    trace = [json.loads(line) for line in
-             (work / "trace.jsonl").read_text().splitlines() if line.strip()]
+    binding=candidate_runtime.prepare(harness)['identity']
+    result=runner.run_one(harness,{'task_id':'t-mock','goal':'Write the word alpha into answer.txt.'},
+        env={'kind':'files','network':'none'},verifier={'kind':'answer','expected':'MINISWE_MOCK'},
+        harness_runtime_identity=binding,timeout_s=90)
+    assert not result.get('invalid') and result['exit_code']==0,result
+    assert result['answer'].strip()=='MINISWE_MOCK' and result['verdict']['passed']
+    trace = [json.loads(line) for line in result['trace'].splitlines() if line.strip()]
     identity = trace[0]["harness_identity"]
     assert identity["harness"] == "miniswe"
     assert identity["agent_backend"] == "mock", "a mock run must say so"
@@ -111,17 +111,18 @@ def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path, native_harness):
     assert final["answer_source"] == "artifact", final
 
 
-def test_missing_overlay_skips_native_integration_explicitly(native_harness, tmp_path, monkeypatch):
+def test_missing_overlay_skips_legacy_integration_explicitly(legacy_harness, tmp_path, monkeypatch):
     from eval.containers import harness_runtime
 
     monkeypatch.setattr(harness_runtime, "overlays_root", lambda: tmp_path / "missing-overlays")
     with pytest.raises(pytest.skip.Exception, match="provision the miniSWE overlay for this Python"):
-        _required_overlay(native_harness)
+        _required_overlay(legacy_harness)
 
 
-def test_tmp_overlay_is_surfaced_without_a_host_miniswe_install(native_harness, tmp_path, monkeypatch):
+def test_tmp_overlay_is_surfaced_without_a_host_miniswe_install(legacy_harness, tmp_path, monkeypatch):
     """Exercise the real mount plan with one dependency, without emulating mini's CLI."""
     from eval.containers import harness_runtime
+    native_harness=legacy_harness
 
     if shutil.which("bwrap") is None:
         pytest.skip("bubblewrap is unavailable")

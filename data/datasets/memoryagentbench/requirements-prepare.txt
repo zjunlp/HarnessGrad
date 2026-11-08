@@ -1,10 +1,9 @@
-# Preparation and official differential tests only; runtime scoring uses stdlib.
-# 3.10.4: the first release outside GHSA-8mgp-746c-j5xp's range (`<= 3.10.3`). Only punkt +
-# `nltk.tabdata` are used, never the artifact-download API the advisory is about.
-nltk==3.10.4
+# Frozen input generation only. Keep tokenizer pins identical to chunk-policy.json.
+# nltk 3.10.3 is part of the frozen benchmark identity; never call its downloader.
+# Historical requirements used the nltk 3.10.4 security floor for GHSA-8mgp-746c-j5xp;
+# that floor remains appropriate to the shared platform, not this frozen artifact.
+# Updating it requires a separately reviewed frozen-input comparison.
+nltk==3.10.3
 regex==2026.9.29
 tiktoken==0.14.0
 pyarrow==23.0.1
-rouge-score==0.1.2
-editdistance==0.8.1
-numpy==2.5.4

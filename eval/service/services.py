@@ -35,6 +35,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import secrets
 import subprocess
 import time
 from pathlib import Path
@@ -183,25 +184,22 @@ class RunningServices:
         for is a number it can be lied to about. `eval/run/runner.py` reads a harness's
         usage from its trace for the same reason.
         """
-        total: dict[str, int] = {}
-        reported = 0
+        from eval.observe.tracing import environment_usage_totals
+        reports = []
         for name, path in self.recordings.items():
             record = path / USAGE_FILE
-            if not record.is_file():
-                continue
             try:
                 payload = json.loads(record.read_text())
             except (OSError, json.JSONDecodeError):
-                continue
-            usage = payload.get("usage")
-            if not isinstance(usage, dict):
-                continue
-            reported += 1
-            for key in ("input_tokens", "output_tokens", "calls"):
-                value = usage.get(key)
-                if isinstance(value, int):
-                    total[key] = total.get(key, 0) + value
-        total["services_reported"] = reported
+                payload = {}
+            usage = payload.get("usage") if isinstance(payload, dict) else None
+            reports.append({**(usage if isinstance(usage, dict) else {}),
+                            "services_reported": int(isinstance(usage, dict)), "services_total": 1})
+        total = environment_usage_totals(reports)
+        # The service-side contract uses *_tokens; runner aggregates into input/output.
+        for key in ("input", "output"):
+            total[key + "_tokens"] = total.pop(key)
+            total[key + "_tokens_reported"] = total.pop(key + "_reported")
         return total
 
     def stop(self) -> list[str]:
@@ -235,7 +233,7 @@ class RunningServices:
 
 
 def create_network(run_id: str, task_id: str) -> str:
-    """Create the task's `--internal` network. Returns its name.
+    """Create the task's `--internal` network. Returns its Docker ID.
 
     Public because a task needs one even when it declares no services: a containerised
     harness cannot reach a model on the host's loopback, so the platform publishes the
@@ -254,7 +252,7 @@ def create_network(run_id: str, task_id: str) -> str:
     "It is already taken" is the expected case on a host that has been running for a while,
     and turning it into an invalid task is exactly the defect the explicit subnet fixes.
     """
-    net = label(f"hg-{run_id}-{task_id}")
+    net = label(f"hg-{secrets.token_hex(16)}-{run_id}-{task_id}")
     try:
         candidates = netpool.allocate(run_id, task_id)
     except netpool.NetPoolError as exc:
@@ -272,22 +270,13 @@ def create_network(run_id: str, task_id: str) -> str:
                                     "--label", f"{netpool.SUBNET_LABEL}={cidr}",
                                     timeout=120)
         if proc.returncode == 0:
-            return net
+            network_id = proc.stdout.strip()
+            if not re.fullmatch(r"[0-9a-f]{64}", network_id):
+                raise ServiceUnavailable("network creation returned no usable Docker ID")
+            return network_id
         stderr = proc.stderr.strip()
         if netpool.network_exists(stderr, net):
-            existing = network_subnet(net)
-            if existing == cidr:
-                # A crashed run that was reaped badly leaves the name *and* the subnet we
-                # are about to ask for, because both are a function of (run_id, task_id).
-                # Reusing it is what keeps that crash out of the next run's measurement;
-                # `reap` remains the cleaner path, it just may have lost a container.
-                return net
-            raise ServiceUnavailable(
-                f"network {net!r} already exists with subnet "
-                f"{existing or 'unknown'}, but this task asked for {cidr}. Refusing to "
-                f"reuse it: the harness's gateway address comes from that subnet. Remove "
-                f"the leftover with `docker network rm {net}` (or run "
-                f"`eval.service.services.reap({run_id!r})`) and re-run.")
+            raise ServiceUnavailable(f"network name {net!r} already exists; refusing to reuse it")
         if netpool.subnet_taken(stderr):
             taken.append(f"{cidr}: {stderr.splitlines()[-1][:160]}")
             continue
@@ -464,7 +453,7 @@ def start(services: list[dict], *, recordings_root: Path, run_id: str,
                 recordings[name] = record_host
 
             cmd = ["run", "--detach", "--rm",
-                   "--name", label(f"hg-{run_id}-{task_id}-{name}"),
+                   "--name", label(f"hg-{secrets.token_hex(16)}-{run_id}-{task_id}-{name}"),
                    # The container's *name* is platform-mangled -- it has to be unique
                    # on the daemon, and several runs may be live at once -- so the name
                    # the harness was told must be attached as an **alias**, or it
@@ -500,7 +489,10 @@ def start(services: list[dict], *, recordings_root: Path, run_id: str,
                 raise ServiceUnavailable(
                     f"service {name!r} did not start: {started.stderr.strip()[:300]}",
                     service=name, stage="start")
-            containers[name] = started.stdout.strip()
+            cid = started.stdout.strip()
+            if not re.fullmatch(r"[0-9a-f]{64}", cid):
+                raise ServiceUnavailable(f"service {name!r} returned no usable Docker ID", service=name, stage="start")
+            containers[name] = cid
 
         running = RunningServices(network=net, containers=containers,
                                   recordings=recordings, services=services)

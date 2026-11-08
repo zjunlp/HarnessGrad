@@ -1,0 +1,6 @@
+{
+  "schema": "harnessgrad.dataset-execution-runtime.v1",
+  "dataset": "agentdojo",
+  "python": "3.12",
+  "requirements": "execution-requirements.lock"
+}

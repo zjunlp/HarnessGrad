@@ -141,6 +141,14 @@ def _no_bytes(monkeypatch) -> list[str]:
     """
     patched: list[str] = []
     modules = {name: inventory._import_adapter(name) for name in registry.published()}
+    original_provider = registry.provider
+
+    class MissingProvider:
+        def inventory(self):
+            raise FileNotFoundError('no dataset bytes on this machine')
+
+    monkeypatch.setattr(registry, 'provider',
+        lambda name: MissingProvider() if original_provider(name) is not None else None)
     monkeypatch.setattr(inventory, "_import_adapter", modules.__getitem__)
     for name, module in modules.items():
         if not callable(getattr(module, "load", None)):

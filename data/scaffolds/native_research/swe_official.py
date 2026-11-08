@@ -23,7 +23,7 @@ def activate():
     global SOURCE_COPY
     source = os.environ.get('HG_SWE_SOURCE')
     if source is None:
-        return None
+        raise ValueError('set HG_SWE_SOURCE to the pinned source; see data/datasets/swe_bench/execution-recipe.md')
     root = Path(source)
     if not root.is_absolute() or root.is_symlink() or any(p.is_symlink() for p in root.parents):
         raise ValueError('official source must be an absolute unlinked directory')

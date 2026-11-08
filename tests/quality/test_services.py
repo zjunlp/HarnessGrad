@@ -331,8 +331,8 @@ def test_the_service_and_check_recording_mounts_are_absolute_before_docker_sees_
     def docker(*args, **kwargs):
         commands.append(args)
         if args[:2] == ("run", "--detach"):
-            return subprocess.CompletedProcess(args, 0, "container-id\n", "")
-        return subprocess.CompletedProcess(args, 0, "", "")
+            return subprocess.CompletedProcess(args, 0, "b" * 64 + "\n", "")
+        return subprocess.CompletedProcess(args, 0, "a" * 64 if args[:2] == ("network", "create") else "", "")
 
     monkeypatch.setattr(services.container_mod, "docker", docker)
     service = {"name": "orders", "image": "sha256:" + "a" * 64,
@@ -473,7 +473,7 @@ def test_a_start_that_fails_does_not_leave_a_network(tmp_path):
 def _leftovers(run_id: str) -> list[str]:
     return container.docker(
         "network", "ls", "--filter", f"label=harnessgrad.run={run_id}",
-        "--format", "{{.Name}}").stdout.split()
+        "--no-trunc", "--format", "{{.ID}}").stdout.split()
 
 
 @pytest.mark.parametrize("stderr,missing", [
@@ -506,18 +506,22 @@ def test_a_leftover_network_from_a_crash_does_not_kill_the_next_run(tmp_path):
     exists` —— 一次测量死在上一次崩溃的手里,而报错看起来是这一次的问题。
     """
     _require_docker()
-    run_id = "reaped-run"
+    run_id = "reaped-run-" + uuid.uuid4().hex
     leftover = services.create_network(run_id, "s01")
     try:
         assert _leftovers(run_id) == [leftover], "前置条件:先有一个崩溃留下的网络"
         assert services.reap(run_id) == [], "reap 说没能清掉它自己刚留下的东西"
         assert _leftovers(run_id) == [], "崩溃留下的网络还在,下一次创建还会撞名"
-        # 这条才是 reap 要买的东西:同一个网络名可以被重新创建
+        # Reaping frees this logical run/task's resources; a fresh network gets
+        # its own Docker identity rather than reusing the removed object's ID.
         again = services.create_network(run_id, "s01")
+        assert again != leftover and _leftovers(run_id) == [again]
+        inspected = json.loads(container.docker("network", "inspect", again).stdout)[0]
+        assert inspected["Internal"] and inspected["Labels"]["harnessgrad.run"] == run_id
+        assert inspected["Labels"]["harnessgrad.task"] == "s01"
     finally:
         for net in _leftovers(run_id):
             services.remove_network(net)
-    assert again == leftover
 
 
 def test_reap_removes_a_service_container_a_crash_left_running(tmp_path):

@@ -1,7 +1,8 @@
 """tau-bench as a dataset: the benchmark's own split, retail and airline. INTERFACE.md §2.5.9.
 
-    python tools/build_tau_bench_gt.py      # regenerate the committed assets
-    driver.py --dataset tau_bench ...
+    python data/datasets/tau_bench/prepared.py --source /path/to/pinned-assets \
+        --destination /path/to/external-prepared
+    HG_TAU_BENCH_PREPARED=/path/to/external-prepared python driver.py --dataset tau_bench ...
 
 Where the tasks come from
 -------------------------
@@ -15,10 +16,12 @@ scores, and the division between them is the benchmark's, file for file:
 
 685 tasks. The checkout's legacy `tasks.py` files hold a larger, older set (185 / 76)
 and are deliberately not used -- `MockRetailDomainEnv`/`MockAirlineDomainEnv` do not
-read them either. `tools/build_tau_bench_gt.py` copies each task's ground truth, the
-clean database, the policy and the tool implementations into `data/datasets/tau_bench/`;
-this module only reads those committed assets, so it does not need the checkout on
-the machine that runs the dataset.
+read them either. `tools/build_tau_bench_gt.py` is the maintainer staging tool for
+the pinned ground truth, clean databases, policies and tool implementations.
+The installed adapter reads a verified external prepared root, selected with
+`HG_TAU_BENCH_PREPARED` or `<configured tau-bench root>/prepared`. Import a complete
+pinned asset root with `data/datasets/tau_bench/prepared.py` before loading; the
+importer checks every file against the distributed `PROVENANCE.json`.
 
 A task id is `<domain>_<split>_<index>` (`retail_train_010`), not `<domain>_<index>`:
 the three retail files each index from 0, so an id that did not name its split would
@@ -147,8 +150,14 @@ ASSETS = Path(__file__).resolve().parent / "tau_bench"
 
 DATASET_ROOT = dataset_root("tau-bench")
 
-GT_DIR = ASSETS / "gt"
-DB_DIR = ASSETS / "db"
+# The sibling directory holds code and provenance only. Import legacy assets explicitly.
+__path__ = [str(ASSETS)]
+from data.datasets.tau_bench.prepared import verify as _verify_prepared
+
+PREPARED_ROOT = (Path(os.environ["HG_TAU_BENCH_PREPARED"]).expanduser().resolve()
+                 if os.environ.get("HG_TAU_BENCH_PREPARED") else DATASET_ROOT / "prepared")
+GT_DIR = PREPARED_ROOT / "gt"
+DB_DIR = PREPARED_ROOT / "db"
 LIB_DIR = ASSETS / "lib"
 CHECK_SCRIPT = ASSETS / "verify" / "check.py"
 SERVICE_SCRIPT = ASSETS / "service.py"
@@ -251,13 +260,18 @@ DEFAULT_ENV = ENV_BASE
 
 
 def _read_gt() -> list[dict]:
-    if not GT_DIR.is_dir():
+    try:
+        payloads = _verify_prepared(Path(PREPARED_ROOT))
+    except (OSError, ValueError) as exc:
         raise ValueError(
-            f"no tau-bench ground truth under {GT_DIR}. Generate it with:\n"
-            f"    python tools/build_tau_bench_gt.py")
+            "tau-bench requires verified external prepared assets. Set "
+            "HG_TAU_BENCH_PREPARED and import the legacy asset root with "
+            "python -m tools.prepare_tau_bench --source LEGACY_ROOT "
+            "--destination PREPARED_ROOT. " + str(exc)) from exc
     records = []
-    for path in sorted(GT_DIR.glob("*.json")):
-        records.append(json.loads(path.read_text()))
+    for name, payload in sorted(payloads.items()):
+        if name.startswith("gt/"):
+            records.append(json.loads(payload))
     if not records:
         raise ValueError(f"{GT_DIR} is empty; run tools/build_tau_bench_gt.py")
     records.sort(key=lambda r: (DOMAIN_ORDER.index(r["domain"]),
@@ -269,12 +283,16 @@ def _read_gt() -> list[dict]:
 #: immutable, so re-reading 685 files per call would be work with no effect.
 #: `_ALL_GT` is everything on disk (the excluded tasks' files are kept); `_GT` is every
 #: task this dataset can return; `_RUN_GT` is the two sides of this run's pool.
-_ALL_GT: list[dict] = _read_gt()
-_unknown_excluded = set(EXCLUDED_TASKS) - {record["task_id"] for record in _ALL_GT}
-if _unknown_excluded:
-    raise ValueError(
-        f"tau_bench: EXCLUDED_TASKS names task(s) with no ground truth: "
-        f"{sorted(_unknown_excluded)}; regenerate it with measured_no_op_tasks()")
+try:
+    _ALL_GT: list[dict] = _read_gt()
+    _DATA_ERROR = None
+except (OSError, ValueError) as _exc:
+    _ALL_GT = []
+    _DATA_ERROR = str(_exc)
+if _ALL_GT:
+    _unknown_excluded = set(EXCLUDED_TASKS) - {record["task_id"] for record in _ALL_GT}
+    if _unknown_excluded:
+        raise ValueError("tau_bench: pinned prepared assets lack excluded task identities")
 _GT: list[dict] = [record for record in _ALL_GT
                    if record["task_id"] not in EXCLUDED_TASKS]
 _BY_ID: dict[str, dict] = {record["task_id"]: record for record in _GT}
@@ -465,6 +483,8 @@ def load() -> tuple[list[dict], dict[str, str]]:
     entry, so the `scorable` map is present only because the interface asks for it."""
     if _LOAD_ERROR is not None:
         raise ValueError(f"tau_bench: {_LOAD_ERROR}")
+    if _DATA_ERROR is not None:
+        raise ValueError(_DATA_ERROR)
     tasks = [{"task_id": record["task_id"],
               "goal": _goal(record),
               "inputs": []}
@@ -488,29 +508,19 @@ OFFICIAL_EVAL = list(_OFFICIAL_EVAL)
 
 
 def downloads() -> list[dict]:
-    """What a reader must fetch to rebuild this dataset's committed assets.
-
-    Tau-bench's ground truth is **committed** under `data/datasets/tau_bench/` -- the adapter
-    reads that, not the checkout -- so this dataset runs on a machine with nothing
-    fetched at all. The entry below describes the upstream source the committed bytes
-    were derived from, pinned to the commit recorded in `PROVENANCE.json`, and
-    `tools/build_tau_bench_gt.py` is what turns it back into `gt/`, `db/`, `policy/`
-    and `lib/`. `tools/datasets.py --write` renders it into `DOWNLOADS.md` from here,
-    so there is one list rather than a document that can drift from the loader.
-    """
+    """Pinned upstream source for the historical assets, imported externally."""
     try:
         commit = json.loads(PROVENANCE.read_text()).get("checkout_commit") or "unknown"
     except (OSError, ValueError):
         commit = "unknown"
     return [{
         "kind": "http",
-        "name": "tau-bench checkout (regenerates the committed assets)",
+        "name": "tau-bench checkout (source of external prepared assets)",
         "version": commit,
         "url": f"https://github.com/sierra-research/tau-bench/archive/{commit}.tar.gz",
         "size": "~67 MB unpacked",
         "dst": ".",
         "extract_to": ".",
-        "note": "Only needed to REGENERATE `data/datasets/tau_bench/`: the adapter reads the "
-                "committed assets, which are already in git. Pinned to the commit in "
-                "PROVENANCE.json -- never a branch.",
+        "note": "External preparation is required. Import the pinned legacy asset root with "
+                "tau_bench/prepared.py. PROVENANCE.json retains original source pins.",
     }]

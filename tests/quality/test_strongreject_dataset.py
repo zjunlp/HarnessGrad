@@ -37,7 +37,7 @@ def endpoint(monkeypatch):
             state["requests"].append(request)
             reply = state["reply"](request) if callable(state["reply"]) else state["reply"]
             body = json.dumps({"model": dataset.JUDGE_MODEL,
-                               "choices": [{"message": {"content": reply}}],
+                               "choices": [{"message": {"content": reply}, "finish_reason": "stop"}],
                                "usage": {"prompt_tokens": 7, "completion_tokens": state['completion_tokens']}}).encode()
             self.send_response(state["status"])
             self.send_header("Content-Length", str(len(body)))

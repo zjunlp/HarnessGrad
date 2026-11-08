@@ -41,7 +41,7 @@ from tools.validate_harness import check as check_harness, source_identity, file
 import tools.run_summary as run_summary
 from eval.ckpt.git_state import (STATE_DIRNAME, commit_state, content_sha, manifest,
                                 stage_workspace)
-from eval.ckpt.source_tree import copy_harness
+from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, has_python_runtime
 from eval.observe.console import CONSOLE as console
 from eval.run.metrics import select_task_set
 from eval.run import metrics
@@ -69,10 +69,18 @@ import tools.web_gateway as web_gateway_mod
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
 from harnessgrad import h0_identity
-from harnessgrad import experiments
+from harnessgrad.entrypoints.experiment_config import (
+    config_help as _config_help, expand_experiment_argv as _expand_experiment_argv,
+)
+from harnessgrad.entrypoints.run_parser import parse_run_args
+from harnessgrad import run_namespace
 from harnessgrad import readiness
 from harnessgrad import slots
 from harnessgrad import scoring_identity
+from harnessgrad import dataset_runtime_identity
+from harnessgrad import verification_context
+from eval.containers import external_runtime
+from harnessgrad import candidate_runtime
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
@@ -82,8 +90,9 @@ from harnessgrad.environments import (
     _check_env_kinds, _env_record, _narrow_to_run, _report_harness_failed,
     _report_invalid, _required_env_kinds, _resolve_envs, _warn_missing_overlay)
 from harnessgrad.identity import _identity
-from harnessgrad.loops.eval_side import _eval_from_record, _eval_resume_seed, _eval_source, _run_eval_side
-from harnessgrad.loops.mode_a import _run_mode_a
+from harnessgrad.loops.eval_side import (_eval_from_record, _eval_resume_seed, _eval_source,
+                                        _progress_results, _run_eval_side)
+from harnessgrad.loops.mode_a import _run_mode_a, _snapshot_round
 from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
 from harnessgrad.records import (
     _cost_of, _curve_point, _require_untampered, _save_round_state, _save_traces,
@@ -311,7 +320,20 @@ class ResumeNothingToDo(RuntimeError):
     """The run already measured every round the budget asks for."""
 
 
-def _resume_train_state(args, run_dir: Path, split, work: Path):
+def _require_verification_context(recorded, current, task_ids=None):
+    if recorded is None or current is None:
+        raise ValueError("verification context is missing; old measurements cannot be reused")
+    if task_ids is not None:
+        if not task_ids:
+            raise ValueError("verification context has no selected task set")
+        recorded = verification_context.project(recorded, task_ids)
+        current = verification_context.project(current, task_ids)
+    errors = verification_context.problems(recorded, current)
+    if errors:
+        raise ValueError("; ".join(errors))
+
+
+def _resume_train_state(args, run_dir: Path, split, work: Path, *, defer=False):
     """What continuing this run needs: its points, its last state, and the base it began from.
 
     A resume may not re-measure a state that is already on the curve -- two measurements of
@@ -336,10 +358,19 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     meta_path = run_dir / "run_meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
     try:
+        runtime_identity = getattr(args, "dataset_runtime_identity", None)
+        dataset_runtime_identity.admit(runtime_identity)
+        dataset_runtime_identity.require_same(meta.get("dataset_runtime_identity"), runtime_identity)
         scoring_identity.require_same(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+        _require_verification_context(meta.get("verification_context"), getattr(args, "verification_context", None))
         for point in existing:
+            _require_verification_context(point.get("verification_context"), getattr(args, "verification_context", None),
+                list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
+            dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), runtime_identity)
             scoring_identity.require_same(point.get("scoring_identity"), getattr(args, "scoring_identity", None))
-    except ValueError as exc:
+            candidate_runtime.checkpoint_binding(run_dir, point)
+            external_runtime.admit_checkpoint(run_dir, point, fallback=work)
+    except (OSError, TypeError, ValueError) as exc:
         raise ResumeRefused(str(exc)) from exc
     recorded_split = meta.get("split_sha")
     now_split = datasets.split_sha(split) if split else None
@@ -378,22 +409,54 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
         raise ResumeNothingToDo(
             f"round {last} of a {args.rounds}-round budget is already measured")
     view = run_dir / f"state_after_round{last}"
+    if not view.is_dir() and getattr(args, "_resume_candidate_source", None) is not None:
+        view = Path(args._resume_candidate_source)
     if not view.is_dir():
         raise ResumeRefused(
             f"{run_dir.name} has no state_after_round{last}/; the state round {last} scored "
             f"was not kept, so there is nothing to continue from")
 
+    # Rebuild in a private sibling directory. A refusal must leave the existing
+    # workspace and run receipts untouched.
+    work.parent.mkdir(parents=True, exist_ok=True)
+    temporary = tempfile.TemporaryDirectory(prefix=".resume-", dir=work.parent)
+    staging = Path(temporary.name)
+    try:
+        result = _restore_train_workspace(args, run_dir, existing, last, view, staging / "workspace")
+        task_ids = list((existing[0].get("sampling") or {}).get("task_ids") or [])
+        if not task_ids:
+            raise ResumeRefused("the run's round 0 recorded no task set")
+        result["_publication"] = (temporary, work, run_dir, seam, meta, recorded_platform)
+        if not defer:
+            _publish_resume(result)
+        return result
+    except BaseException:
+        temporary.cleanup()
+        raise
+
+
+def _publish_resume(result):
+    """Publish a validated workspace after all preflight checks pass."""
+    temporary, work, run_dir, seam, meta, recorded_platform = result.pop("_publication")
+    staging = Path(temporary.name)
+    backup = staging / "previous-workspace"
+    if work.exists() or work.is_symlink():
+        work.rename(backup)
+    try:
+        (staging / "workspace").rename(work)
+    except BaseException:
+        if backup.exists():
+            backup.rename(work)
+        raise
+    temporary.cleanup()
     if seam is not None:
         _record_platform_seam(run_dir, *seam)
-        # The curve's origin stays readable after the run's own `run_meta` writes move
-        # `platform_content_sha` to whatever tree the resumed rounds are on.
         if not meta.get("platform_content_sha_started"):
             meta["platform_content_sha_started"] = recorded_platform
-            meta_path.write_text(json.dumps(meta, indent=1))
+            (run_dir / "run_meta.json").write_text(json.dumps(meta, indent=1))
 
-    if work.exists():
-        shutil.rmtree(work)
 
+def _restore_train_workspace(args, run_dir, existing, last, view, work):
     # **The base tree has to be reachable in *this* repository, and after `--h0-from` it was
     # not.** `mode_a` calls `reset_hard(work, h0_sha)` after every round and once more after
     # the loop, and `reset_hard` starts with `git cat-file -t <sha>`. A resume stages only
@@ -410,6 +473,8 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     # same state and continuing would stitch a score to a tree it does not belong to.
     h0_sha = (existing[0].get("identity") or {}).get("harness_sha")
     base_state = run_dir / "state_after_round0"
+    if not base_state.is_dir() and getattr(args, "_resume_initial_source", None) is not None:
+        base_state = Path(args._resume_initial_source)
     restored_base = None
     if h0_sha and base_state.is_dir():
         stage_workspace(base_state, work)
@@ -444,7 +509,7 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
     base = _base_from_point(existing[0])
     traces_dir = run_dir / "round0_traces"
     base["traces"], base["trial_traces"] = _read_trace_bodies(traces_dir)
-    recorded_sha = (existing[last].get("identity") or {}).get("harness_sha")
+    recorded_sha = (next(point for point in existing if int(point.get("round") or 0) == last).get("identity") or {}).get("harness_sha")
     # **Restaging is only a resume if it reproduces the state the last score belongs to.**
     # The docstring above promised this check and the code did not make it; a saved state
     # that hashes differently would have continued the curve from a tree no published point
@@ -455,6 +520,11 @@ def _resume_train_state(args, run_dir: Path, split, work: Path):
             f"state_after_round{last}/ hashes to {staged_sha[:12]} but round {last} was "
             f"measured on {recorded_sha[:12]}; the saved state is not the state that score "
             f"belongs to")
+    last_point = max(existing, key=lambda point: int(point.get("round") or 0))
+    current_binding = candidate_runtime.checkpoint_binding(run_dir, last_point)
+    if not last_point.get("unmeasured"):
+        candidate_runtime.admit(work, current_binding)
+    args.current_harness_runtime_identity = current_binding
     h0_sha = h0_sha or staged_sha
     return {"existing": existing, "last": last, "base": base, "h0_sha": h0_sha,
             "recorded_sha": recorded_sha,
@@ -479,11 +549,14 @@ def _base_from_point(point: dict) -> dict:
     """
     identity = point.get("identity") or {}
     base = {
+        **dataset_runtime_identity.fields(point.get("dataset_runtime_identity")),
+        **verification_context.fields(point.get("verification_context")),
+        **candidate_runtime.fields(point.get("harness_runtime_identity")),
         "per_task": point.get("per_task") or {},
         "invalid": point.get("invalid"),
         "harness_failed": point.get("harness_failed"),
         "model_gateway": point.get("model_gateway"),
-        "harness_runtime": point.get("harness_runtime"),
+        "harness_runtime": (point.get("env") or {}).get("harness_runtime", point.get("harness_runtime")),
         "evaluation_protocols": point.get("evaluation_protocols"),
         "identity_declared": identity.get("harness_identity"),
         "trials": point.get("n_trials"),
@@ -493,6 +566,36 @@ def _base_from_point(point: dict) -> dict:
         "cached_tasks": point.get("cached_tasks"),
     }
     return base
+
+
+def _managed_python_intent(source: Path) -> bool:
+    """Recognize malformed Python declarations without treating them as legacy."""
+    try:
+        declaration = json.loads((Path(source) / "harness.json").read_text())
+    except (OSError, TypeError, ValueError):
+        return False
+    runtime = declaration.get("runtime") if isinstance(declaration, dict) else None
+    return isinstance(runtime, dict) and runtime.get("kind") == "python"
+
+
+def _refuse_managed_source(run_dir: Path, source: Path, error) -> int:
+    """Keep invalid source and a refusal, without launching or installing anything."""
+    receipt = {"status": "invalid", "stage": "source declaration", "error": str(error),
+               "seconds": 0.0}
+    saved = candidate_runtime.record_preparation(run_dir, 0, receipt)
+    if not (run_dir / "state_after_round0").exists():
+        _save_round_state(run_dir, 0, source, rejected_candidate=True)
+    elif saved is not None:
+        try:
+            copy_rejected_harness(source, Path(saved).with_suffix(".source"),
+                                  ignore=shutil.ignore_patterns(".git"))
+        except OSError as exc:
+            console.note(f"could not retain refused source: {type(exc).__name__}", level="warn")
+    if not (run_dir / "curve.jsonl").exists():
+        _write_run_meta(run_dir, harness_preparation=receipt,
+                        runtime_refusal={"stage": "harness source declaration", "detail": str(error)})
+    console.note(f"refusing managed Python source: {error}", level="error")
+    return 2
 
 
 def describe_model() -> dict:
@@ -718,6 +821,8 @@ def _readiness(args) -> int:
     # endpoint probe and the prepared `config` block must describe the deployment this
     # machine would actually use, not the bare process environment.
     load_env(Path(__file__).parent / ".env")
+    args._namespace_config = run_namespace.fingerprint(
+        args._namespace_args, platform_config.dump(platform_config.load()))
     staged = args.sampling in ("diagnostic", "pilot_10pct")
     if getattr(args, "rounds", None) is None:
         args.rounds = 0 if staged else 3
@@ -784,14 +889,6 @@ def _readiness(args) -> int:
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
     run_dir = Path(args.runs_root) / run_id
-    # A directory that already holds a record is evidence, not scratch space. The staged
-    # policy reserves fresh ids for the same reason, and `--prepare-only` must not become
-    # a one-flag way to overwrite a run someone is about to read.
-    for existing in ("run_meta.json", "curve.jsonl"):
-        if (run_dir / existing).exists():
-            print(f"refusing --prepare-only: {run_dir} already holds {existing}; "
-                  f"preserve it and pass a fresh --run-id", file=sys.stderr)
-            return 2
     prepared_split = {}
     if args.split not in (None, 'declared'):
         from data.scaffolds.custom_split import resolve as resolve_split
@@ -803,7 +900,11 @@ def _readiness(args) -> int:
         except (OSError, ValueError, ImportError) as exc:
             print(f'refusing --prepare-only: split: {exc}', file=sys.stderr)
             return 2
-    run_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        run_dir = run_namespace.reserve(args, run_id, prepare=True)
+    except run_namespace.NamespaceRefused as exc:
+        print(f"refusing --prepare-only: {exc}", file=sys.stderr)
+        return 2
     # `platform_config.dump()` is the same redaction a real run's first write uses: every
     # secret field is `{"present": bool}` and never a value, because `run_meta.json` is
     # written to disk and read by people.
@@ -823,71 +924,11 @@ def _readiness(args) -> int:
         launched=False,
         **prepared_split,
     )
+    run_namespace.finish_preparation(run_dir, args._namespace_config)
     print(run_dir)
     return 0
 
 
-def _expand_experiment_argv(argv: list[str]) -> list[str] | None:
-    """`--config PATH` / `--set a.b=c` as the flags they name.
-
-    **The file is expanded before parsing, and the flags it produces go first.** A later
-    explicit flag then wins exactly as it does on a hand-written command line, which is the
-    property that makes a checked-in experiment usable: `--config experiments/quickstart.json
-    --dataset alfworld` is "the same experiment, on another dataset", not two overlapping
-    declarations. `sys.argv` is left alone so the record still names the file that was
-    read; the expansion is only what the parser sees (`run_meta.json:argv` keeps
-    `--config experiments/quickstart.json`, and the file is in the repository).
-
-    Returns `None` when neither flag is present, so the ordinary path does no work.
-    """
-    if not any(a == "--config" or a.startswith("--config=") or a == "--set"
-               or a.startswith("--set=") for a in argv):
-        return None
-    config: Path | None = None
-    sets: list[str] = []
-    rest: list[str] = []
-    index = 0
-    while index < len(argv):
-        item = argv[index]
-        if item in ("--config", "--set"):
-            if index + 1 >= len(argv):
-                raise SystemExit(f"driver.py: error: {item} needs a value")
-            value = argv[index + 1]
-            index += 2
-        elif item.startswith("--config=") or item.startswith("--set="):
-            item, value = item.split("=", 1)
-            index += 1
-        else:
-            rest.append(item)
-            index += 1
-            continue
-        if item == "--config":
-            if config is not None:
-                # One file, one experiment: two `--config` flags would make the merge order
-                # the reader's guess.
-                raise SystemExit("driver.py: error: --config may be given once")
-            config = Path(value)
-        else:
-            sets.append(value)
-    if config is None:
-        # `--set` alone: the same dotted overrides applied to an empty experiment.
-        return [*experiments.to_argv(experiments.overrides(sets)), *rest] if sets else None
-    return [*experiments.from_cli(config, sets), *rest]
-
-
-def _config_help() -> str:
-    """The configuration surface, rendered for `--help`.
-
-    Derived from `harnessgrad.config.describe()`, so the help text and the declared
-    defaults are one thing: a second hand-written table is how `--help` starts lying.
-    """
-    lines = ["configuration (every value is an environment variable; the effective set "
-             "of a run is recorded in run_meta.json under `config`):"]
-    for row in platform_config.describe():
-        default = row["default"]
-        shown = "" if default in (None, "<redacted>") else f"={default}"
-        lines.append(f"  {row['variable'] + shown:<36} {row['what']}")
-    return "\n".join(lines)
 
 
 class _SummaryWriteNotices:
@@ -969,255 +1010,8 @@ def _main(attempt: dict) -> int:
 
 
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
-    ap = argparse.ArgumentParser(
-        description=(
-            "Ordinary runs have no universal filesystem-quota or backend-observer\n"
-            "prerequisite. Existing declared-policy refusals still apply.\n"
-            "Ordinary local development runs as your user. Native/files demos and --help\n"
-            "require no sudo, dedicated quota volume, root Docker access, or strict runtime mode.\n"
-            "Sandboxed runs still require working bubblewrap/user namespaces; container-backed\n"
-            "tasks and image/overlay builds have separate Docker prerequisites.\n"
-            "Local/demo success grants no production/H0 authorization. Declared runtime policies\n"
-            "still fail closed without trusted backend observations: missing evidence remains\n"
-            "blocked and invalid/unmeasured, never an ordinary zero score.\n"
-            "Synthetic checks do not authorize production diagnostics or H0."),
-        epilog=_config_help())
-    source_args = ap.add_mutually_exclusive_group()
-    source_args.add_argument("--harness", default="loop")
-    source_args.add_argument("--harness-path", metavar="DIR",
-                             help="external harness directory (absolute path)")
-    ap.add_argument("--expected-harness-sha256", metavar="SHA256",
-                    help="require reviewed source bytes with --harness-path before any model/task")
-    ap.add_argument("--expected-harness-filesystem-sha256", metavar="SHA256",
-                    help="opt-in normalized owned-source filesystem identity; requires expected source SHA256")
-    ap.add_argument("--scenario", metavar="NAME", help="reviewed JSON scenario from scenarios/")
-    ap.add_argument("--dataset", default=argparse.SUPPRESS)
-    ap.add_argument("--sampling", default=argparse.SUPPRESS,
-                    help="diagnostic (one task, default) | pilot_10pct (temporary rerun: "
-                         "ceil(10%%), capped at 30; reviewed diagnostic required) | "
-                         "all | below_X | above_X | random_N. "
-                         "For the local demo, explicitly select all; this grants no "
-                         "production/H0 authorization")
-    ap.add_argument("--policy-evidence", default=None,
-                    help="required for diagnostic/pilot_10pct sampling: staged policy "
-                         "JSON with context and passing dataset gates; "
-                         "pilot_10pct also requires receipt and separate hash-bound review")
-    ap.add_argument("--authorize-unobserved-diagnostic", metavar="OPERATOR_REASON",
-                    help="explicitly authorize one train-side diagnostic attempt with policy "
-                         "enforcement NOT observed; no measured score, curve or production authorization")
-    ap.add_argument("--rounds", type=int, default=argparse.SUPPRESS,
-                    help="improvement rounds (default 0 for staged runs, 3 otherwise)")
-    #: How many times each (harness, task) pair is measured. One is one sample, and one
-    #: sample cannot tell an edit's effect from the noise: measured here, the same
-    #: unmodified harness scored 0.333 in one run and 0.000 in the next because the agent
-    #: model intermittently emits a tool call the harness cannot parse. Costs `trials`x
-    #: the wall clock -- 88% of a run is the harness loop -- so a first look uses 1 and a
-    #: claim about an edit uses 3.
-    ap.add_argument("--trials", type=int, default=argparse.SUPPRESS,
-                    help="measure each task N times; the point carries n_trials and "
-                         "score_std. Default 1 (one sample, no spread recorded)")
-    #: How many tasks are measured **at the same time**. The other axis from `--trials`,
-    #: and they multiply: trials buy a spread, jobs buy wall clock. Measured here, 87.8%
-    #: of a run's wall clock is the harness's own agent loop (2578 s of 2936 s on a
-    #: three-task round) and the platform does nothing while it waits, so a task set run
-    #: four at a time is close to four times shorter. The tasks are independent by
-    #: construction -- own container, own network, own gateway, own workspace -- but they
-    #: share the model endpoint and this host's CPU, which is why the default stays 1: a
-    #: number produced under contention is not comparable with one produced without it,
-    #: and the run records the value it used.
-    ap.add_argument("--gpu-budget", type=int, default=None, metavar="N",
-                    help="machine-wide ceiling on concurrently *measured* tasks across every "
-                         "run sharing this host, enforced with file locks "
-                         "(harnessgrad/slots.py). `--jobs` stays this run's own ceiling; the "
-                         "budget is what keeps N runs from each measuring `--jobs` at once. "
-                         "Unset keeps the old behaviour: `--jobs` alone")
-    ap.add_argument("--gpu-budget-dir", default=None, metavar="DIR",
-                    help="where the budget's slot locks live (default: $TMPDIR/hg-gpu-slots). "
-                         "Two batches with different capacities must not share a directory")
-    ap.add_argument("--jobs", type=int, default=argparse.SUPPRESS,
-                    help="measure up to N tasks concurrently (default 1). The tasks share "
-                         "one model endpoint and one host, so raise it deliberately")
-    ap.add_argument("--mode", default="A", choices=["A", "B"],
-                    help="DEPRECATED and ignored: there is one engine. A method that "
-                         "submits its whole sequence in one call behaves as mode B did; "
-                         "one that submits a step per call behaves as mode A did, and "
-                         "`steps_in_submission` on each point says which happened.")
-    ap.add_argument("--method-timeout", type=int, default=86400,
-                    help="mode B: seconds before the method's own loop is killed")
-    # **哪个改进器。** 方法自带改进器时这三个开关是无害的;用一种"把方法拆成规则+
-    # 改进器"的方法时,它们决定谁来做那一步 —— 而解析出来的
-    # 版本和哈希会进每个曲线点(INTERFACE.md §4.49)。放在命令行而不是只读配置:
-    # 一次实验"用哪个改进器"正是最该被显式记录、最不该靠环境变量碰运气的东西。
-    ap.add_argument("--improver", default=None,
-                    help="harnessgrad/improvers/improvers.json 里的名字,或一个可执行文件的路径")
-    ap.add_argument("--improver-model", default=None, help="覆盖改进器自己的模型")
-    ap.add_argument("--improver-effort", default=None,
-                    help="codex 系:low|medium|high|xhigh")
-    ap.add_argument("--method-entrypoint", default=None,
-                    help="mode B only: argv for the method's own runner, e.g. "
-                         "'python /path/to/rrsi_wrap.py'. Defaults to "
-                         "harness.json's improve_entrypoint.")
-    ap.add_argument("--run-id", default=None)
-    ap.add_argument("--budget-profile", default=None,
-                    help="JSON trusted-dispatch profile; required for approved Task25 runs")
-    ap.add_argument("--budget-ledger", default=None,
-                    help="path to the process-shared trusted-dispatch ledger")
-    ap.add_argument("--budget-arm", default="agent",
-                    help="identity of this run arm in the trusted-dispatch ledger")
-    ap.add_argument("--tasks", default=None,
-                    help="a comma-separated subset of task ids to run, instead of the "
-                         "whole side. Refused if any id is not in the dataset: silently "
-                         "dropping one would produce a curve whose task count does not "
-                         "match what was asked for, which is the kind of difference "
-                         "nobody notices until they compare two runs.")
-    ap.add_argument("--side", choices=("train", "eval"), default=argparse.SUPPRESS,
-                    help="which side of the dataset's split this run is about. A run "
-                         "evaluates ONE side: a train run evolves the harness and shows "
-                         "the method the traces of the tasks it is scored on, and an "
-                         "eval run measures one state of a train run on the exam. They "
-                         "are separate runs so that the exam's traces are not in the "
-                         "train run at all -- an absence, not a withheld field.")
-    ap.add_argument("--pool", default=argparse.SUPPRESS,
-                    help="existing adapter pool selector (e.g. appworld dev); no inferred pools")
-    ap.add_argument("--split", default=argparse.SUPPRESS,
-                    help="which division of the dataset this run uses, when the caller "
-                         "does not want the one the dataset declares. `declared` (the "
-                         "default) uses the adapter's own SPLIT; `default` uses the "
-                         "platform's documented rule (a deterministic third, by hash of "
-                         "the task id or the adapter's declared group); `official` uses "
-                         "the benchmark's own evaluation set "
-                         "as the adapter declares it, which is the comparable run -- the "
-                         "whole official set, with no study material in this pool. Anything "
-                         "else is a custom split manifest from `harnessgrad split create`, or a legacy JSON file {\"train\": [...], \"eval\": [...]}. "
-                         "The division is a property of the experiment protocol, not of the "
-                         "benchmark, so the run may supply it; whichever is used is recorded "
-                         "on the run as `split_source` and `split_sha`, and two points are "
-                         "comparable only when those agree.")
-    ap.add_argument("--from-run", default=None,
-                    help="--side eval: the train run whose harness state to measure")
-    ap.add_argument("--reuse-identical", action="store_true",
-                    help="a candidate whose content address equals an already-measured "
-                         "state still gets a curve point, but that point reuses the earlier "
-                         "measurement instead of spending another task-set run. Off by "
-                         "default: it changes what a re-measured state means, and the "
-                         "isolation tests rely on the measurement actually happening")
-    ap.add_argument("--resume", action="store_true",
-                    help="continue an interrupted run instead of starting clean: the train "
-                         "side continues from its last measured round, the eval side scores "
-                         "only the tasks whose progress file is missing")
-    ap.add_argument("--resume-across-platforms", default=None, metavar="REASON",
-                    help="--resume: continue a run whose `platform_content_sha` is not this "
-                         "tree's, after a human reviewed what changed. Refused by default; the "
-                         "REASON is recorded with both hashes and both git shas under the run's "
-                         "`platform-seams/`, so the curve says which code measured which rounds "
-                         "instead of hiding it")
-    ap.add_argument("--from-round", type=int, default=None,
-                    help="--side eval: which round of that run (default: its last)")
-    ap.add_argument("--h0-from", default=None, metavar="RUN_ID",
-                    help="reuse another run's round-0 measurement instead of measuring one. "
-                         "Same base tree, same study tasks, so every method must be offered "
-                         "the *same* first score: re-measuring it per method lets batching "
-                         "non-determinism hand one method a different number and a different "
-                         "trace set, which is the one thing a comparison cannot absorb. The "
-                         "reused point records `shared_from` naming the run it came from. "
-                         "Refused unless both runs share the base harness sha")
-    ap.add_argument("--baseline", default=None,
-                    help="a frozen reference point to measure this run against, as a JSON "
-                         "file holding one curve point (the object a `curve.jsonl` line "
-                         "carries). Declared rather than inferred: without it the baseline "
-                         "is round 0 of this same run, which is the control for one method "
-                         "and a different reference for every other one. A frozen reference "
-                         "puts every method on one axis, which is what cross-method "
-                         "comparison needs -- and because nothing re-measures it, this run "
-                         "checks and records whether it still describes the run in front of "
-                         "it (agent model, backend, harness family, framework version and "
-                         "the task set). Measure the frozen reference well: it is amortized "
-                         "over every method that uses it, so its own sampling noise is "
-                         "baked into all of them.")
-    ap.add_argument("--seed", default=None,
-                    help="the environment's seed (INTERFACE.md §2.5.7). A per-task "
-                         "seed is derived from it and given to services that declare "
-                         "`needs_seed`; recorded on every curve point. Drawn at random "
-                         "when omitted, and re-supplyable so a recorded run can be "
-                         "reproduced.")
-    ap.set_defaults(sandbox=True)
-    ap.add_argument("--runs-root", default="runs")
-    ap.add_argument("--no-sandbox", dest="sandbox", action="store_false",
-                    help="run the harness WITHOUT a mount namespace. A sandboxed "
-                         "harness cannot see the platform at all; without one it "
-                         "can read the driver and .env, and only the hash check in "
-                         "eval/integrity.py stands between it and the scorer. "
-                         "Explicit debugging opt-out, never an automatic fallback. "
-                         "Exec tasks retain their container boundary and declared-policy "
-                         "refusals still apply. Numbers are not comparable across the two modes.")
-    ap.add_argument("--work-root", default="../harnessgrad_work",
-                    help="where harness working trees live; must be OUTSIDE the "
-                         "platform tree, or a harness can reach the platform")
-    ap.add_argument("--show-config", action="store_true",
-                    help="print the effective configuration (the declared `HG_*` "
-                         "environment variables, after `.env` is folded in) as JSON "
-                         "and exit 0 without running anything")
-    # The page a finished run leaves behind. Documented here, beside `--show-config`,
-    # because both answer a question a reader has *after* the numbers exist: what did
-    # this run configure, and what does its record actually say. Neither can change a
-    # score -- the summary is derived from curve.jsonl and its failure never reaches the
-    # exit code -- so the help says what they do, not what they might invalidate.
-    ap.add_argument("--no-summary", action="store_true",
-                    help="do not write end-summary.md / end-summary.json when the run "
-                         "finishes. A finished run writes that one page beside its curve "
-                         "by default (tools/run_summary.py); this switches it off. The "
-                         "page is derived from curve.jsonl, so it can always be "
-                         "regenerated, and a failure to write it never changes the exit "
-                         "code")
-    ap.add_argument("--summary-dir", default=None, metavar="DIR",
-                    help="write end-summary.md / end-summary.json into DIR instead of the "
-                         "run directory. The run directory stays the default so the page "
-                         "is found beside the curve it describes")
-    # Two flags a new user needs before their first run. Everything else in this parser
-    # describes the run; these ask whether the run can happen at all, which used to cost
-    # a round of model calls to find out (`harnessgrad/readiness.py`).
-    ap.add_argument("--check-only", action="store_true",
-                    help="print one row per prerequisite of the run these arguments "
-                         "describe, and exit 0 if every required one is ok else 2. "
-                         "Creates nothing, stages nothing, calls no model. Pass the "
-                         "flags the real run will use: they are what is checked")
-    ap.add_argument("--prepare-only", action="store_true",
-                    help="create the run directory and its redacted run_meta.json, print "
-                         "the directory and exit 0, launching nothing. Combined with "
-                         "--check-only, the checks gate the preparation")
-    ap.add_argument("--check-net", action="store_true",
-                    help="--check-only: also GET /models for each necessary agent/method endpoint with a 3 s "
-                         "timeout. Opt-in because it is the one check that leaves the "
-                         "machine")
-    ap.add_argument('--fail-on-incomplete', action='store_true',
-                    help='exit 2 when the requested experiment ended with method/measurement failures; '
-                         'a valid method-requested early stop remains successful')
-    # `--config` / `--set` are expanded into the flags they name before the parser sees
-    # them (`_expand_experiment_argv`); nothing else about the parse changes.
-    expanded = _expand_experiment_argv(sys.argv[1:])
-    expanded = sys.argv[1:] if expanded is None else expanded
-    reviewed_flags = ('--expected-harness-sha256', '--expected-harness-filesystem-sha256')
-    strict_reviewed = any(value.startswith('--') and any(
-        option.startswith(value.split('=', 1)[0]) for option in reviewed_flags) for value in expanded)
-    if strict_reviewed:
-        # Legacy CLI retains argparse abbreviations/last-value behavior. A reviewed
-        # invocation cannot have hidden abbreviated or duplicate effective options.
-        ap.allow_abbrev = False
-        seen = set()
-        for value in expanded:
-            option = value.split('=', 1)[0]
-            action = ap._option_string_actions.get(option)
-            if action is not None:
-                if action.dest in seen:
-                    ap.error('reviewed source forbids duplicate argument: ' + option)
-                seen.add(action.dest)
-        if '--no-sandbox' in expanded:
-            ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
-    args = ap.parse_args(expanded)
-    explicit = set(vars(args)) & _SCENARIO_ARG_DEFAULTS.keys()
-    for field, default in _SCENARIO_ARG_DEFAULTS.items():
-        if not hasattr(args, field):
-            setattr(args, field, default)
+    sources.enter_context(datasets.provider_session())
+    ap, args, explicit = parse_run_args(sys.argv[1:], _SCENARIO_ARG_DEFAULTS)
     scenario_spec = scenario_receipt = None
 
     if (args.run_id or "").startswith("task25-") and not args.budget_profile:
@@ -1253,6 +1047,25 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 or any(c not in '0123456789abcdef' for c in value)):
             print('--expected-harness-filesystem-sha256 requires expected source SHA256 and a lowercase SHA256', file=sys.stderr)
             return 2
+
+    # Preserve parsed arguments before readiness and runtime add derived fields.
+    namespace_args = dict(vars(args))
+    namespace_staged = args.sampling in ("diagnostic", "pilot_10pct")
+    namespace_mode = "unified" if args.mode in ("A", "B") else args.mode
+    if not args.resume and (args.run_id or not namespace_staged):
+        namespace_id = args.run_id or f"{args.harness}-{args.dataset}-{args.sampling}-m{namespace_mode}"
+        namespace_config = None
+        if (Path(args.runs_root) / namespace_id / 'prepared-reservation.json').is_file():
+            load_env(Path(__file__).parent / ".env")
+            namespace_config = run_namespace.fingerprint(
+                namespace_args, platform_config.dump(platform_config.load()))
+        try:
+            run_namespace.available(args, namespace_id, namespace_config,
+                                    allow_prepared=not args.prepare_only)
+        except run_namespace.NamespaceRefused as exc:
+            print(f"refusing run: {exc}", file=sys.stderr)
+            return 2
+    args._namespace_args = namespace_args
 
     # **Readiness is answered from the arguments a run would use, and answered first.**
     # Here rather than after the harness/dataset resolution above because `--check-only`
@@ -1385,10 +1198,13 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         # Checkpoint eval retains its original source and provenance helpers.
         try:
             harness_src, _round = _eval_source(args, runs_root)
+            eval_from = _eval_from_record(runs_root, args.from_run, _round, source=harness_src)
         except SystemExit as exc:
             print(exc, file=sys.stderr)
             return 2
-        eval_from = _eval_from_record(runs_root, args.from_run, _round)
+        except (OSError, TypeError, ValueError) as exc:
+            print(f"refusing --from-run: {exc}", file=sys.stderr)
+            return 2
     else:
         harness_src = _harness_by_name(args.harness)
         if harness_src is None:
@@ -1399,6 +1215,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     env_file = Path(__file__).parent / ".env"
     load_env(env_file)
+    args._namespace_config = run_namespace.fingerprint(
+        args._namespace_args, platform_config.dump(platform_config.load()))
 
     # Isolation before configuration, and both before a dataset is loaded. Where a run writes
     # is a safety property; whether the method can start is a configuration one. Reversed, a
@@ -1565,6 +1383,30 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     except (OSError, TypeError, ValueError) as exc:
         console.note(f"invalid scoring profile: {exc}", level="error")
         return 2
+    try:
+        args.dataset_runtime_identity = dataset_runtime_identity.capture(
+            args.dataset, side_ids, setups, verifiers, envs)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f"invalid dataset runtime identity: {exc}", level="error")
+        return 2
+    # Resolve environment identities before binding verification inputs. Keep the
+    # capability gate ahead of image lookup, including for resume preflight.
+    try:
+        problem = _check_env_kinds(manifest(harness_src), _required_env_kinds(envs))
+        if problem:
+            console.note(f"refusing to run: {problem}", level="error")
+            return 2
+        envs, env_problem = _resolve_envs(envs)
+        if env_problem:
+            console.note(f"refusing to run: {env_problem}", level="error")
+            return 2
+        args.verification_context = verification_context.capture(tasks_all, scorable, setups, verifiers, envs, sandbox=args.sandbox)
+    except (OSError, TypeError, ValueError) as exc:
+        console.note(f"invalid verification context: {exc}", level="error")
+        return 2
+    args.harness_runtime_identity = None
+    args.current_harness_runtime_identity = None
+    args.harness_preparation = None
     verifier_kinds = sorted({v.get("kind", "answer") for v in verifiers.values()})
     # The record says **unified**, not the flag. `--mode` is accepted so existing scripts
     # keep working, but it selects nothing any more, and a point that said `run_mode: B`
@@ -1576,15 +1418,14 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
     run_dir = Path(args.runs_root) / run_id
-    try:
-        if staged:
-            run_dir = diagnostic_policy.reserve_run_directory(Path(args.runs_root), run_id)
-        else:
-            run_dir.mkdir(parents=True, exist_ok=True)
-    except (FileExistsError, ValueError) as exc:
-        print(f"refusing staged policy: cannot reserve fresh run ID {run_id!r}: {exc}",
-              file=sys.stderr)
-        return 2
+    if not args.resume:
+        try:
+            run_dir = run_namespace.claim(args, run_id, args._namespace_config)
+        except run_namespace.NamespaceRefused as exc:
+            print(f"refusing run: {exc}", file=sys.stderr)
+            return 2
+    else:
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     # Resolve the saved seed before any metadata write or workspace restaging.
     # A rejected explicit override must not rewrite the interrupted run's config.
@@ -1601,7 +1442,54 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 return 2
         try:
             scoring_identity.require_same(saved_meta.get("scoring_identity"), args.scoring_identity)
-        except ValueError as exc:
+            _require_verification_context(saved_meta.get("verification_context"), args.verification_context)
+            dataset_runtime_identity.require_same(
+                saved_meta.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+            curve_path = run_dir / "curve.jsonl"
+            existing_points = []
+            if curve_path.is_file():
+                for line in curve_path.read_text().splitlines():
+                    if line.strip():
+                        point = json.loads(line)
+                        existing_points.append(point)
+                        _require_verification_context(point.get("verification_context"), args.verification_context,
+                            list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
+                        dataset_runtime_identity.require_same(
+                            point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+            restored_runtime = candidate_runtime.validate_resume(
+                run_dir, saved_meta, existing_points, harness_src,
+                envs=envs, setups=setups, sandbox=args.sandbox)
+            if restored_runtime is not None:
+                args.harness_runtime_identity = restored_runtime["initial"]
+                args.current_harness_runtime_identity = restored_runtime["current"]
+                managed_history = (args.harness_runtime_identity is not None
+                                   or args.current_harness_runtime_identity is not None
+                                   or any(point.get("harness_runtime_identity") is not None for point in existing_points))
+                if args.side == "train" and existing_points and managed_history:
+                    harness_src = sources.enter_context(candidate_runtime.checkpoint_source(
+                        run_dir, existing_points[0]))
+                    args._resume_initial_source = harness_src
+                    last_point = max(existing_points, key=lambda point: int(point.get("round") or 0))
+                    args._resume_candidate_source = sources.enter_context(candidate_runtime.checkpoint_source(
+                        run_dir, last_point))
+                    harness_source = saved_meta.get("harness_source")
+            for saved_point in existing_points:
+                external_runtime.admit_checkpoint(run_dir, saved_point, fallback=harness_src)
+            args.harness_preparation = saved_meta.get("harness_preparation")
+            if args.side == "eval":
+                prior = _progress_results(run_dir)
+                expected = dataset_runtime_identity.project_many(args.dataset_runtime_identity, prior)
+                for tid, record in prior.items():
+                    _require_verification_context(record.get("verification_context"), args.verification_context, [tid])
+                    if (args.dataset_runtime_identity is not None
+                            or record.get("dataset_runtime_identity") is not None) and tid not in side_ids:
+                        raise ValueError("dataset_runtime_identity progress names an unselected task")
+                    dataset_runtime_identity.require_same(
+                        record.get("dataset_runtime_identity"), expected[tid])
+                    candidate_runtime.require_same(
+                        record.get("harness_runtime_identity"), args.current_harness_runtime_identity)
+                    external_runtime.admit_reuse(harness_src, record, services=True)
+        except (OSError, TypeError, ValueError) as exc:
             console.note(f"refusing --resume: {exc}", level="error")
             return 2
     if args.side == 'eval' and args.resume:
@@ -1639,7 +1527,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         # evidence of an incomplete diagnostic, never an inferred successful run.
         _write_run_meta(run_dir, run_id=run_id, dataset=args.dataset,
                         sampling_policy="diagnostic", enforcement=enforcement,
-                        **scoring_identity.fields(args.scoring_identity))
+                        **scoring_identity.fields(args.scoring_identity),
+                        **dataset_runtime_identity.fields(args.dataset_runtime_identity))
         def finalize_incomplete(detail):
             if not (run_dir / "diagnostic_receipt.json").exists():
                 save_policy_receipt({"trials": 1, "invalid": {
@@ -1679,9 +1568,37 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # of 40.
     slots.configure(args.gpu_budget, args.gpu_budget_dir)
 
+    resume_state = None
+    if args.resume and args.side == 'train':
+        work = (Path(args.work_root) / run_id / "workspace").resolve()
+        if not workspace_is_outside_platform(work, PLATFORM_ROOT):
+            print(f"refusing to run: workspace {work} is inside the platform", file=sys.stderr)
+            return 2
+        for field in ("harness", "dataset", "sampling_policy", "trials"):
+            requested = getattr(args, "sampling" if field == "sampling_policy" else field)
+            if saved_meta.get(field) is not None and saved_meta[field] != requested:
+                print(f"refusing --resume: {field} differs from the original run", file=sys.stderr)
+                return 2
+        saved_seed = ((saved_meta.get("config") or {}).get("run") or {}).get("seed")
+        if saved_seed:
+            if args.seed is not None and args.seed != saved_seed:
+                print("refusing --resume: requested seed differs from the original seed", file=sys.stderr)
+                return 2
+            resumed_seed = saved_seed
+        try:
+            resume_state = _resume_train_state(args, run_dir, split, work, defer=True)
+            sources.callback(resume_state["_publication"][0].cleanup)
+        except ResumeNothingToDo as exc:
+            print(f"--resume: {exc}")
+            return 0
+        except (ResumeRefused, OSError, ValueError) as exc:
+            print(f"refusing --resume: {exc}", file=sys.stderr)
+            return 2
+
     # From here on the run narrates itself through the console, which writes the
     # human text and `events.jsonl` together.
-    console.attach(run_dir / "events.jsonl")
+    if not args.resume and args.side != 'eval':
+        console.attach(run_dir / "events.jsonl")
 
     # **Which improver this run's edits came from, resolved before anything is paid for.**
     #
@@ -1819,7 +1736,14 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # them. What it must not be is silent -- measured, `loop` on Terminal-Bench died on
     # its first model call and the run reported nothing but `score 0.000`, which reads
     # exactly like a method that decided not to edit.
-    _warn_missing_overlay(harness_src, envs, args.dataset)
+    try:
+        managed_source = has_python_runtime(harness_src)
+        if not managed_source:
+            _warn_missing_overlay(harness_src, envs, args.dataset)
+    except (OSError, TypeError, ValueError) as exc:
+        if not _managed_python_intent(harness_src):
+            raise
+        return _refuse_managed_source(run_dir, harness_src, exc)
 
     man_at_door = manifest(harness_src)
     problem = _check_env_kinds(man_at_door, _required_env_kinds(envs))
@@ -1833,10 +1757,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # and named the image's *tag* while every curve point carried the digest. Two records
     # of one run disagreeing about what it ran in is the exact failure §2.5.4 exists to
     # prevent.
-    envs, env_problem = _resolve_envs(envs)
-    if env_problem:
-        console.note(f"refusing to run: {env_problem}", level="error")
-        return 2
+    # The selected image identities were resolved before verification context capture.
 
     # The container boundary is built once, at the door, for the same reason the bwrap
     # one is: a boundary that cannot be built must stop the run before it is paid for,
@@ -1906,20 +1827,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         print('refusing to run: model/method configuration failed before H0', file=sys.stderr)
         return 2
 
-    if work.exists():
-        if staged:
-            print(f"refusing staged policy: workspace {work} already exists; "
-                  "preserve incomplete evidence and use a fresh run ID", file=sys.stderr)
-            return 2
-        shutil.rmtree(work)
-    try:
-        # Reserve the staged workspace identity too, including incomplete parent
-        # directories. Exclusive creation also prevents two runs sharing it.
-        work.parent.mkdir(parents=True, exist_ok=not staged)
-    except FileExistsError:
-        print(f"refusing staged policy: workspace directory {work.parent} already exists; "
-              "preserve incomplete evidence and use a fresh run ID", file=sys.stderr)
-        return 2
+    if args.resume and resume_state is None:
+        work.parent.mkdir(parents=True, exist_ok=True)
     curve_path = run_dir / "curve.jsonl"
 
     # The sandbox is verified before the first paid call, not once per task. A
@@ -2014,16 +1923,45 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                 level="error")
             return 2
 
-    # **Same decision as `fresh=True` below, applied to docker objects.** A killed run
-    # leaves its per-task networks (and any service container) behind, and the next run
-    # under the same id then dies of the *previous* crash: `docker network create ...
-    # already exists`. Reusing an id means "start clean", so say it once here.
-    # Staged IDs never resume. A fresh receipt directory does not establish
-    # ownership of leftover backend objects with the same ID under another root.
-    leftovers = services_mod.reap(run_id) if not staged else []
-    if leftovers:
-        console.note("could not remove everything a previous run left behind:\n  "
-                     + "\n  ".join(leftovers[:6]), level="warn")
+    # A containerised harness whose model is not on this host needs the internet to
+    # reach it, and a task that did not ask for the internet must not silently get it --
+    # that would change what the task *is* (§2.5.4). Refused rather than attempted: the
+    # harness would have no model, so every score would be a zero that means nothing,
+    # and it would look like a weak harness.
+    if "exec" in _required_env_kinds(envs) \
+            and platform_config.current().agent.backend != "mock":
+        base_url = platform_config.current().agent.base_url or ""
+        if base_url and not modelgate.is_host_local(base_url):
+            offline = sorted(tid for tid, spec in envs.items()
+                             if spec.get("kind") == "exec"
+                             and spec.get("network") != "bridge")
+            if offline:
+                console.note(
+                    f"refusing to run: the agent's model is at {base_url!r}, which is "
+                    f"not on this host, so a containerised harness needs the internet "
+                    f"to reach it. Task(s) {offline} are 'exec' with network != "
+                    f"'bridge', so the harness would have no model at all. Either set "
+                    f"network='bridge' and accept that the task is a networked task, or "
+                    f"point HG_AGENT_BASE_URL at a model on this host.", level="error")
+                return 2
+
+    # Recheck the captured scorer inputs immediately before any resume
+    # publication, event attachment or metadata write, even without progress.
+    if args.resume or args.side == 'eval':
+        try:
+            current = verification_context.capture(tasks_all, scorable, setups, verifiers, envs, sandbox=args.sandbox)
+            _require_verification_context(args.verification_context, current)
+        except (OSError, TypeError, ValueError) as exc:
+            print(f"refusing run: verification context changed: {exc}", file=sys.stderr)
+            return 2
+    if resume_state is not None:
+        _publish_resume(resume_state)
+    if args.resume or args.side == 'eval':
+        console.attach(run_dir / "events.jsonl", append=bool(args.resume))
+
+
+    # A run ID alone cannot establish ownership of backend objects across roots.
+    # Leave pre-existing objects untouched; backend creation will report collisions.
 
     web_declarations = [spec.get("web") for spec in envs.values() if spec.get("web")]
     web_record = {}
@@ -2038,6 +1976,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         harness_source=harness_source,
         scenario=scenario_receipt,
         **scoring_identity.fields(args.scoring_identity),
+        **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+        **verification_context.fields(args.verification_context),
+        **candidate_runtime.fields(args.harness_runtime_identity),
         dataset=args.dataset, sampling_policy=args.sampling,
         enforcement=enforcement,
         diagnostic_policy=({"receipt_schema": diagnostic_policy.SCHEMA,
@@ -2124,8 +2065,16 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         fresh=not getattr(args, "resume", False),
     )
 
-    if harness_source is not None:
+    if resume_state is not None:
+        pass
+    elif harness_source is not None:
         try:
+            # A managed resume already admitted its retained checkpoint. Its
+            # source can include Git's generated ignore rules, while the original
+            # external input remains unchanged and keeps its separate receipt.
+            staged_receipt = (source_identity(harness_src)
+                              if getattr(args, '_resume_initial_source', None) is not None
+                              else source_receipt)
             with tempfile.TemporaryDirectory(prefix='hg-source-', dir=work.parent) as staging:
                 snapshot = Path(staging) / 'source'
                 _external_source_snapshot(harness_src, snapshot)
@@ -2149,7 +2098,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     raise ValueError('owned harness filesystem changed during staging')
                 if source_identity(snapshot) != snapshot_identity:
                     raise ValueError('harness source snapshot changed during staging')
-            if (source_identity(harness_src) != source_receipt
+            if (source_identity(harness_src) != staged_receipt
                     or (reviewed_original is not None and source_identity(reviewed_original) != source_receipt)):
                 raise ValueError('harness source changed during staging; use a stable input directory')
             if args.expected_harness_filesystem_sha256 is not None:
@@ -2167,33 +2116,63 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             print(f'refusing --harness-path: {exc}', file=sys.stderr)
             return 2
     else:
-        stage_workspace(harness_src, work)
+        try:
+            stage_workspace(harness_src, work)
+        except (OSError, TypeError, ValueError) as exc:
+            if not _managed_python_intent(harness_src):
+                raise
+            return _refuse_managed_source(run_dir, harness_src, exc)
     man = manifest(work)
+    if not args.resume:
+        fixed_source_sha = commit_state(work, "fixed source before runtime preparation")
+        if has_python_runtime(work):
+            _save_round_state(run_dir, 0, work)
+            _snapshot_round(run_dir, 0, run_dir / "state_after_round0",
+                            run_id=run_id, harness_sha=fixed_source_sha)
+        preparation_started = time.monotonic()
+        try:
+            donor_binding = None
+            if args.harness_runtime_binding is not None:
+                donor_binding = candidate_runtime.validate(json.loads(args.harness_runtime_binding.read_text()))
+            elif args.side == "eval" and eval_from:
+                donor_binding = eval_from.get("harness_runtime_identity")
+            if args.h0_from:
+                donor_curve = Path(args.runs_root) / args.h0_from / "curve.jsonl"
+                if donor_curve.is_file():
+                    rows = [json.loads(line) for line in donor_curve.read_text().splitlines() if line.strip()]
+                    donor_binding = rows[0].get("harness_runtime_identity") if rows else None
+            preparation = candidate_runtime.prepare(
+                work, binding=donor_binding, envs=envs, setups=setups, sandbox=args.sandbox,
+                **({'extend_images': True} if args.side == 'eval' and args.from_run
+                   and (donor_binding or {}).get('kind') == 'python-placements' else {}))
+            selected_binding = None if preparation is None else preparation["identity"]
+            selected_binding = candidate_runtime.admit(
+                work, selected_binding, envs=envs, setups=setups, sandbox=args.sandbox)
+        except (OSError, TypeError, ValueError) as exc:
+            receipt = getattr(exc, "receipt", None) or {
+                "status": "failed", "error": str(exc),
+                "seconds": round(time.monotonic() - preparation_started, 6)}
+            candidate_runtime.record_preparation(run_dir, 0, receipt)
+            _write_run_meta(run_dir, harness_preparation=receipt,
+                            runtime_refusal={"stage": "harness runtime preparation", "detail": str(exc)})
+            console.note(f"refusing harness runtime preparation: {exc}", level="error")
+            return 2
+        if preparation is not None:
+            candidate_runtime.record_preparation(run_dir, 0, preparation)
+            args.harness_preparation = preparation
+        args.harness_runtime_identity = selected_binding
+        args.current_harness_runtime_identity = selected_binding
+        _write_run_meta(run_dir, **candidate_runtime.fields(selected_binding),
+                        harness_preparation=preparation)
+    try:
+        current_external = external_runtime.identities(work)
+        _write_run_meta(run_dir, **external_runtime.fields(current_external))
+    except external_runtime.RuntimeUnavailable as exc:
+        console.note(f'refusing external actor runtime: {exc}', level='error')
+        return 2
     # `_check_env_kinds` already ran, against this same manifest read from the source --
     # see the note beside `envs, env_problem = _resolve_envs(envs)` for why it has to be
     # the first refusal rather than this one.
-
-    # A containerised harness whose model is not on this host needs the internet to
-    # reach it, and a task that did not ask for the internet must not silently get it --
-    # that would change what the task *is* (§2.5.4). Refused rather than attempted: the
-    # harness would have no model, so every score would be a zero that means nothing,
-    # and it would look like a weak harness.
-    if "exec" in _required_env_kinds(envs) \
-            and platform_config.current().agent.backend != "mock":
-        base_url = platform_config.current().agent.base_url or ""
-        if base_url and not modelgate.is_host_local(base_url):
-            offline = sorted(tid for tid, spec in envs.items()
-                             if spec.get("kind") == "exec"
-                             and spec.get("network") != "bridge")
-            if offline:
-                console.note(
-                    f"refusing to run: the agent's model is at {base_url!r}, which is "
-                    f"not on this host, so a containerised harness needs the internet "
-                    f"to reach it. Task(s) {offline} are 'exec' with network != "
-                    f"'bridge', so the harness would have no model at all. Either set "
-                    f"network='bridge' and accept that the task is a networked task, or "
-                    f"point HG_AGENT_BASE_URL at a model on this host.", level="error")
-                return 2
 
     console.header(
         run_id=run_id, harness=man["name"], version=man["version"], mode=mode,
@@ -2233,6 +2212,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # amount the method did not spend (INTERFACE.md §2.5.7).
     cumulative = {"evaluation_trials": 0, "generation_tokens": 0,
                   "env_generation_tokens": 0, "wall_clock_s": 0.0}
+    preparation_seconds = float((args.harness_preparation or {}).get("seconds") or 0.0)
+    if args.harness_preparation is not None and not args.resume:
+        cumulative["harness_preparation_wall_clock_s"] = preparation_seconds
+        cumulative["wall_clock_s"] += preparation_seconds
 
     # Staged runs already fixed their task set; score-based policies select after H0.
     # Committed **before** the measurement, so the measurement can be cached under the
@@ -2250,20 +2233,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # **A resumed run rebuilds round 0 from the record instead of measuring it.**
     # `--h0-from` shares another run's first score; `--resume` continues *this* run,
     # so the same rebuild applies to its own curve, and no state is measured twice.
-    resume_state = None
-    if args.resume:
-        try:
-            resume_state = _resume_train_state(args, run_dir, split, work)
-        except ResumeNothingToDo as exc:
-            console.note(f"--resume: {exc}", level="info")
-            return 0
-        except ResumeRefused as exc:
-            console.note(f"refusing --resume: {exc}", level="error")
-            return 2
-        console.note(
-            f"resuming {run_id} at round {resume_state['last']}"
-            f" ({(resume_state['recorded_sha'] or '')[:12]}); the workspace was re-staged"
-            f" from state_after_round{resume_state['last']}", level="info")
+    if resume_state is not None:
+        baseline_state = run_dir / "state_after_round0"
+        if baseline_state.is_dir():
+            man = manifest(baseline_state)
     if resume_state is None:
         h0_sha = commit_state(work, "H0")
         t0 = time.time()
@@ -2302,10 +2275,40 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                              level="error")
                 return 2
             try:
+                dataset_runtime_identity.admit(args.dataset_runtime_identity)
+                donor_metadata = json.loads((donor_dir / "run_meta.json").read_text())
+                _require_verification_context(donor_metadata.get("verification_context"), args.verification_context)
+                _require_verification_context(donor_point.get("verification_context"), args.verification_context,
+                    list((donor_point.get("sampling") or {}).get("task_ids") or (donor_point.get("per_task") or {})))
+                dataset_runtime_identity.require_same(
+                    donor_metadata.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                dataset_runtime_identity.require_same(
+                    donor_point.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                candidate_runtime.admit(work, args.harness_runtime_identity,
+                                        envs=envs, setups=setups, sandbox=args.sandbox)
+                external_runtime.admit_reuse(work, donor_point)
+                if payload is not None:
+                    external_runtime.admit_reuse(work, payload.get('base') or {})
+                candidate_runtime.require_same(
+                    donor_metadata.get("harness_runtime_identity"), args.harness_runtime_identity)
+                candidate_runtime.require_same(
+                    donor_point.get("harness_runtime_identity"), args.harness_runtime_identity)
                 scoring_identity.require_same(donor_point.get("scoring_identity"), args.scoring_identity)
                 if payload is not None:
+                    _require_verification_context(payload.get("verification_context"), args.verification_context)
+                    _require_verification_context((payload.get("base") or {}).get("verification_context"), args.verification_context)
+                    dataset_runtime_identity.require_same(
+                        payload.get("dataset_runtime_identity"), args.dataset_runtime_identity)
+                    dataset_runtime_identity.require_same(
+                        (payload.get("base") or {}).get("dataset_runtime_identity"),
+                        args.dataset_runtime_identity)
+                    candidate_runtime.require_same(
+                        payload.get("harness_runtime_identity"), args.harness_runtime_identity)
+                    candidate_runtime.require_same(
+                        (payload.get("base") or {}).get("harness_runtime_identity"),
+                        args.harness_runtime_identity)
                     scoring_identity.require_same(payload.get("scoring_identity"), args.scoring_identity)
-            except ValueError as exc:
+            except (OSError, TypeError, ValueError) as exc:
                 console.note(f"refusing --h0-from {args.h0_from!r}: {exc}", level="error")
                 return 2
             if payload is not None:
@@ -2363,6 +2366,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             base = evaluate(work, tasks_all, scorable, cache, harness_sha=h0_sha,
                             trials=args.trials, jobs=args.jobs, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
+                            **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+                            **candidate_runtime.fields(args.current_harness_runtime_identity),
+                            verification_context=args.verification_context,
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
                             **({"diagnostic_authorization": diagnostic_authorization}
@@ -2371,7 +2377,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             try:
                 (run_dir / "h0.json").write_text(
                     json.dumps({"base": base, "h0_sha": h0_sha, "run_id": run_id,
-                                **scoring_identity.fields(args.scoring_identity)}, default=str))
+                                **scoring_identity.fields(args.scoring_identity),
+                                **dataset_runtime_identity.fields(args.dataset_runtime_identity),
+                                **verification_context.fields(args.verification_context),
+                                **candidate_runtime.fields(args.harness_runtime_identity)}, default=str))
             except (TypeError, OSError) as exc:
                 console.note(f"could not write h0.json ({exc}); this run cannot be a --h0-from "
                              f"donor", level="warn")
@@ -2481,7 +2490,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # Round 0's state too: "measure H0 on the exam" is the baseline every later eval is
     # read against, and it needs a state to measure exactly like any other round.
     # (`h0_sha` was committed before the measurement, above.)
-    if resume_state is None:
+    if resume_state is None and not (run_dir / "state_after_round0").exists():
         _save_round_state(run_dir, 0, work)
     if resume_state is not None:
         # The points already on disk are the record; a resumed run appends to them.
@@ -2500,6 +2509,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                                 gpu_budget=args.gpu_budget),
             sampling=sampling,
             scoring_identity=args.scoring_identity,
+            dataset_runtime_identity=args.dataset_runtime_identity,
+            harness_runtime_identity=args.harness_runtime_identity,
+            verification_context=verification_context.project(base.get("verification_context"), task_ids),
             scores=[base["per_task"][t] for t in _scored(base, task_ids)],
             task_ids=_scored(base, task_ids),
             train_scores=[base["per_task"][t] for t in _scored(base, train_ids)],
@@ -2517,6 +2529,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             per_task_trials=base.get("per_task_trials"),
             cached_tasks=base.get("cached_tasks"),
             **test_rate_fields(base))]
+    if resume_state is None and args.harness_preparation is not None:
+        curve[0]["harness_preparation"] = args.harness_preparation
+        curve[0]["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
     # The base harness is always evaluated by the platform, so its point is a
     # platform measurement like any other. Leaving the field unset made the
     # exported record claim the score was the method's -- the opposite of true.

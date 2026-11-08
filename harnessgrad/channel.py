@@ -70,6 +70,32 @@ def _loop_summary(traces: dict) -> dict:
                                                if f["repeated_commands"]),
     }
 
+def _method_runtimes(value):
+    """Private binding coordinates never enter method diagnostics."""
+    if isinstance(value, list):
+        return [_method_runtimes(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if value.get('schema') == 'harnessgrad.python-runtime-binding.v1':
+        return {'schema': 'harnessgrad.python-runtime-public-summary.v1',
+                'scope': 'dependency-artifact-role',
+                **{key: value[key] for key in ('dataset', 'runtime_id', 'role') if key in value}}
+    result = {}
+    for key, item in value.items():
+        if key == 'verification_context':
+            continue
+        if key == 'dataset_runtime_identity' and item is not None:
+            from harnessgrad.dataset_runtime_identity import public_summary
+            try:
+                result[key] = public_summary(item)
+            except (KeyError, TypeError, ValueError):
+                result[key] = {'schema': 'harnessgrad.dataset-runtime-public-summary.v1',
+                               'status': 'unavailable'}
+        else:
+            result[key] = _method_runtimes(item)
+    return result
+
+
 def _for_method(point: dict) -> dict:
     """A curve point as the method is allowed to see it. Never mutates the input.
 
@@ -98,7 +124,9 @@ def _for_method(point: dict) -> dict:
             "refusing to stage an exam curve point into a method channel: methods exist "
             "only on the train side, and `per_task` on an exam point is the exam "
             "(INTERFACE.md §2.3, §2.6)")
-    result = dict(point)
+    result = _method_runtimes(point)
+    # Task commitments may encode low-entropy private answers; never expose them.
+    result.pop("verification_context", None)
     if (point.get('split_protocol') or {}).get('kind') == 'custom-heldout':
         # Keep the private manifest and the complete eval ID list out of both
         # round.json and history. Counts and protocol hashes identify this
@@ -125,6 +153,9 @@ def _resolve_checks(spec: dict, budget: list[int]) -> dict:
     """
     out: dict[str, str] = {}
     for entry in (spec or {}).get("inputs") or []:
+        if ((spec.get('python_runtime') or {}).get('dataset') in ('spreadsheetbench', 'spreadsheetbench2')
+                and entry.get('path') in ('native-runtime.json', 'runtime-context.json')):
+            continue  # Runtime deployment manifests are private even on the study side.
         src = entry.get("from")
         if src:
             base = Path(src)
@@ -211,11 +242,12 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
                 # `expected` is the gold for an `answer` verifier; `checks` is the gold
                 # for a `command` one. Both are given, for the reason in `_resolve_checks`.
                 "expected": spec.get("expected"),
-                "argv": spec.get("argv"),
+                "argv": (["<managed-verifier-python>", *spec["argv"][1:]]
+                         if spec.get("python_runtime") and spec.get("argv") else spec.get("argv")),
                 "reward_file": spec.get("reward_file"),
                 "checks": _resolve_checks(spec, budget),
             },
-            "verdict": dict(verdicts.get(tid) or {}),
+            "verdict": _method_runtimes(dict(verdicts.get(tid) or {})),
             # Loop facts explain how the harness ended alongside artifact scores.
             # A zero score alone cannot show whether the artifact was wrong or
             # the harness submitted immediately after its first model call.

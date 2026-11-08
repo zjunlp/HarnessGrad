@@ -3,7 +3,7 @@ import copy
 
 import pytest
 
-from harnessgrad import evidence_stats
+from harnessgrad import evidence_stats, verification_context
 
 
 @pytest.fixture
@@ -14,6 +14,7 @@ def states(monkeypatch):
     point = {"identity": {"agent_model": "m", "agent_backend": "b", "harness_name": "h",
                           "framework_version": "v", "trials": 1, "jobs": 1},
              "side": "eval", "score_kind": "exam", "scoring_identity": {"sha256": "s"},
+             "verification_context": verification_context.create({'a': '1' * 64, 'b': '2' * 64}),
              "env": {}, "sampling": {"policy": "all"}, "per_task": {"a": 1, "b": 0},
              "evaluation_protocols": {}, "scorer_isolation_class": "separate-pristine",
              "per_task_scorer_isolation": {"a": "separate-pristine", "b": "separate-pristine"}}

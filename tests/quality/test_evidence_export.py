@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from harnessgrad import evidence, scoring_identity
+from harnessgrad import evidence, scoring_identity, verification_context
 from harnessgrad.evidence_export import build_export, check_export, write_export
 from harnessgrad.receipt_verification import ReceiptStore, canonical, digest, verify_receipts
 
@@ -53,6 +53,7 @@ def save_run(root, name, number=0, *, tree='a', rows=None):
              'n_trials': len(rows[0]), 'per_task_trials': dict(zip(tasks, rows)),
              'score_ci95': [float('nan'), float('nan')],
              'scoring_identity': scoring_identity.create({'metric': 'synthetic.mean', 'scorer_sha256': 'f' * 64}),
+             'verification_context': verification_context.create({task: digest(canonical({'task': task, 'fixture': 'source'})) for task in tasks}),
              'evaluation_protocols': {}, 'scorer_isolation_class': 'separate-pristine',
              'per_task_scorer_isolation': {task: 'separate-pristine' for task in tasks},
              'invalid': {}, 'n_invalid': 0, 'harness_failed': {}, 'timeouts': {},

@@ -1,11 +1,26 @@
 #!/usr/bin/env python3
-"""Build a harness's dependency overlay, once, for each Python version it will meet.
+"""Prepare a Harness's declared Python runtime or its legacy dependency overlays.
 
-    python3 tools/configure_harness.py --harness base_harness/loop          # the `files` half
-    python3 tools/configure_harness.py --harness base_harness/loop --dataset terminal_bench
-    python3 tools/configure_harness.py --harness base_harness/loop --python 3.13 \
+Managed Python
+--------------
+A harness.json with runtime.kind="python" selects a source-owned, fully pinned
+requirements lock and one native CPython minor. runtime.exec additionally maps
+image Python minors to locks; --image or --dataset selects local image placements.
+This branch uses uv with bubblewrap or Docker, installs wheels only, and never
+imports installed packages on the host. The
+interpreter must already be installed. Configuration is offline by default;
+--fetch explicitly allows wheel downloads. --list checks without building.
+See docs/writing_a_harness.md for the declaration and lifecycle contract.
+
+Legacy overlays
+---------------
+The remaining documentation below applies to harnesses without that declaration.
+
+    python tools/configure_harness.py --harness /path/to/legacy-harness          # `files`
+    python tools/configure_harness.py --harness /path/to/legacy-harness --dataset DATASET
+    python tools/configure_harness.py --harness /path/to/legacy-harness --python 3.13 \
         --builder-image IMAGE
-    python3 tools/configure_harness.py --harness base_harness/loop --list
+    python tools/configure_harness.py --harness /path/to/legacy-harness --list
 
 No source flag means **this host**: the interpreter a `files` run launches. A version that is
 not this host's needs `--builder-image`, because the key is the version and a guessed key is
@@ -18,15 +33,9 @@ a benchmark whose images already exist, **without rebuilding any of them**.
 
 Why an overlay and not a derived image
 --------------------------------------
-`import_env.py --harness` bakes the dependencies into an image, which is `O(#task
-images)` per harness -- 89 derived images for Terminal-Bench. Anyone arriving with their
-own harness pays that before their first run. An overlay is `O(#Python versions)`, which
-is a property of the *datasets*, not of the harnesses: measured 5 for Terminal-Bench
-(3.13 x41, 3.12 x13, 3.11 x3, 3.10 x1, 3.9 x2, and 26 images with no interpreter at all,
-which need nothing because the platform already provides one).
-
-So the cost of a new harness does not move when the task set grows, which is the
-property that makes "bring your own harness" true rather than aspirational.
+Legacy overlays are keyed by the requirements and target Python version, allowing
+compatible task images to share dependencies without rebuilding each image. This
+is distinct from the managed runtime selected by a `runtime.kind="python"` declaration.
 
 How it is built
 ---------------
@@ -37,8 +46,7 @@ With the **task image's own** `pip`, into a directory outside every image:
 
 Using a task image as the builder is deliberate and it is not a shortcut. It means the
 wheels are resolved for *that* interpreter, on *that* platform tag, so a `3.13` overlay
-cannot silently be a `3.12` one -- and it needs no base image to be pullable, which
-matters on a host whose registry access is a flaky mirror.
+cannot silently be a `3.12` one.
 
 Verification is by import, not by exit code: every installed distribution's recorded
 top-level modules are imported with the target interpreter and the overlay on
@@ -47,11 +55,9 @@ whole design turns on (`pydantic_core` and `jiter` ship compiled extensions).
 
 Host overlays -- the `files` half
 ---------------------------------
-A `files` run has no image. `eval/run/runner.py:611` launches the bare name `python`, so
-the harness's imports resolve against **that** interpreter's own site-packages:
-unpinned, undeclared and unrecorded. Measured here: `base_harness/loop` declares
-`openai>=1.0` and runs on ALFWorld only because the host's anaconda happens to have
-`openai` -- nothing in the record says so.
+A legacy `files` run has no image and uses the selected host interpreter. Without
+an overlay, its imports can depend on that interpreter's site-packages. This section
+does not describe managed Python harnesses such as Loop.
 
 The same key is built with the host's own `pip` instead of a container:
 
@@ -64,14 +70,14 @@ the image probe exists to prevent.
 
 What a host overlay does **not** do is exclude the host's site-packages from the run.
 `PYTHONPATH` shadows a module of the same name; a dependency the requirements do not
-name still comes from the host. That is strictly better than all of them coming from the
-host unpinned, and it is recorded rather than assumed: `PROVENANCE.json` carries
+name still comes from the host. This visibility is recorded: `PROVENANCE.json` carries
 `host_site_packages_visible: true` and `env.harness_runtime` repeats it on every point.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -504,6 +510,8 @@ def main() -> int:
                      help="build for this version (repeatable)")
     ap.add_argument("--builder-image", help="build against this image's interpreter "
                                            "instead of the host's")
+    ap.add_argument('--image', action='append', default=[],
+                    help='managed Python: prepare an exact task image placement (repeatable)')
     ap.add_argument("--host-interpreter", default=DEFAULT_HOST_INTERPRETER, metavar="PATH",
                     help=f"the interpreter a `files` run launches (default: the bare name "
                          f"{DEFAULT_HOST_INTERPRETER!r}, because that is the name "
@@ -511,9 +519,73 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="report, build nothing")
     ap.add_argument("--force", action="store_true", help="rebuild an existing overlay")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--fetch", action="store_true",
+                    help="managed Python only: explicitly allow downloading wheels during configuration")
+    ap.add_argument("--runtime-root", type=Path,
+                    help="managed Python only: external immutable dependency store")
+    ap.add_argument("--runtime-timeout-s", type=float, default=120,
+                    help="managed Python preparation command timeout (default: 120 seconds)")
     args = ap.parse_args()
 
     harness = Path(args.harness).expanduser().resolve()
+    from eval.ckpt.source_tree import runtime_spec
+    try:
+        managed_spec = runtime_spec(harness)
+    except (OSError, ValueError) as exc:
+        print(f"invalid runtime declaration: {exc}", file=sys.stderr)
+        return 2
+    if managed_spec is not None and managed_spec["kind"] == "python":
+        from harnessgrad import python_harness_runtime as managed
+        if not math.isfinite(args.runtime_timeout_s) or args.runtime_timeout_s <= 0:
+            print("--runtime-timeout-s must be finite and positive", file=sys.stderr)
+            return 2
+        image_contract = 'exec' in managed_spec
+        if ((not image_contract and (args.dataset or args.builder_image or args.image)) or len(args.python) > 1
+                or (args.python and args.host_interpreter != DEFAULT_HOST_INTERPRETER)
+                or (args.list and (args.fetch or args.force or args.python
+                                   or args.host_interpreter != DEFAULT_HOST_INTERPRETER))):
+            print("image preparation requires runtime.exec; --list is read-only and only one native interpreter is supported", file=sys.stderr)
+            return 2
+        selected = args.python[0] if args.python else (
+            args.host_interpreter if args.host_interpreter != DEFAULT_HOST_INTERPRETER else None)
+        try:
+            if image_contract:
+                from harnessgrad import python_exec_runtime
+                images = [*args.image, *([args.builder_image] if args.builder_image else [])]
+                envs = {}
+                if args.dataset:
+                    from data.scaffolds import registry
+                    envs = registry.load_envs(args.dataset)
+                envs = {tid: {**spec, 'image': container.resolve_digest(spec['image'])}
+                        for tid, spec in envs.items() if (spec or {}).get('kind') == 'exec'}
+                envs.update({f'image-{i}': {'kind': 'exec', 'image': container.resolve_digest(image)}
+                             for i, image in enumerate(images)})
+                receipt = python_exec_runtime.prepare(harness, envs=envs,
+                                      build=not args.list, allow_downloads=args.fetch,
+                                      python=selected if not args.list else None, root=args.runtime_root,
+                                      timeout_s=args.runtime_timeout_s, force=args.force)
+            else:
+                receipt = managed.prepare(harness, build=not args.list, allow_downloads=args.fetch,
+                                      python=selected if not args.list else None, root=args.runtime_root,
+                                      timeout_s=args.runtime_timeout_s, force=args.force)
+        except managed.RuntimeUnavailable as exc:
+            if args.json:
+                print(json.dumps(exc.receipt or {"status": "invalid", "detail": str(exc)}, indent=2))
+            else:
+                print(str(exc), file=sys.stderr)
+            return 1 if args.list else 2
+        if args.json:
+            print(json.dumps(receipt, indent=2))
+        else:
+            identity = receipt['identity']
+            artifact = identity.get('native', identity)['artifact']
+            print(f"managed Python {managed_spec['python']}  {artifact['runtime_id']}")
+            print(f"interpreter  {artifact['python']}")
+            print(f"prepared in {receipt['seconds']:.3f}s; cache hit: {receipt['cache_hit']}")
+        return 0
+    if args.fetch or args.runtime_root is not None or args.runtime_timeout_s != 120 or args.image:
+        print("--fetch/--runtime-root/--runtime-timeout-s require a managed Python declaration", file=sys.stderr)
+        return 2
     install = runtime.install_spec(harness)
     if install is None:
         manifest = harness / "harness.json"

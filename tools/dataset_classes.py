@@ -464,8 +464,12 @@ def _cli_scripts(module, task_id: str) -> list[Path]:
     extension while `alf` does not, so neither can a suffix. Every agent-facing program here
     lives under a `cli/` directory or is materialized under a `bin/` directory.
     """
-    out = []
     setup = module.SETUP.get(task_id) or {}
+    return _setup_scripts(setup)
+
+
+def _setup_scripts(setup: dict) -> list[Path]:
+    out = []
     files = list(setup.get("files", []))
     for worker in setup.get("workers", []):
         files.extend(worker.get("files", []))
@@ -482,7 +486,8 @@ def _cli_scripts(module, task_id: str) -> list[Path]:
 
 
 def classify(name: str) -> dict:
-    module = registry.importlib.import_module(registry.module_name(name))
+    provider = registry.provider(name)
+    module = None if provider is not None else registry.importlib.import_module(registry.module_name(name))
     refused = getattr(module, "REFUSED", None)
     demand, surface = CAPABILITY.get(name, (None, None))
     row = {
@@ -520,17 +525,29 @@ def classify(name: str) -> dict:
     # them. `SystemExit` is not caught -- a real declaration error (`EXPECTED_INTERACTION` below,
     # or an unreadable verb set) must still fail the tool.
     try:
-        if getattr(module, "ENV", None):
-            row["env_kinds"] = sorted({v.get("kind") for v in module.ENV.values()})
-        tasks = module.load()[0]
-        task_id = tasks[0]["task_id"]
-        # Prefer the scaffold's declared kind: `VERIFY` is a lazy one-entry-per-task map,
-        # so iterating it built ~83k verifier dicts to recover a single distinct value.
-        # A module that declares no kind still walks its real map, which is small.
-        declared_kinds = getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None)
-        row["verifier_kinds"] = ([declared_kinds] if declared_kinds
-                                 else sorted({v["kind"] for v in module.VERIFY.values()}))
-        scripts = _cli_scripts(module, task_id)
+        if provider is not None:
+            inventory = provider.inventory()
+            metadata = inventory['metadata']
+            if metadata.get('REFUSED'):
+                row.update(refused=True, interaction='n/a (refused)')
+                return row
+            row['env_kinds'] = inventory['env_kinds']
+            row['verifier_kinds'] = inventory['verifier_kinds']
+            scripts = _setup_scripts(inventory['setup'])
+            count, split = inventory['tasks'], metadata.get('SPLIT')
+            if count == 0:
+                raise ValueError('provider inventory contains no tasks')
+        else:
+            if getattr(module, "ENV", None):
+                row["env_kinds"] = sorted({v.get("kind") for v in module.ENV.values()})
+            tasks = module.load()[0]
+            task_id = tasks[0]["task_id"]
+            # Prefer the declared kind to building every lazy verifier entry.
+            declared_kinds = getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None)
+            row["verifier_kinds"] = ([declared_kinds] if declared_kinds
+                                     else sorted({v["kind"] for v in module.VERIFY.values()}))
+            scripts = _cli_scripts(module, task_id)
+            count, split = len(tasks), getattr(module, 'SPLIT', None)
         surface_names = []
         acts = False
         for script in scripts:
@@ -551,8 +568,7 @@ def classify(name: str) -> dict:
             row["interaction"] = "closed_loop"
         else:
             row["interaction"] = "single_shot"
-        row["tasks"] = len(tasks)
-        split = getattr(module, "SPLIT", None)
+        row["tasks"] = count
         # A dataset that publishes no split has no train/eval axis to report. `None`, not `0`:
         # "not declared" and "empty" are different facts (locomo is the case).
         row["train"] = len(split["train"]) if isinstance(split, dict) and "train" in split else None

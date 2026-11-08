@@ -11,7 +11,9 @@ python3 tools/configure_dsh_harness.py /path/to/harness-copy \
 
 Preparation validates `apps/cli/lib/bin.js`, Node, and every package target in
 `dsh_farm.tsv`, then records the canonical installation, exact Node executable and Node prefix in
-`harness.json.runtime_paths`. The platform binds those directories read-only in
+`harness.json.runtime_paths` and an exact `_dsh_runtime` record. That record binds
+source and Node contents, modes, link targets and the plugin farm declaration.
+The platform binds those directories read-only in
 both native and container sandboxes. The exact executable binding keeps symlinked or
 nonstandard Node names from falling back to another binary on PATH. Preparation changes the manifest and its
 candidate identity; perform it before creating an experiment record. It does not
@@ -34,13 +36,13 @@ Each task gets real writable profile directories and links into that installatio
 Missing dependencies, targets escaping the checkout, or an existing farm from a
 different installation cause an error rather than reusing another installation.
 
-`HG_AGENT_DSH` and `HG_AGENT_NODE` still override the selected CLI and Node.
-`HG_AGENT_DSH_ROOT` can select the standard CLI under another root; specifying both
-root and CLI requires them to agree. Changes to an installation also require
-preparing matching `runtime_paths` before sandbox execution.
+For prepared copies, `HG_AGENT_DSH`, `HG_AGENT_NODE`, `HG_AGENT_DSH_ROOT` and
+`HG_AGENT_DSH_COMMAND` must resolve to the recorded command. A different CLI,
+Node, source file or link target requires preparation again. Add dedicated
+dependencies outside those installations with repeatable `--runtime` options.
 
-`HG_AGENT_DSH_COMMAND` remains an argv-style wrapper override for invocation and
-configuration inspection. Its executable is fixed to an absolute path while
+Unprepared diagnostic copies retain the argv-style `HG_AGENT_DSH_COMMAND`
+wrapper route for invocation and configuration inspection. Its executable is fixed to an absolute path while
 preserving symlinks, so `venv/bin/python` keeps that virtual environment's packages.
 A direct `NODE bin.js` override uses that exact Node
 for loader diagnostics, even if the prepared manifest names another interpreter.
@@ -55,3 +57,14 @@ The selected argv is shared by task execution and configuration inspection. The
 loader probe and plugin farm use that same selected installation. A scratch HOME
 is still required; the existing operator-home refusal and model patch remain in
 effect.
+
+Prepared copies reject nonempty `NODE_OPTIONS`, `NODE_PATH`, `LD_PRELOAD`,
+`LD_AUDIT` and `LD_LIBRARY_PATH`; CLI children remove all five. Linux ELF Node
+installations with complete declared contents can authorize score reuse after
+fresh admission. Script/unknown interpreters, unprepared diagnostics and old
+records without a cacheability declaration require fresh measurements.
+
+The same identity is checked before task-cache, whole-point and H0 reuse, and
+before restoring completed progress or checkpoints. Existing historical records
+remain readable; prepare a new Harness copy and run ID when evidence is missing.
+This binds declared application dependencies, not a hermetic host OS or shell.

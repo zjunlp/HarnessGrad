@@ -88,25 +88,21 @@ class Console:
     def out(self):
         return self._stream if self._stream is not None else sys.stdout
 
-    def attach(self, events_path) -> None:
-        """Start recording to `events_path`. Called once, before the first event.
-
-        Opened for **truncation, not append**. The per-event flush already gives
-        durability within a run, so appending across runs buys nothing -- and it
-        cost something real: reusing a run id left the previous run's events in the
-        file, so the console rendered two runs as one stream. Measured: a run
-        directory recorded as `rrsi` held three `seq: 1` headers and showed a
-        previous `DGM` run's rounds, which reads exactly like "I picked RRSI and it
-        ran DGM". The driver records `seq` per `Console`, so a second `seq: 1` in
-        one file is the signature.
-        """
+    def attach(self, events_path, *, append=False) -> None:
+        """Record events, preserving existing receipts when resuming a run."""
         if self._fh is not None:
             self._fh.close()
             self._fh = None
         if events_path:
             path = Path(events_path)
             path.parent.mkdir(parents=True, exist_ok=True)
-            self._fh = path.open("w", encoding="utf-8")
+            if append and path.exists():
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    try:
+                        self._seq = max(self._seq, int(json.loads(line).get("seq", 0)))
+                    except (ValueError, TypeError, AttributeError):
+                        continue
+            self._fh = path.open("a" if append else "w", encoding="utf-8")
 
     def close(self) -> None:
         if self._fh is not None:

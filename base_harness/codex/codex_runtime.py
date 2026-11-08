@@ -5,15 +5,25 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import shlex
 import shutil
+import stat
+import struct
 import tempfile
 
 
 RECORD = "_codex_runtime"
 REMEDY = "prepare this Harness with tools/configure_codex_harness.py"
+SCOPE = "declared-native-or-npm-content; host OS libraries and shell tools are platform capabilities"
 SYSTEM = tuple(map(Path, ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc",
                           "/dev", "/proc", "/sys", "/run")))
+
+
+def require_clean_startup(env: dict) -> None:
+    for name in ('NODE_OPTIONS', 'NODE_PATH', 'LD_PRELOAD', 'LD_AUDIT', 'LD_LIBRARY_PATH'):
+        if env.get(name):
+            raise ValueError(f'prepared runtime forbids ambient startup variable {name}; {REMEDY}')
 
 
 def digest(path: Path) -> str:
@@ -139,6 +149,90 @@ def _package(path: Path) -> Path | None:
     return None
 
 
+def _native_elf(path: Path) -> bool:
+    """Recognize a Linux executable image without trusting its filename or running it."""
+    try:
+        if not path.is_file() or not os.access(path, os.X_OK):
+            return False
+        with path.open('rb') as stream:
+            header = stream.read(64)
+        if (len(header) < 52 or header[:4] != b'\x7fELF' or header[4] not in (1, 2)
+                or header[5] not in (1, 2) or header[6] != 1):
+            return False
+        order = '<' if header[5] == 1 else '>'
+        kind, machine, version = struct.unpack_from(order + 'HHI', header, 16)
+        if kind not in (2, 3) or not machine or version != 1:
+            return False
+        if header[4] == 2:
+            if len(header) < 64:
+                return False
+            offset = struct.unpack_from(order + 'Q', header, 32)[0]
+            size, entry_size, count = struct.unpack_from(order + 'HHH', header, 52)
+            expected_size, expected_entry = 64, 56
+        else:
+            offset = struct.unpack_from(order + 'I', header, 28)[0]
+            size, entry_size, count = struct.unpack_from(order + 'HHH', header, 40)
+            expected_size, expected_entry = 52, 32
+        return (size == expected_size and entry_size == expected_entry and count > 0
+                and offset >= size and offset + count * entry_size <= path.stat().st_size)
+    except (OSError, ValueError, struct.error):
+        return False
+
+
+def _variant(argv: list[str]) -> str:
+    program = Path(argv[0])
+    if program.name == 'codex' and _native_elf(program) and len(argv) == 1:
+        return 'native'
+    if (program.name.startswith('node') and _native_elf(program) and len(argv) == 2
+            and _argument_file(argv[1]) is not None and _package(Path(argv[1]).resolve()) is not None):
+        return 'npm'
+    return 'opaque'
+
+
+def content_inventory(bindings: list[Path]) -> dict:
+    """Content identity for supported native/npm installations, including their links."""
+    roots = sorted(set(bindings), key=lambda p: (len(p.parts), str(p)))
+    roots = [root for i, root in enumerate(roots) if not any(
+        parent.is_dir() and root.is_relative_to(parent) for parent in roots[:i])]
+    rows = []
+    counts = {'files': 0, 'directories': 0, 'symlinks': 0}
+
+    def add(path):
+        mode = path.lstat().st_mode
+        row = [str(path), stat.S_IMODE(mode)]
+        if stat.S_ISLNK(mode):
+            target = path.resolve(strict=True)
+            if not any(target == root or (root.is_dir() and target.is_relative_to(root)) for root in bindings):
+                raise ValueError(f'Codex dependency link needs an explicit --runtime binding: {path}; {REMEDY}')
+            if not target.is_file() and not target.is_dir():
+                raise ValueError(f'Codex dependency link has a special target: {path}')
+            row += ['symlink', os.readlink(path), str(target), digest(target) if target.is_file() else None]
+            counts['symlinks'] += 1
+        elif stat.S_ISREG(mode):
+            row += ['file', digest(path)]
+            counts['files'] += 1
+        elif stat.S_ISDIR(mode):
+            row += ['directory']
+            counts['directories'] += 1
+        else:
+            raise ValueError(f'Codex runtime contains a special file: {path}')
+        rows.append(row)
+
+    def failed_walk(error):
+        raise error
+
+    for root in roots:
+        add(root)
+        if root.is_dir() and not root.is_symlink():
+            for directory, dirs, files in os.walk(root, followlinks=False, onerror=failed_walk):
+                dirs[:] = sorted(name for name in dirs if name != '.git')
+                for name in sorted([*dirs, *files]):
+                    add(Path(directory) / name)
+    payload = json.dumps(sorted(rows), ensure_ascii=True, separators=(',', ':')).encode()
+    return {'sha256': hashlib.sha256(payload).hexdigest(), **counts,
+            'excluded_directories': ['.git'], 'system': platform.system(), 'machine': platform.machine()}
+
+
 def installation(argv: list[str], *, extra: tuple[Path, ...] = (),
                  forbidden: tuple[Path, ...] = ()) -> dict:
     """Derive installation bindings without collecting personal configuration."""
@@ -240,14 +334,54 @@ def installation(argv: list[str], *, extra: tuple[Path, ...] = (),
         real = path.resolve()
         if not any(real == p or (p.is_dir() and real.is_relative_to(p)) for p in bindings):
             bind(real)
-    return {"argv": argv, "runtime_paths": [str(p) for p in bindings],
-            "files": [{"path": str(p), "sha256": digest(p)} for p in files],
+    variant = _variant(argv)
+    return {"closure": variant, "cacheable": variant != 'opaque', "scope": SCOPE,
+            "content_inventory": content_inventory(bindings) if variant != 'opaque' else None,
+            "argv": argv, "runtime_paths": [str(p) for p in bindings],
+            "files": [{"path": str(p), "realpath": str(p.resolve(strict=True)),
+                       "sha256": digest(p)} for p in files],
             "path": list(dict.fromkeys(str(Path(p).parent) for p in argv
                                        if Path(p).is_absolute() and _argument_file(p) is not None))}
 
 
-def resolve(harness: Path, env: dict) -> dict:
+def check_files(record: dict) -> None:
+    """Recheck physical reachability and identity before publication or launch.
+
+    Older schema-1 receipts lack realpath. They retain byte checks but must still
+    prove the current physical target is supplied by their existing bindings.
+    """
+    bindings = [Path(value) for value in record["runtime_paths"]]
+    for entry in record["files"]:
+        path = Path(entry["path"])
+        real = path.resolve(strict=True)
+        if not path.is_absolute() or not any(path == tree or
+                (tree.is_dir() and path.is_relative_to(tree)) for tree in bindings):
+            raise ValueError(f"Codex identity file is outside its runtime bindings: {path}; {REMEDY}")
+        # Mount destinations retain their spellings. An alias bind does not
+        # provide its newly selected target at that target's physical location.
+        if not any(real == tree or
+                (tree.is_dir() and real.is_relative_to(tree)) for tree in bindings):
+            raise ValueError(f"Codex physical identity file is outside its runtime bindings: {path}; {REMEDY}")
+        expected = entry.get("realpath")
+        if expected is not None and (not isinstance(expected, str) or expected != str(real)):
+            raise ValueError(f"prepared Codex physical runtime file changed: {path}; {REMEDY}")
+        if digest(path) != entry["sha256"]:
+            raise ValueError(f"prepared Codex runtime file changed: {path}; {REMEDY}")
+    inventory = record.get('content_inventory')
+    cacheable = record.get('cacheable', False)
+    if (not isinstance(cacheable, bool) or record.get('scope', SCOPE) != SCOPE
+            or record.get('closure', _variant(record['argv'])) != _variant(record['argv'])
+            or (record.get('cacheable') is True and
+                (_variant(record['argv']) == 'opaque' or not isinstance(inventory, dict)))):
+        raise ValueError(f'invalid prepared Codex content identity; {REMEDY}')
+    if inventory is not None and (not isinstance(inventory, dict) or
+                                  content_inventory(bindings) != inventory):
+        raise ValueError(f'prepared Codex dependency contents changed; {REMEDY}')
+
+
+def resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...] = ()) -> dict:
     """Use the prepared argv and exact file identities; never discover a new CLI."""
+    require_clean_startup(env)
     manifest = json.loads((harness / "harness.json").read_text())
     prepared = manifest.get(RECORD)
     if not isinstance(prepared, dict) or prepared.get("schema") != 1:
@@ -278,13 +412,7 @@ def resolve(harness: Path, env: dict) -> dict:
     if manifest.get("runtime_paths") != prepared.get("runtime_paths"):
         raise ValueError(f"Codex runtime bindings differ from the prepared installation; {REMEDY}")
     for entry in bindings:
-        validate_binding(Path(entry))
-    for entry in files:
-        path = Path(entry["path"])
-        if not path.is_absolute() or not any(path == Path(tree) or
-                (Path(tree).is_dir() and path.is_relative_to(tree)) for tree in bindings):
-            raise ValueError(f"Codex identity file is outside its runtime bindings: {path}; {REMEDY}")
-        if digest(path) != entry["sha256"]:
-            raise ValueError(f"prepared Codex runtime file changed: {path}; {REMEDY}")
+        validate_binding(Path(entry), forbidden=forbidden)
+    check_files(prepared)
     executable(argv[0], {"PATH": ""})
     return prepared

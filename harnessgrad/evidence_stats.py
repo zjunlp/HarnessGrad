@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import math
 import statistics
+import hashlib
+import json
 
 from harnessgrad.evidence import finite_number
 from harnessgrad.receipt_verification import measurement_problems
@@ -46,9 +48,14 @@ def conditions(run, point):
     meta = run.get("meta") or {}
     values = {"identity." + name: _at(point, "identity." + name) for name in (
         "agent_model", "agent_backend", "harness_name", "framework_version", "trials", "jobs")}
+    identity = point.get('identity') or {}
+    if (identity.get('agent_backend') == 'mock' and 'agent_model' in identity
+            and identity['agent_model'] is None):
+        values['identity.agent_model'] = {'explicit_mock_without_model': True}
     values.update({"dataset": meta.get("dataset"), "side": point.get("side"),
                    "score_kind": point.get("score_kind"),
                    "scoring_identity": point.get("scoring_identity"),
+                   "verification_context": verification_context(point),
                    "environment": point.get("env"),
                    "platform": _at(meta, "platform.content_sha"),
                    "agent_config": _at(meta, "config.agent"),
@@ -88,9 +95,126 @@ def compare_conditions(left_run, left, right_run, right):
     a, b = conditions(left_run, left), conditions(right_run, right)
     missing = [k for k in a if a[k] is None or b[k] is None or a[k] == "" or b[k] == ""]
     changed = [k for k in a if k not in missing and a[k] != b[k]]
+    from harnessgrad.dataset_runtime_identity import problems
+    runtime_problems = problems(left.get('dataset_runtime_identity'), right.get('dataset_runtime_identity'))
+    if runtime_problems:
+        if left.get('dataset_runtime_identity') is None or right.get('dataset_runtime_identity') is None or any('invalid' in p for p in runtime_problems):
+            missing.append('dataset_runtime_identity')
+        else:
+            changed.append('dataset_runtime_identity')
+    left_actor, right_actor = actor_runtime(left), actor_runtime(right)
+    if left_actor.get('external') or right_actor.get('external'):
+        if (not left_actor.get('external') or not right_actor.get('external')
+                or left_actor['status'] != 'recorded' or right_actor['status'] != 'recorded'):
+            missing.append('external_actor_runtime')
+        elif left_actor['dependencies_sha256'] != right_actor['dependencies_sha256']:
+            changed.append('external_actor_runtime')
     return {"comparable": not missing and not changed and complete(left) and complete(right),
             "missing_conditions": missing, "changed_conditions": changed,
             "complete_task_coverage": complete(left) and complete(right)}
+
+
+def verification_context(point):
+    """Private comparison value; its fingerprints must not be exported."""
+    value = point.get('verification_context')
+    if value is None:
+        return None
+    try:
+        from harnessgrad.verification_context import project, validate
+        value = validate(value)
+        return project(value, point['per_task']) if 'per_task' in point else value
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def public_verification_context(point, groups=None):
+    """Reveal equality within one export, never a guessable private-input hash."""
+    value = verification_context(point)
+    if value is None:
+        return {'status': 'unrecorded' if point.get('verification_context') is None else 'invalid'}
+    result = {'status': 'recorded'}
+    if groups is not None:
+        key = value['sha256']
+        result['equivalence_group'] = groups.setdefault(key, f'verification-{len(groups) + 1}')
+    return result
+
+
+def _managed_actor_runtime(point):
+    """Privacy-safe actor provenance; dependency identity excludes editable source."""
+    value = point.get('harness_runtime_identity')
+    if value is None:
+        return {'status': 'unrecorded'}
+    try:
+        from harnessgrad.candidate_runtime import validate
+        value = validate(value)
+        native = value.get('native', value)
+        dependencies = {'kind': value['kind'], 'declaration_sha256': value['declaration_sha256'],
+                        'native_artifact': native['artifact'], 'images': value.get('images', {})}
+        digest = hashlib.sha256(json.dumps(dependencies, sort_keys=True, separators=(',', ':'),
+                                           ensure_ascii=False).encode()).hexdigest()
+        return {'status': 'recorded', 'sha256': value['sha256'],
+                'source_sha256': value['source_sha256'], 'dependencies_sha256': digest}
+    except (TypeError, ValueError, KeyError):
+        return {'status': 'invalid'}
+
+
+def actor_runtime(point):
+    """Project only normalized external runtime summaries; never raw receipts."""
+    managed = _managed_actor_runtime(point)
+    entries = (point.get('env') or {}).get('harness_runtime', point.get('harness_runtime')) or []
+    if isinstance(entries, dict):
+        entries = [entries]
+    external = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return {'status': 'invalid'}
+        for kind in ('bun', 'openclaw', 'codex', 'dsh', 'external'):
+            if kind not in entry:
+                continue
+            value = entry[kind]
+            if not isinstance(value, dict):
+                return {'status': 'invalid'}
+            # Old Bun receipts are complete content identities. The other old
+            # partial receipts must explicitly prove completeness/cacheability.
+            complete = kind == 'bun' or value.get('complete') is True
+            safe = {'kind': kind, 'complete': complete,
+                    'cacheable': value.get('cacheable', kind == 'bun') is True}
+            try:
+                encoded = json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+            except (TypeError, ValueError):
+                return {'status': 'invalid'}
+            safe['sha256'] = hashlib.sha256(encoded).hexdigest()
+            if safe not in external:
+                external.append(safe)
+    if not external:
+        if managed['status'] != 'unrecorded':
+            return managed
+        name = (point.get('identity') or {}).get('harness_name')
+        if name in ('codex', 'deepseek-harness', 'openclaw', 'opencode'):
+            return {'status': 'incomplete', 'external': [{'kind': name, 'complete': False, 'cacheable': False}]}
+        return managed
+    external.sort(key=lambda item: (item['kind'], item['sha256']))
+    dependencies = {'external': external}
+    if managed['status'] != 'unrecorded':
+        if managed['status'] != 'recorded':
+            return {'status': 'invalid'}
+        dependencies['managed'] = managed['dependencies_sha256']
+    digest = hashlib.sha256(json.dumps(dependencies, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    return {'status': 'recorded' if all(item['complete'] and item['cacheable'] for item in external) else 'incomplete',
+            'sha256': digest, 'dependencies_sha256': digest,
+            'source_sha256': managed.get('source_sha256') or (point.get('identity') or {}).get('harness_sha'),
+            'external': external}
+
+
+def dataset_runtime(point):
+    value = point.get('dataset_runtime_identity')
+    if value is None:
+        return {'status': 'unrecorded'}
+    try:
+        from harnessgrad.dataset_runtime_identity import validate
+        return {'status': 'recorded', 'sha256': validate(value)['sha256']}
+    except (TypeError, ValueError, KeyError):
+        return {'status': 'invalid'}
 
 
 def describe(values):
@@ -152,6 +276,12 @@ def run_variation(states):
             return {**unavailable("incompatible_or_missing_conditions"), **comparison}
         if _at(first, "identity.harness_sha") != _at(point, "identity.harness_sha"):
             return unavailable("different_harness_trees")
+        first_actor, actor = actor_runtime(first), actor_runtime(point)
+        if first_actor['status'] != 'unrecorded' or actor['status'] != 'unrecorded':
+            if (first_actor['status'] != 'recorded' or actor['status'] != 'recorded'
+                    or first_actor['dependencies_sha256'] != actor['dependencies_sha256']
+                    or first_actor['source_sha256'] != actor['source_sha256']):
+                return unavailable('different_or_invalid_harness_runtime_dependencies')
     result = describe([point["score"] for _, point in states])
     result.update({"scope": "between_runs_same_harness", "independence": "distinct_run_ids_only",
                    "not_optimization_method_variance": True})

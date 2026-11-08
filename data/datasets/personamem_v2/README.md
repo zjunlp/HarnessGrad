@@ -66,10 +66,13 @@ bytes stay outside the repository.
 ```sh
 export HG_DATA_PERSONAMEM_V2=/absolute/path/to/datasets/personamem_v2
 python tools/datasets.py --fetch --dataset personamem_v2
-python data/datasets/personamem_v2/prepare.py \
+python -m data.datasets.personamem_v2.prepare \
   --raw "$HG_DATA_PERSONAMEM_V2/raw" \
   --output "$HG_DATA_PERSONAMEM_V2/prepared"
 ```
+
+The module entrypoint also works from an installed distribution; the existing
+checkout script `data/datasets/personamem_v2/prepare.py` remains supported.
 
 Preparation uses Python's standard library. It checks every source CSV and each
 selected history against `specs/source.json`, retains original split row indices,
@@ -209,3 +212,64 @@ and trusted record outside the repository; controls make no model calls.
 ordering and retries, delayed questions, source integrity, native split identity,
 the fixed exclusion and retained-question denominators, scorer isolation and real sandbox controls. The full
 release inventory test requires the external prepared pool.
+
+## Dependency and resource boundary
+
+This text-32k MCQ route is standard-library Python throughout: preparation parses
+pinned CSV/JSON with `csv/ast/json/random`; loading authenticates the prepared
+manifest and artifacts; the actor CLI uses the shared socket transport; the
+trusted relay runs the ordered `Session`; the isolated scorer parses the sealed
+record and applies the pinned MemAgent MCQ extraction rule. No upstream training
+stack, embeddings, vector database, model judge, external endpoint or credentials
+are required. Downloading the fixed sources needs HTTPS; preparation and prepared
+execution are offline. Linux bubblewrap and the platform's supported Python are
+native platform prerequisites, and the interpreter must live outside hidden
+sandbox trees. Controls preserve the invoking venv's path for Python CLIs.
+
+`test_stdlib_venv_platform_controls` creates an empty virtual environment without
+pip or site packages and runs actual bubblewrap actor/relay/verifier controls:
+oracle = 1, completed wrong = 0, noop = unmeasured `incomplete_episode`, with
+complete relay cleanup. The authored CSV/history preparation test also executes
+in a package-free child interpreter, preserving order, source exclusion metadata
+and gold separation. Its fixture pins and source counts are explicitly synthetic;
+the released source/scorer pins are unchanged. This is execution/preparation
+closure evidence for the exercised protocol, not a measured full-release
+benchmark or network download. Full-release inventory validation still requires
+the external prepared pool. Oracle/wrong answer maps are explicit control-only
+actor inputs; normal actors receive neither gold letters nor future history.
+
+Each `load()`, readiness check and native-split metadata lookup refreshes the
+cached pool once through `storage.pool`, authenticating the current manifest and
+pool bytes. Repeated task factory/row accesses within that selection reuse the
+validated snapshot; they do not rescan the entire pool per task. Thus a persistent
+console sees a valid replaced pool on its next selection and refuses a changed
+pool whose digest no longer matches. Service/gold reads separately authenticate
+selected artifacts. Preparation still refuses to overwrite output, and replacing
+files during an active run is unsupported. Storage configuration resolved at
+adapter import remains fixed for that process: changing the configured root
+requires restarting the host, whereas changed prepared bytes are checked at the
+next selection without a restart.
+
+### Selected-engine failure audit
+
+The additional authored-episode checks in `test_personamem_v2.py` execute the
+real service and scorer rather than replacing their scoring logic. Missing
+history state refuses service startup and removes temporary files. A test-owned
+relay is killed after the actor has finished submitting the complete oracle
+episode; the runner reports invalid/unmeasured service failure and complete
+cleanup, rather than accepting the otherwise correct answers. The actual scorer
+also runs directly under `python -I -S`: correct/wrong sealed records score 1/0;
+missing gold or sealed record exits 3 as `scorer_error`, removes a deliberately
+stale reward and leaves no measured score.
+
+A native verifier probe tries both modifying an existing scorer module and
+creating a new file in the immutable scorer projection. Both writes fail with an
+OS permission/read-only error before the unchanged official scoring route scores
+the completed record. Earlier actor-forgery tests separately establish that
+actor-written gold, records and scorer paths cannot replace verifier inputs.
+The protocol dependency chain is local `Session` (deepcopy/hash/JSON/threading),
+shared stdlib `Relay`/Unix socket transport, then `verify` and local regex-based
+`score_answer`; preparation adds stdlib CSV/AST/random handling. No model, vector
+store, external judge or third-party Python package is used by this text MCQ
+route. Native mounts/process lifecycle still depend on bubblewrap and OS/Python
+resources. This audit uses authored episodes, not the full release or a model run.

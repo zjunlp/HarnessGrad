@@ -17,10 +17,14 @@ import json
 from pathlib import Path
 
 from harnessgrad.loops.mode_a import _copy_round_traces, _identical_prior
+from harnessgrad.verification_context import capture
+
+CONTEXT = capture([{"task_id": "t1"}, {"task_id": "t2"}], {"t1": "a", "t2": "b"})
 
 
 def _point(round_no: int, sha: str, *, trials: int = 1, score: float = 0.5) -> dict:
     return {
+        "verification_context": CONTEXT,
         "round": round_no,
         "score": score,
         "identity": {"harness_sha": sha},
@@ -31,24 +35,24 @@ def _point(round_no: int, sha: str, *, trials: int = 1, score: float = 0.5) -> d
 
 def test_matches_the_same_content() -> None:
     curve = [_point(0, "aaaa"), _point(1, "bbbb")]
-    got = _identical_prior(curve, "aaaa", 1)
+    got = _identical_prior(curve, "aaaa", 1, verification_context=CONTEXT)
     assert got is not None and got["round"] == 0
 
 
 def test_returns_none_for_new_content() -> None:
     curve = [_point(0, "aaaa")]
-    assert _identical_prior(curve, "cccc", 1) is None
+    assert _identical_prior(curve, "cccc", 1, verification_context=CONTEXT) is None
 
 
 def test_a_different_trial_count_is_a_different_question() -> None:
     curve = [_point(0, "aaaa", trials=3)]
-    assert _identical_prior(curve, "aaaa", 1) is None
-    assert _identical_prior(curve, "aaaa", 3) is not None
+    assert _identical_prior(curve, "aaaa", 1, verification_context=CONTEXT) is None
+    assert _identical_prior(curve, "aaaa", 3, verification_context=CONTEXT) is not None
 
 
 def test_prefers_the_most_recent_match() -> None:
     curve = [_point(0, "aaaa"), _point(1, "aaaa"), _point(2, "bbbb")]
-    got = _identical_prior(curve, "aaaa", 1)
+    got = _identical_prior(curve, "aaaa", 1, verification_context=CONTEXT)
     assert got is not None and got["round"] == 1
 
 
@@ -84,15 +88,15 @@ def test_identical_bun_source_requires_current_runtime_identity(tmp_path, monkey
     bun, _, calls = fake_runtime(tmp_path, monkeypatch)
     before = bun_runtime.configure(repo)["identity"]
     old = _point(0, "same")
-    assert _identical_prior([old], "same", 1, repo=repo) is None
+    assert _identical_prior([old], "same", 1, repo=repo, verification_context=CONTEXT) is None
     old["env"] = {"harness_runtime": [{"bun": before}]}
-    assert _identical_prior([old], "same", 1, repo=repo) is old
+    assert _identical_prior([old], "same", 1, repo=repo, verification_context=CONTEXT) is old
     overlay = configure(bun, tmp_path / "overlays", route="https://coding.tu-zi.com/v1/responses", mode="repair")
     monkeypatch.setenv("HG_RESPONSES_OVERLAY", overlay["path"])
     calls.clear()
-    assert _identical_prior([old], "same", 1, repo=repo) is None
+    assert _identical_prior([old], "same", 1, repo=repo, verification_context=CONTEXT) is None
     old["env"]["harness_runtime"] = [{"bun": bun_runtime.identity(repo)}]
-    assert _identical_prior([old], "same", 1, repo=repo) is old
+    assert _identical_prior([old], "same", 1, repo=repo, verification_context=CONTEXT) is old
     monkeypatch.setenv("HG_RESPONSES_OVERLAY", str(tmp_path / "absent"))
-    assert _identical_prior([old], "same", 1, repo=repo) is None
+    assert _identical_prior([old], "same", 1, repo=repo, verification_context=CONTEXT) is None
     assert not any("install" in command for command in calls)

@@ -20,15 +20,9 @@ def downloads():
     不写 `downloads()` 是沉默，不是"没有数据"：这里声明来源、内容摘要与字节数，
     于是 run 的记录能说清它量的是哪一份 bundle。
     """
-    import hashlib
+    from data.scaffolds.authored import download_entry
     import pathlib
-    root = pathlib.Path(__file__).resolve().parents[1] / "authored" / "example-fix-bug"
-    digest = hashlib.sha256((root / "bundle.json").read_bytes()).hexdigest()
-    size = sum(p.stat().st_size for p in root.rglob("*") if p.is_file())
-    return [{"kind": "authored", "name": _BUNDLE_NAME, "version": digest[:16],
-             "size": f"{size} bytes",
-             "note": "authored scenario bundle: bundle.json + materials + oracle, "
-                     "versioned with this repository",
-             "path": "data/authored/example-fix-bug", "sha256": digest}]
+    root = pathlib.Path(__file__).resolve().parents[1] / "authored"
+    return [download_entry(_BUNDLE_NAME, authored_root=root)]
 DEFAULT_ENV = {"kind": "files"}
 DEFAULT_SPLIT = {"by": "sha256(task_id)", "eval_fraction": 0.2}

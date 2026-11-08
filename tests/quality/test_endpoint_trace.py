@@ -46,8 +46,12 @@ def _fake_client(reply: str, monkeypatch) -> None:
         def __init__(self, **_kw):
             self.chat = type("C", (), {"completions": _Completions()})()
 
-    import openai
-    monkeypatch.setattr(openai, "OpenAI", _Client)
+    import editor
+    def endpoint_client(**kwargs):
+        client = _Client(**kwargs)
+        client.complete = client.chat.completions.create
+        return client
+    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
 
 
 def test_the_conversation_is_written_into_the_round(tmp_path, monkeypatch):

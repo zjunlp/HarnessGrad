@@ -337,12 +337,16 @@ def test_public_cli_to_materialized_verifier(submission, expected, tmp_path, mon
     # Suppress the shared scaffold's import-time pool construction in the child too.
     # The check and scorer run from their actual, unedited VERIFY copies.
     bootstrap = (
-        "import runpy,sys; from data.scaffolds.qa import base; "
+        "import runpy,sys; sys.path.insert(0,sys.argv[1]); from data.scaffolds.qa import base; "
         "base.QASpec.records=lambda self: []; "
-        "sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name='__main__')"
+        "sys.argv=sys.argv[2:]; runpy.run_path(sys.argv[0],run_name='__main__')"
     )
+    argv = spec.verifier(record)["argv"]
+    script_index = next(i for i in range(1,len(argv)) if not argv[i].startswith("-"))
+    python_flags = argv[1:script_index]
+    assert "-I" in python_flags and set(python_flags) <= {"-I", "-B"}
     checked = subprocess.run(
-        [sys.executable, "-c", bootstrap, *spec.verifier(record)["argv"][1:], "--redact-gold"],
+        [argv[0], *python_flags, "-c", bootstrap, str(tmp_path), *argv[script_index:], "--redact-gold"],
         cwd=tmp_path, capture_output=True, text=True)
     if expected is None:
         assert checked.returncode == 3, checked.stderr

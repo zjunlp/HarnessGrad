@@ -66,21 +66,25 @@ cross-concern imports are retained. Every production importer now targets a
 canonical implementation. The 32 documented old-path aliases add compatibility
 edges only; package `__init__.py` files have no implementation imports. The
 [architecture map](architecture.md#compatibility-import-paths) lists every shim.
-The exact eleven data exceptions and three config edges below retain their
-original justifications and now name the moved implementations. The guard also
+The initial data exceptions below retain their original justifications and name
+the moved implementations. The current inventory is the guard's exact
+`EXCEPTIONS` and `ALLOWED_EVAL_CONFIG_EDGES` mappings. The guard also
 checks that canonical production modules never import the compatibility paths.
 
 ## Enforced boundaries
 
 - `harnessgrad/config/` and `harnessgrad/runtime/` cannot import `eval`, `data`,
   `tools`, or `driver`, including their submodules.
-- `eval/` can import config only through the three exact module edges below.
+- `eval/` can import config only through the exact module edges below.
   Additional config submodule dependencies need separate review.
 - Production Python modules anywhere under `data/`, `eval/`, and `harnessgrad/`
   cannot import `legacy` or any of its submodules. The initial audit found none.
 - Adapters may import `data.scaffolds.*` and their own private assets; imports of other adapters or other `data.*` modules are forbidden. The guard covers `data.datasets.*`, including private support scripts; top-level adapter shims are forbidden.
-- `data/` cannot import `eval/`, except for the eleven existing edges explicitly
-  recorded below. Support/control scripts are scanned too.
+- `data/` cannot import `eval/`, except for reviewed, named edges in `EXCEPTIONS`.
+  Support/control scripts are scanned too.
+- Adapter asset directories require a matching adapter module. The explicitly
+  classified `native_qa` directory holds only a preparation recipe; it has no
+  adapter module and does not add a published dataset.
 
 The permitted config edges are:
 
@@ -89,11 +93,12 @@ The permitted config edges are:
 | `eval/containers/harness_runtime.py` | `harnessgrad.config` | Resolved runtime overlay configuration |
 | `eval/containers/sandbox.py` | `harnessgrad.config` | Resolved sandbox configuration |
 | `eval/service/services.py` | `harnessgrad.config` | Resolved service configuration |
+| `eval/service/judge.py` | `harnessgrad.config` | Explicit verifier judge identity and credential |
 
 ## Existing exceptions
 
-The `data -> eval` invariant was already violated at the audited revision. These
-are documented layering debt, preserved to keep this change focused on the guard.
+The `data -> eval` invariant was already violated at the audited revision. The
+initial bridges below are documented layering debt, retained for compatibility.
 The structural refactor rewires those same dependencies to canonical paths.
 Every exception is keyed by rule, exact file,
 and exact imported module in `EXCEPTIONS`, with a reason:
@@ -112,9 +117,43 @@ and exact imported module in `EXCEPTIONS`, with a reason:
 | `data/datasets/scienceworld/control.py` | `eval.run.runner` | Platform control invokes the ScienceWorld verifier through `run_one` |
 | `data/datasets/spreadsheetbench/control.py` | `eval.run.runner` | Platform control invokes the spreadsheet verifier through `run_one` |
 
+The managed Jericho control additionally owns its selected relay through
+`eval.run.tool_relay`, while the relay program uses `eval.service.tool_transport`.
+The shared operator-only command control consumes private scorer receipts through
+`eval.verification.verifier` and measured-result semantics through
+`eval.verification.result_contract`. These exact bridges reuse existing execution
+and wire contracts; they grant no broader adapter access to `eval`.
+
+ALFWorld and ScienceWorld operator controls likewise reuse the relay lifecycle
+and native verifier. ScienceWorld's explicit oracle control invokes its private
+reference worker through the Python service launcher; its ordinary engine relay
+exposes no oracle operation. These file/module bridges are individually named in
+the guard, separate from dependency-free adapter discovery.
+
 New permissions require a focused diff explaining the exact dependency and its
 reason. Empty reasons and stale permissions fail the guard, including removed
 config edges: remove the corresponding permission when removing an import.
 Failures identify the importing file, line, import statement, rule, and resolved
 module edge. Exceptions never authorize a whole directory or another imported
 module from the same file.
+
+## Extracted helper boundaries
+
+The current graph also scans `console/`. The historical counts above describe
+those revisions and are not current inventories. Four small extracted modules
+have exact dependency sets in `EXTRACTED_UNIT_IMPORTS` in the guard:
+
+| Module | Repository imports | Other imports |
+| --- | --- | --- |
+| `eval.run.outcomes` | `eval.observe.tracing` | `__future__` |
+| `console.record_reader` | None | `__future__`, `json`, `math`, `pathlib`, `re`, `time` |
+| `harnessgrad.entrypoints.experiment_config` | `harnessgrad.config`, `harnessgrad.experiments` | `__future__`, `pathlib` |
+| `harnessgrad.entrypoints.run_parser` | `harnessgrad.entrypoints.experiment_config` | `__future__`, `argparse`, `collections.abc`, `pathlib` |
+
+The guard rejects other imports, including nested/conditional imports, rather
+than granting these helpers access to their composition roots or subprocess
+execution. A new dependency needs review of the helper's responsibility and a
+focused change to this mapping. The guard is static: it does not prove absence
+of dynamic import, filesystem side effects or execution through a called function.
+Compatibility aliases and canonical monkeypatch ownership are described in the
+[extraction stage](architecture.md#small-unit-extraction-stage-and-remaining-responsibilities).

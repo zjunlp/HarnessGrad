@@ -106,6 +106,17 @@ _SPEC = base.QASpec(
                     "answer contract would need -- it is here, the answer channel is what "
                     "does not exist.",
         },
+        {
+            "kind": "pip",
+            "name": "pyarrow",
+            "package": "pyarrow",
+            "version": "23.0.0",
+            "size": "~40 MB",
+            "note": "Reads the pinned Parquet task pool in the dedicated dataset provider "
+                    "runtime. Run `python tools/prepare_dataset.py --dataset hotpotqa` after "
+                    "fetching. The platform Python and JSON-input scorer do not need "
+                    "pyarrow or the HuggingFace `datasets` package.",
+        },
     ],
     split="validation",
     source="hotpot_qa@1908d6afbbead072334abe2965f91bd2709910ab (config `fullwiki`)",

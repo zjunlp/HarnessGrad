@@ -8,6 +8,7 @@ exposed by the sandbox and must not be mistaken for a supported installation.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -23,8 +24,17 @@ RESOURCES = (
     "base_harness/loop/agent.py",
     "base_harness/loop/harness.json",
     "base_harness/loop/requirements.txt",
+    "base_harness/loop/requirements.lock",
+    "base_harness/loop/requirements-py310.lock",
+    "base_harness/loop/requirements-py39.lock",
+    "base_harness/loop/README.md",
     "base_harness/miniswe/requirements.txt",
+    "base_harness/miniswe/requirements.lock",
+    "base_harness/miniswe/requirements-py310.lock",
+    "base_harness/miniswe/requirements-py311.lock",
     "base_harness/miniswe/README.md",
+    "base_harness/miniagent/requirements.lock",
+    "base_harness/miniagent/PROVENANCE.json",
     "base_harness/openclaw/openclaw_runtime.py",
     "eval/containers/openclaw_runtime.py",
     "tools/configure_openclaw_harness.py",
@@ -35,9 +45,21 @@ RESOURCES = (
     "data/scaffolds/qa/cli/qa",
     "data/scaffolds/qa/prediction.schema.json",
     "data/scaffolds/qa/verify/check.py",
+    "data/scaffolds/qa/oracle_harness/harness.json",
+    "data/datasets/gsm8k/runtime.json",
+    "data/datasets/gsm8k/requirements-load.txt",
+    "data/datasets/hotpotqa/runtime.json",
+    "data/datasets/hotpotqa/requirements-load.txt",
+    "data/datasets/triviaqa/runtime.json",
+    "data/datasets/triviaqa/requirements-load.txt",
+    "data/datasets/costbench/execution-runtime.json",
+    "data/datasets/costbench/requirements.lock",
     "harnessgrad/improvers/improvers.json",
     "harnessgrad/improvers/skill.md",
     "harnessgrad/runtime/eight_stage_protocol.schema.json",
+    "harnessgrad/candidate_runtime.py",
+    "harnessgrad/python_harness_runtime.py",
+    "harnessgrad/python_artifacts.py",
     "methods/noop/method.json",
     "methods/dsh-improver",
 )
@@ -61,7 +83,7 @@ def installed(tmp_path_factory):
     prefixes = ("harnessgrad/", "eval/", "data/", "methods/", "tools/",
                 "scenarios/", "base_harness/")
     for name in tracked:
-        if name in {"pyproject.toml", "LICENSE", "driver.py"} or name.startswith(prefixes):
+        if name in {"pyproject.toml", "README.md", "LICENSE", "driver.py"} or name.startswith(prefixes):
             src = ROOT / name
             if src.is_file():
                 dst = source / name
@@ -76,6 +98,12 @@ def installed(tmp_path_factory):
             name = f"{package}/local-secret.{suffix}"
             (source / name).write_text("DO NOT DISTRIBUTE: synthetic secret\n")
             sentinels.append(name)
+    # The policy-port source bundle is public provenance, not a wildcard for
+    # local private material placed alongside it.
+    for suffix in ("json", "md", "reference"):
+        name = f"methods/policy_ports/vendor/ace/local-secret.{suffix}"
+        (source / name).write_text("DO NOT DISTRIBUTE: synthetic secret\n")
+        sentinels.append(name)
     # Discovery is still namespace-based: the data allowlist is NOT a
     # tracked-source security boundary. Document this known Python-module risk
     # without importing the sentinel or claiming arbitrary dirty builds safe.
@@ -96,6 +124,15 @@ def installed(tmp_path_factory):
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
         assert not names.intersection(sentinels)
+        policy_root = "methods/policy_ports/"
+        for relative in ("README.md", "PROVENANCE.json", "vendor/LICENSE.Apache-2.0"):
+            assert archive.read(policy_root + relative) == (source / policy_root / relative).read_bytes()
+        provenance = json.loads(archive.read(policy_root + "PROVENANCE.json"))
+        assert provenance["license"] == "Apache-2.0"
+        for relative, digest in provenance["files"].items():
+            packaged = archive.read(policy_root + "vendor/" + relative)
+            assert hashlib.sha256(packaged).hexdigest() == digest, relative
+            assert packaged == (source / policy_root / "vendor" / relative).read_bytes()
         assert "data/local_ignored_module/__init__.py" in names
         launcher = archive.getinfo("methods/dsh-improver")
         assert (launcher.external_attr >> 16) & 0o111, "launcher lost executable mode"
@@ -138,13 +175,39 @@ from pathlib import Path
 import harnessgrad
 from data.scaffolds import registry
 from data.scaffolds.aggregation import aggregation_policy
+from data.datasets import costbench, costbench_dynamic
+from harnessgrad.dataset_runtime import execution_descriptor
 assert not site.ENABLE_USER_SITE
 assert registry.published()
 assert len(registry.load_tasks('demo')[0]) == 8
 assert aggregation_policy('demo', 'run_reward')
+assert registry.provider('costbench') is None
+assert execution_descriptor('costbench')['python'] == '3.12'
+assert costbench._execution() is costbench_dynamic._execution()
+assert callable(costbench._execution().binding)
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
+
+
+def test_installed_miniagent_declares_its_own_complete_lock(installed):
+    root, env, runtime = installed
+    code = '''
+import importlib.util,json
+from pathlib import Path
+import harnessgrad
+from harnessgrad.python_harness_runtime import descriptor
+source = Path(harnessgrad.__file__).resolve().parent.parent / 'base_harness/miniagent'
+manifest = json.loads((source / 'harness.json').read_text())
+assert manifest['install'] == 'requirements.lock'
+assert manifest['runtime'] == {'kind':'python','python':'3.12','requirements':'requirements.lock'}
+assert manifest['env_kinds'] == ['files'] and manifest['runtime_paths'] == []
+pins = descriptor(source)['pins']
+assert len(pins) == 20
+assert pins['openai'] == '2.21.0' and pins['pyyaml'] == '6.0.3' and pins['requests'] == '2.33.0'
+assert all(importlib.util.find_spec(name) is None for name in ('openai','httpx','yaml','requests'))
+'''
+    run([str(runtime / 'bin/python'), '-I', '-B', '-c', code], root, env)
 
 
 def test_installed_openclaw_template_and_preparation_tool(installed):
@@ -188,7 +251,7 @@ else:
     run([python, "-c", code], root, env)
 
 
-def test_installed_miniswe_template_and_overlay_requirements(installed):
+def test_installed_miniswe_template_and_managed_requirements(installed):
     root, env, runtime = installed
     python = str(runtime / "bin/python")
     assert "--harness" in run([python, "-m", "tools.configure_harness", "--help"], root, env)
@@ -196,19 +259,23 @@ def test_installed_miniswe_template_and_overlay_requirements(installed):
 import json
 from pathlib import Path
 import base_harness.miniswe.agent as agent
-from eval.containers import harness_runtime
+from eval.ckpt.source_tree import python_spec
 root = Path(agent.__file__).parent
 manifest = json.loads((root / "harness.json").read_text())
 assert manifest["runtime_paths"] == []
-assert manifest["install"] == "requirements.txt"
+assert manifest["install"] == "requirements.lock"
 assert manifest["env_kinds"] == ["files", "exec"]
-assert harness_runtime.install_spec(root)[1] == "requirements.txt"
+assert python_spec(manifest['runtime'],manifest['install'])['kind']=='python'
+assert manifest['runtime']['exec']['requirements']=={'3.10':'requirements-py310.lock',
+    '3.11':'requirements-py311.lock','3.12':'requirements.lock','3.13':'requirements.lock'}
+assert all((root/name).is_file() for name in ('requirements.lock','requirements-py310.lock','requirements-py311.lock'))
 assert (root / "requirements.txt").read_text().splitlines() == ["mini-swe-agent==2.4.6", "litellm==1.75.9"]
 '''
     run([python, "-c", code], root, env)
 
 
-def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
+@pytest.mark.parametrize('dataset', ['gsm8k', 'triviaqa', 'hotpotqa'])
+def test_installed_parquet_qa_synthetic_setup_and_adapter_scorer(installed, dataset):
     """Exercise installed adapter SETUP and isolated verifier without released tasks.
 
     Patching only the adapter's table reader gives it one synthetic record per split;
@@ -216,16 +283,29 @@ def test_installed_gsm8k_synthetic_setup_and_official_adapter_scorer(installed):
     """
     root, env, runtime = installed
     code = r'''
-import json, shutil, subprocess, sys
+import importlib, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
 from data.scaffolds.qa import base
-base.parquet_rows = lambda path: [{"question": "Synthetic: two plus three?", "answer": "#### 5"}]
-from data.datasets import gsm8k
-records, _ = gsm8k.load()
+name = sys.argv[1]
+from harnessgrad.dataset_runtime import descriptor
+assert descriptor(name)['pins'] == {'pyarrow': '23.0.0'}
+assert importlib.util.find_spec('pyarrow') is None
+row = {'question':'Synthetic: two plus three?', 'answer': '#### 5'}
+if name == 'triviaqa':
+    row['answer'] = {'value':'5', 'normalized_aliases':['5', 'five']}
+elif name == 'hotpotqa':
+    row.update(answer='5', supporting_facts={'title':['Authored private evidence'], 'sent_id':[0]})
+    # This adapter checks file presence before calling the patched table reader.
+    path = Path(os.environ['HG_DATA_HOTPOTQA']) / 'fullwiki/validation-00000-of-00001.parquet'
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'authored reader placeholder; no released data')
+base.parquet_rows = lambda path, **kwargs: [row]
+adapter = importlib.import_module('data.datasets.' + name)
+records, _ = adapter.load()
 task = records[0]
-work = Path("installed-gsm8k-test")
+work = Path('installed-' + name + '-test')
 work.mkdir()
-for item in gsm8k.SETUP[task["task_id"]]["files"] + gsm8k.VERIFY[task["task_id"]]["inputs"]:
+for item in adapter.SETUP[task["task_id"]]["files"] + adapter.VERIFY[task["task_id"]]["inputs"]:
     destination = work / item["path"]
     destination.parent.mkdir(parents=True, exist_ok=True)
     if "content" in item:
@@ -233,16 +313,16 @@ for item in gsm8k.SETUP[task["task_id"]]["files"] + gsm8k.VERIFY[task["task_id"]
     else:
         shutil.copy2(item["from"], destination)
 subprocess.run([sys.executable, "qa/bin/qa", "submit", "5"], cwd=work, check=True)
-verifier = gsm8k.VERIFY[task["task_id"]]
+verifier = adapter.VERIFY[task["task_id"]]
 check = subprocess.run([sys.executable, *verifier["argv"][1:]], cwd=work,
                        capture_output=True, text=True)
 assert check.returncode == 0, check.stdout + check.stderr
 assert float((work / "verifier/reward.txt").read_text()) == 1.0
-print("installed synthetic GSM8K SETUP and scorer: ok")
+print('installed synthetic ' + name + ' SETUP and scorer: ok')
 '''
-    configured = {**env, "HG_DATA_GSM8K": str(root / "synthetic-gsm8k")}
-    output = run([str(runtime / "bin/python"), "-c", code], root, configured)
-    assert "installed synthetic GSM8K SETUP and scorer: ok" in output
+    configured = {**env, 'HG_DATA_' + dataset.upper(): str(root / ('synthetic-' + dataset))}
+    output = run([str(runtime / "bin/python"), "-c", code, dataset], root, configured)
+    assert 'installed synthetic ' + dataset + ' SETUP and scorer: ok' in output
 
 
 def test_installer_python_floor_diagnostic():

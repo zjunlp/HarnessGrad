@@ -12,6 +12,7 @@ import sys
 import pytest
 
 from tools import validate_harness as validator
+from test_scenario import offline_loop_dependencies  # noqa: F401 - explicit fixture reuse
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENT = '''import argparse
@@ -247,7 +248,9 @@ def test_external_input_is_not_changed_by_overlapping_outputs(tmp_path, overlap)
         argv[argv.index(flag)+1] = str(source/'output')
     proc = subprocess.run([sys.executable, *argv], cwd=ROOT, capture_output=True, text=True,
                           env={**os.environ,'HG_AGENT_BACKEND':'mock'}, timeout=120)
-    _refused(proc, 'overlap')
+    # A source occupying the reserved work namespace is refused before staging.
+    # Nested outputs otherwise reach the distinct source/output overlap guard.
+    _refused(proc, 'namespace' if overlap == 'source-is-workspace' else 'overlap')
     assert source.is_dir() and _digest(source) == expected
     assert not (source/'output').exists()
 
@@ -258,7 +261,7 @@ def test_source_parameters_are_mutually_exclusive(tmp_path):
 
 
 @pytest.mark.parametrize('source', [(), ('--harness', 'loop'), ('--harness', 'absolute')])
-def test_legacy_harness_calls_still_run(tmp_path, source):
+def test_legacy_harness_calls_still_run(tmp_path, source, offline_loop_dependencies):
     if source == ('--harness', 'absolute'):
         source = ('--harness', str(_harness(tmp_path)))
     proc = _run(tmp_path, *source)

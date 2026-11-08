@@ -11,13 +11,45 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture(autouse=True)
+def local_improver_registry(tmp_path, monkeypatch):
+    """Resolve only authored local CLIs, independent of host installs or credentials."""
+    cli = tmp_path / "authored-improver"
+    calls = tmp_path / "improver-calls.jsonl"
+    cli.write_text(
+        f"#!{sys.executable}\n"
+        "import json, sys\nfrom pathlib import Path\n"
+        f"with Path({str(calls)!r}).open('a') as stream:\n"
+        "    stream.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+        "if sys.argv[1:] != ['--version']:\n"
+        "    raise SystemExit('authored fixture permits only version discovery')\n"
+        "print('authored-improver 1.2.3')\n")
+    cli.chmod(0o755)
+    registry = tmp_path / "improvers.json"
+    registry.write_text(json.dumps({
+        "default": "missing-cli",
+        "improvers": {
+            "authored-cli": {"name": "authored-local", "kind": "cli",
+                             "launcher": str(cli), "argv_style": "authored",
+                             "provider": "authored-local", "model": "authored-no-model"},
+            "missing-cli": {"name": "missing-local", "kind": "cli",
+                            "launcher": str(tmp_path / "missing-improver")},
+        },
+    }))
+    monkeypatch.setenv("HG_IMPROVER_CONFIG", str(registry))
+    return cli, calls
 
 
 def _run(tmp_path: Path, run_id: str, *extra: str) -> subprocess.CompletedProcess:
@@ -116,7 +148,7 @@ def test_a_shared_round_zero_stages_the_donors_traces(tmp_path):
     assert "KeyError" not in proc.stderr
 
 
-def test_a_shared_point_carries_this_runs_improver_not_the_donors(tmp_path):
+def test_a_shared_point_carries_this_runs_improver_not_the_donors(tmp_path, local_improver_registry):
     """**2026-10-17 整批失败就是这条。** donor 用 `--improver none` 测（我们那份真实的 H0 就是），
     共用时把它的 `improver` 一起抄过来 —— 那里根本没有这个键 —— 于是九个方法都以为
     "我没有 CLI improver"，退回聊天端点，用为 CLI 准备的 prompt 去撞 16k 窗口，round 1 全灭。
@@ -128,11 +160,29 @@ def test_a_shared_point_carries_this_runs_improver_not_the_donors(tmp_path):
     assert "improver" not in (_first_point(tmp_path, "donor")["identity"]), (
         "--improver none 的点不该记录 improver，这个前提不成立就测不到那条 bug")
 
-    consumer = _run(tmp_path, "consumer", "--h0-from", "donor", "--improver", "dsh")
+    consumer = _run(tmp_path, "consumer", "--h0-from", "donor", "--improver", "authored-cli")
     assert consumer.returncode == 0, consumer.stderr[-800:]
     b = _first_point(tmp_path, "consumer")
     improver = (b.get("identity") or {}).get("improver")
-    assert improver and improver.get("name") == "dsh", (
+    assert improver and improver.get("name") == "authored-local", (
         f"共用点必须记录本次 run 解析到的 improver，实际是 {improver!r}")
     # donor 的测量条件仍然可查
     assert b["shared_from"]["measured_with"]["jobs"] == 1
+
+    cli, calls = local_improver_registry
+    assert improver["kind"] == "cli" and improver["requested"] == "authored-cli"
+    assert improver["path"] == str(cli) and improver["version"] == "1.2.3"
+    assert improver["sha256"] == hashlib.sha256(cli.read_bytes()).hexdigest()
+    assert b["per_task"] == _first_point(tmp_path, "donor")["per_task"]
+    assert [json.loads(line) for line in calls.read_text().splitlines()] == [["--version"]]
+
+    # An unresolved request must not inherit either the donor's or another run's CLI.
+    unresolved = _run(tmp_path, "unresolved", "--h0-from", "donor", "--improver", "missing-cli")
+    assert unresolved.returncode == 0, unresolved.stderr[-800:]
+    assert "no improver resolved" in unresolved.stdout + unresolved.stderr
+    assert "launcher is missing" in unresolved.stdout + unresolved.stderr
+    point = _first_point(tmp_path, "unresolved")
+    assert "improver" not in point["identity"]
+    assert point["shared_from"]["run_id"] == "donor"
+    assert point["per_task"] == b["per_task"]
+    assert [json.loads(line) for line in calls.read_text().splitlines()] == [["--version"]]

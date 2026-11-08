@@ -1,0 +1,3 @@
+# Official workbook reader and its complete Python dependency closure.
+openpyxl==3.1.2
+et-xmlfile==2.0.0

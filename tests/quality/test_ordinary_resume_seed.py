@@ -121,3 +121,32 @@ def test_invalid_resume_seed_plan_cannot_rewrite_metadata(interrupted_driver, da
     assert state.execute('--resume') == 2
     assert (state.run / 'run_meta.json').read_bytes() == state.metadata
     assert len(state.started) == 1
+
+
+def test_driver_eval_resume_rejects_drift_before_changing_old_workspace(interrupted_driver, monkeypatch):
+    from eval.observe.console import CONSOLE
+    from harnessgrad import verification_context
+    state = interrupted_driver
+    work = state.run.parent.parent / 'work' / 'eval' / 'workspace'
+    def snapshot(root):
+        return {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    before_run = snapshot(state.run)
+    before_work = snapshot(work)
+    original = verification_context.capture
+    calls = []
+    def drift(*args, **kwargs):
+        value = original(*args, **kwargs)
+        calls.append(value)
+        if len(calls) == 2:
+            items = dict(value['tasks'])
+            key = next(iter(items))
+            items[key] = 'f' * 64 if items[key] != 'f' * 64 else 'e' * 64
+            return verification_context.create(items)
+        return value
+    CONSOLE.close()
+    monkeypatch.setattr(verification_context, 'capture', drift)
+    assert state.execute('--resume') == 2
+    CONSOLE.close()
+    assert len(calls) == 2
+    assert snapshot(state.run) == before_run
+    assert snapshot(work) == before_work

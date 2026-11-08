@@ -103,9 +103,18 @@ def _probe(tmp_path: Path, config: Path, *,
         "--set", "jobs=1", "--set", "trials=1",
         "--set", f"run_id={ident}",
         "--runs-root", str(runs_root), "--work-root", str(tmp_path / "work"),
-        "--no-sandbox",
     ]
+    # Managed actors cannot use the legacy host-interpreter shortcut. Keep the
+    # preset's actual sandbox route when it declares its own Python environment.
+    harness = experiments.load(config).get('harness', 'loop')
+    manifest_path = ROOT / 'base_harness' / harness / 'harness.json'
+    manifest = json.loads(manifest_path.read_text()) if manifest_path.is_file() else {}
+    managed = (manifest.get('runtime') or {}).get('kind') == 'python'
+    if not managed:
+        argv.append('--no-sandbox')
     env = _model_free_env()
+    if managed:
+        env.update(HG_HARNESS_RUNTIME_ROOT=str(tmp_path / 'harness-runtimes'), UV_OFFLINE='1')
     # Keep the run's own temp trees beside its roots, so the test leaves nothing on the
     # shared filesystem that pytest's cleanup does not own.
     env["TMPDIR"] = str(tmp_path)

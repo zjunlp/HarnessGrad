@@ -42,13 +42,10 @@ If the dataset is new to you, read `docs/dataset-first-day.md` first: it is the
 reconnaissance — three measurements that decide whether this dataset is runnable, refused, or
 runnable with a measured exclusion — and its whole point is that **no adapter is written until
 the gold has been run through the official scorer**.
-The skill doc is more than 1,500 lines of measured lessons and is titled *"the judgement, not
-the checklist"* on purpose — read it when a decision is not obvious. This page is what you
-follow so you do not have to rediscover which decisions there are.
 
-**Precedence, in order:** the programs win over this page, and this page wins over the
-skill doc. If this page and `data/dataset.schema.json` / `tools/dataset_lint.py` disagree
-about something a program can decide, the program is right — fix this page.
+**Precedence:** executable contracts take precedence over this guide. If this page and
+`data/dataset.schema.json` / `tools/dataset_lint.py` disagree about something a program
+can decide, the program is right — fix this page.
 
 Three rules that produce most of the failures this page exists to prevent:
 
@@ -145,12 +142,11 @@ silently is not one:
 | position | legal values | meaning |
 | --- | --- | --- |
 | `ENV[<task>]["kind"]` | `files` | a directory tree is materialised and the agent runs a command inside it |
-| | `exec` | a container; this machine has no working Docker, so nothing here uses it |
+| | `exec` | a container; requires a working Docker runtime and the declared runtime admission |
 | `VERIFY[<task>]["kind"]` | `answer` | the agent's answer is compared as a string; no check program runs |
 | | `command` | an argv runs against the task workdir and writes a reward file |
 
-Everything the earlier sixteen datasets used is one of those four. The schema is the
-authority; this table is a reading of it.
+The schema is the authority; this table summarizes these environment and verifier kinds.
 
 ### The download contract
 
@@ -184,7 +180,7 @@ linked-worktree behavior. Machine-specific absolute defaults are rejected by lin
 The index displays logical paths derived from the `dataset_root()` declaration and
 each download's `dst`/`extract_to`, including directory aliases and shared roots.
 It names the per-dataset override separately. `--check` continues to report the
-current server's actual absolute paths; local `.env` settings do not enter the index.
+configured storage's actual absolute paths; local `.env` settings do not enter the index.
 
 ```
 python3 tools/datasets.py --check   --dataset <name>    # are the bytes here?
@@ -195,13 +191,13 @@ python3 tools/datasets.py --write                        # regenerate DOWNLOADS.
 `--fetch` verifies a declared `sha256` and deletes the file when it does not match, so a
 `downloads()` entry without a hash is a fetch that trusts the network. Pin one.
 
-**Hugging Face note (measured on this machine): `huggingface.co` is unreachable;
-`hf-mirror.com` works and serves the same repo ids and commit SHAs.** `--endpoint` defaults
-to the mirror. `raw.githubusercontent.com` is also blocked; use `codeload.github.com` or
-`github.com/…/raw/…`. When the provenance really is a raw file, `HG_GH_RAW_MIRROR=<proxy
-prefix>` makes `--fetch` ask for `<mirror>/https://raw.githubusercontent.com/<path>`; it is
-off by default and rewrites no other host (a mirror in front of a checksummed URL elsewhere
-would surface as a hash mismatch). The header of `DOWNLOADS.md` carries the same one-liner.
+**Download endpoints:** `--endpoint` defaults to `https://hf-mirror.com`; set
+`HG_HF_ENDPOINT` or pass `--endpoint` to select another Hugging Face endpoint.
+Network access depends on the host. If a pinned raw GitHub URL is inaccessible,
+`HG_GH_RAW_MIRROR=<proxy prefix>` makes `--fetch` request
+`<mirror>/https://raw.githubusercontent.com/<path>`. This opt-in setting rewrites
+only that host; declared checksums still apply. The header of `DOWNLOADS.md`
+documents these endpoint settings.
 
 **A dataset can be blocked twice, at the transport and at its preparation interpreter, and
 one fix does not lift the other.** `memoryagentbench` measured both (2026-11-02, re-measured
@@ -218,8 +214,9 @@ HG_MAB_PYTHON=/tmp/hg-mab-venv/bin/python python3 data/datasets/memoryagentbench
 
 with `R=<the dataset root>`, and the prepared interpreter built once:
 `python3 -m venv /tmp/hg-mab-venv && /tmp/hg-mab-venv/bin/pip install nltk==3.10.3
-regex==2026.9.29 tiktoken==0.14.0`. Unset, the fetch still ends `FAIL … curl exited 35:
-curl: (35) Recv failure: 连接被对方重置`, and the preparation refuses with
+regex==2026.9.29 tiktoken==0.14.0`. In the recorded network check, omitting the mirror
+ended with `FAIL … curl exited 35: curl: (35) Recv failure: 连接被对方重置`.
+An incompatible preparation interpreter refuses with
 `dependency_version_mismatch:nltk` plus the three pins, the three installed versions and
 that install command. `HG_MAB_PYTHON` is a **prepared interpreter, not an install into the
 shared one**: it is the shape `HG_SWE_PYTHON` and `HG_JUDGE_*_PYTHON` already use, and

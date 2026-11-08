@@ -35,6 +35,11 @@ import tools.datasets_doc as doc  # noqa: E402
 
 DOC_PATH = ROOT / "DATASETS.md"
 
+
+def test_runtime_support_inventory_covers_all_declared_adapters():
+    # Registration must not silently omit an adapter's dependency review status.
+    assert set(doc.runtime_support_rows()) == set(doc.published_declarations(ROOT))
+
 #: A table row starts with the dataset name in a code span; notes and bullets do not.
 ROW = re.compile(r"^\| `([a-z0-9_]+)` \|")
 

@@ -79,6 +79,7 @@ def configure(harness: Path, codex: str | None = None, *, command: str | None = 
         raise ValueError("expected the Codex agent.py manifest")
     adapter = _adapter(harness)
     selected_env = _environment() if env is None else env
+    adapter.require_clean_startup(selected_env)
     argv = adapter.select(selected_env, codex=codex, command=command, node=node)
     selected = adapter.installation(argv, extra=runtime_paths,
                                     forbidden=(ROOT, main_checkout(ROOT), harness))
@@ -88,9 +89,7 @@ def configure(harness: Path, codex: str | None = None, *, command: str | None = 
     record = {"schema": 1, "version": version,
               "selection": adapter.choice(selected_env, codex=codex, command=command), **selected}
     # Detect changes during probes before committing a complete installation.
-    for entry in record["files"]:
-        if adapter.digest(Path(entry["path"])) != entry["sha256"]:
-            raise ValueError("Codex installation changed during preparation")
+    adapter.check_files(record)
     manifest["runtime_paths"] = selected["runtime_paths"]
     manifest[adapter.RECORD] = record
     temporary = None

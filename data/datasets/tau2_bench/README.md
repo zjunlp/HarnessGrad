@@ -46,34 +46,41 @@ bound before evaluation because the upstream default is an import-time constant.
 
 ## Preparation and readiness
 
-Run from the repository root. Set these portable variables to your own locations;
-the runtime must already be provisioned from `requirements.lock`:
+The platform controller uses only the standard library and can run under Python
+3.12 from either the source checkout or an installed wheel. It resolves an already
+prepared managed execution artifact, then starts its Python 3.13 worker with
+`-I -B`. Normal preparation and check-only never install dependencies.
 
 ```bash
 export HG_DATA_ROOT="$HOME/hg-data"
+export HG_DATASET_RUNTIME_ROOT="$HOME/.cache/harnessgrad/dataset-runtimes"
 TAU2_ROOT="$HG_DATA_ROOT/tau2-bench"
 TAU2_SOURCE="$HG_DATA_ROOT/sources/tau2-bench-0.1.0"
-TAU2_RUNTIME="$HG_DATA_ROOT/runtimes/tau2-python313"
 
-# Read-only inspection; host Python 3.12 is supported, --source is unnecessary.
-python3.12 -B data/datasets/tau2_bench/prepare.py --check-only \
-    --target "$TAU2_ROOT" --runtime "$TAU2_RUNTIME"
+# Separate explicit action when the execution artifact has not been prepared.
+python -m tools.prepare_tau2_bench --prepare-runtime
 
-# Fresh generation: target must not exist; use the extracted pinned source.
-"$TAU2_RUNTIME/bin/python" -B data/datasets/tau2_bench/prepare.py \
-    --source "$TAU2_SOURCE" --target "$HG_DATA_ROOT/tau2-bench-fresh"
+# Read-only inspection; --source is unnecessary.
+python -m tools.prepare_tau2_bench --check-only --target "$TAU2_ROOT"
 
-# Prove regeneration matches an already-valid payload; never repair it in place.
-"$TAU2_RUNTIME/bin/python" -B data/datasets/tau2_bench/prepare.py \
-    --source "$TAU2_SOURCE" --target "$TAU2_ROOT" --reuse-bundle
+# Fresh generation using the separately pinned extracted source.
+python -m tools.prepare_tau2_bench --source "$TAU2_SOURCE" \
+    --target "$HG_DATA_ROOT/tau2-bench-fresh"
+
+# Validate existing bytes and prove regeneration; never repair in place.
+python -m tools.prepare_tau2_bench --source "$TAU2_SOURCE" \
+    --target "$TAU2_ROOT" --reuse-bundle
 ```
 
-Generation requires Python 3.13, stages on the target filesystem, validates expected
-pins and publishes by atomic rename. It does not install a runtime. `--reuse-bundle`
-validates the existing bundle/cases, regenerates cases in temporary sibling storage
-and checks reproducibility without replacing deployed assets. Partial/corrupt targets
-are refused; provision a fresh target separately. Check-only defaults to
-`<target>/runtime`; pass `--runtime` for an external runtime, including fresh targets.
+The worker admits the exact role binding and executable before importing provider
+code, re-admits after generation/checking, and returns only a management receipt.
+The parent re-admits after completion before publishing a staged fresh payload.
+Atomic no-replace publication refuses even a concurrent empty target directory.
+Failure or package drift leaves the existing payload untouched. Partial/corrupt
+targets are refused; provision a fresh target separately. `--runtime`, if supplied,
+must name the selected managed artifact; no external-venv fallback is performed.
+Model/endpoint credentials and active Python configuration are not inherited by
+the worker. Host shared libraries/base stdlib remain compatibility inputs.
 
 The payload contains `manifest.json`, paired `cases/<domain>/<id>/{public,private}.json`,
 `bundle/src`, and `bundle/data` without task sets or trajectories. Both case halves
@@ -121,3 +128,55 @@ Focused regression coverage lives in `tests/quality/test_tau2_bench_*.py`: inven
 preparation, runtime, official scorer, integrity/limits and dual-control tests.
 Real-payload checks may explicitly skip when storage/runtime is unavailable; a skip
 is not execution evidence.
+
+## Managed execution artifact
+
+Service and scorer declarations now require the separately prepared execution
+profile, built at its final path from `execution-requirements.lock`. This is the
+existing exact lock with only `tau2==0.0.1` omitted: that package is supplied by
+the separately digest-pinned source bundle and is not available from the index:
+
+```bash
+python tools/prepare_dataset.py --dataset tau2_bench --runtime execution
+```
+
+Preparation is explicit; loading and readiness never install dependencies. Both
+trusted launch roles carry the artifact identity and revalidate its bytes before
+launch. Discovery is not cached by the adapter. Existing external venvs are not
+copied or silently adopted. `HG_DATA_TAU2_BENCH_RUNTIME`, if set, must name the selected
+managed artifact; unset the old override when migrating. The legacy `RUNTIME`
+constant remains available to direct fixture utilities, but does not select the
+production service, scorer or preparation controller. Use the formal
+`python -m tools.prepare_tau2_bench` entry point for preparation.
+
+The artifact covers the venv and base executable. Host shared libraries and the
+base standard library are compatibility inputs, not an immutable operating system.
+Pinned bundle source and private/public case digests remain separate checks;
+runtime identity contains no private task or answer bytes. Readiness does not
+establish model endpoint health or an episode score.
+
+
+Preparation source admission also commits the finite set of owned controller,
+prepare, adapter and bootstrap/runtime helper `.py` files. Those helpers are
+compiled directly from their source bytes at explicit owned paths; timestamp-valid
+`.pyc` files and import-cache/cwd helper substitutions are not used. The worker
+checks that source identity before/after loading and execution, and the parent
+checks it again before publication. Upstream bundle/source/task pins are unchanged.
+Source drift fails closed and retains the sibling staging directory with the
+expected source inventory, source snapshots and minimal worker-attempt metadata;
+an existing payload and its provenance are never rewritten by check-only.
+
+Each dependency/provider worker uses a temporary private HOME, XDG directories,
+TMP and cwd. Relative CLI source/target/archive arguments are normalized against
+the controller's original cwd before launch. Explicit source fetching stays in
+the standard-library controller with its existing authentication/proxy settings;
+workers receive the archive path and still enforce the original archive digest.
+
+
+Once a fresh preparation attempt has been created, every failure preserves its
+private staging directory: source snapshots, partial payload, worker attempt and
+raw stdout/stderr diagnostics. `failed.json` contains only the exception type and
+phase; the public error gives that safe summary and the private stage path, never
+raw task/error text. Only successful publication removes staging. A late target
+collision leaves the concurrent target and all historical receipts unchanged.
+Reuse and read-only checks create no attempt/output directories.

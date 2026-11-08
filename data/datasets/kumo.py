@@ -13,7 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from harnessgrad.paths import dataset_root
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
 ORACLE_SOURCE = "released"
@@ -65,6 +65,14 @@ def roster():
     return {row["task_id"]: row for row in manifest()["tasks"]}
 
 
+def _refresh_catalog():
+    # Registry selections must authenticate current bytes, not a prior selection.
+    for cached in (manifest, roster):
+        clear = getattr(cached, "cache_clear", None)
+        if clear is not None:
+            clear()
+
+
 def control_task(task_id):
     if task_id not in roster():
         raise ValueError(f"unknown KUMO task: {task_id}")
@@ -72,6 +80,7 @@ def control_task(task_id):
 
 
 def load():
+    _refresh_catalog()
     return [control_task(tid) for tid in roster()], {tid: METRIC for tid in roster()}
 
 
@@ -141,14 +150,19 @@ def downloads():
 
 def provision_status():
     try:
+        root = str(DATASET_ROOT)
+    except DataRootNotConfigured as exc:
+        return {"root": None, "present": False, "status": "config_missing", "detail": str(exc)}
+    try:
+        _refresh_catalog()
         pool = roster()
         missing = sum(not (PREPARED / row["path"] / name).is_file()
                       for row in pool.values() for name in ("public.json", "private.json"))
-        return {"root": str(DATASET_ROOT), "present": missing == 0,
+        return {"root": root, "present": missing == 0,
                 "tasks": len(pool), "source_tasks": 5300, "excluded": 10,
                 "detail": f"{missing} missing prepared files"}
     except (OSError, ValueError, KeyError) as error:
-        return {"root": str(DATASET_ROOT), "present": False, "detail": str(error)}
+        return {"root": root, "present": False, "detail": str(error)}
 
 
 #: **No division**: the released task set is the benchmark's scored split, so the whole pool

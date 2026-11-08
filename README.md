@@ -36,7 +36,7 @@ The table records the inventory at this README revision; the benchmark row is ch
 | --- | --- | --- |
 | **harnesses** | 8: `loop`, `codex`, `opencode`, `deepseek-harness`, `openclaw`, `miniagent`, `miniswe`, `oracle` | `base_harness/<name>/` |
 | **RSI methods** | 19: `dgm`, `rrsi`, `adas`, `ahe`, `ace`, `skillopt`, `evoprompt`, `evo_harness`, `opro`, `tthe`, `dream_rsi`, `sica_ci`, `gepa`, `darwinx`, `arbor`, `hyperagents`, `meta_harness`, `harnessx`, `modular_rsi` | `experiments/method-<name>.json` |
-| **benchmarks** | 56 declared, **56 runnable**, none refused — every one listed: `agentdojo`, `aime`, `alfworld`, `appworld`, `authored_example_fix_bug`, `bbeh`, `bfcl_v3`, `bird_minidev`, `browsecomp`, `chessbench_puzzles`, `cooperbench`, `costbench`, `costbench_dynamic`, `deepsearchqa`, `deepswe`, `ds1000`, `fever`, `gaia`, `gsm8k`, `harvey_lab`, `hle`, `hotpotqa`, `jericho`, `jobbench`, `kumo`, `livecodebench`, `livemathbench`, `locomo`, `math`, `math500`, `memoryagentbench`, `musique`, `nq`, `officeqa_pro`, `personamem_v2`, `physicsquestions`, `reasoning_gym`, `scienceworld`, `searchqa`, `sportsunderstanding`, `spreadsheetbench`, `spreadsheetbench2`, `strategyqa`, `strongreject`, `supergpqa`, `swe_bench`, `swe_bench_pro`, `tau2_bench`, `tau3_bench`, `tau_bench`, `terminal_bench`, `travelplanner`, `triviaqa`, `twowikimultihopqa`, `widesearch`, `workbench` | `data/datasets/`, detail in [`DATASETS.md`](DATASETS.md) |
+| **benchmarks** | 56 declared adapters; preparation and runtime prerequisites vary — every one listed: `agentdojo`, `aime`, `alfworld`, `appworld`, `authored_example_fix_bug`, `bbeh`, `bfcl_v3`, `bird_minidev`, `browsecomp`, `chessbench_puzzles`, `cooperbench`, `costbench`, `costbench_dynamic`, `deepsearchqa`, `deepswe`, `ds1000`, `fever`, `gaia`, `gsm8k`, `harvey_lab`, `hle`, `hotpotqa`, `jericho`, `jobbench`, `kumo`, `livecodebench`, `livemathbench`, `locomo`, `math`, `math500`, `memoryagentbench`, `musique`, `nq`, `officeqa_pro`, `personamem_v2`, `physicsquestions`, `reasoning_gym`, `scienceworld`, `searchqa`, `sportsunderstanding`, `spreadsheetbench`, `spreadsheetbench2`, `strategyqa`, `strongreject`, `supergpqa`, `swe_bench`, `swe_bench_pro`, `tau2_bench`, `tau3_bench`, `tau_bench`, `terminal_bench`, `travelplanner`, `triviaqa`, `twowikimultihopqa`, `widesearch`, `workbench` | `data/datasets/`, detail in [`DATASETS.md`](DATASETS.md) |
 
 </details>
 
@@ -88,11 +88,14 @@ The platform itself has **no third-party runtime dependencies** and imports only
 library; a dataset, a harness or a search provider may need more, and each recipe names what.
 `./install.sh` installs missing system prerequisites and verifies the sandbox boundary.
 
-```bash
-HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json --check-only
-```
+Python Harnesses can opt into [their own managed environment](docs/writing_a_harness.md#21-managed-python-dependencies)
+for sandboxed tasks. The default [Loop](base_harness/loop/README.md) and
+[MiniSWE](base_harness/miniswe/README.md) use this route
+for native `files` and container `exec`; [MiniAgent](base_harness/miniagent/README.md)
+uses native `files`. Other base Harness recipes retain their declared runtime setup.
 
-`--check-only` checks the invocation without starting a round. `--prepare-only` also creates the run directory without starting a round.
+Follow the [first-use guide](docs/getting-started.md) to prepare a Harness, verify the installation without model calls, and open its results in the Console.
+`--check-only` checks prerequisites without starting a round. `--prepare-only` reserves a configuration-bound run for a matching later invocation; it does not execute tasks.
 
 <a id="dataset-storage"></a>
 
@@ -114,8 +117,10 @@ Configure the dataset and both model roles, then start a run. Use your own OpenA
 
 ```bash
 # The provided configuration uses GSM8K.
-python3 tools/configure_harness.py --harness base_harness/loop
-python3 tools/datasets.py --fetch --dataset gsm8k
+python tools/configure_harness.py --harness base_harness/loop --fetch
+python tools/datasets.py --fetch --dataset gsm8k
+python tools/prepare_dataset.py --dataset gsm8k
+python tools/datasets.py --check --dataset gsm8k
 export HG_AGENT_BACKEND=openai
 export HG_AGENT_BASE_URL='YOUR_SOLVER_ENDPOINT_URL'
 export HG_AGENT_MODEL='YOUR_SOLVER_MODEL_NAME'
@@ -123,12 +128,25 @@ export HG_AGENT_API_KEY='YOUR_SOLVER_API_KEY'
 export HG_METHOD_BASE_URL='YOUR_EDITOR_ENDPOINT_URL'
 export HG_METHOD_MODEL='YOUR_EDITOR_MODEL_NAME'
 export HG_METHOD_API_KEY='YOUR_EDITOR_API_KEY'
-harnessgrad run --config experiments/method-dgm.json --check-only --check-net
-harnessgrad run --config experiments/method-dgm.json
-python3 tools/run_summary.py runs/dgm-quickstart
+HG_QUICKSTART_ID="dgm-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
+harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --check-only --check-net
+harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --fail-on-incomplete
+python tools/run_summary.py "runs/$HG_QUICKSTART_ID"
 ```
 
-Replace the placeholders before running. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
+Replace the placeholders before running and use a fresh run ID for each new experiment. The check probes endpoints but does not generate responses. The run uses five training tasks and one editing round; see the [recipe](experiments/method-dgm.json) and [experiment documentation](docs/rsi-experiments.md) for details.
+
+Loop preparation installs its locked wheels into a separate CPython 3.12 environment;
+the platform Python does not need the OpenAI SDK. `--fetch` explicitly permits wheel
+downloads; omit it when the required wheels are cached. A candidate's actual source
+and dependency artifacts are verified before execution, cached score reuse and resume.
+
+GSM8K's preparation command installs its pinned data-loading dependencies in a separate
+environment; the platform environment does not need pyarrow. Fetching only downloads data.
+Use `python tools/prepare_dataset.py --dataset gsm8k --check` to check the prepared
+environment and data without installing anything. See [dataset runtimes](docs/dataset-runtime-interfaces.md#dataset-provider-runtime) for the preparation and loading contract.
+TriviaQA and HotpotQA use the same provider preparation flow; substitute their
+dataset name in the commands. Their Parquet readers also stay outside the platform environment.
 
 <a id="contributors"></a>
 
@@ -155,14 +173,10 @@ Explore experiments, inspect harness versions and trajectories, and edit a candi
 
 ```bash
 export HG_CONSOLE_RUNS="$PWD/runs"  # existing run-record directory
-python3 console/server.py --port 4460
+python console/server.py --port 4460
 ```
 
 Open [http://127.0.0.1:4460/](http://127.0.0.1:4460/). Run these commands from the repository root after an experiment has created `runs/`, or point `HG_CONSOLE_RUNS` to another existing run-record directory. The Console binds to localhost by default.
-
-Candidate trials additionally require `HG_CONSOLE_TRIAL_RUNS` to name an existing **absolute**, symlink-free directory outside (and not an ancestor of) the platform checkout. An administrator must provision and protect this directory and all its ancestors against untrusted modification, and dedicate it to this service; for example, create a private directory under a suitable deployment data volume and export its absolute path before starting the Console. There is no shared `/tmp` default. The service reserves both `<root>/<run-id>` and `<root>/work/<run-id>` exclusively; existing or incomplete IDs cannot be reused, including after failures or timeouts. Choose a new ID rather than deleting historical data. Run IDs use 1–48 ASCII letters, digits, dot, underscore or hyphen, excluding `.`, `..`, and `work`. This changes compatibility for deployments relying on the former default or reusing IDs. The root must be exclusive to this service: direct driver CLI runs and other writers must not use either namespace. The reservation protects cooperating trial requests, not malicious processes running as the same OS user or administrators modifying the trusted root.
-
-A candidate trial passes `--sampling all --rounds 0`: zero optimization rounds does **not** mean one task. It can evaluate the entire selected dataset and incur corresponding model, time, and resource costs. Review the dataset and deployment limits before launching.
 
 <details>
 <summary>🖥️ See the Console</summary>

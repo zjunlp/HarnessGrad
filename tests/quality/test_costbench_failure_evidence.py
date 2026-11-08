@@ -35,6 +35,7 @@ def corrupt_shard(setup, dataset, case, root):
     spec = json.loads(setup['tool_relay']['content'])
     spec['dataset_root'] = str(root)
     setup['tool_relay']['content'] = json.dumps(spec)
+    setup['tool_relay']['read_paths'].append(str(index.parent.resolve()))
 
 
 @pytest.mark.parametrize('kind', ['runtime', 'startup', 'timeout', 'healthy', 'zero'])

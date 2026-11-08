@@ -28,7 +28,7 @@ def invoke(monkeypatch, output, temps, *args):
     return code, json.loads(output.read_text())
 
 
-def test_real_subprocess_pass_fail_skip_and_exact_argv(sandbox, monkeypatch):
+def test_real_subprocess_pass_fail_skip_and_exact_argv(sandbox, monkeypatch, capsys):
     root, tests, output, temps = sandbox
     (tests / "test_pass.py").write_text("def test_ok(): assert True\n")
     (tests / "test_fail.py").write_text("def test_bad(): assert False\n")
@@ -42,6 +42,10 @@ def test_real_subprocess_pass_fail_skip_and_exact_argv(sandbox, monkeypatch):
     assert not data["unexecuted"] and not data["full_coverage"]
     assert all(a["argv"][:4] == ["<redacted>", "-m", "pytest", "-q"] for a in data["attempts"])
     assert "receipt-must-not-contain-this" not in output.read_text()
+    summary = capsys.readouterr().out
+    assert "standalone recheck not performed" in summary
+    assert "failed even when run alone" not in summary
+    assert len(data["attempts"]) == 2
 
 
 def test_all_skipped_file_is_not_test_case_coverage(sandbox, monkeypatch):
