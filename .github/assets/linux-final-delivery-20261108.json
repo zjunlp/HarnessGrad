@@ -1,0 +1,5397 @@
+{
+  "schema": "harnessgrad.linux-final-delivery.v1",
+  "status": "required_software_checks_accepted_with_8_explicit_optional_skips",
+  "publication": "Validation record only; no remote publication, push or release action is recorded here.",
+  "tested_source_commit": "ecb004b745fe126e45e9b6730c5286cdc6b3633d",
+  "tested_source_tree": "53cc90d7fe29a0bbe78d8e5eb48e67ceef842ff6",
+  "integration_tree_equivalent_commit": "4e2856",
+  "delivery_structure": {
+    "tested_thematic_candidate_count": 5,
+    "append_only_docs_receipt_commit_ordinal": 6,
+    "tested_commit_remains_reachable": true,
+    "tested_commit_amended": false
+  },
+  "scope": "Linux selected authored/offline software and installed-wheel delivery checks with eight explicit optional skips; not full benchmark acceptance.",
+  "source_gate": {
+    "status": "accepted_with_explicit_optional_skips",
+    "selected_files": 107,
+    "new_final_source_counts": {
+      "passed": 1721,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 8
+    },
+    "first_attempt_complete": true,
+    "first_attempt_counts": {
+      "passed": 1720,
+      "failed": 0,
+      "errors": 1,
+      "skipped": 8
+    },
+    "tracked_snapshot_drift": [],
+    "selection_evidence": "source_selection",
+    "first_attempt_snapshot_evidence": "source_initial_report",
+    "loop_profile_setup_error": {
+      "file": "tests/quality/test_trials_and_unmeasured.py",
+      "initial_counts": {
+        "passed": 14,
+        "failed": 0,
+        "errors": 1,
+        "skipped": 0
+      },
+      "corrected_counts": {
+        "passed": 15,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "resolution": "Same-source fresh snapshot single-file rerun with genuine prepared Loop cache/store profile; source/assertions unchanged, no download. Original setup error retained.",
+      "correction_report_evidence": "source_loop_profile_correction"
+    },
+    "skip_reconciliation": {
+      "status": "eight_exact_optional_skips_accepted_without_pass_inference",
+      "harvey_optional_cases": 7,
+      "historical_legacy_adapter_case": 1,
+      "historical_allowance_max_skips": 1,
+      "nodes": [
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts0-1.0]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts1-0.5]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts2-0.0]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_native_dual_provider_parse_failure_remains_unmeasured[malformed]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_native_dual_provider_parse_failure_remains_unmeasured[incomplete]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_real_hg_actor_files_private_native_dual_verifier[providers0-1.0]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_native_harvey.py",
+          "id": "tests.quality.test_native_harvey::test_real_hg_actor_files_private_native_dual_verifier[providers1-0.0]",
+          "reason": "configure managed Harvey artifact, pinned lab-core wheel and HG_HARVEY_TEST_PANDOC"
+        },
+        {
+          "file": "tests/quality/test_eval_package_compat.py",
+          "id": "tests.quality.test_eval_package_compat::test_legacy_critic_recognizes_both_scorer_path_locations",
+          "reason": "historical adapter is not in this checkout: legacy/adapters/harnessgrad_domain/adapter.py"
+        }
+      ]
+    },
+    "per_file": [
+      {
+        "file": "tests/quality/test_actor_launch_spec.py",
+        "exact_selection": [
+          "tests/quality/test_actor_launch_spec.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_000_log",
+          "junit_evidence": "source_first_000_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_000_log",
+          "junit_evidence": "source_accepted_000_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_author_bundle_archive_errors.py",
+        "exact_selection": [
+          "tests/quality/test_author_bundle_archive_errors.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_001_log",
+          "junit_evidence": "source_first_001_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_001_log",
+          "junit_evidence": "source_accepted_001_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_chess_native_preparation.py",
+        "exact_selection": [
+          "tests/quality/test_chess_native_preparation.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_002_log",
+          "junit_evidence": "source_first_002_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_002_log",
+          "junit_evidence": "source_accepted_002_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_lifetime.py",
+        "exact_selection": [
+          "tests/quality/test_console_lifetime.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_003_log",
+          "junit_evidence": "source_first_003_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_003_log",
+          "junit_evidence": "source_accepted_003_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_submission_e2e.py",
+        "exact_selection": [
+          "tests/quality/test_console_submission_e2e.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_004_log",
+          "junit_evidence": "source_first_004_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_004_log",
+          "junit_evidence": "source_accepted_004_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_dataset_runtime_base_admission.py",
+        "exact_selection": [
+          "tests/quality/test_dataset_runtime_base_admission.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_005_log",
+          "junit_evidence": "source_first_005_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_005_log",
+          "junit_evidence": "source_accepted_005_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_driver_readiness_closures.py",
+        "exact_selection": [
+          "tests/quality/test_driver_readiness_closures.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_006_log",
+          "junit_evidence": "source_first_006_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_006_log",
+          "junit_evidence": "source_accepted_006_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_explanation_cache_owner.py",
+        "exact_selection": [
+          "tests/quality/test_explanation_cache_owner.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_007_log",
+          "junit_evidence": "source_first_007_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_007_log",
+          "junit_evidence": "source_accepted_007_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_h0_cost_projection_reader.py",
+        "exact_selection": [
+          "tests/quality/test_h0_cost_projection_reader.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 48,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_008_log",
+          "junit_evidence": "source_first_008_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 48,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_008_log",
+          "junit_evidence": "source_accepted_008_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_h0_planning.py",
+        "exact_selection": [
+          "tests/quality/test_h0_planning.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_009_log",
+          "junit_evidence": "source_first_009_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_009_log",
+          "junit_evidence": "source_accepted_009_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_harness_path.py",
+        "exact_selection": [
+          "tests/quality/test_harness_path.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 80,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_010_log",
+          "junit_evidence": "source_first_010_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 80,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_010_log",
+          "junit_evidence": "source_accepted_010_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_import_direction.py",
+        "exact_selection": [
+          "tests/quality/test_import_direction.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_011_log",
+          "junit_evidence": "source_first_011_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_011_log",
+          "junit_evidence": "source_accepted_011_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_improver_probe_credentials.py",
+        "exact_selection": [
+          "tests/quality/test_improver_probe_credentials.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_012_log",
+          "junit_evidence": "source_first_012_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_012_log",
+          "junit_evidence": "source_accepted_012_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_jobbench_judge_gateway.py",
+        "exact_selection": [
+          "tests/quality/test_jobbench_judge_gateway.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_013_log",
+          "junit_evidence": "source_first_013_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_013_log",
+          "junit_evidence": "source_accepted_013_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_jobbench_judge_identity.py",
+        "exact_selection": [
+          "tests/quality/test_jobbench_judge_identity.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_014_log",
+          "junit_evidence": "source_first_014_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 29,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_014_log",
+          "junit_evidence": "source_accepted_014_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_jobbench_renderer_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_jobbench_renderer_runtime.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_015_log",
+          "junit_evidence": "source_first_015_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_015_log",
+          "junit_evidence": "source_accepted_015_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_loop_managed_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_loop_managed_runtime.py::test_empty_platform_can_prepare_and_check_loop_without_pip_or_sdk",
+          "tests/quality/test_loop_managed_runtime.py::test_real_loop_sdk_shell_and_private_scorer[files]",
+          "tests/quality/test_loop_managed_runtime.py::test_tasks_reuse_readonly_dependencies_and_start_with_private_state[files]",
+          "tests/quality/test_loop_managed_runtime.py::test_shipped_loop_h0_and_snapshot_resume"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_016_log",
+          "junit_evidence": "source_first_016_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_016_log",
+          "junit_evidence": "source_accepted_016_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_miniswe_managed_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_miniswe_managed_runtime.py::test_native_cli_uses_bound_runtime_and_keeps_task_python[files-mount]",
+          "tests/quality/test_miniswe_managed_runtime.py::test_empty_platform_can_check_prepared_miniswe_without_pip_or_sdks",
+          "tests/quality/test_miniswe_managed_runtime.py::test_shipped_h0_cache_snapshot_eval_and_resume"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_017_log",
+          "junit_evidence": "source_first_017_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_017_log",
+          "junit_evidence": "source_accepted_017_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_modelgate_http_paths.py",
+        "exact_selection": [
+          "tests/quality/test_modelgate_http_paths.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_018_log",
+          "junit_evidence": "source_first_018_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_018_log",
+          "junit_evidence": "source_accepted_018_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_modelgate_lifecycle.py",
+        "exact_selection": [
+          "tests/quality/test_modelgate_lifecycle.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_019_log",
+          "junit_evidence": "source_first_019_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_019_log",
+          "junit_evidence": "source_accepted_019_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_case_method_projection.py",
+        "exact_selection": [
+          "tests/quality/test_native_case_method_projection.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_020_log",
+          "junit_evidence": "source_first_020_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_020_log",
+          "junit_evidence": "source_accepted_020_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_harbor_dispatch_policy.py",
+        "exact_selection": [
+          "tests/quality/test_native_harbor_dispatch_policy.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_021_log",
+          "junit_evidence": "source_first_021_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_021_log",
+          "junit_evidence": "source_accepted_021_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_harbor_identity_policy.py",
+        "exact_selection": [
+          "tests/quality/test_native_harbor_identity_policy.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_022_log",
+          "junit_evidence": "source_first_022_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_022_log",
+          "junit_evidence": "source_accepted_022_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_harbor_python_identity.py",
+        "exact_selection": [
+          "tests/quality/test_native_harbor_python_identity.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 17,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_023_log",
+          "junit_evidence": "source_first_023_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 17,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_023_log",
+          "junit_evidence": "source_accepted_023_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_harbor_shared_dispatch.py",
+        "exact_selection": [
+          "tests/quality/test_native_harbor_shared_dispatch.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_024_log",
+          "junit_evidence": "source_first_024_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_024_log",
+          "junit_evidence": "source_accepted_024_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_harvey.py",
+        "exact_selection": [
+          "tests/quality/test_native_harvey.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 7,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_025_log",
+          "junit_evidence": "source_first_025_junit",
+          "skipped_nodes": [
+            "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts0-1.0]",
+            "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts1-0.5]",
+            "tests.quality.test_native_harvey::test_real_pinned_evaluator_runs_both_native_provider_sdks[verdicts2-0.0]",
+            "tests.quality.test_native_harvey::test_native_dual_provider_parse_failure_remains_unmeasured[malformed]",
+            "tests.quality.test_native_harvey::test_native_dual_provider_parse_failure_remains_unmeasured[incomplete]",
+            "tests.quality.test_native_harvey::test_real_hg_actor_files_private_native_dual_verifier[providers0-1.0]",
+            "tests.quality.test_native_harvey::test_real_hg_actor_files_private_native_dual_verifier[providers1-0.0]"
+          ]
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 7,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_025_log",
+          "junit_evidence": "source_accepted_025_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_native_swe_native.py",
+        "exact_selection": [
+          "tests/quality/test_native_swe_native.py::test_actual_official_grader_reports_missing_execution_without_fabricated_pass",
+          "tests/quality/test_native_swe_native.py::test_applied_patch_without_parseable_official_execution_is_unmeasured",
+          "tests/quality/test_native_swe_native.py::test_authenticated_source_executes_snapshot_not_mutable_cache"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_026_log",
+          "junit_evidence": "source_first_026_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_026_log",
+          "junit_evidence": "source_accepted_026_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_ordinary_resume_seed.py",
+        "exact_selection": [
+          "tests/quality/test_ordinary_resume_seed.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_027_log",
+          "junit_evidence": "source_first_027_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_027_log",
+          "junit_evidence": "source_accepted_027_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_post_execution_usage_retention.py",
+        "exact_selection": [
+          "tests/quality/test_post_execution_usage_retention.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_028_log",
+          "junit_evidence": "source_first_028_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_028_log",
+          "junit_evidence": "source_accepted_028_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_python_candidate_actor.py",
+        "exact_selection": [
+          "tests/quality/test_python_candidate_actor.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_029_log",
+          "junit_evidence": "source_first_029_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_029_log",
+          "junit_evidence": "source_accepted_029_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_python_candidate_lifecycle.py",
+        "exact_selection": [
+          "tests/quality/test_python_candidate_lifecycle.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 43,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_030_log",
+          "junit_evidence": "source_first_030_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 43,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_030_log",
+          "junit_evidence": "source_accepted_030_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_result_reduction.py",
+        "exact_selection": [
+          "tests/quality/test_result_reduction.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_031_log",
+          "junit_evidence": "source_first_031_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_031_log",
+          "junit_evidence": "source_accepted_031_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_resume_transaction.py",
+        "exact_selection": [
+          "tests/quality/test_resume_transaction.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_032_log",
+          "junit_evidence": "source_first_032_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_032_log",
+          "junit_evidence": "source_accepted_032_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_reviewed_filesystem_identity.py",
+        "exact_selection": [
+          "tests/quality/test_reviewed_filesystem_identity.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 47,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_033_log",
+          "junit_evidence": "source_first_033_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 47,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_033_log",
+          "junit_evidence": "source_accepted_033_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_completion.py",
+        "exact_selection": [
+          "tests/quality/test_run_completion.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_034_log",
+          "junit_evidence": "source_first_034_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_034_log",
+          "junit_evidence": "source_accepted_034_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_metadata_projection.py",
+        "exact_selection": [
+          "tests/quality/test_run_metadata_projection.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_035_log",
+          "junit_evidence": "source_first_035_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_035_log",
+          "junit_evidence": "source_accepted_035_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_shared_h0_incremental_cost.py",
+        "exact_selection": [
+          "tests/quality/test_shared_h0_incremental_cost.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_036_log",
+          "junit_evidence": "source_first_036_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_036_log",
+          "junit_evidence": "source_accepted_036_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_source_candidate_stage.py",
+        "exact_selection": [
+          "tests/quality/test_source_candidate_stage.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_037_log",
+          "junit_evidence": "source_first_037_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_037_log",
+          "junit_evidence": "source_accepted_037_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_task_output_verification.py",
+        "exact_selection": [
+          "tests/quality/test_task_output_verification.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_038_log",
+          "junit_evidence": "source_first_038_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_038_log",
+          "junit_evidence": "source_accepted_038_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_task_session.py",
+        "exact_selection": [
+          "tests/quality/test_task_session.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_039_log",
+          "junit_evidence": "source_first_039_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_039_log",
+          "junit_evidence": "source_accepted_039_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_task_session_close.py",
+        "exact_selection": [
+          "tests/quality/test_task_session_close.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_040_log",
+          "junit_evidence": "source_first_040_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 20,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_040_log",
+          "junit_evidence": "source_accepted_040_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_task_workspace.py",
+        "exact_selection": [
+          "tests/quality/test_task_workspace.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_041_log",
+          "junit_evidence": "source_first_041_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_041_log",
+          "junit_evidence": "source_accepted_041_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_trial_worker_contract.py",
+        "exact_selection": [
+          "tests/quality/test_trial_worker_contract.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_042_log",
+          "junit_evidence": "source_first_042_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_042_log",
+          "junit_evidence": "source_accepted_042_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_trials_and_unmeasured.py",
+        "exact_selection": [
+          "tests/quality/test_trials_and_unmeasured.py"
+        ],
+        "first_attempt": {
+          "returncode": 1,
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 1
+          },
+          "timeout": false,
+          "log_evidence": "source_first_043_log",
+          "junit_evidence": "source_first_043_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_043_log",
+          "junit_evidence": "source_accepted_043_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_wheel_console.py",
+        "exact_selection": [
+          "tests/quality/test_wheel_console.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_044_log",
+          "junit_evidence": "source_first_044_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_044_log",
+          "junit_evidence": "source_accepted_044_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_binding_recheck.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_binding_recheck.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_045_log",
+          "junit_evidence": "source_first_045_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_045_log",
+          "junit_evidence": "source_accepted_045_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_editor_drivers.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_editor_drivers.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 27,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_046_log",
+          "junit_evidence": "source_first_046_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 27,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_046_log",
+          "junit_evidence": "source_accepted_046_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_redaction_overlap.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_redaction_overlap.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 30,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_047_log",
+          "junit_evidence": "source_first_047_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 30,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_047_log",
+          "junit_evidence": "source_accepted_047_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_request_flag.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_request_flag.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_048_log",
+          "junit_evidence": "source_first_048_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_048_log",
+          "junit_evidence": "source_accepted_048_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_service.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_service.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_049_log",
+          "junit_evidence": "source_first_049_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_049_log",
+          "junit_evidence": "source_accepted_049_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_check_first_use.py",
+        "exact_selection": [
+          "tests/quality/test_check_first_use.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 8,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_050_log",
+          "junit_evidence": "source_first_050_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 8,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_050_log",
+          "junit_evidence": "source_accepted_050_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_namespace.py",
+        "exact_selection": [
+          "tests/quality/test_run_namespace.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_051_log",
+          "junit_evidence": "source_first_051_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_051_log",
+          "junit_evidence": "source_accepted_051_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_parser.py",
+        "exact_selection": [
+          "tests/quality/test_run_parser.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_052_log",
+          "junit_evidence": "source_first_052_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_052_log",
+          "junit_evidence": "source_accepted_052_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_summary.py",
+        "exact_selection": [
+          "tests/quality/test_run_summary.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 13,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_053_log",
+          "junit_evidence": "source_first_053_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 13,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_053_log",
+          "junit_evidence": "source_accepted_053_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_selected_run_plan.py",
+        "exact_selection": [
+          "tests/quality/test_selected_run_plan.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 34,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_054_log",
+          "junit_evidence": "source_first_054_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 34,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_054_log",
+          "junit_evidence": "source_accepted_054_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_evaluation_admission_plan.py",
+        "exact_selection": [
+          "tests/quality/test_evaluation_admission_plan.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_055_log",
+          "junit_evidence": "source_first_055_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_055_log",
+          "junit_evidence": "source_accepted_055_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_resume_train.py",
+        "exact_selection": [
+          "tests/quality/test_resume_train.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_056_log",
+          "junit_evidence": "source_first_056_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 19,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_056_log",
+          "junit_evidence": "source_accepted_056_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_resume_train_e2e.py",
+        "exact_selection": [
+          "tests/quality/test_resume_train_e2e.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_057_log",
+          "junit_evidence": "source_first_057_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_057_log",
+          "junit_evidence": "source_accepted_057_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_resume_eval.py",
+        "exact_selection": [
+          "tests/quality/test_resume_eval.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_058_log",
+          "junit_evidence": "source_first_058_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 16,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_058_log",
+          "junit_evidence": "source_accepted_058_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_repeated_trial_resume.py",
+        "exact_selection": [
+          "tests/quality/test_repeated_trial_resume.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 27,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_059_log",
+          "junit_evidence": "source_first_059_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 27,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_059_log",
+          "junit_evidence": "source_accepted_059_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_ordinary_resume_statistics.py",
+        "exact_selection": [
+          "tests/quality/test_ordinary_resume_statistics.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 30,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_060_log",
+          "junit_evidence": "source_first_060_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 30,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_060_log",
+          "junit_evidence": "source_accepted_060_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_verification_context.py",
+        "exact_selection": [
+          "tests/quality/test_verification_context.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_061_log",
+          "junit_evidence": "source_first_061_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_061_log",
+          "junit_evidence": "source_accepted_061_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_verification_context_workflows.py",
+        "exact_selection": [
+          "tests/quality/test_verification_context_workflows.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_062_log",
+          "junit_evidence": "source_first_062_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 10,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_062_log",
+          "junit_evidence": "source_accepted_062_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_shared_h0.py",
+        "exact_selection": [
+          "tests/quality/test_shared_h0.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_063_log",
+          "junit_evidence": "source_first_063_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_063_log",
+          "junit_evidence": "source_accepted_063_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_prepare_h0.py",
+        "exact_selection": [
+          "tests/quality/test_prepare_h0.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 41,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_064_log",
+          "junit_evidence": "source_first_064_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 41,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_064_log",
+          "junit_evidence": "source_accepted_064_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_h0_reuse_identity.py",
+        "exact_selection": [
+          "tests/quality/test_h0_reuse_identity.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_065_log",
+          "junit_evidence": "source_first_065_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_065_log",
+          "junit_evidence": "source_accepted_065_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_dataset_runtime_cache.py",
+        "exact_selection": [
+          "tests/quality/test_dataset_runtime_cache.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_066_log",
+          "junit_evidence": "source_first_066_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 15,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_066_log",
+          "junit_evidence": "source_accepted_066_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_external_actor_runtime_cache.py",
+        "exact_selection": [
+          "tests/quality/test_external_actor_runtime_cache.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_067_log",
+          "junit_evidence": "source_first_067_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_067_log",
+          "junit_evidence": "source_accepted_067_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_external_loader_environment.py",
+        "exact_selection": [
+          "tests/quality/test_external_loader_environment.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_068_log",
+          "junit_evidence": "source_first_068_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_068_log",
+          "junit_evidence": "source_accepted_068_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_evidence_export.py",
+        "exact_selection": [
+          "tests/quality/test_evidence_export.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 62,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_069_log",
+          "junit_evidence": "source_first_069_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 62,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_069_log",
+          "junit_evidence": "source_accepted_069_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_evidence_export_privacy.py",
+        "exact_selection": [
+          "tests/quality/test_evidence_export_privacy.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_070_log",
+          "junit_evidence": "source_first_070_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_070_log",
+          "junit_evidence": "source_accepted_070_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_evidence_runtime_integration.py",
+        "exact_selection": [
+          "tests/quality/test_evidence_runtime_integration.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_071_log",
+          "junit_evidence": "source_first_071_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_071_log",
+          "junit_evidence": "source_accepted_071_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_evidence_verification_context.py",
+        "exact_selection": [
+          "tests/quality/test_evidence_verification_context.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_072_log",
+          "junit_evidence": "source_first_072_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_072_log",
+          "junit_evidence": "source_accepted_072_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_launch_service.py",
+        "exact_selection": [
+          "tests/quality/test_console_launch_service.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_073_log",
+          "junit_evidence": "source_first_073_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 5,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_073_log",
+          "junit_evidence": "source_accepted_073_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_evidence_api.py",
+        "exact_selection": [
+          "tests/quality/test_console_evidence_api.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_074_log",
+          "junit_evidence": "source_first_074_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_074_log",
+          "junit_evidence": "source_accepted_074_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_evidence_integration.py",
+        "exact_selection": [
+          "tests/quality/test_console_evidence_integration.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_075_log",
+          "junit_evidence": "source_first_075_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_075_log",
+          "junit_evidence": "source_accepted_075_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_query_service.py",
+        "exact_selection": [
+          "tests/quality/test_console_query_service.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_076_log",
+          "junit_evidence": "source_first_076_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 7,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_076_log",
+          "junit_evidence": "source_accepted_076_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_record_reader.py",
+        "exact_selection": [
+          "tests/quality/test_console_record_reader.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 8,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_077_log",
+          "junit_evidence": "source_first_077_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 8,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_077_log",
+          "junit_evidence": "source_accepted_077_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_console_range_diff_boundary.py",
+        "exact_selection": [
+          "tests/quality/test_console_range_diff_boundary.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_078_log",
+          "junit_evidence": "source_first_078_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 11,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_078_log",
+          "junit_evidence": "source_accepted_078_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_workbench_selection_boundary.py",
+        "exact_selection": [
+          "tests/quality/test_workbench_selection_boundary.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_079_log",
+          "junit_evidence": "source_first_079_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_079_log",
+          "junit_evidence": "source_accepted_079_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_improver_cost.py",
+        "exact_selection": [
+          "tests/quality/test_improver_cost.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 26,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_080_log",
+          "junit_evidence": "source_first_080_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 26,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_080_log",
+          "junit_evidence": "source_accepted_080_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_unknown_harness_usage.py",
+        "exact_selection": [
+          "tests/quality/test_unknown_harness_usage.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_081_log",
+          "junit_evidence": "source_first_081_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_081_log",
+          "junit_evidence": "source_accepted_081_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_boundaries.py",
+        "exact_selection": [
+          "tests/quality/test_boundaries.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_082_log",
+          "junit_evidence": "source_first_082_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_082_log",
+          "junit_evidence": "source_accepted_082_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_eval_package_compat.py",
+        "exact_selection": [
+          "tests/quality/test_eval_package_compat.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 39,
+            "failed": 0,
+            "skipped": 1,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_083_log",
+          "junit_evidence": "source_first_083_junit",
+          "skipped_nodes": [
+            "tests.quality.test_eval_package_compat::test_legacy_critic_recognizes_both_scorer_path_locations"
+          ]
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 39,
+            "failed": 0,
+            "skipped": 1,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_083_log",
+          "junit_evidence": "source_accepted_083_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_wheel_adapter_resources.py",
+        "exact_selection": [
+          "tests/quality/test_wheel_adapter_resources.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_084_log",
+          "junit_evidence": "source_first_084_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 2,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_084_log",
+          "junit_evidence": "source_accepted_084_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_quality_receipts.py",
+        "exact_selection": [
+          "tests/quality/test_quality_receipts.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_085_log",
+          "junit_evidence": "source_first_085_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 24,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_085_log",
+          "junit_evidence": "source_accepted_085_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_ds1000_runtime_prepare.py",
+        "exact_selection": [
+          "tests/quality/test_ds1000_runtime_prepare.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_086_log",
+          "junit_evidence": "source_first_086_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 22,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_086_log",
+          "junit_evidence": "source_accepted_086_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_ds1000_execution_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_ds1000_execution_runtime.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_087_log",
+          "junit_evidence": "source_first_087_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_087_log",
+          "junit_evidence": "source_accepted_087_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_ds1000_actor_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_ds1000_actor_runtime.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_088_log",
+          "junit_evidence": "source_first_088_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 4,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_088_log",
+          "junit_evidence": "source_accepted_088_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_math_native_failure_boundaries.py",
+        "exact_selection": [
+          "tests/quality/test_math_native_failure_boundaries.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_089_log",
+          "junit_evidence": "source_first_089_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_089_log",
+          "junit_evidence": "source_accepted_089_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_memoryagentbench_resources.py",
+        "exact_selection": [
+          "tests/quality/test_memoryagentbench_resources.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_090_log",
+          "junit_evidence": "source_first_090_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_090_log",
+          "junit_evidence": "source_accepted_090_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_memoryagentbench_prepare.py",
+        "exact_selection": [
+          "tests/quality/test_memoryagentbench_prepare.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 34,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_091_log",
+          "junit_evidence": "source_first_091_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 34,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_091_log",
+          "junit_evidence": "source_accepted_091_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_memoryagentbench_judge_runtime.py",
+        "exact_selection": [
+          "tests/quality/test_memoryagentbench_judge_runtime.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 41,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_092_log",
+          "junit_evidence": "source_first_092_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 41,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_092_log",
+          "junit_evidence": "source_accepted_092_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_costbench_authored_lifecycle.py",
+        "exact_selection": [
+          "tests/quality/test_costbench_authored_lifecycle.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_093_log",
+          "junit_evidence": "source_first_093_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 3,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_093_log",
+          "junit_evidence": "source_accepted_093_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_tau_real_package_controls.py",
+        "exact_selection": [
+          "tests/quality/test_tau_real_package_controls.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 13,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_094_log",
+          "junit_evidence": "source_first_094_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 13,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_094_log",
+          "junit_evidence": "source_accepted_094_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_spreadsheet_official_differential.py",
+        "exact_selection": [
+          "tests/quality/test_spreadsheet_official_differential.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 21,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_095_log",
+          "junit_evidence": "source_first_095_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 21,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_095_log",
+          "junit_evidence": "source_accepted_095_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_jericho_supported_native.py",
+        "exact_selection": [
+          "tests/quality/test_jericho_supported_native.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_096_log",
+          "junit_evidence": "source_first_096_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_096_log",
+          "junit_evidence": "source_accepted_096_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_kumo_dataset.py",
+        "exact_selection": [
+          "tests/quality/test_kumo_dataset.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_097_log",
+          "junit_evidence": "source_first_097_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 23,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_097_log",
+          "junit_evidence": "source_accepted_097_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_personamem_v2.py",
+        "exact_selection": [
+          "tests/quality/test_personamem_v2.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 95,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_098_log",
+          "junit_evidence": "source_first_098_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 95,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_098_log",
+          "junit_evidence": "source_accepted_098_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_portable_blocker_history.py",
+        "exact_selection": [
+          "tests/quality/test_portable_blocker_history.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_099_log",
+          "junit_evidence": "source_first_099_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_099_log",
+          "junit_evidence": "source_accepted_099_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_inactive_evidence_retention.py",
+        "exact_selection": [
+          "tests/quality/test_inactive_evidence_retention.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_100_log",
+          "junit_evidence": "source_first_100_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_100_log",
+          "junit_evidence": "source_accepted_100_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_bfclcontain_differential.py",
+        "exact_selection": [
+          "tests/quality/test_bfclcontain_differential.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_101_log",
+          "junit_evidence": "source_first_101_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 32,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_101_log",
+          "junit_evidence": "source_accepted_101_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_bfclguard_reachability.py",
+        "exact_selection": [
+          "tests/quality/test_bfclguard_reachability.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_102_log",
+          "junit_evidence": "source_first_102_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 25,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_102_log",
+          "junit_evidence": "source_accepted_102_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_dataset_roots.py",
+        "exact_selection": [
+          "tests/quality/test_dataset_roots.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_103_log",
+          "junit_evidence": "source_first_103_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 9,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_103_log",
+          "junit_evidence": "source_accepted_103_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_documentation_commands.py",
+        "exact_selection": [
+          "tests/quality/test_documentation_commands.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_104_log",
+          "junit_evidence": "source_first_104_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 6,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_104_log",
+          "junit_evidence": "source_accepted_104_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_container_state_observation.py",
+        "exact_selection": [
+          "tests/quality/test_container_state_observation.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_105_log",
+          "junit_evidence": "source_first_105_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 14,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_105_log",
+          "junit_evidence": "source_accepted_105_junit"
+        }
+      },
+      {
+        "file": "tests/quality/test_run_observation_wiring.py",
+        "exact_selection": [
+          "tests/quality/test_run_observation_wiring.py"
+        ],
+        "first_attempt": {
+          "returncode": 0,
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "timeout": false,
+          "log_evidence": "source_first_106_log",
+          "junit_evidence": "source_first_106_junit",
+          "skipped_nodes": []
+        },
+        "accepted_reconciliation": {
+          "counts": {
+            "passed": 18,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0
+          },
+          "returncode": 0,
+          "timeout": false,
+          "log_evidence": "source_accepted_106_log",
+          "junit_evidence": "source_accepted_106_junit"
+        }
+      }
+    ],
+    "completed_first_attempt_files": 107,
+    "reconciled_evidence": "source_reconciled",
+    "source_snapshots": [
+      {
+        "head": "ecb004b745fe126e45e9b6730c5286cdc6b3633d",
+        "tree": "53cc90d7fe29a0bbe78d8e5eb48e67ceef842ff6",
+        "tracked_status": ""
+      },
+      {
+        "head": "ecb004b745fe126e45e9b6730c5286cdc6b3633d",
+        "tree": "53cc90d7fe29a0bbe78d8e5eb48e67ceef842ff6",
+        "tracked_status": ""
+      }
+    ]
+  },
+  "installed_wheel": {
+    "status": "passed",
+    "report_evidence": "wheel_pass_report",
+    "wheel_sha256": "6faa298d0f77f27eec6cc6ee9696060c5aabdd8044996003263e7a000b0ccfc5",
+    "successful_steps": [
+      {
+        "name": "build",
+        "exit_code": 0
+      },
+      {
+        "name": "install",
+        "exit_code": 0
+      },
+      {
+        "name": "dependency-boundary",
+        "exit_code": 0
+      },
+      {
+        "name": "architecture-modules-source-free",
+        "exit_code": 0
+      },
+      {
+        "name": "first-use",
+        "exit_code": 0
+      },
+      {
+        "name": "preset",
+        "exit_code": 0
+      },
+      {
+        "name": "public-resume-refusal",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-readonly",
+        "exit_code": 0
+      },
+      {
+        "name": "contributor-smoke",
+        "exit_code": 0
+      },
+      {
+        "name": "chess-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "appworld-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "math-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "locomo-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "editor-installed",
+        "exit_code": 0
+      },
+      {
+        "name": "readonly-empty-catalogue",
+        "exit_code": 0
+      },
+      {
+        "name": "ds1000-runtime-readonly",
+        "exit_code": 0
+      }
+    ],
+    "resource_files": 350,
+    "missing_resources": 0,
+    "changed_resources": 0,
+    "architecture_owners": 44,
+    "normal_dotted_imports": 43,
+    "explicit_installed_file_assets": 1,
+    "file_asset_owner": "data.datasets.jobbench.renderer_identity",
+    "build_source_removed_before_checks": true,
+    "historical_first_attempt": {
+      "status": "failed",
+      "report_evidence": "wheel_first_failed_report",
+      "cause": "Probe incorrectly assumed same-stem adapter resource directory was a dotted Python package; harness corrected to file-load installed asset. Original failed report retained."
+    }
+  },
+  "native_same_source": {
+    "status": "passed",
+    "source_commit": "ecb004b745fe126e45e9b6730c5286cdc6b3633d",
+    "report_evidence": "native_report",
+    "swe": {
+      "selected_file": "tests/quality/test_native_swe_native.py",
+      "passed": 6,
+      "actual_docker_official_grader_cases": 3,
+      "actual_rewards": [
+        1,
+        0,
+        0
+      ],
+      "separate_unit_controls": 3,
+      "junit_evidence": "native_swe_junit"
+    },
+    "t2": {
+      "authored_cases_passed": 2,
+      "cases": [
+        "success",
+        "constructor-failure-after-real-network"
+      ],
+      "scope": "Actual owned Docker/resource/gateway cleanup; not dataset scoring or model quality",
+      "report_evidence": "native_t2_report"
+    },
+    "independent_cleanup": {
+      "exact_receipt_references_inspected_absent": 14,
+      "count_is_independent_resource_total": false,
+      "cached_base_preserved": true,
+      "report_evidence": "native_exact_absence"
+    }
+  },
+  "required_ci_supplement": {
+    "status": "passed",
+    "report_evidence": "required_ci_six_junit",
+    "files": 6,
+    "passed": 165,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "per_file_counts": {
+      "tests/quality/test_documentation_links.py": {
+        "passed": 20,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests/quality/test_ci_select.py": {
+        "passed": 86,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests/quality/test_test_lanes.py": {
+        "passed": 3,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests/quality/test_ci_workflow.py": {
+        "passed": 33,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests/quality/test_registry_broken_adapters.py": {
+        "passed": 6,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "tests/quality/test_contributors.py": {
+        "passed": 17,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "other_required_ci_files_in_source_gate": [
+      "tests/quality/test_documentation_commands.py",
+      "tests/quality/test_import_direction.py"
+    ],
+    "overlap_policy": "Do not sum overlapping source/native/CI counts as independent coverage."
+  },
+  "driver_help_import": {
+    "status": "passed",
+    "evidence": "release_entrypoint_controls",
+    "evidence_kind": "Root recorded completed exec results after execution; not a new invocation",
+    "command_exit_codes": [
+      0,
+      0
+    ],
+    "checkout_status_after_commands": "clean",
+    "runtime_models_or_downloads": false
+  },
+  "raw_evidence": {
+    "source_first_000_log": {
+      "sha256": "fcf34db1dfdbbb4b8084125ebf8c3f2eed4f3661626b5f6e987a0e920f65313e",
+      "bytes": 227
+    },
+    "source_first_000_junit": {
+      "sha256": "08530fa7cca808f422f4e8ea2434783cc9c46587a4fbd77a3bf55591f328a05f",
+      "bytes": 1798
+    },
+    "source_first_001_log": {
+      "sha256": "acec76819031797e3378d7536ad86676e12e727e2471269c437ddeb55ea85d27",
+      "bytes": 237
+    },
+    "source_first_001_junit": {
+      "sha256": "058db5c52c20c55f35049bb99576c315c7bc5337ee601d589e510217371dd5e4",
+      "bytes": 547
+    },
+    "source_first_002_log": {
+      "sha256": "0f46b161017b3c57d9be0d74d84a0315bd5a5b5e024818388c9ee6b966648a3c",
+      "bytes": 235
+    },
+    "source_first_002_junit": {
+      "sha256": "30e7a984239e6e21e384c0fbe5448e393ddbb5333f71f0ff2980b64675706d97",
+      "bytes": 2020
+    },
+    "source_first_003_log": {
+      "sha256": "80e905b98fcfae3257de33e2b2e2b600210747919f891caae8ed25b8564a88be",
+      "bytes": 225
+    },
+    "source_first_003_junit": {
+      "sha256": "399b28d2f4bb18191ca2127647832c454624ccf73f721f2f92a6025be9622b0c",
+      "bytes": 1479
+    },
+    "source_first_004_log": {
+      "sha256": "dc8a072a8c8c7637550f06c04687d40111670c733075b70577654ada9551d03d",
+      "bytes": 231
+    },
+    "source_first_004_junit": {
+      "sha256": "5285630a843867711dcbdbbd41f933f1addd04043865346661c6d5c14b5a3a68",
+      "bytes": 647
+    },
+    "source_first_005_log": {
+      "sha256": "3cea6f226a4a6833f8a173b5674292dd84e76cd7cc059510dd70bff73eef2f16",
+      "bytes": 241
+    },
+    "source_first_005_junit": {
+      "sha256": "85ea20c7d0531b9d6b58f65be3d981aa414db63035a72ee90c0ad0d46cd83aa8",
+      "bytes": 2684
+    },
+    "source_first_006_log": {
+      "sha256": "934c9997598c149822663e04f8d7295fe1ecf62c7c0bdeeb3df4bfd942929639",
+      "bytes": 235
+    },
+    "source_first_006_junit": {
+      "sha256": "89c04c0fe08501d4ec1578fb57065217188673a401aa17f05dbb09e179d01d58",
+      "bytes": 2960
+    },
+    "source_first_007_log": {
+      "sha256": "2fdeb578b6d9c735456cd348be490267997bea9251d5587aa72d2f11e5178978",
+      "bytes": 232
+    },
+    "source_first_007_junit": {
+      "sha256": "30411e9f218e34ade00c074e33a24793e057f7ad67ef44d17d1687275fc8e579",
+      "bytes": 633
+    },
+    "source_first_008_log": {
+      "sha256": "0bc55f6d84c7b61d5fd1f2cff0f0023e5429b8803e27e4987cf5de89d5f6243e",
+      "bytes": 235
+    },
+    "source_first_008_junit": {
+      "sha256": "18168d492e0743d529d73db993330fc71ca6c4d023ed0031f01cbf2e18433f74",
+      "bytes": 8374
+    },
+    "source_first_009_log": {
+      "sha256": "25b305cbf71b873fbe02334148945c25b27048be8341203f39114dfeb23cf3ae",
+      "bytes": 221
+    },
+    "source_first_009_junit": {
+      "sha256": "195f14421bd877c44a16bb0dda1b2d6c2f650fd623452abaeadf3c461746670a",
+      "bytes": 2522
+    },
+    "source_first_010_log": {
+      "sha256": "8896b368bb7a4c83d1db6a452080bf42c8c7eff276e8b40a2b49fb505001c286",
+      "bytes": 303
+    },
+    "source_first_010_junit": {
+      "sha256": "2cc00a6dbac828aeb5d60a9c988cbee5a64e11c3fd646e2b879d2627890b0602",
+      "bytes": 10868
+    },
+    "source_first_011_log": {
+      "sha256": "26b349acda37c0d94e9c91de877a6bfc1cbb6797064dff6aa24cadb2e264912c",
+      "bytes": 1518
+    },
+    "source_first_011_junit": {
+      "sha256": "46d33ab05281f1841ca5b82040d1ed0572f1f273bf95ea2ef90274e210c73827",
+      "bytes": 1886
+    },
+    "source_first_012_log": {
+      "sha256": "957500c97045d5187645a9d5dbf5857c28c2b94b1b624da369dc8f4aa683cbe8",
+      "bytes": 235
+    },
+    "source_first_012_junit": {
+      "sha256": "ed6f8972d4ce80f4cbdec0325cc02a3faf44513f74fc16f74c730dc2c2022a6c",
+      "bytes": 1307
+    },
+    "source_first_013_log": {
+      "sha256": "7579b91db04814a04be9eabc078dc5bbccf8bdbe6911be87967d7485be143ad8",
+      "bytes": 233
+    },
+    "source_first_013_junit": {
+      "sha256": "f23438429158fedbf3550b8857f11b531ca981b4480bc3f9deebbbbc8fccfa11",
+      "bytes": 1811
+    },
+    "source_first_014_log": {
+      "sha256": "cba5a7882df7176de8686825e56257a3748ac31f9ece9becf8a538f0a8a43c05",
+      "bytes": 244
+    },
+    "source_first_014_junit": {
+      "sha256": "408584456a3873cabe6b36f415402e79a6938462207dd4092a4535e8ee452340",
+      "bytes": 4903
+    },
+    "source_first_015_log": {
+      "sha256": "9ba7e795ebbc74bed14738ac708a73315042b2cdda68ec54256ae6a64a511cf1",
+      "bytes": 236
+    },
+    "source_first_015_junit": {
+      "sha256": "e5de4c80dcad79b89ca9d6a11b56f293d8ca1b135e1ef1aa2f807162d14f81af",
+      "bytes": 1793
+    },
+    "source_first_016_log": {
+      "sha256": "17f2136fb63469d065222ecf4e8881a660aebecadaca478fe2fee0d9bad18c73",
+      "bytes": 230
+    },
+    "source_first_016_junit": {
+      "sha256": "20b991fbaf8e58303cb9c46d8f9a2b871869cc89a876cd7790397ad4a5ad66eb",
+      "bytes": 788
+    },
+    "source_first_017_log": {
+      "sha256": "e1902b31c2c79f8ef56cbcfc171f34d67d233b5cf2e0810699cf89da4e2b928d",
+      "bytes": 244
+    },
+    "source_first_017_junit": {
+      "sha256": "8767a685b2e71e001e8e6295fb209c290cf6ae738e7dcffe97dbe1d1cffa05f3",
+      "bytes": 666
+    },
+    "source_first_018_log": {
+      "sha256": "6282566a73b193913f53d770112aff66147db89c97eaf10acf9cf7f30e4dc241",
+      "bytes": 229
+    },
+    "source_first_018_junit": {
+      "sha256": "eba2e043cf6f4136c5cca69e62440fefc557ffcaf653fe9075f32ec2db3b09d5",
+      "bytes": 1277
+    },
+    "source_first_019_log": {
+      "sha256": "879d5c477317c41aae5692b4a33fa37aad615838e2c9ff433195144bc14318d8",
+      "bytes": 228
+    },
+    "source_first_019_junit": {
+      "sha256": "949dc5b9d6261b5878d00d39080d6cf35c1e71582e9ebb6f4c87f3115e7f52e1",
+      "bytes": 1560
+    },
+    "source_first_020_log": {
+      "sha256": "0eb0664a92e4d0d7738b87f1964164395ca38589a997c76a1488ac1d3e2af0cf",
+      "bytes": 239
+    },
+    "source_first_020_junit": {
+      "sha256": "e6e0a57872f5fb99ae48cc795f094a0d0c075db7725346db88d434602e221d9b",
+      "bytes": 2384
+    },
+    "source_first_021_log": {
+      "sha256": "c0359abf50d82ca7775afe76f5a692d8eb85088bc2f90e6352b9bd713c613b12",
+      "bytes": 239
+    },
+    "source_first_021_junit": {
+      "sha256": "784685afa76da1cfb1f6b2562c821f14c152059bec70c880a2255c8780ed6d63",
+      "bytes": 3445
+    },
+    "source_first_022_log": {
+      "sha256": "94cb2ab551bc54d77ceb3c2fbb4d142210a845f8ad1428370fb316f695430aaf",
+      "bytes": 239
+    },
+    "source_first_022_junit": {
+      "sha256": "4988b9872e77e93b4543fc16b8ce89379c271539b134ae0bfb44f1d8b16af1ce",
+      "bytes": 3827
+    },
+    "source_first_023_log": {
+      "sha256": "21c9e5a0502e7b9f32da853c24064c37c27dbe5a8605f042472dc2a02198ec81",
+      "bytes": 250
+    },
+    "source_first_023_junit": {
+      "sha256": "a08b79133d4bd327b8c9be57d815581bea684c8eaeb7692d1749331801da2d09",
+      "bytes": 2921
+    },
+    "source_first_024_log": {
+      "sha256": "75d8f7d96d778e95fa9285a8ccb9a6f019eb19cbacd405f0a9f0e0a1e7634374",
+      "bytes": 240
+    },
+    "source_first_024_junit": {
+      "sha256": "5c3aa6830c3d51135f71269d7ce779996231c440b760552915fcf843cb746070",
+      "bytes": 2143
+    },
+    "source_first_025_log": {
+      "sha256": "c673eeecd4206bda357c142a80095cf4d2479eaa5bde1fb708c5fa58aa8dda8a",
+      "bytes": 722
+    },
+    "source_first_025_junit": {
+      "sha256": "268f1d242f1dc80dba36e6e5d8c375e90973140ca166acc3cbb47e91ba7efab9",
+      "bytes": 4184
+    },
+    "source_first_026_log": {
+      "sha256": "e25a92e778ae0222526ebe8c83fed313bbf2a84a73c8a8d6281acdf64a68cc25",
+      "bytes": 227
+    },
+    "source_first_026_junit": {
+      "sha256": "5703b868b4bbb38d487dc5f97df04476a89b125ee8bf454939301af6e6bf245b",
+      "bytes": 672
+    },
+    "source_first_027_log": {
+      "sha256": "986f8ec710d563b38e05e3c62aa3b812acd770382d5e2e016d32c5188ce7dc72",
+      "bytes": 240
+    },
+    "source_first_027_junit": {
+      "sha256": "a9f054a3b8772d63206ef4203fd4190120f967725be63e8ac13855c99941dd4e",
+      "bytes": 1282
+    },
+    "source_first_028_log": {
+      "sha256": "1269d2f07c07be17085c6a4abace7859aa9262a6ec1ee56f8631896b4b133d1c",
+      "bytes": 239
+    },
+    "source_first_028_junit": {
+      "sha256": "19fa450ea2c0d7d548718ed7d359bcb9b13166e6e2d8bf135081eec8da8ef71f",
+      "bytes": 841
+    },
+    "source_first_029_log": {
+      "sha256": "62e4d2cddeb0c1c24c07ef6d5c1c91a1a3059755130e2d27f8f32feb4f14fb47",
+      "bytes": 233
+    },
+    "source_first_029_junit": {
+      "sha256": "7041c52e31cec616f22080aa299292a12d92e564d7365173d5ea2849c269453e",
+      "bytes": 3289
+    },
+    "source_first_030_log": {
+      "sha256": "2998a4940a8b1d13d514db7522c90c6502749dd90014df8e9d8cec7d616763e5",
+      "bytes": 248
+    },
+    "source_first_030_junit": {
+      "sha256": "ac59fb39ee56264aa934f2f8cff126a60b300ff8dce8d430461a41e2f5adf3c5",
+      "bytes": 7452
+    },
+    "source_first_031_log": {
+      "sha256": "e10d91b9e3902d42e4c453865e24754c65d811eda82d88abbad35e3468adfc44",
+      "bytes": 225
+    },
+    "source_first_031_junit": {
+      "sha256": "5a4ea717bfa5b7448fc0a3fc3070449d1319d5794fb4f58652505d8d91a540ff",
+      "bytes": 655
+    },
+    "source_first_032_log": {
+      "sha256": "f1d3abd1a28519a43eab16bdc040783fdc69bd1ef05b13f317db01355a6a936a",
+      "bytes": 228
+    },
+    "source_first_032_junit": {
+      "sha256": "f1b4d998e2ebef070f806d626faa32a3ca25201400346d052e65cabf1ed76b0b",
+      "bytes": 2137
+    },
+    "source_first_033_log": {
+      "sha256": "4d308e4e8ecfba86b658b57a37d1e71efaed86d7e6db214923340779e48406aa",
+      "bytes": 238
+    },
+    "source_first_033_junit": {
+      "sha256": "244d93a737898cca2ad0b6dce750892e617a110719ecb283d5f2bb3014e135a3",
+      "bytes": 7867
+    },
+    "source_first_034_log": {
+      "sha256": "721289a4433b8a19b46cbbf3fc2ae1e1b9774cc949e845466db667169be0e2fc",
+      "bytes": 224
+    },
+    "source_first_034_junit": {
+      "sha256": "48c7b9a16e7cde784166cd4ef25ccca79f3adcbcc4a9d123e705e99b0b23c313",
+      "bytes": 2683
+    },
+    "source_first_035_log": {
+      "sha256": "5f9a795dd29bbc4eb2dbe43cba5691e325236a1594bcec2a7dbf21b611fff775",
+      "bytes": 232
+    },
+    "source_first_035_junit": {
+      "sha256": "8e4fafe69731859dd524f35284d7d2614f04b8b024aeee70610e366a2b43026c",
+      "bytes": 1601
+    },
+    "source_first_036_log": {
+      "sha256": "7408dc55dd51aaa54cb9326d2d729fb876d6599e3206c9c411e6b38bf37543b8",
+      "bytes": 236
+    },
+    "source_first_036_junit": {
+      "sha256": "3288624fcd9dd2694a4557d6f723021641a33066f6c6e15400a3ca3b639de299",
+      "bytes": 1263
+    },
+    "source_first_037_log": {
+      "sha256": "beddc44b6b6d0ae798336aa7a44193c9d4739089590754cb84783f9ce159453e",
+      "bytes": 232
+    },
+    "source_first_037_junit": {
+      "sha256": "78631f167b49deadcf96cee14f3e1fb38a59b677ee16d78850bf3270b2f39cdc",
+      "bytes": 3782
+    },
+    "source_first_038_log": {
+      "sha256": "0e93ddc653d41e3a994f6ac996f166e7b25c0e743b30aa900b2cbb559dfa40a0",
+      "bytes": 233
+    },
+    "source_first_038_junit": {
+      "sha256": "4343ec986b37690a1aae180dbedd6d0b64c53c79f0686f51648807843eeded3d",
+      "bytes": 1041
+    },
+    "source_first_039_log": {
+      "sha256": "ce41df8c493e0386113360e3cc4d79314227c51f8e357f40349ca078fca296e9",
+      "bytes": 221
+    },
+    "source_first_039_junit": {
+      "sha256": "da6d3cbfeb8d37ef4309b8789e11266fea03e39a8a6da562f700350e178a19b5",
+      "bytes": 1011
+    },
+    "source_first_040_log": {
+      "sha256": "63826ba7dc8f2f3b6d62fc5032990df7d4f5d8274408339a0e5b3a7510195535",
+      "bytes": 228
+    },
+    "source_first_040_junit": {
+      "sha256": "7b8205c28cf12018ed7fb4d68cd57214eaf407b30e6c64f8ca52cb0d67dee17c",
+      "bytes": 3513
+    },
+    "source_first_041_log": {
+      "sha256": "dccd4a0e76f85715fed3f21951288fbd1bf86ea56bd27ded37f1184b7c7b0ab2",
+      "bytes": 223
+    },
+    "source_first_041_junit": {
+      "sha256": "eb3bea459ad33bdf5f26286618f3d77d7f340b8b8f28d33db3c4122c1c6c3ebe",
+      "bytes": 678
+    },
+    "source_first_042_log": {
+      "sha256": "c01c12bc3e0adebced4f2a3ca97da3609b79b2e6f45db5abdbbe31c33a38ed0f",
+      "bytes": 230
+    },
+    "source_first_042_junit": {
+      "sha256": "31ec7db8d605fe3cb55ba61cec7d6db6622e403cf005f61c2fe1e1f2041f6eaf",
+      "bytes": 980
+    },
+    "source_first_043_log": {
+      "sha256": "77e49892c03d03b853086a589143a6e9a56610181ad6829676fbea19d1bc3979",
+      "bytes": 18174
+    },
+    "source_first_043_junit": {
+      "sha256": "82a215ed54c67eada340461ce90c1a940fabce75bbaef379e26789a12da956bf",
+      "bytes": 20661
+    },
+    "source_first_044_log": {
+      "sha256": "9045d117fe52decb6bd0ffe877ffbbdb8c9c4833080c989b78eaceb47c970d35",
+      "bytes": 223
+    },
+    "source_first_044_junit": {
+      "sha256": "8b3cdb1369d3191477d3f93ac5ab747ab94555259d3761f7e7f30941724f4d7d",
+      "bytes": 458
+    },
+    "source_first_045_log": {
+      "sha256": "f0b214d358b94c7237394d8350ad30e3b220508054ab3495299c6dca1ddaba0f",
+      "bytes": 235
+    },
+    "source_first_045_junit": {
+      "sha256": "a29ccbd6163c274e4ace2e6e6c55f0af3e793699e118a7c0156eb6c19c3923a2",
+      "bytes": 3880
+    },
+    "source_first_046_log": {
+      "sha256": "18c98f3636807696138eea6d5f6c1ff95f6c55217719459aeefbbb70f064e8e9",
+      "bytes": 234
+    },
+    "source_first_046_junit": {
+      "sha256": "2b819831b3a38157577ff5c6dc8b40ef389bf7f0b9452e3ee81c0cc3d046d83c",
+      "bytes": 4200
+    },
+    "source_first_047_log": {
+      "sha256": "0d8a179110cbcd5ed5040bf49c30655bde0a240a67aba2ead6ff73f211ed5bc7",
+      "bytes": 237
+    },
+    "source_first_047_junit": {
+      "sha256": "a866ecb6b9ed7a17e82c74c3f6634dff47a540057cde7399a4be21e9064abfc4",
+      "bytes": 4899
+    },
+    "source_first_048_log": {
+      "sha256": "b8f07ff6cf99aa19c87e53f3657a53c162e080a14624ebc92e9ec755f6d4d93e",
+      "bytes": 231
+    },
+    "source_first_048_junit": {
+      "sha256": "44e0016fd68cc6b171b1055c9a0630cb7386847a314d676fda885c612b89df47",
+      "bytes": 643
+    },
+    "source_first_049_log": {
+      "sha256": "02c13c7d0ab670f734cab4ba5a230f2ecd9678f2f3eabd4ff41244ce2c9340b9",
+      "bytes": 226
+    },
+    "source_first_049_junit": {
+      "sha256": "e0485fe02f9c19c3e6675265ad4f7bcddded3bbe5bdd4be0fbe61f979eb6a275",
+      "bytes": 802
+    },
+    "source_first_050_log": {
+      "sha256": "6fac709f998f0f894637a72f828c977fd18e4fa2553332902b7c001cb9ab3bd6",
+      "bytes": 224
+    },
+    "source_first_050_junit": {
+      "sha256": "51953d960e8138de1e9593d4ad550e5fc471e94e0d4cfbcfebba93e3cdb12b10",
+      "bytes": 1222
+    },
+    "source_first_051_log": {
+      "sha256": "a37580d8d24170ee61ed7c8d6c58181f119b11def4f415443d20c2d70f7be9f4",
+      "bytes": 223
+    },
+    "source_first_051_junit": {
+      "sha256": "24c93e5d87c49825b15c105a129f316c03c92f0e365ff774a4d4cd57b6389de2",
+      "bytes": 1550
+    },
+    "source_first_052_log": {
+      "sha256": "ecd4eebed9051b9b719bc70313ad99e4473defaa0fcfcdb7b1323202d0d2d7d9",
+      "bytes": 220
+    },
+    "source_first_052_junit": {
+      "sha256": "d3878415746d1479d869272cbd0a5cd0549053261c39fcc4a881e1cead080cd2",
+      "bytes": 1672
+    },
+    "source_first_053_log": {
+      "sha256": "6e025805cb227884ab85473d0e4532ee36ad1deabd93139f37cd56c064e1be36",
+      "bytes": 221
+    },
+    "source_first_053_junit": {
+      "sha256": "c9db10f660890b68da8c99b984dd62a79f82d9ffabc3a477ed3b43e4ffd6d256",
+      "bytes": 1952
+    },
+    "source_first_054_log": {
+      "sha256": "a952e4fe44532c6c10803b1bb16e34ebff1ff43ead02e9ead5ad55c70a9e10e0",
+      "bytes": 227
+    },
+    "source_first_054_junit": {
+      "sha256": "461ddabe95c88077895141ae0d86f2f0ebbd8f955328c721189f48877a5f642b",
+      "bytes": 5758
+    },
+    "source_first_055_log": {
+      "sha256": "c213adb4a0533daa5eca9414faeefeb0138606afda06f3a3acc651ab97c6d02f",
+      "bytes": 234
+    },
+    "source_first_055_junit": {
+      "sha256": "10a97215d592710a9827815bf7d14787f97709caea1319e25d60c75c455afd72",
+      "bytes": 965
+    },
+    "source_first_056_log": {
+      "sha256": "1980cf4809f67b726e1da24dfaa1e0a7774b718be290026d9c28ea62d1c249de",
+      "bytes": 222
+    },
+    "source_first_056_junit": {
+      "sha256": "cde83d026180877b702464395284bd6d4948e9465f121cca5cba31a9d805d692",
+      "bytes": 2737
+    },
+    "source_first_057_log": {
+      "sha256": "e41b17f8d628caef33da90c092b761d1f85439f03b91a528eb8c1e8ffed331f2",
+      "bytes": 226
+    },
+    "source_first_057_junit": {
+      "sha256": "141367be636b8ea44f4d01990119d14e8bba1f00f4207f81f428f83cb3337a5a",
+      "bytes": 469
+    },
+    "source_first_058_log": {
+      "sha256": "5d7e32c8d27f206cdedae0d48da75c288c1a22b2bc379fccf25a7688fdc1ae12",
+      "bytes": 221
+    },
+    "source_first_058_junit": {
+      "sha256": "10bd764f115df3acb29eaeeec55dea2ca11d6cc7b74b70c14358ca8110aed8e1",
+      "bytes": 2391
+    },
+    "source_first_059_log": {
+      "sha256": "805eabd6a7c26793724898ea349fb8361ca939fbceb1209d42293f3f593b9001",
+      "bytes": 231
+    },
+    "source_first_059_junit": {
+      "sha256": "946366c0ce5f6c3895404f441af6a6b0dbe688719d3f08f54534c4d115268d91",
+      "bytes": 4492
+    },
+    "source_first_060_log": {
+      "sha256": "66a64ee5cb68b3c71c93663b9734ac744eb2187dd28fdbc8214bbdf8088ca5d3",
+      "bytes": 237
+    },
+    "source_first_060_junit": {
+      "sha256": "87d195d422db3757cba9e3487187858cc5bc1af8eb350c453223ac4f8ea9e4c2",
+      "bytes": 5514
+    },
+    "source_first_061_log": {
+      "sha256": "a2eb927b46fef53d14d6ddea49caf2ec98b505f6dfd20690e3941c9d24d3be48",
+      "bytes": 230
+    },
+    "source_first_061_junit": {
+      "sha256": "b7435316f99b175a7ba649f0f8aa8556db07c116f5ce3c4182afe3b55163a6e6",
+      "bytes": 1789
+    },
+    "source_first_062_log": {
+      "sha256": "f53dc63987a4b8e378bee788a5ceccd0d784e3f0c89df063daaf72dd5168580d",
+      "bytes": 240
+    },
+    "source_first_062_junit": {
+      "sha256": "2fb63081cf2b4efcdc192a2803e78a1d408913eb471cd0e56e9c64fc48db1884",
+      "bytes": 1702
+    },
+    "source_first_063_log": {
+      "sha256": "95b62804d0003337afda012d6f5611544f5576242bdd73c8e9c1b6b84ba05ba2",
+      "bytes": 219
+    },
+    "source_first_063_junit": {
+      "sha256": "5595a5a4ae266181e54aebc6dce5af0e8a79eeb27cddd24e0c7cb33b7dc597f0",
+      "bytes": 974
+    },
+    "source_first_064_log": {
+      "sha256": "90f4bf45fdcf39578f1b128d889eb34bae54ee5ee26204512605cea45fcd6421",
+      "bytes": 220
+    },
+    "source_first_064_junit": {
+      "sha256": "647a1403079533fc373d3b2b56a838f586181fc54afdc89e5cc39821ec612e1a",
+      "bytes": 5841
+    },
+    "source_first_065_log": {
+      "sha256": "37e74da4c142fab5c3ee20d9a2d31993fe92042d74bea66ad460b1e8544f6c62",
+      "bytes": 227
+    },
+    "source_first_065_junit": {
+      "sha256": "606b5846d70c7c62c937a86a898463bf30af3988ea220b2da5d0c5ea06c0fb3d",
+      "bytes": 2430
+    },
+    "source_first_066_log": {
+      "sha256": "9a1d93e979c9d6d3030d7980a50f0406424479522126fb4a8e6c0058dd50c13d",
+      "bytes": 231
+    },
+    "source_first_066_junit": {
+      "sha256": "d79387ec83dc8dddd5d156318f9375348acb21a254997705aa76c64ec1ab4408",
+      "bytes": 2470
+    },
+    "source_first_067_log": {
+      "sha256": "5f201fb3e0269af7b38542cce1b486d51b0eb127ca24d6e5a6fbc8f9327c23f5",
+      "bytes": 238
+    },
+    "source_first_067_junit": {
+      "sha256": "ec2f4f73e1f133f39471b1d2af39dec70469df8d6136a4a0baab8b84407937f5",
+      "bytes": 3753
+    },
+    "source_first_068_log": {
+      "sha256": "5cee33b7de9e357e6e3f462a9afe1f692566b3caec6e3fd4a585168c6850bdba",
+      "bytes": 237
+    },
+    "source_first_068_junit": {
+      "sha256": "be6806fc39f4b8623d6e2a03681cecf4922d32d17d298995c276420f9da95153",
+      "bytes": 3835
+    },
+    "source_first_069_log": {
+      "sha256": "50acfefa9e903d6b62e5637d48e93fc1938dc2889852d6eaed4e7ac8f5f0d030",
+      "bytes": 225
+    },
+    "source_first_069_junit": {
+      "sha256": "0a22ecfd1cbf936ce51ada2495bb89259ba94a564963d1d766b56a98c63af822",
+      "bytes": 9246
+    },
+    "source_first_070_log": {
+      "sha256": "a1a2a6e7afe9a95d79302197487fbcb30f840ae7350304437082089a8a36bc75",
+      "bytes": 232
+    },
+    "source_first_070_junit": {
+      "sha256": "0df2ef90509f11ee0f29f048b287847c1d9b477277eead471ae1aad58d57dd37",
+      "bytes": 475
+    },
+    "source_first_071_log": {
+      "sha256": "d435a01922a423afeb7c13603e4c2c7759f752851b1d16bf3da88de4eaa5f824",
+      "bytes": 237
+    },
+    "source_first_071_junit": {
+      "sha256": "a13a8262c0d6a759cca70089cd1ebfd2dd277bb9518a5d05bc6a968f829b955c",
+      "bytes": 1377
+    },
+    "source_first_072_log": {
+      "sha256": "af31b727956f8ad62f73be4e30c955bf2adf673238d7c6270e545a53c8608278",
+      "bytes": 238
+    },
+    "source_first_072_junit": {
+      "sha256": "85e7e5f9ac7d79b083402ab9451ee55ffeb32f5dcd5ce516fa62d334ceb0f036",
+      "bytes": 986
+    },
+    "source_first_073_log": {
+      "sha256": "9e9e0a53fb1d1a78c99a616c180721c774c70faacd91c937620559aabbe46404",
+      "bytes": 231
+    },
+    "source_first_073_junit": {
+      "sha256": "b1896080d60bb78d3e28b0a8b51b45b017d012d323dfa5579472344c64732848",
+      "bytes": 970
+    },
+    "source_first_074_log": {
+      "sha256": "66ee5afd8f7aec38416ad295eab9f2a869f16cd869cf568e9f4b9f8879312fbb",
+      "bytes": 229
+    },
+    "source_first_074_junit": {
+      "sha256": "f2a1ff2d1b8e20f3be6b49b4887f3de11a7cabfb615d5591074898f45502047b",
+      "bytes": 608
+    },
+    "source_first_075_log": {
+      "sha256": "88a892475d7ae3ca0da7c58d8c0fd17b08ba9e435f93d233f5ff3a2f4aad558a",
+      "bytes": 237
+    },
+    "source_first_075_junit": {
+      "sha256": "b5099e53d08b9d1388b37350cbca0ae22365fdfd54c0b7a2f3bfeab1fdd34ee0",
+      "bytes": 499
+    },
+    "source_first_076_log": {
+      "sha256": "ab6e853d548179eac0e506d12249e3839952d390686b2e19bea4e499e03be430",
+      "bytes": 230
+    },
+    "source_first_076_junit": {
+      "sha256": "1bffc8ef2be2178a685a697045fb4c300135a8162041db21a1954cca5db3d140",
+      "bytes": 1228
+    },
+    "source_first_077_log": {
+      "sha256": "79391c6f69fff98d2af514616200450e7ca1f627cd8c8a53f0f6398bb776d7df",
+      "bytes": 230
+    },
+    "source_first_077_junit": {
+      "sha256": "cf6ff81c3a2a6ae1655a8f1844ea87837519941e3b645446ace291b4a46a33c9",
+      "bytes": 1217
+    },
+    "source_first_078_log": {
+      "sha256": "87b1957bd32692f7ef500392d3c05a678970865be293b68db6b501d304092157",
+      "bytes": 237
+    },
+    "source_first_078_junit": {
+      "sha256": "ff0d64fb5eb90908aea652755531a2f9f0fb5d240718333bdb44b36068bd49fb",
+      "bytes": 1907
+    },
+    "source_first_079_log": {
+      "sha256": "f0c0128d7fdbbb171ce9363b2bd8aa635d983b3a7225876e637f8bdade72a8b4",
+      "bytes": 238
+    },
+    "source_first_079_junit": {
+      "sha256": "6321b053ca38a6203ba63f30a8061ca4242f8e56c46a3ac39d7beb06649f95e3",
+      "bytes": 2262
+    },
+    "source_first_080_log": {
+      "sha256": "b8fde7077dc48174dc385e829987079a8e49cda3ce2ef993e9b81cd293df4f9d",
+      "bytes": 223
+    },
+    "source_first_080_junit": {
+      "sha256": "22f1b10aa7f699229c863c1ce298d7021842291912363ac6c905106439908c87",
+      "bytes": 3667
+    },
+    "source_first_081_log": {
+      "sha256": "cc34ce44106b09abbcf02ab96bd3c4e0faad9b303806d18c4b47ec11c98aa13e",
+      "bytes": 231
+    },
+    "source_first_081_junit": {
+      "sha256": "61f0f2362424026c7c27af0e91fe28c5f53c36868f2cc09ba5329f6f94ea81f5",
+      "bytes": 3958
+    },
+    "source_first_082_log": {
+      "sha256": "13ce2cd4dc1e747c0ee696dbde4f3de5c0ee6f414e4dd91b08f1771667c0e6e3",
+      "bytes": 598
+    },
+    "source_first_082_junit": {
+      "sha256": "bfa46e7dd877634942cbaac12219d5d2c4da926a7a1ef3dac13508b8c839497d",
+      "bytes": 3878
+    },
+    "source_first_083_log": {
+      "sha256": "98cd8a65a49756feb01d7fc6408efaa2d3b31e048f75b234839a3f749f9d08a5",
+      "bytes": 551
+    },
+    "source_first_083_junit": {
+      "sha256": "5cca5ee9ec7021d01e72398e91025503fad93503b1d8be06d5cb25f1bfb15596",
+      "bytes": 7250
+    },
+    "source_first_084_log": {
+      "sha256": "b460298b09af966825a70b3c4de5ecbd31acffcfa319cadcc17714d95bfab3dd",
+      "bytes": 232
+    },
+    "source_first_084_junit": {
+      "sha256": "4516f3bc164957facae9c95785b2ecf699b5499d8bb6ad124c945aa735d7313f",
+      "bytes": 504
+    },
+    "source_first_085_log": {
+      "sha256": "6af22430b251f023382ef9c5c4262f91d61b75d511f251e6778f3d01ce7282fb",
+      "bytes": 226
+    },
+    "source_first_085_junit": {
+      "sha256": "5411f9bc96e35354fe8c8872a96920a575c7e3631e88f84b721d89b70d2e9520",
+      "bytes": 3293
+    },
+    "source_first_086_log": {
+      "sha256": "3e0b084791faf6603b3f4cd65237dcd0ad06cb50916a1b5bd3f0e4674bfbcef3",
+      "bytes": 232
+    },
+    "source_first_086_junit": {
+      "sha256": "021723b43cb2493b54f886e134ac8261cac3acf8b69515b0a3f09fa32669b063",
+      "bytes": 3532
+    },
+    "source_first_087_log": {
+      "sha256": "22109da90d778acb04f61791c443acdd833a865f84ce9726ee77912641b3adc9",
+      "bytes": 246
+    },
+    "source_first_087_junit": {
+      "sha256": "dca17654d97ba77dbd9e885edb4af6305fa50eec27ad3882f40d593d52e879f5",
+      "bytes": 3894
+    },
+    "source_first_088_log": {
+      "sha256": "e6b8b56fdca71fa524f08dc49e418d8930d630d264044363a5d281330bbc853e",
+      "bytes": 241
+    },
+    "source_first_088_junit": {
+      "sha256": "bc70f965e6dfb962aebce98e6e3a63fcc9f000b2e9622a64d34df78cac9c6c49",
+      "bytes": 825
+    },
+    "source_first_089_log": {
+      "sha256": "beabc0e5b7b25b0f837964c237cd4935c9337345f05a9513096fb22f0c74a6da",
+      "bytes": 240
+    },
+    "source_first_089_junit": {
+      "sha256": "bb0281e6f39ad0599db50acc72a03c2f0ecec33d6680d48d7d851fc57fcf3f30",
+      "bytes": 366
+    },
+    "source_first_090_log": {
+      "sha256": "aa4dec969702ed7a640f40d7546aa4f4148e6c2b959599908621c586aed8ad0d",
+      "bytes": 236
+    },
+    "source_first_090_junit": {
+      "sha256": "14e1b2d5090cec969958c1e6b4f34d878631f21878ecaec66115b35e281fd3c1",
+      "bytes": 2772
+    },
+    "source_first_091_log": {
+      "sha256": "e4c93a93f6749d4db9e94c4a141c9559a64b416f5d32a8bfbf0535dc4afb19e2",
+      "bytes": 234
+    },
+    "source_first_091_junit": {
+      "sha256": "3446497793d0ef75aecdf25296f8596a45fde701a39ad74437ced7d32e0ff9f8",
+      "bytes": 17211
+    },
+    "source_first_092_log": {
+      "sha256": "6c724ed7be79ce4297d5e9d7787d0f4de15ce540ef94d28212b75f0938ba2640",
+      "bytes": 251
+    },
+    "source_first_092_junit": {
+      "sha256": "de5c2fce90a513cf1796060e58bb057e54c930e9e4cc875169689b07dfb2376a",
+      "bytes": 7074
+    },
+    "source_first_093_log": {
+      "sha256": "353e48c9e1d9efc685fb9480533753be9a8e6a307a915280c975f190cc26780d",
+      "bytes": 238
+    },
+    "source_first_093_junit": {
+      "sha256": "85bd866be3689e1d28a6d10de7b2887b2c8dfc78acb2bf57c473c0932f71d780",
+      "bytes": 637
+    },
+    "source_first_094_log": {
+      "sha256": "1385ebdcd19dd9938c80496bf636dcad4ff3e54caa6283d0c0a05fe0e2aa1be6",
+      "bytes": 247
+    },
+    "source_first_094_junit": {
+      "sha256": "d34b06ad12fefeaa4cef32c597c7e65af767bd5e46e7b4b36fe7bd491042b53f",
+      "bytes": 2196
+    },
+    "source_first_095_log": {
+      "sha256": "254af6cb6568c3f8eccfdc10c6e6c4b29f5d4d25a8a6c0459bad0a976da0f6a7",
+      "bytes": 1247
+    },
+    "source_first_095_junit": {
+      "sha256": "449b5e59cdcbeb0dd7a1b66d0972c55313bfd33275ae5d379f56bd63889ead43",
+      "bytes": 3523
+    },
+    "source_first_096_log": {
+      "sha256": "f3011057f640dec2a0bcc08bb4865790b69512bac33d0a00ef6593b42cbf32b8",
+      "bytes": 234
+    },
+    "source_first_096_junit": {
+      "sha256": "1b8e8a31897ce7150e68885af0a7e54cb6657874e5aef12d74b59d45bc9ac42e",
+      "bytes": 374
+    },
+    "source_first_097_log": {
+      "sha256": "2e935208025064d4336ffa8e9a139861ce1602aac7ec0abb9e92b599c3baf3ee",
+      "bytes": 223
+    },
+    "source_first_097_junit": {
+      "sha256": "1ecd4958a7d61ebf39a1c73cc7b2845872874e058b8590e44b76fa0659f641d4",
+      "bytes": 3217
+    },
+    "source_first_098_log": {
+      "sha256": "ff5e2e8d67d477d3885704314c99b843fcdf6fecec6dc9fda542f80e5f5311a2",
+      "bytes": 318
+    },
+    "source_first_098_junit": {
+      "sha256": "3e4db33914721ed677ac97c87e7a510e758fbf2b80ff949d5778f064cb389ccc",
+      "bytes": 12988
+    },
+    "source_first_099_log": {
+      "sha256": "b8146acd411d459d961ecf5c518bd9d90e51551671f236866fb9ad4dfb84a193",
+      "bytes": 233
+    },
+    "source_first_099_junit": {
+      "sha256": "481dd240dc131271aa77d24b98c2fcfb82d24c6588c51bed40b696cf675a8bc5",
+      "bytes": 1072
+    },
+    "source_first_100_log": {
+      "sha256": "89a87f3790394865edfdcbf860e8f6be2f5b92bd10b1ce45a4ad2839406b813b",
+      "bytes": 236
+    },
+    "source_first_100_junit": {
+      "sha256": "85409200637dac6c25ddbdb84101504571bf041a0b17495be3ab67e510fa293c",
+      "bytes": 373
+    },
+    "source_first_101_log": {
+      "sha256": "54bd547a42a7fcb456edc5555431f2110241edb6aa37be05278ab0df87aab456",
+      "bytes": 1352
+    },
+    "source_first_101_junit": {
+      "sha256": "d94ace684fd439912da4faee020def1f3aee268d46211c7cae2a1a0dce16d061",
+      "bytes": 5171
+    },
+    "source_first_102_log": {
+      "sha256": "37f51726bd50ea16ddef0f7b76540773f877605c611a604fb6f0aa079eefa5a9",
+      "bytes": 704
+    },
+    "source_first_102_junit": {
+      "sha256": "c3acb7915fc38b3801e32b3cb17846bc1d5b5e632add6dc379b1ff0e890a6fb2",
+      "bytes": 4537
+    },
+    "source_first_103_log": {
+      "sha256": "49b6a945846e9401504c60ef467efc1c8780819f5ce66e041594ba0ed930b57a",
+      "bytes": 1053
+    },
+    "source_first_103_junit": {
+      "sha256": "c4d9b1ae567d9b2061d0663d95ae2dbd082276edb024bc44d30d822760d9525e",
+      "bytes": 1600
+    },
+    "source_first_104_log": {
+      "sha256": "c56ae973259e4535f744c75177d46c11b568987907a9021f662065352e0a0c6e",
+      "bytes": 231
+    },
+    "source_first_104_junit": {
+      "sha256": "f825c069a77444c3770b9d73a84beb6403e253c8084f3997f2cafed7d621dc4d",
+      "bytes": 970
+    },
+    "source_first_105_log": {
+      "sha256": "84f03b82a6af08a941eacd5bbdefc6c8f374f93126443b5623f8173cfef01d39",
+      "bytes": 237
+    },
+    "source_first_105_junit": {
+      "sha256": "a8d1034da278259caf4707e4eb34685c91f44d02115b41c6b785181607bfec42",
+      "bytes": 2416
+    },
+    "source_first_106_log": {
+      "sha256": "cc20199875f7b1902dba9238b7253ac266dd6175eeb4ef7524940cdd2e8ee4f7",
+      "bytes": 232
+    },
+    "source_first_106_junit": {
+      "sha256": "d6b7bbd9583b65d4cf6fe98f8f59561bf462975e309c17ec86e1c75b7dec2dc7",
+      "bytes": 2864
+    },
+    "source_selection": {
+      "sha256": "53f48fde69589d9a9d1a020f80924c7a992bb35f3b26bb51c3d308946e27bb16",
+      "bytes": 51784
+    },
+    "wheel_pass_report": {
+      "sha256": "619a53af1567ba2620abd205f8bc767b7344320ad4908782c8ab28b6e5654d7c",
+      "bytes": 18126
+    },
+    "wheel_first_failed_report": {
+      "sha256": "3de937dde5f928569bb2178a9341a1441c9bf7c0945bc58cc4f249f1d27c9f97",
+      "bytes": 6429
+    },
+    "native_report": {
+      "sha256": "79b95ccf951795f965ea89ce0db8505362baf9a9843c7145e2f895854d7d0654",
+      "bytes": 2993
+    },
+    "native_swe_junit": {
+      "sha256": "8893f84b5697980822e160805d3586188743b34e0edcd65f2ef39f991499ccdb",
+      "bytes": 1073
+    },
+    "native_t2_report": {
+      "sha256": "6fceb53ffd0558b61a9b6102be8021c4fe2ed669cae74d3b1748c77714a52c64",
+      "bytes": 10351
+    },
+    "native_exact_absence": {
+      "sha256": "32e4bac6d15dd5c2bc45a06405ec900c06d0baa82a97a3b7a7fec415f7d9436b",
+      "bytes": 9540
+    },
+    "required_ci_six_junit": {
+      "sha256": "afd2736e7d750be43f1d1d5c0ca4441b5d1ceddce68faa017a450f3312232926",
+      "bytes": 23743
+    },
+    "release_entrypoint_controls": {
+      "sha256": "8f999f0537bd6f225004eaee32c1139f026191d38261fd259c746311c366aac1",
+      "bytes": 778
+    },
+    "source_initial_report": {
+      "sha256": "daadf93ff0846c5c23dd94c1c025a03e0fe381e22f4af66314e0845918204734",
+      "bytes": 551137
+    },
+    "source_reconciled": {
+      "sha256": "f11f14142aefc1599ff91417dc0fad09f7849faa1a59265b144458a06243af04",
+      "bytes": 517229
+    },
+    "source_loop_profile_correction": {
+      "sha256": "ee00fb7db39d935a7576eb04a94c2a9aefbfb39f20ae9f731b8b9408231841e0",
+      "bytes": 43733
+    },
+    "source_accepted_000_log": {
+      "sha256": "fcf34db1dfdbbb4b8084125ebf8c3f2eed4f3661626b5f6e987a0e920f65313e",
+      "bytes": 227
+    },
+    "source_accepted_000_junit": {
+      "sha256": "08530fa7cca808f422f4e8ea2434783cc9c46587a4fbd77a3bf55591f328a05f",
+      "bytes": 1798
+    },
+    "source_accepted_001_log": {
+      "sha256": "acec76819031797e3378d7536ad86676e12e727e2471269c437ddeb55ea85d27",
+      "bytes": 237
+    },
+    "source_accepted_001_junit": {
+      "sha256": "058db5c52c20c55f35049bb99576c315c7bc5337ee601d589e510217371dd5e4",
+      "bytes": 547
+    },
+    "source_accepted_002_log": {
+      "sha256": "0f46b161017b3c57d9be0d74d84a0315bd5a5b5e024818388c9ee6b966648a3c",
+      "bytes": 235
+    },
+    "source_accepted_002_junit": {
+      "sha256": "30e7a984239e6e21e384c0fbe5448e393ddbb5333f71f0ff2980b64675706d97",
+      "bytes": 2020
+    },
+    "source_accepted_003_log": {
+      "sha256": "80e905b98fcfae3257de33e2b2e2b600210747919f891caae8ed25b8564a88be",
+      "bytes": 225
+    },
+    "source_accepted_003_junit": {
+      "sha256": "399b28d2f4bb18191ca2127647832c454624ccf73f721f2f92a6025be9622b0c",
+      "bytes": 1479
+    },
+    "source_accepted_004_log": {
+      "sha256": "dc8a072a8c8c7637550f06c04687d40111670c733075b70577654ada9551d03d",
+      "bytes": 231
+    },
+    "source_accepted_004_junit": {
+      "sha256": "5285630a843867711dcbdbbd41f933f1addd04043865346661c6d5c14b5a3a68",
+      "bytes": 647
+    },
+    "source_accepted_005_log": {
+      "sha256": "3cea6f226a4a6833f8a173b5674292dd84e76cd7cc059510dd70bff73eef2f16",
+      "bytes": 241
+    },
+    "source_accepted_005_junit": {
+      "sha256": "85ea20c7d0531b9d6b58f65be3d981aa414db63035a72ee90c0ad0d46cd83aa8",
+      "bytes": 2684
+    },
+    "source_accepted_006_log": {
+      "sha256": "934c9997598c149822663e04f8d7295fe1ecf62c7c0bdeeb3df4bfd942929639",
+      "bytes": 235
+    },
+    "source_accepted_006_junit": {
+      "sha256": "89c04c0fe08501d4ec1578fb57065217188673a401aa17f05dbb09e179d01d58",
+      "bytes": 2960
+    },
+    "source_accepted_007_log": {
+      "sha256": "2fdeb578b6d9c735456cd348be490267997bea9251d5587aa72d2f11e5178978",
+      "bytes": 232
+    },
+    "source_accepted_007_junit": {
+      "sha256": "30411e9f218e34ade00c074e33a24793e057f7ad67ef44d17d1687275fc8e579",
+      "bytes": 633
+    },
+    "source_accepted_008_log": {
+      "sha256": "0bc55f6d84c7b61d5fd1f2cff0f0023e5429b8803e27e4987cf5de89d5f6243e",
+      "bytes": 235
+    },
+    "source_accepted_008_junit": {
+      "sha256": "18168d492e0743d529d73db993330fc71ca6c4d023ed0031f01cbf2e18433f74",
+      "bytes": 8374
+    },
+    "source_accepted_009_log": {
+      "sha256": "25b305cbf71b873fbe02334148945c25b27048be8341203f39114dfeb23cf3ae",
+      "bytes": 221
+    },
+    "source_accepted_009_junit": {
+      "sha256": "195f14421bd877c44a16bb0dda1b2d6c2f650fd623452abaeadf3c461746670a",
+      "bytes": 2522
+    },
+    "source_accepted_010_log": {
+      "sha256": "8896b368bb7a4c83d1db6a452080bf42c8c7eff276e8b40a2b49fb505001c286",
+      "bytes": 303
+    },
+    "source_accepted_010_junit": {
+      "sha256": "2cc00a6dbac828aeb5d60a9c988cbee5a64e11c3fd646e2b879d2627890b0602",
+      "bytes": 10868
+    },
+    "source_accepted_011_log": {
+      "sha256": "26b349acda37c0d94e9c91de877a6bfc1cbb6797064dff6aa24cadb2e264912c",
+      "bytes": 1518
+    },
+    "source_accepted_011_junit": {
+      "sha256": "46d33ab05281f1841ca5b82040d1ed0572f1f273bf95ea2ef90274e210c73827",
+      "bytes": 1886
+    },
+    "source_accepted_012_log": {
+      "sha256": "957500c97045d5187645a9d5dbf5857c28c2b94b1b624da369dc8f4aa683cbe8",
+      "bytes": 235
+    },
+    "source_accepted_012_junit": {
+      "sha256": "ed6f8972d4ce80f4cbdec0325cc02a3faf44513f74fc16f74c730dc2c2022a6c",
+      "bytes": 1307
+    },
+    "source_accepted_013_log": {
+      "sha256": "7579b91db04814a04be9eabc078dc5bbccf8bdbe6911be87967d7485be143ad8",
+      "bytes": 233
+    },
+    "source_accepted_013_junit": {
+      "sha256": "f23438429158fedbf3550b8857f11b531ca981b4480bc3f9deebbbbc8fccfa11",
+      "bytes": 1811
+    },
+    "source_accepted_014_log": {
+      "sha256": "cba5a7882df7176de8686825e56257a3748ac31f9ece9becf8a538f0a8a43c05",
+      "bytes": 244
+    },
+    "source_accepted_014_junit": {
+      "sha256": "408584456a3873cabe6b36f415402e79a6938462207dd4092a4535e8ee452340",
+      "bytes": 4903
+    },
+    "source_accepted_015_log": {
+      "sha256": "9ba7e795ebbc74bed14738ac708a73315042b2cdda68ec54256ae6a64a511cf1",
+      "bytes": 236
+    },
+    "source_accepted_015_junit": {
+      "sha256": "e5de4c80dcad79b89ca9d6a11b56f293d8ca1b135e1ef1aa2f807162d14f81af",
+      "bytes": 1793
+    },
+    "source_accepted_016_log": {
+      "sha256": "17f2136fb63469d065222ecf4e8881a660aebecadaca478fe2fee0d9bad18c73",
+      "bytes": 230
+    },
+    "source_accepted_016_junit": {
+      "sha256": "20b991fbaf8e58303cb9c46d8f9a2b871869cc89a876cd7790397ad4a5ad66eb",
+      "bytes": 788
+    },
+    "source_accepted_017_log": {
+      "sha256": "e1902b31c2c79f8ef56cbcfc171f34d67d233b5cf2e0810699cf89da4e2b928d",
+      "bytes": 244
+    },
+    "source_accepted_017_junit": {
+      "sha256": "8767a685b2e71e001e8e6295fb209c290cf6ae738e7dcffe97dbe1d1cffa05f3",
+      "bytes": 666
+    },
+    "source_accepted_018_log": {
+      "sha256": "6282566a73b193913f53d770112aff66147db89c97eaf10acf9cf7f30e4dc241",
+      "bytes": 229
+    },
+    "source_accepted_018_junit": {
+      "sha256": "eba2e043cf6f4136c5cca69e62440fefc557ffcaf653fe9075f32ec2db3b09d5",
+      "bytes": 1277
+    },
+    "source_accepted_019_log": {
+      "sha256": "879d5c477317c41aae5692b4a33fa37aad615838e2c9ff433195144bc14318d8",
+      "bytes": 228
+    },
+    "source_accepted_019_junit": {
+      "sha256": "949dc5b9d6261b5878d00d39080d6cf35c1e71582e9ebb6f4c87f3115e7f52e1",
+      "bytes": 1560
+    },
+    "source_accepted_020_log": {
+      "sha256": "0eb0664a92e4d0d7738b87f1964164395ca38589a997c76a1488ac1d3e2af0cf",
+      "bytes": 239
+    },
+    "source_accepted_020_junit": {
+      "sha256": "e6e0a57872f5fb99ae48cc795f094a0d0c075db7725346db88d434602e221d9b",
+      "bytes": 2384
+    },
+    "source_accepted_021_log": {
+      "sha256": "c0359abf50d82ca7775afe76f5a692d8eb85088bc2f90e6352b9bd713c613b12",
+      "bytes": 239
+    },
+    "source_accepted_021_junit": {
+      "sha256": "784685afa76da1cfb1f6b2562c821f14c152059bec70c880a2255c8780ed6d63",
+      "bytes": 3445
+    },
+    "source_accepted_022_log": {
+      "sha256": "94cb2ab551bc54d77ceb3c2fbb4d142210a845f8ad1428370fb316f695430aaf",
+      "bytes": 239
+    },
+    "source_accepted_022_junit": {
+      "sha256": "4988b9872e77e93b4543fc16b8ce89379c271539b134ae0bfb44f1d8b16af1ce",
+      "bytes": 3827
+    },
+    "source_accepted_023_log": {
+      "sha256": "21c9e5a0502e7b9f32da853c24064c37c27dbe5a8605f042472dc2a02198ec81",
+      "bytes": 250
+    },
+    "source_accepted_023_junit": {
+      "sha256": "a08b79133d4bd327b8c9be57d815581bea684c8eaeb7692d1749331801da2d09",
+      "bytes": 2921
+    },
+    "source_accepted_024_log": {
+      "sha256": "75d8f7d96d778e95fa9285a8ccb9a6f019eb19cbacd405f0a9f0e0a1e7634374",
+      "bytes": 240
+    },
+    "source_accepted_024_junit": {
+      "sha256": "5c3aa6830c3d51135f71269d7ce779996231c440b760552915fcf843cb746070",
+      "bytes": 2143
+    },
+    "source_accepted_025_log": {
+      "sha256": "c673eeecd4206bda357c142a80095cf4d2479eaa5bde1fb708c5fa58aa8dda8a",
+      "bytes": 722
+    },
+    "source_accepted_025_junit": {
+      "sha256": "268f1d242f1dc80dba36e6e5d8c375e90973140ca166acc3cbb47e91ba7efab9",
+      "bytes": 4184
+    },
+    "source_accepted_026_log": {
+      "sha256": "e25a92e778ae0222526ebe8c83fed313bbf2a84a73c8a8d6281acdf64a68cc25",
+      "bytes": 227
+    },
+    "source_accepted_026_junit": {
+      "sha256": "5703b868b4bbb38d487dc5f97df04476a89b125ee8bf454939301af6e6bf245b",
+      "bytes": 672
+    },
+    "source_accepted_027_log": {
+      "sha256": "986f8ec710d563b38e05e3c62aa3b812acd770382d5e2e016d32c5188ce7dc72",
+      "bytes": 240
+    },
+    "source_accepted_027_junit": {
+      "sha256": "a9f054a3b8772d63206ef4203fd4190120f967725be63e8ac13855c99941dd4e",
+      "bytes": 1282
+    },
+    "source_accepted_028_log": {
+      "sha256": "1269d2f07c07be17085c6a4abace7859aa9262a6ec1ee56f8631896b4b133d1c",
+      "bytes": 239
+    },
+    "source_accepted_028_junit": {
+      "sha256": "19fa450ea2c0d7d548718ed7d359bcb9b13166e6e2d8bf135081eec8da8ef71f",
+      "bytes": 841
+    },
+    "source_accepted_029_log": {
+      "sha256": "62e4d2cddeb0c1c24c07ef6d5c1c91a1a3059755130e2d27f8f32feb4f14fb47",
+      "bytes": 233
+    },
+    "source_accepted_029_junit": {
+      "sha256": "7041c52e31cec616f22080aa299292a12d92e564d7365173d5ea2849c269453e",
+      "bytes": 3289
+    },
+    "source_accepted_030_log": {
+      "sha256": "2998a4940a8b1d13d514db7522c90c6502749dd90014df8e9d8cec7d616763e5",
+      "bytes": 248
+    },
+    "source_accepted_030_junit": {
+      "sha256": "ac59fb39ee56264aa934f2f8cff126a60b300ff8dce8d430461a41e2f5adf3c5",
+      "bytes": 7452
+    },
+    "source_accepted_031_log": {
+      "sha256": "e10d91b9e3902d42e4c453865e24754c65d811eda82d88abbad35e3468adfc44",
+      "bytes": 225
+    },
+    "source_accepted_031_junit": {
+      "sha256": "5a4ea717bfa5b7448fc0a3fc3070449d1319d5794fb4f58652505d8d91a540ff",
+      "bytes": 655
+    },
+    "source_accepted_032_log": {
+      "sha256": "f1d3abd1a28519a43eab16bdc040783fdc69bd1ef05b13f317db01355a6a936a",
+      "bytes": 228
+    },
+    "source_accepted_032_junit": {
+      "sha256": "f1b4d998e2ebef070f806d626faa32a3ca25201400346d052e65cabf1ed76b0b",
+      "bytes": 2137
+    },
+    "source_accepted_033_log": {
+      "sha256": "4d308e4e8ecfba86b658b57a37d1e71efaed86d7e6db214923340779e48406aa",
+      "bytes": 238
+    },
+    "source_accepted_033_junit": {
+      "sha256": "244d93a737898cca2ad0b6dce750892e617a110719ecb283d5f2bb3014e135a3",
+      "bytes": 7867
+    },
+    "source_accepted_034_log": {
+      "sha256": "721289a4433b8a19b46cbbf3fc2ae1e1b9774cc949e845466db667169be0e2fc",
+      "bytes": 224
+    },
+    "source_accepted_034_junit": {
+      "sha256": "48c7b9a16e7cde784166cd4ef25ccca79f3adcbcc4a9d123e705e99b0b23c313",
+      "bytes": 2683
+    },
+    "source_accepted_035_log": {
+      "sha256": "5f9a795dd29bbc4eb2dbe43cba5691e325236a1594bcec2a7dbf21b611fff775",
+      "bytes": 232
+    },
+    "source_accepted_035_junit": {
+      "sha256": "8e4fafe69731859dd524f35284d7d2614f04b8b024aeee70610e366a2b43026c",
+      "bytes": 1601
+    },
+    "source_accepted_036_log": {
+      "sha256": "7408dc55dd51aaa54cb9326d2d729fb876d6599e3206c9c411e6b38bf37543b8",
+      "bytes": 236
+    },
+    "source_accepted_036_junit": {
+      "sha256": "3288624fcd9dd2694a4557d6f723021641a33066f6c6e15400a3ca3b639de299",
+      "bytes": 1263
+    },
+    "source_accepted_037_log": {
+      "sha256": "beddc44b6b6d0ae798336aa7a44193c9d4739089590754cb84783f9ce159453e",
+      "bytes": 232
+    },
+    "source_accepted_037_junit": {
+      "sha256": "78631f167b49deadcf96cee14f3e1fb38a59b677ee16d78850bf3270b2f39cdc",
+      "bytes": 3782
+    },
+    "source_accepted_038_log": {
+      "sha256": "0e93ddc653d41e3a994f6ac996f166e7b25c0e743b30aa900b2cbb559dfa40a0",
+      "bytes": 233
+    },
+    "source_accepted_038_junit": {
+      "sha256": "4343ec986b37690a1aae180dbedd6d0b64c53c79f0686f51648807843eeded3d",
+      "bytes": 1041
+    },
+    "source_accepted_039_log": {
+      "sha256": "ce41df8c493e0386113360e3cc4d79314227c51f8e357f40349ca078fca296e9",
+      "bytes": 221
+    },
+    "source_accepted_039_junit": {
+      "sha256": "da6d3cbfeb8d37ef4309b8789e11266fea03e39a8a6da562f700350e178a19b5",
+      "bytes": 1011
+    },
+    "source_accepted_040_log": {
+      "sha256": "63826ba7dc8f2f3b6d62fc5032990df7d4f5d8274408339a0e5b3a7510195535",
+      "bytes": 228
+    },
+    "source_accepted_040_junit": {
+      "sha256": "7b8205c28cf12018ed7fb4d68cd57214eaf407b30e6c64f8ca52cb0d67dee17c",
+      "bytes": 3513
+    },
+    "source_accepted_041_log": {
+      "sha256": "dccd4a0e76f85715fed3f21951288fbd1bf86ea56bd27ded37f1184b7c7b0ab2",
+      "bytes": 223
+    },
+    "source_accepted_041_junit": {
+      "sha256": "eb3bea459ad33bdf5f26286618f3d77d7f340b8b8f28d33db3c4122c1c6c3ebe",
+      "bytes": 678
+    },
+    "source_accepted_042_log": {
+      "sha256": "c01c12bc3e0adebced4f2a3ca97da3609b79b2e6f45db5abdbbe31c33a38ed0f",
+      "bytes": 230
+    },
+    "source_accepted_042_junit": {
+      "sha256": "31ec7db8d605fe3cb55ba61cec7d6db6622e403cf005f61c2fe1e1f2041f6eaf",
+      "bytes": 980
+    },
+    "source_accepted_043_log": {
+      "sha256": "4c30bd2fcc9ed606ffee7dece5f21f757f7cf1b462b19473f8d298cce30788c5",
+      "bytes": 256
+    },
+    "source_accepted_043_junit": {
+      "sha256": "8f83eef1c993b0fbe19feb859f0d15ac376d6360ca254df61dd2a531e267d91b",
+      "bytes": 2197
+    },
+    "source_accepted_044_log": {
+      "sha256": "9045d117fe52decb6bd0ffe877ffbbdb8c9c4833080c989b78eaceb47c970d35",
+      "bytes": 223
+    },
+    "source_accepted_044_junit": {
+      "sha256": "8b3cdb1369d3191477d3f93ac5ab747ab94555259d3761f7e7f30941724f4d7d",
+      "bytes": 458
+    },
+    "source_accepted_045_log": {
+      "sha256": "f0b214d358b94c7237394d8350ad30e3b220508054ab3495299c6dca1ddaba0f",
+      "bytes": 235
+    },
+    "source_accepted_045_junit": {
+      "sha256": "a29ccbd6163c274e4ace2e6e6c55f0af3e793699e118a7c0156eb6c19c3923a2",
+      "bytes": 3880
+    },
+    "source_accepted_046_log": {
+      "sha256": "18c98f3636807696138eea6d5f6c1ff95f6c55217719459aeefbbb70f064e8e9",
+      "bytes": 234
+    },
+    "source_accepted_046_junit": {
+      "sha256": "2b819831b3a38157577ff5c6dc8b40ef389bf7f0b9452e3ee81c0cc3d046d83c",
+      "bytes": 4200
+    },
+    "source_accepted_047_log": {
+      "sha256": "0d8a179110cbcd5ed5040bf49c30655bde0a240a67aba2ead6ff73f211ed5bc7",
+      "bytes": 237
+    },
+    "source_accepted_047_junit": {
+      "sha256": "a866ecb6b9ed7a17e82c74c3f6634dff47a540057cde7399a4be21e9064abfc4",
+      "bytes": 4899
+    },
+    "source_accepted_048_log": {
+      "sha256": "b8f07ff6cf99aa19c87e53f3657a53c162e080a14624ebc92e9ec755f6d4d93e",
+      "bytes": 231
+    },
+    "source_accepted_048_junit": {
+      "sha256": "44e0016fd68cc6b171b1055c9a0630cb7386847a314d676fda885c612b89df47",
+      "bytes": 643
+    },
+    "source_accepted_049_log": {
+      "sha256": "02c13c7d0ab670f734cab4ba5a230f2ecd9678f2f3eabd4ff41244ce2c9340b9",
+      "bytes": 226
+    },
+    "source_accepted_049_junit": {
+      "sha256": "e0485fe02f9c19c3e6675265ad4f7bcddded3bbe5bdd4be0fbe61f979eb6a275",
+      "bytes": 802
+    },
+    "source_accepted_050_log": {
+      "sha256": "6fac709f998f0f894637a72f828c977fd18e4fa2553332902b7c001cb9ab3bd6",
+      "bytes": 224
+    },
+    "source_accepted_050_junit": {
+      "sha256": "51953d960e8138de1e9593d4ad550e5fc471e94e0d4cfbcfebba93e3cdb12b10",
+      "bytes": 1222
+    },
+    "source_accepted_051_log": {
+      "sha256": "a37580d8d24170ee61ed7c8d6c58181f119b11def4f415443d20c2d70f7be9f4",
+      "bytes": 223
+    },
+    "source_accepted_051_junit": {
+      "sha256": "24c93e5d87c49825b15c105a129f316c03c92f0e365ff774a4d4cd57b6389de2",
+      "bytes": 1550
+    },
+    "source_accepted_052_log": {
+      "sha256": "ecd4eebed9051b9b719bc70313ad99e4473defaa0fcfcdb7b1323202d0d2d7d9",
+      "bytes": 220
+    },
+    "source_accepted_052_junit": {
+      "sha256": "d3878415746d1479d869272cbd0a5cd0549053261c39fcc4a881e1cead080cd2",
+      "bytes": 1672
+    },
+    "source_accepted_053_log": {
+      "sha256": "6e025805cb227884ab85473d0e4532ee36ad1deabd93139f37cd56c064e1be36",
+      "bytes": 221
+    },
+    "source_accepted_053_junit": {
+      "sha256": "c9db10f660890b68da8c99b984dd62a79f82d9ffabc3a477ed3b43e4ffd6d256",
+      "bytes": 1952
+    },
+    "source_accepted_054_log": {
+      "sha256": "a952e4fe44532c6c10803b1bb16e34ebff1ff43ead02e9ead5ad55c70a9e10e0",
+      "bytes": 227
+    },
+    "source_accepted_054_junit": {
+      "sha256": "461ddabe95c88077895141ae0d86f2f0ebbd8f955328c721189f48877a5f642b",
+      "bytes": 5758
+    },
+    "source_accepted_055_log": {
+      "sha256": "c213adb4a0533daa5eca9414faeefeb0138606afda06f3a3acc651ab97c6d02f",
+      "bytes": 234
+    },
+    "source_accepted_055_junit": {
+      "sha256": "10a97215d592710a9827815bf7d14787f97709caea1319e25d60c75c455afd72",
+      "bytes": 965
+    },
+    "source_accepted_056_log": {
+      "sha256": "1980cf4809f67b726e1da24dfaa1e0a7774b718be290026d9c28ea62d1c249de",
+      "bytes": 222
+    },
+    "source_accepted_056_junit": {
+      "sha256": "cde83d026180877b702464395284bd6d4948e9465f121cca5cba31a9d805d692",
+      "bytes": 2737
+    },
+    "source_accepted_057_log": {
+      "sha256": "e41b17f8d628caef33da90c092b761d1f85439f03b91a528eb8c1e8ffed331f2",
+      "bytes": 226
+    },
+    "source_accepted_057_junit": {
+      "sha256": "141367be636b8ea44f4d01990119d14e8bba1f00f4207f81f428f83cb3337a5a",
+      "bytes": 469
+    },
+    "source_accepted_058_log": {
+      "sha256": "5d7e32c8d27f206cdedae0d48da75c288c1a22b2bc379fccf25a7688fdc1ae12",
+      "bytes": 221
+    },
+    "source_accepted_058_junit": {
+      "sha256": "10bd764f115df3acb29eaeeec55dea2ca11d6cc7b74b70c14358ca8110aed8e1",
+      "bytes": 2391
+    },
+    "source_accepted_059_log": {
+      "sha256": "805eabd6a7c26793724898ea349fb8361ca939fbceb1209d42293f3f593b9001",
+      "bytes": 231
+    },
+    "source_accepted_059_junit": {
+      "sha256": "946366c0ce5f6c3895404f441af6a6b0dbe688719d3f08f54534c4d115268d91",
+      "bytes": 4492
+    },
+    "source_accepted_060_log": {
+      "sha256": "66a64ee5cb68b3c71c93663b9734ac744eb2187dd28fdbc8214bbdf8088ca5d3",
+      "bytes": 237
+    },
+    "source_accepted_060_junit": {
+      "sha256": "87d195d422db3757cba9e3487187858cc5bc1af8eb350c453223ac4f8ea9e4c2",
+      "bytes": 5514
+    },
+    "source_accepted_061_log": {
+      "sha256": "a2eb927b46fef53d14d6ddea49caf2ec98b505f6dfd20690e3941c9d24d3be48",
+      "bytes": 230
+    },
+    "source_accepted_061_junit": {
+      "sha256": "b7435316f99b175a7ba649f0f8aa8556db07c116f5ce3c4182afe3b55163a6e6",
+      "bytes": 1789
+    },
+    "source_accepted_062_log": {
+      "sha256": "f53dc63987a4b8e378bee788a5ceccd0d784e3f0c89df063daaf72dd5168580d",
+      "bytes": 240
+    },
+    "source_accepted_062_junit": {
+      "sha256": "2fb63081cf2b4efcdc192a2803e78a1d408913eb471cd0e56e9c64fc48db1884",
+      "bytes": 1702
+    },
+    "source_accepted_063_log": {
+      "sha256": "95b62804d0003337afda012d6f5611544f5576242bdd73c8e9c1b6b84ba05ba2",
+      "bytes": 219
+    },
+    "source_accepted_063_junit": {
+      "sha256": "5595a5a4ae266181e54aebc6dce5af0e8a79eeb27cddd24e0c7cb33b7dc597f0",
+      "bytes": 974
+    },
+    "source_accepted_064_log": {
+      "sha256": "90f4bf45fdcf39578f1b128d889eb34bae54ee5ee26204512605cea45fcd6421",
+      "bytes": 220
+    },
+    "source_accepted_064_junit": {
+      "sha256": "647a1403079533fc373d3b2b56a838f586181fc54afdc89e5cc39821ec612e1a",
+      "bytes": 5841
+    },
+    "source_accepted_065_log": {
+      "sha256": "37e74da4c142fab5c3ee20d9a2d31993fe92042d74bea66ad460b1e8544f6c62",
+      "bytes": 227
+    },
+    "source_accepted_065_junit": {
+      "sha256": "606b5846d70c7c62c937a86a898463bf30af3988ea220b2da5d0c5ea06c0fb3d",
+      "bytes": 2430
+    },
+    "source_accepted_066_log": {
+      "sha256": "9a1d93e979c9d6d3030d7980a50f0406424479522126fb4a8e6c0058dd50c13d",
+      "bytes": 231
+    },
+    "source_accepted_066_junit": {
+      "sha256": "d79387ec83dc8dddd5d156318f9375348acb21a254997705aa76c64ec1ab4408",
+      "bytes": 2470
+    },
+    "source_accepted_067_log": {
+      "sha256": "5f201fb3e0269af7b38542cce1b486d51b0eb127ca24d6e5a6fbc8f9327c23f5",
+      "bytes": 238
+    },
+    "source_accepted_067_junit": {
+      "sha256": "ec2f4f73e1f133f39471b1d2af39dec70469df8d6136a4a0baab8b84407937f5",
+      "bytes": 3753
+    },
+    "source_accepted_068_log": {
+      "sha256": "5cee33b7de9e357e6e3f462a9afe1f692566b3caec6e3fd4a585168c6850bdba",
+      "bytes": 237
+    },
+    "source_accepted_068_junit": {
+      "sha256": "be6806fc39f4b8623d6e2a03681cecf4922d32d17d298995c276420f9da95153",
+      "bytes": 3835
+    },
+    "source_accepted_069_log": {
+      "sha256": "50acfefa9e903d6b62e5637d48e93fc1938dc2889852d6eaed4e7ac8f5f0d030",
+      "bytes": 225
+    },
+    "source_accepted_069_junit": {
+      "sha256": "0a22ecfd1cbf936ce51ada2495bb89259ba94a564963d1d766b56a98c63af822",
+      "bytes": 9246
+    },
+    "source_accepted_070_log": {
+      "sha256": "a1a2a6e7afe9a95d79302197487fbcb30f840ae7350304437082089a8a36bc75",
+      "bytes": 232
+    },
+    "source_accepted_070_junit": {
+      "sha256": "0df2ef90509f11ee0f29f048b287847c1d9b477277eead471ae1aad58d57dd37",
+      "bytes": 475
+    },
+    "source_accepted_071_log": {
+      "sha256": "d435a01922a423afeb7c13603e4c2c7759f752851b1d16bf3da88de4eaa5f824",
+      "bytes": 237
+    },
+    "source_accepted_071_junit": {
+      "sha256": "a13a8262c0d6a759cca70089cd1ebfd2dd277bb9518a5d05bc6a968f829b955c",
+      "bytes": 1377
+    },
+    "source_accepted_072_log": {
+      "sha256": "af31b727956f8ad62f73be4e30c955bf2adf673238d7c6270e545a53c8608278",
+      "bytes": 238
+    },
+    "source_accepted_072_junit": {
+      "sha256": "85e7e5f9ac7d79b083402ab9451ee55ffeb32f5dcd5ce516fa62d334ceb0f036",
+      "bytes": 986
+    },
+    "source_accepted_073_log": {
+      "sha256": "9e9e0a53fb1d1a78c99a616c180721c774c70faacd91c937620559aabbe46404",
+      "bytes": 231
+    },
+    "source_accepted_073_junit": {
+      "sha256": "b1896080d60bb78d3e28b0a8b51b45b017d012d323dfa5579472344c64732848",
+      "bytes": 970
+    },
+    "source_accepted_074_log": {
+      "sha256": "66ee5afd8f7aec38416ad295eab9f2a869f16cd869cf568e9f4b9f8879312fbb",
+      "bytes": 229
+    },
+    "source_accepted_074_junit": {
+      "sha256": "f2a1ff2d1b8e20f3be6b49b4887f3de11a7cabfb615d5591074898f45502047b",
+      "bytes": 608
+    },
+    "source_accepted_075_log": {
+      "sha256": "88a892475d7ae3ca0da7c58d8c0fd17b08ba9e435f93d233f5ff3a2f4aad558a",
+      "bytes": 237
+    },
+    "source_accepted_075_junit": {
+      "sha256": "b5099e53d08b9d1388b37350cbca0ae22365fdfd54c0b7a2f3bfeab1fdd34ee0",
+      "bytes": 499
+    },
+    "source_accepted_076_log": {
+      "sha256": "ab6e853d548179eac0e506d12249e3839952d390686b2e19bea4e499e03be430",
+      "bytes": 230
+    },
+    "source_accepted_076_junit": {
+      "sha256": "1bffc8ef2be2178a685a697045fb4c300135a8162041db21a1954cca5db3d140",
+      "bytes": 1228
+    },
+    "source_accepted_077_log": {
+      "sha256": "79391c6f69fff98d2af514616200450e7ca1f627cd8c8a53f0f6398bb776d7df",
+      "bytes": 230
+    },
+    "source_accepted_077_junit": {
+      "sha256": "cf6ff81c3a2a6ae1655a8f1844ea87837519941e3b645446ace291b4a46a33c9",
+      "bytes": 1217
+    },
+    "source_accepted_078_log": {
+      "sha256": "87b1957bd32692f7ef500392d3c05a678970865be293b68db6b501d304092157",
+      "bytes": 237
+    },
+    "source_accepted_078_junit": {
+      "sha256": "ff0d64fb5eb90908aea652755531a2f9f0fb5d240718333bdb44b36068bd49fb",
+      "bytes": 1907
+    },
+    "source_accepted_079_log": {
+      "sha256": "f0c0128d7fdbbb171ce9363b2bd8aa635d983b3a7225876e637f8bdade72a8b4",
+      "bytes": 238
+    },
+    "source_accepted_079_junit": {
+      "sha256": "6321b053ca38a6203ba63f30a8061ca4242f8e56c46a3ac39d7beb06649f95e3",
+      "bytes": 2262
+    },
+    "source_accepted_080_log": {
+      "sha256": "b8fde7077dc48174dc385e829987079a8e49cda3ce2ef993e9b81cd293df4f9d",
+      "bytes": 223
+    },
+    "source_accepted_080_junit": {
+      "sha256": "22f1b10aa7f699229c863c1ce298d7021842291912363ac6c905106439908c87",
+      "bytes": 3667
+    },
+    "source_accepted_081_log": {
+      "sha256": "cc34ce44106b09abbcf02ab96bd3c4e0faad9b303806d18c4b47ec11c98aa13e",
+      "bytes": 231
+    },
+    "source_accepted_081_junit": {
+      "sha256": "61f0f2362424026c7c27af0e91fe28c5f53c36868f2cc09ba5329f6f94ea81f5",
+      "bytes": 3958
+    },
+    "source_accepted_082_log": {
+      "sha256": "13ce2cd4dc1e747c0ee696dbde4f3de5c0ee6f414e4dd91b08f1771667c0e6e3",
+      "bytes": 598
+    },
+    "source_accepted_082_junit": {
+      "sha256": "bfa46e7dd877634942cbaac12219d5d2c4da926a7a1ef3dac13508b8c839497d",
+      "bytes": 3878
+    },
+    "source_accepted_083_log": {
+      "sha256": "98cd8a65a49756feb01d7fc6408efaa2d3b31e048f75b234839a3f749f9d08a5",
+      "bytes": 551
+    },
+    "source_accepted_083_junit": {
+      "sha256": "5cca5ee9ec7021d01e72398e91025503fad93503b1d8be06d5cb25f1bfb15596",
+      "bytes": 7250
+    },
+    "source_accepted_084_log": {
+      "sha256": "b460298b09af966825a70b3c4de5ecbd31acffcfa319cadcc17714d95bfab3dd",
+      "bytes": 232
+    },
+    "source_accepted_084_junit": {
+      "sha256": "4516f3bc164957facae9c95785b2ecf699b5499d8bb6ad124c945aa735d7313f",
+      "bytes": 504
+    },
+    "source_accepted_085_log": {
+      "sha256": "6af22430b251f023382ef9c5c4262f91d61b75d511f251e6778f3d01ce7282fb",
+      "bytes": 226
+    },
+    "source_accepted_085_junit": {
+      "sha256": "5411f9bc96e35354fe8c8872a96920a575c7e3631e88f84b721d89b70d2e9520",
+      "bytes": 3293
+    },
+    "source_accepted_086_log": {
+      "sha256": "3e0b084791faf6603b3f4cd65237dcd0ad06cb50916a1b5bd3f0e4674bfbcef3",
+      "bytes": 232
+    },
+    "source_accepted_086_junit": {
+      "sha256": "021723b43cb2493b54f886e134ac8261cac3acf8b69515b0a3f09fa32669b063",
+      "bytes": 3532
+    },
+    "source_accepted_087_log": {
+      "sha256": "22109da90d778acb04f61791c443acdd833a865f84ce9726ee77912641b3adc9",
+      "bytes": 246
+    },
+    "source_accepted_087_junit": {
+      "sha256": "dca17654d97ba77dbd9e885edb4af6305fa50eec27ad3882f40d593d52e879f5",
+      "bytes": 3894
+    },
+    "source_accepted_088_log": {
+      "sha256": "e6b8b56fdca71fa524f08dc49e418d8930d630d264044363a5d281330bbc853e",
+      "bytes": 241
+    },
+    "source_accepted_088_junit": {
+      "sha256": "bc70f965e6dfb962aebce98e6e3a63fcc9f000b2e9622a64d34df78cac9c6c49",
+      "bytes": 825
+    },
+    "source_accepted_089_log": {
+      "sha256": "beabc0e5b7b25b0f837964c237cd4935c9337345f05a9513096fb22f0c74a6da",
+      "bytes": 240
+    },
+    "source_accepted_089_junit": {
+      "sha256": "bb0281e6f39ad0599db50acc72a03c2f0ecec33d6680d48d7d851fc57fcf3f30",
+      "bytes": 366
+    },
+    "source_accepted_090_log": {
+      "sha256": "aa4dec969702ed7a640f40d7546aa4f4148e6c2b959599908621c586aed8ad0d",
+      "bytes": 236
+    },
+    "source_accepted_090_junit": {
+      "sha256": "14e1b2d5090cec969958c1e6b4f34d878631f21878ecaec66115b35e281fd3c1",
+      "bytes": 2772
+    },
+    "source_accepted_091_log": {
+      "sha256": "e4c93a93f6749d4db9e94c4a141c9559a64b416f5d32a8bfbf0535dc4afb19e2",
+      "bytes": 234
+    },
+    "source_accepted_091_junit": {
+      "sha256": "3446497793d0ef75aecdf25296f8596a45fde701a39ad74437ced7d32e0ff9f8",
+      "bytes": 17211
+    },
+    "source_accepted_092_log": {
+      "sha256": "6c724ed7be79ce4297d5e9d7787d0f4de15ce540ef94d28212b75f0938ba2640",
+      "bytes": 251
+    },
+    "source_accepted_092_junit": {
+      "sha256": "de5c2fce90a513cf1796060e58bb057e54c930e9e4cc875169689b07dfb2376a",
+      "bytes": 7074
+    },
+    "source_accepted_093_log": {
+      "sha256": "353e48c9e1d9efc685fb9480533753be9a8e6a307a915280c975f190cc26780d",
+      "bytes": 238
+    },
+    "source_accepted_093_junit": {
+      "sha256": "85bd866be3689e1d28a6d10de7b2887b2c8dfc78acb2bf57c473c0932f71d780",
+      "bytes": 637
+    },
+    "source_accepted_094_log": {
+      "sha256": "1385ebdcd19dd9938c80496bf636dcad4ff3e54caa6283d0c0a05fe0e2aa1be6",
+      "bytes": 247
+    },
+    "source_accepted_094_junit": {
+      "sha256": "d34b06ad12fefeaa4cef32c597c7e65af767bd5e46e7b4b36fe7bd491042b53f",
+      "bytes": 2196
+    },
+    "source_accepted_095_log": {
+      "sha256": "254af6cb6568c3f8eccfdc10c6e6c4b29f5d4d25a8a6c0459bad0a976da0f6a7",
+      "bytes": 1247
+    },
+    "source_accepted_095_junit": {
+      "sha256": "449b5e59cdcbeb0dd7a1b66d0972c55313bfd33275ae5d379f56bd63889ead43",
+      "bytes": 3523
+    },
+    "source_accepted_096_log": {
+      "sha256": "f3011057f640dec2a0bcc08bb4865790b69512bac33d0a00ef6593b42cbf32b8",
+      "bytes": 234
+    },
+    "source_accepted_096_junit": {
+      "sha256": "1b8e8a31897ce7150e68885af0a7e54cb6657874e5aef12d74b59d45bc9ac42e",
+      "bytes": 374
+    },
+    "source_accepted_097_log": {
+      "sha256": "2e935208025064d4336ffa8e9a139861ce1602aac7ec0abb9e92b599c3baf3ee",
+      "bytes": 223
+    },
+    "source_accepted_097_junit": {
+      "sha256": "1ecd4958a7d61ebf39a1c73cc7b2845872874e058b8590e44b76fa0659f641d4",
+      "bytes": 3217
+    },
+    "source_accepted_098_log": {
+      "sha256": "ff5e2e8d67d477d3885704314c99b843fcdf6fecec6dc9fda542f80e5f5311a2",
+      "bytes": 318
+    },
+    "source_accepted_098_junit": {
+      "sha256": "3e4db33914721ed677ac97c87e7a510e758fbf2b80ff949d5778f064cb389ccc",
+      "bytes": 12988
+    },
+    "source_accepted_099_log": {
+      "sha256": "b8146acd411d459d961ecf5c518bd9d90e51551671f236866fb9ad4dfb84a193",
+      "bytes": 233
+    },
+    "source_accepted_099_junit": {
+      "sha256": "481dd240dc131271aa77d24b98c2fcfb82d24c6588c51bed40b696cf675a8bc5",
+      "bytes": 1072
+    },
+    "source_accepted_100_log": {
+      "sha256": "89a87f3790394865edfdcbf860e8f6be2f5b92bd10b1ce45a4ad2839406b813b",
+      "bytes": 236
+    },
+    "source_accepted_100_junit": {
+      "sha256": "85409200637dac6c25ddbdb84101504571bf041a0b17495be3ab67e510fa293c",
+      "bytes": 373
+    },
+    "source_accepted_101_log": {
+      "sha256": "54bd547a42a7fcb456edc5555431f2110241edb6aa37be05278ab0df87aab456",
+      "bytes": 1352
+    },
+    "source_accepted_101_junit": {
+      "sha256": "d94ace684fd439912da4faee020def1f3aee268d46211c7cae2a1a0dce16d061",
+      "bytes": 5171
+    },
+    "source_accepted_102_log": {
+      "sha256": "37f51726bd50ea16ddef0f7b76540773f877605c611a604fb6f0aa079eefa5a9",
+      "bytes": 704
+    },
+    "source_accepted_102_junit": {
+      "sha256": "c3acb7915fc38b3801e32b3cb17846bc1d5b5e632add6dc379b1ff0e890a6fb2",
+      "bytes": 4537
+    },
+    "source_accepted_103_log": {
+      "sha256": "49b6a945846e9401504c60ef467efc1c8780819f5ce66e041594ba0ed930b57a",
+      "bytes": 1053
+    },
+    "source_accepted_103_junit": {
+      "sha256": "c4d9b1ae567d9b2061d0663d95ae2dbd082276edb024bc44d30d822760d9525e",
+      "bytes": 1600
+    },
+    "source_accepted_104_log": {
+      "sha256": "c56ae973259e4535f744c75177d46c11b568987907a9021f662065352e0a0c6e",
+      "bytes": 231
+    },
+    "source_accepted_104_junit": {
+      "sha256": "f825c069a77444c3770b9d73a84beb6403e253c8084f3997f2cafed7d621dc4d",
+      "bytes": 970
+    },
+    "source_accepted_105_log": {
+      "sha256": "84f03b82a6af08a941eacd5bbdefc6c8f374f93126443b5623f8173cfef01d39",
+      "bytes": 237
+    },
+    "source_accepted_105_junit": {
+      "sha256": "a8d1034da278259caf4707e4eb34685c91f44d02115b41c6b785181607bfec42",
+      "bytes": 2416
+    },
+    "source_accepted_106_log": {
+      "sha256": "cc20199875f7b1902dba9238b7253ac266dd6175eeb4ef7524940cdd2e8ee4f7",
+      "bytes": 232
+    },
+    "source_accepted_106_junit": {
+      "sha256": "d6b7bbd9583b65d4cf6fe98f8f59561bf462975e309c17ec86e1c75b7dec2dc7",
+      "bytes": 2864
+    }
+  },
+  "privacy": "Only source identities, public test selections/counts and raw receipt digests are projected. No host paths, credentials, task hashes or private raw logs are published.",
+  "remaining": {
+    "windows_macos": "Deferred; no Windows/macOS runtime acceptance claim.",
+    "external_inputs": "Original task/data/ROM/corpus/image/toolchain and reviewed native archive supply remain adapter-specific prerequisites. Authored controls do not certify complete benchmarks.",
+    "release_actions": "No remote publication or release action is established by this receipt."
+  }
+}

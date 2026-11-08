@@ -1,5 +1,12 @@
 # Linux runtime acceptance remaining work
 
+The [2026-11-08 final-source Linux validation](linux-release-validation.md) records
+107 selected files with **1721 passed, zero failures/errors and eight explicit
+optional skips**, plus source-free wheel, native and required-CI controls at
+`ecb004b7`. See its [receipt](../.github/assets/linux-final-delivery-20261108.json)
+for exact selections and retained failed attempts. This is bounded software
+acceptance; Windows/macOS and external dataset/image inputs remain separate.
+
 This is a source and test evidence audit of 56 published adapters, not a host
 installation certificate or benchmark result. `data/runtime-support.json` is the
 maintained matrix; regenerate `DATASETS.md` with
@@ -51,9 +58,10 @@ unsupported authored-native and fake-engine controls retain their limited scope.
 Tau2/Tau3 shared-bwrap relay controls passed twice with dependency stubs, covering
 readonly/source/neighbor privacy rather than real upstream service lifecycle.
 
-## Next delivery priorities
+## Historical next delivery priorities (pre-final-validation snapshot)
 
-These priorities follow the Linux Goal: implemented dependency boundaries,
+These priorities record the earlier planning snapshot, not a new statement
+that the final-source checks above remain unrun. They follow the Linux Goal: implemented dependency boundaries,
 preparation/check/identity interfaces, integration controls, packaging and
 architecture. Complete released benchmarks, every workbook function and public
 redistribution of private task pools are separate, authorization-dependent work;
