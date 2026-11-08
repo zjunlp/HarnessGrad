@@ -26,16 +26,17 @@ No actor-supplied `correct`/rubric/verifier event is accepted.
 
 ## Explicit prerequisites
 
-Prepare native data through `tools/prepare_native_research.py`. Preparation
-copies only public documents separately from private cases and records each file
-digest. The original task/documents layout is preserved. A local data override is
-recorded as local custody, not authenticated acquisition of the upstream release.
+Prepare the managed dependency artifact using [execution-recipe.md](execution-recipe.md)
+before running `tools/prepare_native_research.py`, including for local data. The
+preparation worker uses the admitted Harvey execution runtime and records its
+service binding in the prepared manifest. It copies public documents separately
+from private cases, records each file digest and preserves the original
+task/documents layout. The manifest records a local data override as local custody.
 
-Prepare the managed dependency artifact and fixed release-wheel source using
-[execution-recipe.md](execution-recipe.md). The platform selects and re-admits the
-exact artifact before each worker launch; platform Python and interpreter overrides
-are not fallback runtimes. Provision `pandoc>=3.5` separately. Neither imports nor
-actor runs install dependencies or download models.
+Scoring also requires the fixed release wheel from the execution recipe and
+`pandoc>=3.5`. The platform selects and re-admits the exact artifact before each
+worker launch. The admitted artifact supplies the worker interpreter. Dependency
+installation is an explicit preparation step.
 
 All settings are trusted host environment variables. Their `HG_JUDGE_` prefix is
 removed by the existing HarnessGrad actor environment filter:
