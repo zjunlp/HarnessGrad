@@ -6,9 +6,12 @@ neither retries spawn nor cancels a detached process when a response is lost.
 """
 from __future__ import annotations
 import json
+import math
 import os
 import pathlib
+import platform
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -35,6 +38,8 @@ class LaunchPaths:
     budget_dir: pathlib.Path | None
     external_state: bool
     console_parent: pathlib.Path
+    candidates_root: pathlib.Path | None = None
+    custom_methods_root: pathlib.Path | None = None
 
 
 @dataclass(frozen=True)
@@ -42,6 +47,7 @@ class InvocationPort:
     validate: Callable
     argv: Callable
     environment: Callable
+    method_identity: Callable | None = None
 
 def parse_capacity(value) -> int:
     if not re.fullmatch(r'[1-9][0-9]{0,3}', str(value)):
@@ -142,14 +148,62 @@ def _single_measurement(form: dict) -> bool:
     return str(form.get("rounds")) == "0" or str(form.get("method") or "").strip() == "none"
 
 
+def _candidate_spec(form, paths):
+    name = str(form.get('harness') or '')
+    if not name.startswith('candidate:'):
+        return None
+    name = name.removeprefix('candidate:')
+    if not re.fullmatch(r'[A-Za-z0-9._-]{1,48}', name) or name in ('.', '..') or paths.candidates_root is None:
+        raise ValueError('invalid candidate name')
+    root = paths.candidates_root.resolve(strict=True)
+    target = root / name
+    if target.is_symlink() or target.resolve(strict=True) != target or not target.is_dir():
+        raise ValueError('candidate is not an ordinary directory')
+    from tools.validate_harness import check, source_identity, filesystem_identity
+    problems = check(target)
+    if problems:
+        raise ValueError('candidate manifest or source is invalid')
+    sha = source_identity(target)['submission_sha256']
+    fs_sha = filesystem_identity(target)['sha256']
+    for field, actual in (('candidate_sha256', sha), ('candidate_filesystem_sha256', fs_sha)):
+        expected = form.get(field)
+        if expected and expected != actual:
+            raise ValueError('candidate changed since preview; preview it again')
+    return target, sha, fs_sha
+
+
+def _custom_method(form, paths):
+    name = str(form.get('method') or '')
+    if not name.startswith('custom:'):
+        return None
+    if paths.custom_methods_root is None:
+        raise ValueError('custom methods unavailable')
+    state = paths.state_root.resolve()
+    platform_root = paths.platform.resolve()
+    if not paths.external_state or state == platform_root or state in platform_root.parents or platform_root in state.parents:
+        raise ValueError('custom methods require a private state root outside the platform checkout')
+    if __package__:
+        from . import custom_methods
+    else:
+        import custom_methods
+    data, digest = custom_methods.read(paths.custom_methods_root, name.removeprefix('custom:'))
+    if form.get('custom_method_sha256') and form['custom_method_sha256'] != digest:
+        raise ValueError('method changed since preview')
+    return data, digest
+
+
 def build_argv(form: dict, run_id: str, *, paths, budget_capacity) -> list[str]:
     """预览与真正起跑**共用这一个函数** —— 否则"预览的命令"和"实际跑的命令"迟早分叉。"""
     jobs = int(form["jobs"])
     single = _single_measurement(form)
     improver = "none" if single else str(form["improver"])
     improver_model = str(form.get("improver_model") or "")
+    candidate = _candidate_spec(form, paths)
     return [sys.executable, str(paths.driver),
-            "--harness", str(form["harness"]),
+            *(["--harness-path", str(candidate[0]),
+               "--expected-harness-sha256", str(form.get('candidate_sha256') or candidate[1]),
+               "--expected-harness-filesystem-sha256", str(form.get('candidate_filesystem_sha256') or candidate[2])]
+              if candidate else ["--harness", str(form["harness"])]),
             "--dataset", str(form["dataset"]),
             "--split", "declared",
             "--side", "train",
@@ -157,9 +211,12 @@ def build_argv(form: dict, run_id: str, *, paths, budget_capacity) -> list[str]:
             "--rounds", "0" if single else str(int(form["rounds"])),
             "--trials", str(int(form["trials"])),
             "--jobs", str(jobs),
-            *(["--method-entrypoint",
+            "--fail-on-incomplete",
+            *(["--method-entrypoint", shlex.join([sys.executable, str(paths.launch_dir / 'method-sources' / run_id / 'run.py')])
+               if str(form.get('method') or '').startswith('custom:') else
                str(paths.methods_root / str(form["method"]) / "run.py")]
-              if str(form.get("method") or "").strip() not in ("", "none") else []),
+              if str(form.get("method") or "").strip() not in ("", "none")
+              and not (single and str(form.get('method') or '').startswith('custom:')) else []),
             "--improver", improver,
             *(["--improver-model", improver_model] if improver_model and not single else []),
             "--run-id", run_id,
@@ -200,7 +257,7 @@ def new_run_id(form: dict) -> str:
 
 
 def _field_types(form):
-    for field in ('dataset', 'harness', 'sampling', 'improver', 'improver_model', 'method',
+    for field in ('dataset', 'harness', 'candidate_sha256', 'candidate_filesystem_sha256', 'custom_method_sha256', 'sampling', 'improver', 'improver_model', 'method',
                   'task_backend', 'task_model', 'task_base_url', 'meta_base_url',
                   'task_api_key', 'meta_api_key'):
         if field in form and not isinstance(form[field], str):
@@ -217,16 +274,29 @@ def _host_capabilities(form, paths, catalogue, python_supported, sandbox_support
                                 "HarnessGrad 需要 Python 3.12+")}
     if not paths.driver.is_file():
         return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{paths.driver}"}
+    if platform.system() != 'Linux':
+        return 400, {"error": "unsupported-platform", "detail":
+                     "启动实验需要 Linux 和可用的 bubblewrap；可在 Linux 主机或 Linux 虚拟机上运行 Console。"
+                     " Launch requires Linux with bubblewrap; use a Linux host or VM."}
     sandbox = sandbox_supported()
     if not sandbox.ok:
-        return 400, {"error": "sandbox-unavailable", "detail": sandbox.detail}
+        return 400, {"error": "sandbox-unavailable", "detail": sandbox.detail +
+                     " 请安装 bubblewrap 并启用用户命名空间，再重新预检。"
+                     " Install bubblewrap and enable user namespaces, then retry."}
     method = str(form.get("method") or "").strip()
-    if method not in ("", "none"):
+    if method.startswith('custom:'):
+        try:
+            _custom_method(form, paths)
+        except (OSError, ValueError):
+            return 400, {"error": "custom-method-unavailable", "detail": "方法不存在、不安全或在预览后发生变化；请重新预览。"}
+    elif method not in ("", "none"):
         entry = paths.methods_root / method / "run.py"
-        if not entry.is_file():
+        available = {str(row.get('name') or '') for row in catalogue.method_catalogue()}
+        if (not re.fullmatch(r'[A-Za-z0-9_-]{1,64}', method) or method not in available
+                or not entry.is_file() or entry.resolve().parent != (paths.methods_root / method).resolve()):
             return 400, {"error": "unknown-method",
                          "detail": f"methods/{method}/run.py 不存在；可选："
-                                   + ", ".join(row["name"] for row in catalogue.method_catalogue())}
+                                   + ", ".join(sorted(available))}
     return None
 
 
@@ -257,12 +327,17 @@ def _storage_and_budget(paths, budget_capacity):
     return None
 
 
-def _catalogue_selection(form, catalogue):
+def _catalogue_selection(form, catalogue, paths):
     known = {a["name"] for a in catalogue.adapters()}
     if form.get("dataset") not in known:
         return 400, {"error": "unknown-dataset",
                      "detail": f"{form.get('dataset')!r} 不是 KIND=dataset 的适配器"}
-    if form.get("harness") not in set(catalogue.base_harnesses()):
+    if str(form.get('harness') or '').startswith('candidate:'):
+        try:
+            _candidate_spec(form, paths)
+        except (OSError, ValueError, RuntimeError):
+            return 400, {"error": "candidate-unavailable", "detail": "候选不存在、不安全或在预览后发生变化；请重新选择并预览。"}
+    elif form.get("harness") not in set(catalogue.base_harnesses()):
         return 400, {"error": "unknown-harness",
                      "detail": f"task-harness {form.get('harness')!r} 不在可启动清单里"}
     return None
@@ -292,6 +367,8 @@ def _solver_credentials(form, env, backend, model, preview_key_pending):
 def _editor_credentials(form, catalogue, env, preview_meta_key_pending):
     if _single_measurement(form):
         return None
+    if str(form.get('method') or '').startswith('custom:') and form.get('improver') == 'none':
+        return None
     if not form.get("improver"):
         return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
     selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
@@ -319,6 +396,15 @@ def _count_bounds(form):
         value = int(raw)
         if not lo <= value <= hi:
             return 400, {"error": "bad-value", "detail": f"{key} 必须在 {lo}..{hi}"}
+    policy = form.get('sampling') or 'all'
+    valid = policy in ('all', 'pilot_10pct', 'diagnostic') or bool(re.fullmatch(r'random_[0-9]+', policy))
+    if not valid and policy.startswith(('below_', 'above_')):
+        try:
+            valid = math.isfinite(float(policy.split('_', 1)[1]))
+        except ValueError:
+            pass
+    if not valid:
+        return 400, {'error': 'bad-sampling', 'detail': '未知采样策略；可使用 all、pilot_10pct 或 diagnostic。'}
     return None
 
 
@@ -338,7 +424,7 @@ def validate_launch_request(form: dict, *, paths, catalogue, python_supported, s
     problem = _storage_and_budget(paths, budget_capacity)
     if problem:
         return problem
-    problem = _catalogue_selection(form, catalogue)
+    problem = _catalogue_selection(form, catalogue, paths)
     if problem:
         return problem
     backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
@@ -376,23 +462,73 @@ def _write_improver_override(paths, selected, form, environment, run_id):
 
 
 def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_environment) -> tuple[int, dict]:
+    if not isinstance(form, dict):
+        return 400, {'error': 'bad-value', 'detail': 'Launch parameters must be a JSON object.'}
+    if str(form.get('harness') or '').startswith('candidate:'):
+        if not all(re.fullmatch(r'[0-9a-f]{64}', str(form.get(key) or ''))
+                   for key in ('candidate_sha256', 'candidate_filesystem_sha256')):
+            return 400, {'error': 'candidate-preview-required', 'detail': '请先预览候选并确认其版本。'}
+    if str(form.get('method') or '').startswith('custom:') and not _single_measurement(form):
+        if not re.fullmatch(r'[0-9a-f]{64}', str(form.get('custom_method_sha256') or '')):
+            return 400, {'error': 'method-preview-required', 'detail': '请先预览方法并确认其版本。'}
     code, err = plan.validate(form)
     if code != 200:
         return code, err
     run_id = make_run_id(form)
-    argv = plan.argv(form, run_id)
+    try:
+        argv = plan.argv(form, run_id)
+    except (OSError, ValueError, RuntimeError):
+        return 400, {'error': 'source-changed', 'detail': '候选或方法不可用；请重新预览。'}
     environment = {**base_environment, **plan.environment(form)}
+    if str(form.get('method') or '').startswith('custom:') and not _single_measurement(form):
+        try:
+            data, digest = _custom_method(form, paths)
+            if digest != form['custom_method_sha256']:
+                raise ValueError('method changed since preview')
+            if not re.fullmatch(r'[A-Za-z0-9._-]{1,180}', run_id) or run_id in ('.', '..'):
+                raise ValueError('invalid run ID')
+            paths.launch_dir.mkdir(parents=True, exist_ok=True)
+            root_fd = os.open(paths.launch_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            methods_fd = run_fd = None
+            try:
+                try:
+                    os.mkdir('method-sources', 0o700, dir_fd=root_fd)
+                except FileExistsError:
+                    pass
+                methods_fd = os.open('method-sources', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root_fd)
+                os.mkdir(run_id, 0o700, dir_fd=methods_fd)
+                run_fd = os.open(run_id, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=methods_fd)
+                fd = os.open('run.py', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=run_fd)
+                with os.fdopen(fd, 'wb') as stream:
+                    stream.write(data)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            finally:
+                if run_fd is not None:
+                    os.close(run_fd)
+                if methods_fd is not None:
+                    os.close(methods_fd)
+                os.close(root_fd)
+        except (OSError, ValueError):
+            return 400, {'error': 'custom-method-unavailable', 'detail': '方法版本不可读取或发生变化；请重新预览。'}
     if not _single_measurement(form):
         selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
         _write_improver_override(paths, selected, form, environment, run_id)
     paths.launch_dir.mkdir(parents=True, exist_ok=True)
     log_path = paths.launch_dir / f"{run_id}.log"
-    with log_path.open("ab") as handle:
-        spawn(argv, stdout=handle, stderr=subprocess.STDOUT,
+    worker = pathlib.Path(__file__).with_name('launch_worker.py')
+    try:
+        handle = log_path.open("xb")
+    except FileExistsError:
+        return 409, {'error': 'launch-id-exists', 'detail': '运行标识已存在，请重新启动以获取新标识。'}
+    with handle:
+        spawn([sys.executable, str(worker), str(paths.launch_dir), run_id, '--', *argv],
+                         stdout=handle, stderr=subprocess.STDOUT,
                          start_new_session=True, cwd=str(paths.platform), env=environment)
     with paths.launch_log.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                                 "run_id": run_id, "argv": argv, "by": "console /launch.html"},
+                                 "run_id": run_id, "argv": argv, "by": "console /launch.html",
+                                 "custom_method_sha256": form.get('custom_method_sha256') or None},
                                 ensure_ascii=False) + "\n")
     return 202, {"run_id": run_id, "argv": argv, "log": str(log_path.relative_to(paths.state_root))}
 
@@ -427,7 +563,7 @@ def preview(form: dict, *, plan, catalogue) -> dict:
         preview_meta_key_pending=form.get("meta_key_present") in (True, "true", "1"))
     try:
         argv = plan.argv(form, "rsi10-<UTC>-<dataset>-<improver>-train")
-    except (KeyError, TypeError, ValueError, OverflowError):
+    except (KeyError, TypeError, ValueError, OverflowError, OSError, RuntimeError):
         argv = []
         if code == 200:
             code = 400
@@ -442,10 +578,17 @@ def preview(form: dict, *, plan, catalogue) -> dict:
             form[field] = display_base_url(value)
             form[field + "_set"] = bool(value)
             form[field + "_redacted"] = bool(value and not form[field])
-    return {
+    result = {
         "argv": argv,
         "env": shown_env,
         "form": form,
         "preflight": {"ok": code == 200, "status": code, **err},
         "scope": scope_preview(form, effective_env, catalogue=catalogue),
     }
+    if code == 200 and str(form.get('method') or '').startswith('custom:') and plan.method_identity:
+        try:
+            custom = plan.method_identity(form)
+            result['custom_method_sha256'] = custom[1]
+        except (AttributeError, OSError, ValueError):
+            pass
+    return result

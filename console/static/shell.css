@@ -36,6 +36,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.harness-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; min-width: 0; }
+.harness-files-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 14px; padding-top: 10px; min-width: 0; }
+@media (max-width: 1000px) {
+  .harness-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .harness-files-layout { grid-template-columns: minmax(0, 1fr); }
+  .harness-layout .card__head { flex-wrap: wrap; }
+  .harness-layout .card__head input { min-width: 0; max-width: 100%; }
+  .harness-layout .hg-chat { min-width: 0; overflow: hidden; }
+  .harness-layout .hg-chat__head select { min-width: 0; max-width: calc(100% - 4rem); }
+  .harness-layout .hg-chat__thread, .harness-layout .hg-chat__compose { min-width: 0; overflow-wrap: anywhere; }
+}
+
 /* ── 顶部模式条 ───────────────────────────────────────────────────────── */
 .sh-bar {
   position: sticky; top: 0; z-index: 40;

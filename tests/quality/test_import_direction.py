@@ -128,10 +128,10 @@ EXTRACTED_UNIT_IMPORTS = {
         "__future__", "dataclasses", "re", "sys", "typing", "harnessgrad.config",
         "data.scaffolds.registry", "console.record_reader", "record_reader"},
     "console/launch.py": {
-        "__future__", "dataclasses", "json", "os", "pathlib", "re", "subprocess",
+        "__future__", "dataclasses", "json", "math", "os", "pathlib", "platform", "re", "shlex", "subprocess",
         "sys", "time", "typing", "urllib.parse", "uuid", "harnessgrad.config",
         "harnessgrad.slots", "console.record_reader", "console.settings",
-        "record_reader", "settings"},
+        "console.custom_methods", "custom_methods", "tools.validate_harness", "record_reader", "settings"},
     "console/candidates.py": {
         "__future__", "dataclasses", "hashlib", "importlib.util", "io", "json", "os",
         "pathlib", "re", "secrets", "shlex", "shutil", "stat", "sys", "tarfile", "time",

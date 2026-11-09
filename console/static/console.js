@@ -306,6 +306,12 @@
   //: 状态徽标。running 带一个会走的小圆点，其余用语义色（--ok/--warn），
   //: 不写字面色值 —— 深色主题只换 token 就能跟着变。
   function statusPill(r) {
+    if (r.status === "unknown") {
+      return `<span class="badge badge--warn">${esc(window.HGI18n.language === "zh" ? "状态未知" : "unknown")}</span>`;
+    }
+    if (r.status === "failed") {
+      return `<span class="badge badge--warn">${esc(window.HGI18n.language === "zh" ? "失败" : "failed")} (${esc(r.launch_exit_code)})</span>`;
+    }
     if (r.status === "running") {
       return `<span class="badge badge--accent"><span class="dot live"></span>running${r.progress ? ` ${fmtInt(r.progress.done)}` : ""}</span>`;
     }
@@ -528,9 +534,11 @@
         </dl>
         <div class="composer-bar">
           <button class="btn" id="go-harness"${goDisabled}>${esc(t("runs.viewChanges"))}</button>
+          ${String(r.id).startsWith("console-") ? `<button class="btn" id="show-launch-log">${esc(window.HGI18n.language === "zh" ? "查看启动日志" : "View launch log")}</button>` : ""}
           <span class="spacer"></span>
           <a class="btn" href="https://huggingface.co/datasets/Xubqpanda/HarnessGrad" target="_blank" rel="noreferrer">Hub ↗</a>
         </div>
+        <pre id="launch-log" class="mono" hidden style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto"></pre>
         <div id="eval-pool" class="eval-slot"></div>
       </div></div>
       ${rounds.length ? `<div class="card"><div class="card-head"><div class="card-title">${esc(t("runs.perRound"))}
@@ -556,6 +564,19 @@
     if (go) go.onclick = () => {
       if (!rounds.length) return;
       goHarness(r.id, rounds[rounds.length - 1].round);
+    };
+    const logButton = rail.querySelector("#show-launch-log");
+    if (logButton) logButton.onclick = async () => {
+      const area = rail.querySelector("#launch-log");
+      area.hidden = false;
+      area.textContent = window.HGI18n.language === "zh" ? "正在读取日志…" : "Loading log…";
+      try {
+        const data = await api(`/api/runs/${encodeURIComponent(r.id)}/launch-log`);
+        const notice = window.HGI18n.language === "zh"
+          ? "日志可能包含任务内容，请谨慎分享。已隐藏已知密钥和网址。\n\n"
+          : "Logs may contain task content. Share carefully. Known keys and URLs are hidden.\n\n";
+        area.textContent = notice + (data.truncated ? "…\n" : "") + (data.text || "（空日志）");
+      } catch (e) { area.textContent = e.message; }
     };
     rail.querySelectorAll("[data-round]").forEach((tr) => {
       tr.onclick = () => goHarness(r.id, Number(tr.dataset.round));

@@ -93,6 +93,18 @@ class RunHistoryGetEndpoints:
     run_verdicts: Callable
 
 
+@dataclass(frozen=True)
+class LaunchLogGetEndpoints:
+    read_log: Callable
+
+
+def launch_log_get(self, parts, query, raw_query, ports):
+    if len(parts) == 4 and parts[1] == 'runs' and parts[3] == 'launch-log':
+        result = ports.read_log(parts[2])
+        return self._send(result) if result is not None else self._error('launch log not found', 404)
+    return UNHANDLED
+
+
 def run_history_get(self, parts, query, raw_query, ports):
     if len(parts) == 4 and parts[1] == "runs" and parts[3] == "verdicts":
         raw = (query.get("round") or ["0"])[0]
@@ -190,6 +202,7 @@ def round_get(self, parts, query, raw_query, ports):
 class ConfigurationGetEndpoints:
     launch_form: Callable
     settings_for_ui: Callable
+    custom_method_template: Callable | None = None
 
 
 def configuration_get(self, parts, query, raw_query, ports):
@@ -198,6 +211,9 @@ def configuration_get(self, parts, query, raw_query, ports):
 
     if parts[1:] == ["settings"]:
         return self._send(ports.settings_for_ui())
+
+    if parts[1:] == ['custom-methods', 'template']:
+        return self._send(ports.custom_method_template()) if ports.custom_method_template else self._error('template unavailable', 404)
 
     return UNHANDLED
 
@@ -337,6 +353,24 @@ def launch_preview_post(self, route, url, ports):
         return self._send(ports.launch_preview(form))
 
     return UNHANDLED
+
+
+@dataclass(frozen=True)
+class CustomMethodPostEndpoints:
+    create: Callable
+
+
+def custom_method_post(self, route, url, ports):
+    if route != 'api/custom-methods':
+        return UNHANDLED
+    if url.query:
+        self.close_connection = True
+        return self._error('bad-query', 400)
+    body = self._json_body(strict=True)
+    if not isinstance(body, dict) or set(body) != {'name', 'source'}:
+        return self._error('bad-method', 400)
+    code, result = ports.create(body['name'], body['source'])
+    return self._send(result, code)
 
 
 @dataclass(frozen=True)

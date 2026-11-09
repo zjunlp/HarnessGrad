@@ -159,21 +159,20 @@ def test_no_ansi_escapes_reach_the_drivers_output(tmp_path):
     assert "\x1b[" not in proc.stderr
 
 
-def test_a_reused_run_id_does_not_inherit_the_previous_runs_events(tmp_path):
-    """复用实验名时,`events.jsonl` 必须重来,不能续写。
-
-    它以前是**追加**打开的。后果不是"多几行",而是面板把两次运行渲染成一条流:
-    实测一个 `run_meta.json` 里记着 `rrsi` 的 run 目录,`events.jsonl` 里躺着三个
-    `seq: 1` 的表头,显示的全是上一次 DGM 的轮次 —— 读起来就是"我选的是 RRSI,
-    为什么在跑 DGM"。
-
-    `seq` 是每个 `Console` 各自从 1 开始数的,所以一个文件里出现第二个 `seq: 1`,
-    就是"有第二个进程写过这个文件"的签名。这条断言比"行数变多"更准。
-    """
-    _, first = _run(tmp_path, "reused-id")
+def test_a_reused_run_id_is_refused_and_previous_events_are_preserved(tmp_path):
+    """A fresh run cannot silently replace or append to an existing receipt."""
+    run_dir, first = _run(tmp_path, "reused-id")
     assert first.returncode == 0
-    run_dir, second = _run(tmp_path, "reused-id")
-    assert second.returncode == 0
+    before = (run_dir / 'events.jsonl').read_bytes()
+    second = subprocess.run(
+        [sys.executable, 'driver.py', '--harness', 'loop_plain', '--mode', 'A',
+         '--rounds', '1', '--run-id', 'reused-id', '--dataset', 'demo', '--sampling', 'all',
+         '--runs-root', str(tmp_path / 'runs'), '--work-root', str(tmp_path / 'work'),
+         '--method-entrypoint', f"{sys.executable} {ROOT / 'methods/noop/run.py'}"],
+        cwd=ROOT, capture_output=True, text=True, timeout=300,
+        env={**os.environ, 'HG_AGENT_BACKEND': 'mock'})
+    assert second.returncode != 0 and 'already exists' in second.stderr
+    assert (run_dir / 'events.jsonl').read_bytes() == before
 
     events = [json.loads(l) for l in
               (run_dir / "events.jsonl").read_text().splitlines() if l.strip()]

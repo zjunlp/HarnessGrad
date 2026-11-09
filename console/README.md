@@ -47,12 +47,23 @@ userinfo、查询、片段或控制字符的实际地址，需重新配置；合
 
 观察已有结果只需将 `HG_CONSOLE_RUNS` 指向结果根目录；上例与源码 checkout 的默认运行结果目录一致。空列表时先核对该路径。启动实验或候选试跑还需要数据、模型端点及共享预算配置；预览中检查任务池、模型角色和预算。`rounds=0` 不表示只运行一题，可能测量整个选定任务池。
 
+启动页提供标明为 fixture 的 `demo`，可配合 mock 后端验证流程；它不是公开 benchmark。实验启动需要 Linux 与可用的 bubblewrap 用户命名空间；Windows/macOS 可在 Linux 主机或虚拟机中运行 Console。缺少 bubblewrap 或无法建立命名空间时，预检会给出原因，不会启动实验。
+
+编辑屏保存候选后，可点击“使用此候选启动实验”，也可在启动页的 task-harness 列表选择候选。预览绑定候选的内容与文件系统摘要；预览后修改候选会导致启动拒绝，需要重新预览。不要直接修改已经启动的候选或运行记录。
+
+启动页的“创建自定义 RSI 方法”可加载无改动 Python 模板，编辑后使用新名称保存。源码运行的 Console 需要先将 `HG_CONSOLE_STATE_ROOT` 设置为平台目录以外的私有目录并重启；已安装版本默认使用外部用户状态目录。模板默认不调用模型，也不会改进 Harness；语法检查不代表方法协议或运行一定正确。选择自包含方法时可将 meta-harness 设为 `none`。每个名字只保存一次，修改请使用新名字；启动时固定方法源码摘要并在私有运行目录保留一份快照。方法应遵守 [自定义方法接口](../docs/bring-your-own-method.md)。
+
+Console 启动的实验即使在建立 run 目录前失败，也会在 Runs 中显示；新的启动记录保存 driver 退出码，并把非零退出显示为失败。旧记录或缺少退出凭据时状态可能未知，缺少曲线不代表零分。详情中的“查看启动日志”只读取 Console 自己的有界日志；已知启动密钥和 URL 会被隐藏，但日志仍可能包含任务或其他敏感内容，分享前请检查。此入口与其他 Console API 一样不提供用户身份认证。
+
+开发者可在单独的 Linux Console 实例上验证浏览器链路：设置平台外的私有 `HG_CONSOLE_STATE_ROOT`、独立的 `HG_CONSOLE_RUNS` 和预算目录，在本机启动该实例后运行 `python console/uat/onboarding_smoke.py --url http://127.0.0.1:PORT`。脚本需要 Playwright 和 Chromium，会创建唯一命名的候选、方法和运行记录；它固定使用 `demo`、mock 后端及自带无改动方法，不调用真实模型，运行记录不会自动删除。
+
 可选环境变量：
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `HG_CONSOLE_RUNS` | `~/.local/share/harnessgrad/runs` | 已存在的 run 根目录；观察视图只读 |
 | `HG_CONSOLE_PLATFORM` | 当前 console 所在 checkout | 平台代码根目录 |
+| `HG_CONSOLE_STATE_ROOT` | 源码版为 `console/`；安装版为用户状态目录 | 候选、方法、启动日志和工作目录；创建自定义方法需要平台外的私有目录 |
 | `HG_CONSOLE_BUDGET_DIR` | 未设置 | 启动/提交使用的、平台外共享 lease 目录 |
 | `HG_CONSOLE_BUDGET_CAPACITY` | 未设置 | 部署方配置的共享正整数 capacity；同一资源的参与者必须共享目录和 capacity |
 
@@ -125,6 +136,7 @@ userinfo、查询、片段或控制字符的实际地址，需重新配置；合
 浏览器中即时检查：轮数 `0..20`、并发 `1..64`、trials `1..3`。选择“不使用方法
 （只测一个点）”时，预览与实际命令都会规范成 `rounds=0 --improver none`，不会把未执行的
 meta-harness 记进 run id 或运行声明。
+Console 启动同时使用 `--fail-on-incomplete`，以便 driver 对不完整运行返回非零状态；实际进程退出码由启动记录保存。
 
 ### `POST /api/runs`
 

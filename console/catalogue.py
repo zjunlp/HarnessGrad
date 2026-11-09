@@ -26,7 +26,10 @@ def adapters(platform) -> list[dict]:
     try:
         sys.path.insert(0, str(platform))
         from data.scaffolds.registry import published  # noqa: PLC0415
-        return [{"name": name, "path": f"data/datasets/{name}.py"} for name in published()]
+        rows = [{"name": name, "path": f"data/datasets/{name}.py"} for name in published()]
+        if (platform / 'data' / 'demo.py').is_file():
+            rows.insert(0, {'name': 'demo', 'path': 'data/demo.py', 'kind': 'fixture'})
+        return rows
     except Exception:  # noqa: BLE001 - 平台不可导入时仍然给一个能用的列表
         out = []
         for f in sorted((platform / "data" / "datasets").glob("*.py")):

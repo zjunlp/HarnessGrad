@@ -35,6 +35,18 @@
         </div>
       </div>
 
+      <details class="card" style="margin-bottom:14px">
+        <summary class="card__head">创建自定义 RSI 方法 / Create a custom RSI method</summary>
+        <div class="card__body hg-stack">
+          <p>从无改动模板开始，修改 Python 代码后以新名称保存；模板本身不会调用模型或改进 Harness。</p>
+          <label class="field"><span class="field__label">方法名称 / Method name</span><input class="input" id="custom-method-name" maxlength="48"></label>
+          <button class="btn" type="button" id="load-method-template">加载模板 / Load template</button>
+          <label class="field"><span class="field__label">run.py</span><textarea class="input hg-mono" id="custom-method-source" rows="16" spellcheck="false"></textarea></label>
+          <button class="btn" type="button" id="create-method">保存新方法 / Save new method</button>
+          <p id="method-create-status" role="status"></p>
+        </div>
+      </details>
+
       <div class="card">
         <div class="card__head"><span class="card__title" data-i18n="ls.5">命令</span>
           <span class="card__sub" data-i18n="ls.6">预检没过就不给起跑，理由写在下面</span></div>

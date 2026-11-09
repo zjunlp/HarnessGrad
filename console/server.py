@@ -89,10 +89,10 @@ stamp_of = comparison.stamp_of
 study_candidates = comparison.study_candidates
 
 if __name__ == "__main__" and not __package__:
-    import catalogue, launch
+    import catalogue, launch, launch_logs, custom_methods
     import settings as console_settings
 else:
-    from console import catalogue, launch
+    from console import catalogue, launch, launch_logs, custom_methods
     from console import settings as console_settings
 
 display_base_url = console_settings.display_base_url
@@ -110,11 +110,13 @@ def _launch_catalogue():
 
 def _launch_paths():
     return launch.LaunchPaths(DRIVER, PLATFORM, PLATFORM_ROOT / 'methods', RUNS, STATE_ROOT,
-                             LAUNCH_DIR, LAUNCH_LOG, BUDGET_DIR, EXTERNAL_STATE, ROOT.parent)
+                             LAUNCH_DIR, LAUNCH_LOG, BUDGET_DIR, EXTERNAL_STATE, ROOT.parent, CANDIDATES,
+                             STATE_ROOT / 'methods')
 
 
 def _invocation_port():
-    return launch.InvocationPort(guard_launch, launch_argv, launch_env)
+    return launch.InvocationPort(guard_launch, launch_argv, launch_env,
+                                 lambda form: launch._custom_method(form, _launch_paths()))
 
 if __name__ == "__main__" and not __package__:
     import candidates, candidate_trial
@@ -241,6 +243,8 @@ def _read_endpoints():
                                            harness_candidate_archive=harness_candidate_archive,
                                            harness_candidate_file=harness_candidate_file,
                                            harness_candidates=harness_candidates)),
+        (http_routes.launch_log_get,
+         http_routes.LaunchLogGetEndpoints(read_log=launch_log)),
         (http_routes.run_history_get,
          http_routes.RunHistoryGetEndpoints(_valid_history_range=_valid_history_range, api_run=api_run,
                                             run_compare=run_compare, run_history=run_history,
@@ -249,7 +253,8 @@ def _read_endpoints():
          http_routes.RoundGetEndpoints(api_file=api_file, api_round=api_round, api_trace=api_trace,
                                        api_traces=api_traces, find_run=find_run, round_exists=round_exists)),
         (http_routes.configuration_get,
-         http_routes.ConfigurationGetEndpoints(launch_form=launch_form, settings_for_ui=settings_for_ui)),
+         http_routes.ConfigurationGetEndpoints(launch_form=launch_form, settings_for_ui=settings_for_ui,
+                                               custom_method_template=custom_method_template)),
         (http_routes.artifact_get,
          http_routes.ArtifactGetEndpoints(api_adapters=api_adapters, api_base=api_base,
                                           api_base_file=api_base_file,
@@ -269,6 +274,8 @@ def _write_endpoints():
          http_routes.EvidencePostEndpoints(evidence_export=_evidence_export)),
         (http_routes.launch_preview_post,
          http_routes.LaunchPreviewPostEndpoints(launch_preview=launch_preview)),
+        (http_routes.custom_method_post,
+         http_routes.CustomMethodPostEndpoints(create=create_custom_method)),
         (http_routes.explain_post,
          http_routes.ExplainPostEndpoints(api_explain=api_explain, api_explain_range=api_explain_range)),
         (http_routes.candidate_post,
@@ -349,8 +356,11 @@ def live_drivers() -> dict[str, dict]:
 
 
 def all_rows(force: bool = False) -> list[dict]:
-    return _run_queries.all_rows(RUNS, live_drivers=live_drivers, force=force,
+    rows = _run_queries.all_rows(RUNS, live_drivers=live_drivers, force=force,
                                  ttl=LIST_TTL_S, clock=time.time)
+    extra = launch_logs.orphan_rows(LAUNCH_DIR, {row['id'] for row in rows}, live_drivers())
+    return sorted((launch_logs.with_exit(row, LAUNCH_DIR) for row in [*rows, *extra]),
+                  key=lambda row: row.get('mtime_s') or 0, reverse=True)
 
 
 def find_run(run_id: str) -> pathlib.Path | None:
@@ -444,7 +454,42 @@ def method_catalogue() -> list[dict]:
 
 
 def launch_form() -> dict:
-    return launch.describe(_launch_catalogue(), load_settings=load_settings, pools=POOLS)
+    result = launch.describe(_launch_catalogue(), load_settings=load_settings, pools=POOLS)
+    result['candidates'] = [{'name': row['dir']} for row in harness_candidates().get('rows', [])]
+    result['methods'] += [{**row, 'name': 'custom:' + row['name']} for row in
+                          custom_methods.list_methods(STATE_ROOT / 'methods')]
+    return result
+
+
+def custom_method_template():
+    path = PLATFORM_ROOT / 'examples' / 'method-template' / 'run.py'
+    try:
+        return {'source': path.read_text(encoding='utf-8')}
+    except OSError:
+        return {'source': '', 'error': 'template-unavailable'}
+
+
+def create_custom_method(name, source):
+    if launch.platform.system() != 'Linux':
+        return 503, {'error': 'unsupported-platform', 'detail':
+                     '自定义方法的安全保存与运行需要 Linux；请使用 Linux 主机或虚拟机。'}
+    state = STATE_ROOT.resolve()
+    platform_root = PLATFORM_ROOT.resolve()
+    if not EXTERNAL_STATE or state == platform_root or state in platform_root.parents or platform_root in state.parents:
+        return 503, {'error': 'external-state-required', 'detail':
+                     '自定义方法需要平台目录以外的私有 HG_CONSOLE_STATE_ROOT；设置后重启 Console。'}
+    try:
+        digest = custom_methods.create(STATE_ROOT / 'methods', name, source)
+    except FileExistsError:
+        return 409, {'error': 'method-exists', 'detail': '请使用新名称保存另一个版本。'}
+    except (OSError, ValueError, UnicodeError) as error:
+        return 400, {'error': 'invalid-method', 'detail': str(error)}
+    return 201, {'name': name, 'sha256': digest}
+
+
+def launch_log(run_id: str):
+    return launch_logs.read(run_id, directory=LAUNCH_DIR, environment=os.environ,
+                            settings=load_settings())
 
 
 def launch_argv(form: dict, run_id: str) -> list[str]:
@@ -492,7 +537,14 @@ def api_health() -> dict:
 
 
 def api_run(run_id: str) -> dict | None:
-    return _run_queries.api_run(run_id, lookup=find_run, live_drivers=live_drivers)
+    result = _run_queries.api_run(run_id, lookup=find_run, live_drivers=live_drivers)
+    if result is not None:
+        result['row'] = launch_logs.with_exit(result['row'], LAUNCH_DIR)
+        return result
+    row = next((row for row in launch_logs.orphan_rows(LAUNCH_DIR, set(), live_drivers())
+                if row['id'] == run_id), None)
+    return ({'row': launch_logs.with_exit(row, LAUNCH_DIR), 'rounds': [], 'bad_points': 0, 'curve_state': 'missing',
+             'curve_errors': 0, 'method': None, 'meta': {}} if row else None)
 
 
 def api_round(run_id: str, n: int) -> dict | None:

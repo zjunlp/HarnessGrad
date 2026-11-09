@@ -15,7 +15,7 @@ from __future__ import annotations
 
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`. A fixture is platform test material and is
-#: deliberately not offered as a choice in the Launch form.
+#: offered in the Console as an explicitly labelled test fixture, not a benchmark.
 KIND = "fixture"
 #: The demo fixture's oracle submits the fixture's own reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`). Declared even though the lint

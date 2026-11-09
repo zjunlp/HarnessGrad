@@ -30,7 +30,7 @@
       <span class="badge" id="dirty" hidden data-i18n="未保存">未保存</span>
       <button class="btn btn--sm" type="button" id="save" data-i18n="另存为候选">另存为候选</button>
     </div>
-    <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;align-items:start">
+    <div class="harness-layout">
       <div class="workshop" style="max-width:100%;padding:14px 16px 24px">
         <div class="card">
           <div class="card__head" style="gap:10px">
@@ -42,7 +42,7 @@
             <span class="hg-mono hg-muted" id="source-current">—</span>
           </div>
           <div class="hg-srcbar" id="source-list" role="listbox" aria-label="Harness 版本" data-i18n-aria-label="Harness 版本"></div>
-          <div class="card__body" style="display:grid;grid-template-columns:236px minmax(0,1fr);gap:14px;padding-top:10px">
+          <div class="card__body harness-files-layout">
             <div>
               <div class="seg" id="left-tabs" style="margin-bottom:8px">
                 <button type="button" data-tab="files" aria-pressed="true" data-i18n="文件">文件</button>

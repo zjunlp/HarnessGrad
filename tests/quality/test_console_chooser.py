@@ -29,14 +29,16 @@ def _console():
 
 def test_console_dataset_chooser_matches_the_registry():
     module = _console()
-    offered = sorted(item["name"] for item in module.adapters())
+    rows = module.adapters()
+    offered = sorted(item["name"] for item in rows if item.get('kind') != 'fixture')
     expected = sorted(published())
     assert offered == expected, (
         f"控制台少给 / 多给了数据集：缺 {sorted(set(expected) - set(offered))}，"
         f"多 {sorted(set(offered) - set(expected))}")
+    assert [item['name'] for item in rows if item.get('kind') == 'fixture'] == ['demo']
 
 
 def test_every_offered_name_is_a_module_on_disk():
     module = _console()
     for item in module.adapters():
-        assert (ROOT / "data" / "datasets" / f"{item['name']}.py").is_file(), item
+        assert (ROOT / item['path']).is_file(), item

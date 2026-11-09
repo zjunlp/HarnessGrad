@@ -1,11 +1,12 @@
 """Authored launch ports, persistence and detach lifecycle; no actual driver/model."""
 import json
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from console import catalogue, launch, server, settings
+from console import catalogue, custom_methods, launch, server, settings
 
 
 def form(**overrides):
@@ -72,6 +73,20 @@ def test_invalid_field_precedes_capability_storage_and_catalogue(ready, monkeypa
     assert code == 400 and body['error'] == 'unsupported-python'
 
 
+def test_invalid_sampling_is_refused_before_launch(ready):
+    code, body = ready.plan.validate(form(sampling='default'))
+    assert code == 400 and body['error'] == 'bad-sampling'
+    assert '--fail-on-incomplete' in launch.build_argv(form(), 'fixture', paths=ready.paths,
+                                                        budget_capacity=lambda: 3)
+
+
+def test_method_selection_cannot_escape_the_catalogue(ready):
+    target = ready.paths.platform / 'outside'; target.mkdir()
+    (target / 'run.py').write_text('print(1)')
+    code, body = ready.plan.validate(form(method='../outside'))
+    assert code == 400 and body['error'] == 'unknown-method'
+
+
 def test_failed_sandbox_probe_blocks_launch_before_storage_or_catalogue(ready):
     def forbidden(*args, **kwargs):
         pytest.fail('sandbox failure reached a later launch stage')
@@ -80,7 +95,15 @@ def test_failed_sandbox_probe_blocks_launch_before_storage_or_catalogue(ready):
         sandbox_supported=lambda: SimpleNamespace(ok=False, detail='fixture namespace failed'),
         budget_capacity=forbidden, launch_env=forbidden)
     assert code == 400
-    assert body == {'error': 'sandbox-unavailable', 'detail': 'fixture namespace failed'}
+    assert body['error'] == 'sandbox-unavailable'
+    assert 'fixture namespace failed' in body['detail'] and 'bubblewrap' in body['detail']
+
+
+def test_non_linux_launch_has_actionable_guidance(ready, monkeypatch):
+    monkeypatch.setattr(launch.platform, 'system', lambda: 'Darwin')
+    code, body = ready.plan.validate(form())
+    assert code == 400 and body['error'] == 'unsupported-platform'
+    assert 'Linux' in body['detail'] and 'bubblewrap' in body['detail']
 
 
 def test_single_measurement_does_not_claim_or_configure_an_editor(ready):
@@ -109,6 +132,65 @@ def test_single_measurement_ignores_stale_editor_configuration(ready, mode):
     assert not any(key.startswith('HG_METHOD_') for key in calls[0][1]['env'])
     assert 'HG_IMPROVER_CONFIG' not in calls[0][1]['env']
     assert list(ready.paths.launch_dir.glob('*.improvers.json')) == []
+
+
+def test_candidate_preview_binds_both_identities_and_refuses_changes(ready, tmp_path):
+    root = tmp_path / 'candidates'; candidate = root / 'mine'; candidate.mkdir(parents=True)
+    (candidate / 'harness.json').write_text(json.dumps({'name': 'mine', 'version': '1', 'entrypoint': 'agent.py'}))
+    (candidate / 'agent.py').write_text('print("hello")\n')
+    paths = replace(ready.paths, candidates_root=root)
+    request = form(harness='candidate:mine', method='none', rounds=0)
+    argv = launch.build_argv(request, 'candidate-run', paths=paths, budget_capacity=lambda: 3)
+    assert argv[argv.index('--harness-path') + 1] == str(candidate)
+    assert '--harness' not in argv
+    for flag, key in (('--expected-harness-sha256', 'candidate_sha256'),
+                      ('--expected-harness-filesystem-sha256', 'candidate_filesystem_sha256')):
+        request[key] = argv[argv.index(flag) + 1]
+    assert launch._candidate_spec(request, paths)[1] == request['candidate_sha256']
+    (candidate / 'agent.py').write_text('print("changed")\n')
+    with pytest.raises(ValueError, match='changed since preview'):
+        launch._candidate_spec(request, paths)
+    assert launch._catalogue_selection(request, ready.catalogue, paths)[1]['error'] == 'candidate-unavailable'
+
+
+def test_candidate_start_requires_reviewed_identity(ready):
+    code, body = launch.start(form(harness='candidate:mine'), paths=ready.paths,
+        catalogue=ready.catalogue, plan=ready.plan, make_run_id=lambda _: 'x',
+        spawn=lambda *args, **kwargs: pytest.fail('must not spawn'), base_environment={})
+    assert code == 400 and body['error'] == 'candidate-preview-required'
+
+
+def test_launch_does_not_append_to_an_existing_launch_log(ready):
+    ready.paths.launch_dir.mkdir()
+    old = ready.paths.launch_dir / 'collision.log'; old.write_text('old evidence')
+    code, body = launch.start(form(), paths=ready.paths, catalogue=ready.catalogue,
+        plan=ready.plan, make_run_id=lambda _: 'collision',
+        spawn=lambda *args, **kwargs: pytest.fail('must not spawn'), base_environment={})
+    assert code == 409 and body['error'] == 'launch-id-exists'
+    assert old.read_text() == 'old evidence'
+
+
+def test_custom_method_is_copied_into_a_dedicated_run_directory(ready, tmp_path):
+    methods = tmp_path / 'methods'
+    source = 'print("hello")\n'
+    digest = custom_methods.create(methods, 'my_method', source)
+    paths = replace(ready.paths, custom_methods_root=methods)
+    request = form(method='custom:my_method', rounds=2, custom_method_sha256=digest)
+    plan = launch.InvocationPort(lambda data: (200, {}),
+        lambda data, run_id: launch.build_argv(data, run_id, paths=paths, budget_capacity=lambda: 3),
+        ready.plan.environment)
+    calls = []
+    code, result = launch.start(request, paths=paths, catalogue=ready.catalogue, plan=plan,
+        make_run_id=lambda _: 'console-test', spawn=lambda argv, **kw: calls.append(argv), base_environment={})
+    assert code == 202 and len(calls) == 1
+    staged = paths.launch_dir / 'method-sources/console-test/run.py'
+    assert staged.read_text() == source
+    assert list(staged.parent.iterdir()) == [staged]
+    assert str(staged) in result['argv'][result['argv'].index('--method-entrypoint') + 1]
+    (methods / 'my_method.py').write_text('print("changed")')
+    assert staged.read_text() == source
+    assert launch._host_capabilities(request, paths, ready.catalogue, lambda: True,
+        lambda: SimpleNamespace(ok=True)) [1]['error'] == 'custom-method-unavailable'
 
 
 def test_preview_and_budget_preflight_are_read_only_and_do_not_probe(ready, monkeypatch, tmp_path):
@@ -150,7 +232,8 @@ def test_endpoint_override_is_private_and_spawn_owns_only_the_open_log(ready):
     for path in ready.paths.state_root.rglob('*'):
         if path.is_file():
             assert 'synthetic-secret' not in path.read_text()
-    assert json.loads(ready.paths.launch_log.read_text())['argv'] == result['argv'] == argv
+    assert json.loads(ready.paths.launch_log.read_text())['argv'] == result['argv']
+    assert argv[argv.index('--') + 1:] == result['argv']
 
 
 def test_lost_http_response_does_not_retry_or_kill_detached_launch(ready, monkeypatch):
