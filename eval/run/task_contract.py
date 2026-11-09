@@ -1,6 +1,8 @@
 """Adapter-declared, public runtime instructions shared by all harnesses."""
 from __future__ import annotations
 
+import json
+
 #: The file the platform collects a text answer from (`eval/run/runner.py`), and the one
 #: every verifier written against an `answer`-kind task is given.
 ANSWER_FILE = "answer.txt"
@@ -40,8 +42,38 @@ def runtime_task(task: dict, setup: dict | None, verdict_kind: str | None = None
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("SETUP.runtime_prompt must be a nonempty string")
         goal = goal + "\n\nRuntime tool instructions:\n" + prompt
-    if verdict_kind == "answer" and ANSWER_FILE not in goal:
+    is_files = isinstance(task.get("submission"), dict) and task["submission"].get("kind") == "files"
+    if verdict_kind == "answer" and not is_files and ANSWER_FILE not in goal:
         goal = (goal + ("\n\n" if goal else "")) + DELIVERY
     if goal == str(task.get("goal") or ""):
         return task
     return {**task, "goal": goal}
+
+
+def cli_task_text(task: dict) -> str:
+    """Render only public task content for CLI adapters, consistently across harnesses."""
+    goal = task.get("goal") or task.get("instruction")
+    if not isinstance(goal, str) or not goal.strip():
+        raise ValueError("task requires a non-empty goal or instruction")
+    result = goal
+    if task.get("inputs") is not None:
+        result += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+    spec = task.get("submission")
+    if "submission" in task and spec != {"kind": "text"}:
+        if not isinstance(spec, dict) or set(spec) != {"kind", "paths"} or spec["kind"] != "files":
+            raise ValueError("invalid public submission descriptor")
+        paths = spec["paths"]
+        if not isinstance(paths, list) or not paths or any(
+            not isinstance(p, str) or not p.strip() or "\\" in p or ":" in p
+            or any(part in ("", ".", "..") for part in p.split("/")) for p in paths
+        ):
+            raise ValueError("file submission paths must be relative paths within the workdir")
+        result += ("\n\nTask delivery:\nLeave these files in the working directory: "
+                   + json.dumps(paths, ensure_ascii=False)
+                   + ". A final message or answer.txt is not required in addition to the files.")
+    return result
+
+
+def with_cli_task(task: dict) -> dict:
+    """Bind platform-rendered CLI content, overriding any task-supplied value."""
+    return {**task, "cli_task": cli_task_text(task)}

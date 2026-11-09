@@ -386,7 +386,6 @@ KNOBS_FILE = Path(__file__).resolve().parent / "knobs.json"
 DEFAULT_PREAMBLE = ("Complete the following task in the current working directory. "
                     "Use the available tools and follow the task's delivery and environment instructions. "
                     "Write every file the task asks for exactly as asked.")
-DEFAULT_INPUTS_HEADER = "\n\nTask inputs:\n"
 
 
 def knobs() -> dict:
@@ -464,16 +463,59 @@ def _answer_stamp(path: Path):
         return None
 
 
+def submission_paths(task: dict) -> list[str] | None:
+    """Public delivery metadata only; never infer a contract from IDs or the grader.
+
+    Omission keeps legacy text transport. File presence is a completion check,
+    not a correctness check: the platform still owns all content validation.
+    """
+    if "submission" not in task:
+        return None
+    spec = task["submission"]
+    if spec == {"kind": "text"}:
+        return None
+    if not isinstance(spec, dict) or set(spec) != {"kind", "paths"} or spec["kind"] != "files":
+        raise ValueError("Invalid public submission descriptor")
+    paths = spec["paths"]
+    if not isinstance(paths, list) or not paths:
+        raise ValueError("File submission paths must be a nonempty list")
+    for name in paths:
+        if (not isinstance(name, str) or not name.strip() or "\\" in name or ":" in name
+                or any(part in ("", ".", "..") for part in name.split("/"))):
+            raise ValueError("File submission paths must be relative paths within the workdir")
+    return paths
+
+
+
+def file_submission(work: Path, task: dict) -> dict | None:
+    paths = submission_paths(task)
+    if paths is None:
+        return None
+    root = work.resolve()
+    missing = []
+    for name in paths:
+        path = root / name
+        if (not path.resolve().is_relative_to(root) or not path.is_file()
+                or any(p.is_symlink() for p in (path, *path.parents) if p != root and root in p.parents)):
+            missing.append(name)
+    if missing:
+        raise ValueError("Missing or unsafe submission files: " + ", ".join(missing))
+    return {"submitted": True, "answer": "", "answer_source": "files", "submitted_files": paths}
+
+
 def task_prompt(task: dict, tun: dict) -> str:
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise ValueError("task requires a non-empty goal")
     prompt_cfg = tun.get("prompt") or {}
-    prompt = str(prompt_cfg.get("preamble") or DEFAULT_PREAMBLE).rstrip() + "\n\n" + goal
-    if task.get("inputs") and prompt_cfg.get("append_inputs", True):
-        prompt += str(prompt_cfg.get("inputs_header") or DEFAULT_INPUTS_HEADER) + json.dumps(
-            task["inputs"], ensure_ascii=False)
-    return prompt
+    public = task.get("cli_task")
+    if public is None:
+        public = task.get("goal") or task.get("instruction")
+        if not isinstance(public, str) or not public.strip():
+            raise ValueError("task requires a non-empty goal")
+        if task.get("inputs") is not None:
+            public += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+        paths = submission_paths(task)
+        if paths is not None:
+            public += "\n\nTask delivery:\nLeave these files in the working directory: " + json.dumps(paths, ensure_ascii=False)
+    return str(prompt_cfg.get("preamble") or DEFAULT_PREAMBLE).rstrip() + "\n\n" + public
 
 
 def run(task: dict, workdir: Path) -> int:
@@ -488,6 +530,7 @@ def run(task: dict, workdir: Path) -> int:
     before = _answer_stamp(answer)
 
     tun = knobs()
+    submission_paths(task)  # Validate before launching the external CLI.
     prompt = task_prompt(task, tun)
     prompt_path = workdir / ".dsh-task.txt"
     prompt_path.write_text(prompt, encoding="utf-8")
@@ -578,7 +621,7 @@ def run(task: dict, workdir: Path) -> int:
 
         measured = facts(env, home, prompt, patch, selected)
         record({"harness_identity": {"harness": "deepseek-harness",
-                                     "harness_version": "0.4.0",
+                                     "harness_version": "0.5.0",
                                      "agent_backend": "dsh-headless",
                                      "agent_model": model_ran,
                                      "agent_base_url": env.get("HG_AGENT_BASE_URL"),
@@ -640,7 +683,7 @@ def run(task: dict, workdir: Path) -> int:
             record({"error": "dsh failed", "exit_code": proc.returncode})
             return proc.returncode
         try:
-            record(submitted(answer, before, final))
+            record(file_submission(workdir, task) or submitted(answer, before, final))
         except ValueError as exc:
             record({"error": str(exc), "exit_code": 0})
             return 1

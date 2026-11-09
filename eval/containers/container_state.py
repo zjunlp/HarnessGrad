@@ -29,7 +29,7 @@ from harnessgrad import candidate_runtime, python_exec_runtime
 from eval.service.services import label
 from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT
-from eval.run.task_contract import runtime_task
+from eval.run.task_contract import runtime_task, with_cli_task
 from eval.observe.tracing import _last_identity, _materialize
 from eval.verification.verifier import _verify_container_state
 
@@ -142,7 +142,8 @@ def _run_one_container_state(repo: Path, task: dict, *, env_spec: dict, setup,
                 manifest = json.loads((repo / "harness.json").read_text())
                 entry = manifest["entrypoint"]
                 task_file = (setup_root if managed is not None else staging) / 'task.json'
-                task_file.write_text(json.dumps(runtime_task(task, setup)))
+                public_task = runtime_task(task, setup, verdict_kind=(verifier or {}).get("kind"))
+                task_file.write_text(json.dumps(with_cli_task(public_task)))
                 if managed is not None:
                     # Copying the initial directory also creates a missing task
                     # directory, without starting the image before SETUP is ready.

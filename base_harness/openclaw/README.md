@@ -1,6 +1,6 @@
 # OpenClaw harness
 
-Harness adapter `0.5.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
+Harness adapter `0.6.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
 **2026.3.13 (`61d171a`)**. The checked-in Harness is a portable adapter template. OpenClaw
 and Node are external read-only dependencies. Each reviewed release selects an
 adapter profile for its configuration and session format.

@@ -1,6 +1,6 @@
 {
   "name": "openclaw",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",

@@ -234,8 +234,15 @@ task's `goal` (`eval/run/task_contract.py:runtime_task`):
   CostBench's goal says so itself: *"answer.txt cannot replace the tool costs and invalid
   calls"*.
 * a task that declares file submissions carries `task["submission"] = {"kind": "files",
-  "paths": [...]}`, and every adapter branches on it: leave those files, a final message
-  cannot replace them.
+  "paths": [...]}`. Codex, DeepSeek Harness, OpenCode and OpenClaw check those
+  files: leave them in place; a final message cannot replace them.
+
+The platform also renders `cli_task` from the public goal, runtime instructions, public
+inputs and file-delivery descriptor. The Codex, DeepSeek Harness, OpenCode and OpenClaw
+CLI adapters append this common content to their own editable or native preambles;
+standalone adapter invocations without `cli_task` retain a public-field fallback. The
+platform regenerates the field rather than trusting one supplied by a dataset. DeepSeek
+Harness's preamble remains editable; public task inputs are always included.
 
 What remains the adapter's job is only the *collection*: a file the agent wrote during the
 run wins (`answer_source: artifact`), otherwise the final message is written to
@@ -245,7 +252,7 @@ Verified on `demo/t01` ("Answer with the word alpha", an `answer`-kind fixture) 
 move: all six adapters scored 1.000 with a conformant trace for that fixture.
 
 **What a harness cannot see.** `task.json` carries `goal`, `task_id`, `inputs` and
-`submission`; it does not carry the verifier kind. The injection happens *before* the task
+`submission` and the platform-rendered `cli_task`; it does not carry the verifier kind. The injection happens *before* the task
 is written, so a harness reads the requirement as part of the task -- which is the only
 channel it needs.
 

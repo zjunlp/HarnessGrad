@@ -135,16 +135,60 @@ def _answer_stamp(path: Path):
         return None
 
 
+def submission_paths(task: dict) -> list[str] | None:
+    """Public delivery metadata only; never infer a contract from IDs or the grader.
+
+    Omission keeps legacy text transport. File presence is a completion check,
+    not a correctness check: the platform still owns all content validation.
+    """
+    if "submission" not in task:
+        return None
+    spec = task["submission"]
+    if spec == {"kind": "text"}:
+        return None
+    if not isinstance(spec, dict) or set(spec) != {"kind", "paths"} or spec["kind"] != "files":
+        raise ValueError("Invalid public submission descriptor")
+    paths = spec["paths"]
+    if not isinstance(paths, list) or not paths:
+        raise ValueError("File submission paths must be a nonempty list")
+    for name in paths:
+        if (not isinstance(name, str) or not name.strip() or "\\" in name or ":" in name
+                or any(part in ("", ".", "..") for part in name.split("/"))):
+            raise ValueError("File submission paths must be relative paths within the workdir")
+    return paths
+
+
+
+def file_submission(work: Path, task: dict) -> dict | None:
+    paths = submission_paths(task)
+    if paths is None:
+        return None
+    root = work.resolve()
+    missing = []
+    for name in paths:
+        path = root / name
+        if (not path.resolve().is_relative_to(root) or not path.is_file()
+                or any(p.is_symlink() for p in (path, *path.parents) if p != root and root in p.parents)):
+            missing.append(name)
+    if missing:
+        raise ValueError("Missing or unsafe submission files: " + ", ".join(missing))
+    return {"submitted": True, "answer": "", "answer_source": "files", "submitted_files": paths}
+
+
 def task_prompt(task: dict) -> str:
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise ValueError("task requires a non-empty goal")
-    prompt = ("Complete the following task in the current working directory. "
-              "Use the available tools and follow the task's delivery and environment instructions. "
-              "Write every file the task asks for exactly as asked.\n\n" + goal)
-    if task.get("inputs"):
-        prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
-    return prompt
+    public = task.get("cli_task")
+    if public is None:
+        goal = task.get("goal") or task.get("instruction")
+        if not isinstance(goal, str) or not goal.strip():
+            raise ValueError("task requires a non-empty goal")
+        public = goal
+        if task.get("inputs") is not None:
+            public += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+        paths = submission_paths(task)
+        if paths is not None:
+            public += "\n\nTask delivery:\nLeave these files in the working directory: " + json.dumps(paths, ensure_ascii=False)
+    return ("Complete the following task in the current working directory. "
+            "Use the available tools and follow the task's delivery and environment instructions.\n\n" + public)
 
 
 def run(task: dict, workdir: Path) -> int:
@@ -169,6 +213,7 @@ def run(task: dict, workdir: Path) -> int:
     # exact-match verifier scored 0 -- for a reason the harness had created. The four
     # harnesses that scored 1.000 on the same task all say "answer only" instead
     # (`opencode`, `miniagent`, `openclaw`, and DSH's knobs.json preamble).
+    submission_paths(task)  # Validate before launching the external CLI.
     prompt = task_prompt(task)
     # Daily CLI defaults and other model roles must not select this task's
     # provider, credentials or profile. CODEX_HOME is supplied privately below.
@@ -236,7 +281,7 @@ def run(task: dict, workdir: Path) -> int:
                 record({"error": "codex failed", "exit_code": proc.returncode})
                 return proc.returncode
             try:
-                record(submitted(answer, before, last_message))
+                record(file_submission(workdir, task) or submitted(answer, before, last_message))
             except ValueError as exc:
                 record({"error": str(exc), "exit_code": proc.returncode})
                 return 1

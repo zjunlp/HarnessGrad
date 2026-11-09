@@ -40,26 +40,21 @@ def redact(text: str, env: dict) -> str:
 
 
 def task_prompt(task: dict) -> str:
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise ValueError("task requires a non-empty goal or instruction")
-    paths = submission_paths(task)
-    delivery = (
-        "The task submits these files relative to the working directory: "
-        + json.dumps(paths) + ". Leave them in place for the platform's scorer. "
-        "A final chat message or answer.txt is not required in addition to those files. "
-        if paths is not None else
-        "Write every file the task asks for exactly as asked. Anything it names as its answer file is preserved as written. "
-    )
-    prompt = (
-        "Complete this task in the current working directory using real tools. "
-        "Follow the task's exact submission format and its supplied tool/CLI instructions. "
-        "Create all requested artifacts and perform required environment submissions. "
-        + delivery + "\n\n" + goal
-    )
-    if task.get("inputs") is not None:
-        prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
-    return prompt
+    submission_paths(task)
+    public = task.get("cli_task")
+    if public is None:
+        goal = task.get("goal") or task.get("instruction")
+        if not isinstance(goal, str) or not goal.strip():
+            raise ValueError("task requires a non-empty goal or instruction")
+        public = goal
+        if task.get("inputs") is not None:
+            public += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+        paths = submission_paths(task)
+        if paths is not None:
+            public += "\n\nTask delivery:\nLeave these files in the working directory: " + json.dumps(paths, ensure_ascii=False)
+    return ("Complete this task in the current working directory using real tools. "
+            "Follow the task's exact submission format and its supplied tool/CLI instructions. "
+            "Create all requested artifacts and perform required environment submissions.\n\n" + public)
 
 
 def configuration(env: dict, profile: str) -> dict:

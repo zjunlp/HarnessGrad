@@ -45,7 +45,7 @@ class AdapterProfile(NamedTuple):
 
 def submission_paths(task: dict) -> list[str] | None:
     spec = task.get("submission")
-    if spec is None or spec == {"kind": "text"}:
+    if "submission" not in task or spec == {"kind": "text"}:
         return None
     if not isinstance(spec, dict) or set(spec) != {"kind", "paths"} or spec["kind"] != "files":
         raise AdapterError("invalid public submission descriptor")
@@ -60,19 +60,18 @@ def submission_paths(task: dict) -> list[str] | None:
 
 
 def task_prompt(task: dict) -> str:
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise AdapterError("task requires a non-empty goal or instruction")
-    paths = submission_paths(task)
-    if paths:
-        delivery = "Leave these files in the working directory for scoring: " + json.dumps(paths) + "."
-    else:
-        delivery = "Write every file the task asks for exactly as asked."
-    text = (ROOT / "prompt.md").read_text(encoding="utf-8")
-    result = text + "\n\nTask delivery:\n" + delivery + "\n\nTask:\n" + goal
-    if task.get("inputs") is not None:
-        result += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
-    return result
+    submission_paths(task)
+    public = task.get("cli_task")
+    if public is None:
+        public = task.get("goal") or task.get("instruction")
+        if not isinstance(public, str) or not public.strip():
+            raise AdapterError("task requires a non-empty goal or instruction")
+        if task.get("inputs") is not None:
+            public += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+        paths = submission_paths(task)
+        if paths is not None:
+            public += "\n\nTask delivery:\nLeave these files in the working directory: " + json.dumps(paths, ensure_ascii=False)
+    return (ROOT / "prompt.md").read_text(encoding="utf-8") + "\n\nTask:\n" + public
 
 
 def runtime_identity(env: dict | None = None) -> dict:
@@ -409,7 +408,9 @@ def save_answer(work: Path, task: dict, before: bytes | None, final: str) -> tup
     paths = submission_paths(task)
     if paths:
         missing = [name for name in paths if not (work / name).is_file()
-                   or (work / name).is_symlink() or not (work / name).resolve().is_relative_to(work)]
+                   or not (work / name).resolve().is_relative_to(work)
+                   or any(p.is_symlink() for p in (work / name, *(work / name).parents)
+                          if p != work and work in p.parents)]
         if missing:
             raise AdapterError("missing or unsafe submission files: " + ", ".join(missing))
         return "", "files"
@@ -529,7 +530,8 @@ def run(task: dict, work: Path) -> int:
             if not children_complete:
                 raise AdapterError("OpenClaw subagent work or usage could not be fully collected before the task deadline")
             answer, source = save_answer(work, task, before, final)
-            record({"submitted": True, "answer": answer, "answer_source": source})
+            record({"submitted": True, "answer": answer, "answer_source": source,
+                    **({"submitted_files": submission_paths(task)} if source == "files" else {})})
             return 0
     except (AdapterError, OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         if not rows:

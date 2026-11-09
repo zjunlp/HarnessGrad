@@ -19,7 +19,7 @@ def test_owned_directories_are_removed_but_checkpoint_archive_and_operator_roots
     stepwise = workspace.allocate_stepwise()
     overlay = workspace.stage_runtime({'public': True}, stage=lambda declaration, target: target)
     written = workspace.write_public_task({'task_id': 'authored', 'goal': 'public'})
-    assert json.loads(written.read_text()) == {'task_id': 'authored', 'goal': 'public'}
+    assert json.loads(written.read_text()) == {'task_id': 'authored', 'goal': 'public', 'cli_task': 'public'}
     assert home.is_relative_to(task) and overlay == workspace.runtime_dir
     workspace.remove_stepwise()
     workspace.remove_task()

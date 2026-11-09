@@ -26,6 +26,8 @@ class TaskWorkspace:
 
     def write_public_task(self, task):
         path = self.path / 'task.json'
+        from eval.run.task_contract import with_cli_task
+        task = with_cli_task(task)
         path.write_text(json.dumps(task))
         return path
 
