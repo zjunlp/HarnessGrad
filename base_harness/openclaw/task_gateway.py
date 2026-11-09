@@ -26,29 +26,13 @@ def configure(config: dict, *, profile: str = 'list') -> int:
     config['gateway'] = {'mode': 'local', 'bind': 'loopback', 'port': port,
                          'auth': {'mode': 'token', 'token': secrets.token_hex(32)},
                          'controlUi': {'enabled': False}}
-    config.pop('channels', None)
-    config.pop('hooks', None)
-    config['plugins'] = {'enabled': False}
-    config['browser'] = {'enabled': False}
-    # The legacy canvasHost key is rejected by newer OpenClaw releases; the
-    # task environment disables the canvas host via OPENCLAW_SKIP_CANVAS_HOST.
-    config.pop('canvasHost', None)
-    config['cron'] = {'enabled': False}
-    config['discovery'] = {'mdns': {'mode': 'off'}}
-    config['update'] = {'checkOnStart': False}
-    if profile == 'entries':
-        # Newer releases otherwise refresh a remote model catalog on startup,
-        # outside the task's explicitly selected model endpoint.
-        config.setdefault('models', {})['catalogRefresh'] = {'enabled': False}
-    config.setdefault('agents', {}).setdefault('defaults', {})['heartbeat'] = {'every': '0m'}
     return port
 
 
 @contextmanager
 def running(argv, *, state: Path, work: Path, env: dict, port: int, deadline: float, stop):
     """Start only our foreground gateway; never discover, reuse or stop a shared one."""
-    child = dict(env, OPENCLAW_SKIP_CHANNELS='1', OPENCLAW_SKIP_CRON='1',
-                 OPENCLAW_SKIP_GMAIL_WATCHER='1', OPENCLAW_SKIP_CANVAS_HOST='1')
+    child = dict(env)
     with (state / 'gateway.log').open('wb') as log:
         proc = subprocess.Popen([*argv, 'gateway', 'run', '--port', str(port), '--bind', 'loopback'],
                                 cwd=work, env=child, stdin=subprocess.DEVNULL,

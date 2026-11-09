@@ -1,6 +1,6 @@
 # OpenClaw harness
 
-Harness adapter `0.4.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
+Harness adapter `0.5.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
 **2026.3.13 (`61d171a`)**. The checked-in Harness is a portable adapter template. OpenClaw
 and Node are external read-only dependencies. Each reviewed release selects an
 adapter profile for its configuration and session format.
@@ -8,8 +8,7 @@ adapter profile for its configuration and session format.
 `agent.py --task task.json --workdir <dir>` runs the real installed CLI via
 `node openclaw.mjs agent --json`, with a private task-local loopback Gateway
 for delegation. The older profile uses `--local`; the newer profile uses its
-private Gateway. It does not connect to the operator's Gateway, messaging
-channels or state. Each task has fresh HOME/XDG/config/auth/session directories
+private Gateway. It does not import the operator's Gateway or state. Each task has fresh HOME/XDG/config/auth/session directories
 which are removed on exit. Gateway startup and child work count against the task deadline.
 
 ## Prepare a local installation
@@ -144,9 +143,15 @@ source, unlike the vendored MiniAgent harness.
 `config.json` supplies tool policy and native behavior settings. The adapter
 replaces the model/provider/credential/workspace/deadline fields with the
 platform's `HG_AGENT_*` contract. Only one custom provider is configured, with
-no fallback model. The default tool surface includes `read`, `write`, `edit`, `exec` and native
-subagent/session tools. Remote channels, browser and plugins are disabled; this
-is a restricted task configuration, not the operator's full personal setup. OpenClaw's exec approvals are
+no fallback model. The template uses the native `full` tool profile, with no adapter allowlist;
+browser, messaging, plugins, bundled skills and native delegation are not
+disabled by the adapter. The task-local Gateway preserves channel, plugin, browser
+and service settings from the candidate configuration. Availability still depends
+on the installed release, task sandbox networking, compatible browser/plugin
+dependencies and explicitly provisioned task-local channel credentials. Operator
+state and credentials are not imported automatically. Enabling an external channel
+may send task data outside the sandbox; provision only endpoints intended for the
+experiment. OpenClaw's exec approvals are
 off **inside the HarnessGrad task sandbox**, which is the filesystem boundary.
 The manifest declares **files only**: Node/OpenClaw would need separate
 provisioning in a container before declaring `exec` support.
@@ -212,6 +217,9 @@ stays unknown. Mock zero usage is explicit and remains zero. Task artifacts take
 precedence over final text, and a missing declared file is an adapter failure.
 
 No real-model benchmark quality or container support is claimed by these checks.
+
+Enabling these capabilities changes the harness baseline and may add background
+network activity or resource usage.
 
 Native child sessions are retained in the trace separately from the parent answer.
 Usage is combined only when the session tree and its usage are available and

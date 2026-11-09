@@ -3,7 +3,7 @@
 
 The external package is a declared read-only dependency. The candidate owns this
 adapter, prompt.md and config.json; changing them changes what actually executes.
-No gateway daemon, user config, messaging channel or benchmark scorer is used.
+A private task-local Gateway is used; operator state and benchmark scorers are not imported.
 """
 from __future__ import annotations
 
@@ -108,9 +108,7 @@ def child_environment(parent: dict, state: Path, config: Path, work: Path) -> di
         child[name] = str(target)
     child.update({"OPENCLAW_STATE_DIR": str(state), "OPENCLAW_CONFIG_PATH": str(config),
                   "OPENCLAW_AGENT_DIR": str(state / "agents" / "main" / "agent"),
-                  "OPENCLAW_NO_BANNER": "1", "OPENCLAW_SKIP_CHANNELS": "1",
-                  "OPENCLAW_SKIP_CRON": "1", "OPENCLAW_SKIP_GMAIL_WATCHER": "1",
-                  "OPENCLAW_SKIP_CANVAS_HOST": "1", "NODE_DISABLE_COMPILE_CACHE": "1", "PWD": str(work)})
+                  "OPENCLAW_NO_BANNER": "1", "NODE_DISABLE_COMPILE_CACHE": "1", "PWD": str(work)})
     return child
 
 
@@ -118,7 +116,7 @@ def _list_configuration(config: dict, model: str, workspace: str, context: int, 
     config["models"]["providers"]["harnessgrad"]["models"][0]["contextWindow"] = context
     agents = config["agents"]
     agents["defaults"].update({"models": {model: {}}, "contextTokens": context})
-    agents["list"] = [{"id": "main", "default": True, "workspace": workspace, "skills": []}]
+    agents["list"] = [{"id": "main", "default": True, "workspace": workspace}]
     execution = config["tools"]["exec"]
     execution.setdefault("security", "full")
     execution.setdefault("ask", "off")
@@ -130,7 +128,7 @@ def _entries_configuration(config: dict, model: str, workspace: str, context: in
     agents = config["agents"]
     agents["defaults"].setdefault("modelPolicy", {})["allow"] = [model]
     agents["entries"] = {"main": {**agents.get("entries", {}).get("main", {}),
-                                  "workspace": workspace, "skills": []}}
+                                  "workspace": workspace}}
     execution = config["tools"]["exec"]
     execution.setdefault("mode", "full")
     execution["timeoutSeconds"] = timeout

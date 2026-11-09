@@ -22,20 +22,21 @@ def parent(key):
                          'details': {'status': 'accepted', 'childSessionKey': key}}}]
 
 
-def test_gateway_configuration_is_private_and_disables_unrelated_services():
+def test_gateway_configuration_keeps_native_service_configuration():
     gateway = module('task_gateway')
-    config = {'gateway': {'port': 18789}, 'channels': {'fixture': {}}, 'hooks': {'enabled': True}}
+    config = {'gateway': {'port': 18789}, 'channels': {'fixture': {}},
+              'hooks': {'enabled': True}, 'plugins': {'enabled': True},
+              'browser': {'enabled': True}, 'cron': {'enabled': True}}
     port = gateway.configure(config)
     assert port > 0 and config['gateway']['port'] == port
     assert config['gateway']['bind'] == 'loopback' and config['gateway']['auth']['mode'] == 'token'
     assert config['gateway']['auth']['token']
-    assert 'channels' not in config and 'hooks' not in config
-    assert config['plugins'] == {'enabled': False} and config['browser'] == {'enabled': False}
-    assert config['cron'] == {'enabled': False} and config['discovery']['mdns']['mode'] == 'off'
-    assert config['agents']['defaults']['heartbeat']['every'] == '0m'
-    newer = {}
+    assert config['channels'] == {'fixture': {}} and config['hooks'] == {'enabled': True}
+    assert config['plugins'] == {'enabled': True} and config['browser'] == {'enabled': True}
+    assert config['cron'] == {'enabled': True}
+    newer = {'models': {}}
     gateway.configure(newer, profile='entries')
-    assert newer['models']['catalogRefresh']['enabled'] is False
+    assert 'catalogRefresh' not in newer['models']
 
 
 def test_child_records_are_collected_and_counted_once(tmp_path):

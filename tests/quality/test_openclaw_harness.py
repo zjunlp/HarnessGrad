@@ -102,6 +102,9 @@ def test_config_uses_one_platform_endpoint_and_model(tmp_path):
     config = agent.configuration({"HG_AGENT_API_KEY": "task-secret", "HG_AGENT_MAX_OUTPUT_TOKENS": "512",
                                   "HG_AGENT_CONTEXT_WINDOW": "16384"},
                                  "http://127.0.0.1:9999/v1", "test-model", tmp_path, 30)
+    assert config["tools"]["profile"] == "full"
+    assert "allow" not in config["tools"]
+    assert "plugins" not in config and "skills" not in config
     providers = config["models"]["providers"]
     assert list(providers) == ["harnessgrad"]
     assert providers["harnessgrad"]["baseUrl"] == "http://127.0.0.1:9999/v1"
@@ -115,7 +118,7 @@ def test_entries_configuration_uses_current_model_and_exec_fields(tmp_path):
     agent = _agent()
     config = agent.configuration({"HG_AGENT_CONTEXT_WINDOW": "16384"}, "http://127.0.0.1:9999/v1",
                                  "test-model", tmp_path, 30, profile=agent._PROFILES["entries"])
-    assert config["agents"]["entries"] == {"main": {"workspace": str(tmp_path), "skills": []}}
+    assert config["agents"]["entries"] == {"main": {"workspace": str(tmp_path)}}
     defaults = config["agents"]["defaults"]
     assert defaults["modelPolicy"]["allow"] == ["harnessgrad/test-model"]
     assert "models" not in defaults and "contextTokens" not in defaults

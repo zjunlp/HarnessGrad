@@ -1,15 +1,46 @@
 {
-  "plugins": {"enabled": false},
-  "models": {"mode": "replace", "providers": {"harnessgrad": {
-    "baseUrl": "http://127.0.0.1:0/v1", "apiKey": "local", "api": "openai-completions",
-    "models": [{"id": "task-model", "name": "task-model", "reasoning": false,
-      "input": ["text"], "contextWindow": 32768, "maxTokens": 2048,
-      "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}}]
-  }}},
-  "agents": {"defaults": {"model": {"primary": "harnessgrad/task-model", "fallbacks": []},
-    "skipBootstrap": true,
-    "thinkingDefault": "off"}},
-  "tools": {"allow": ["read", "write", "edit", "exec", "sessions_spawn", "subagents", "sessions_list", "sessions_history", "session_status"],
-    "exec": {"host": "gateway"}},
-  "skills": {"allowBundled": []}
+  "models": {
+    "mode": "replace",
+    "providers": {
+      "harnessgrad": {
+        "baseUrl": "http://127.0.0.1:0/v1",
+        "apiKey": "local",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "task-model",
+            "name": "task-model",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 32768,
+            "maxTokens": 2048,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "harnessgrad/task-model",
+        "fallbacks": []
+      },
+      "skipBootstrap": true,
+      "thinkingDefault": "off"
+    }
+  },
+  "tools": {
+    "exec": {
+      "host": "gateway"
+    },
+    "profile": "full"
+  }
 }
