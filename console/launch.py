@@ -183,7 +183,7 @@ def build_environment(form: dict, *, load_settings) -> dict:
             (task.get("api_key") if env["HG_AGENT_BASE_URL"] == str(task.get("base_url") or "") else "") or "")
     # Method-owned editor clients consume HG_METHOD_*. Endpoint-backed improvers use
     # a per-launch registry override; CLI improvers retain their own transport.
-    if form.get('meta_base_url'):
+    if not _single_measurement(form) and form.get('meta_base_url'):
         env['HG_METHOD_BASE_URL'] = str(form['meta_base_url'])
         env['HG_METHOD_MODEL'] = str(form.get('improver_model') or '')
         env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or
@@ -382,8 +382,9 @@ def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_enviro
     run_id = make_run_id(form)
     argv = plan.argv(form, run_id)
     environment = {**base_environment, **plan.environment(form)}
-    selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
-    _write_improver_override(paths, selected, form, environment, run_id)
+    if not _single_measurement(form):
+        selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
+        _write_improver_override(paths, selected, form, environment, run_id)
     paths.launch_dir.mkdir(parents=True, exist_ok=True)
     log_path = paths.launch_dir / f"{run_id}.log"
     with log_path.open("ab") as handle:
