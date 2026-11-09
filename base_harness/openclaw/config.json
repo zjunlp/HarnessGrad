@@ -9,7 +9,7 @@
   "agents": {"defaults": {"model": {"primary": "harnessgrad/task-model", "fallbacks": []},
     "skipBootstrap": true,
     "thinkingDefault": "off"}},
-  "tools": {"allow": ["read", "write", "edit", "exec"],
+  "tools": {"allow": ["read", "write", "edit", "exec", "sessions_spawn", "subagents", "sessions_list", "sessions_history", "session_status"],
     "exec": {"host": "gateway"}},
   "skills": {"allowBundled": []}
 }

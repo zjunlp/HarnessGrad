@@ -110,3 +110,9 @@ fresh run ID to measure it; do not rewrite historical manifests or receipts.
 The content scope covers declared application/runtime files. Host OS libraries,
 shell tools and compatibility with a task image remain platform capabilities,
 not a hermetic machine image or proof that a model-backed task will succeed.
+
+The task defines its own deliverable; the adapter does not require every task to
+modify a file. Native delegation depends on the installed CLI and its configuration.
+When a child session is detected but complete child usage is unavailable, the trace
+retains observed parent usage and marks the total unknown. Use a fresh baseline
+after this adapter change.

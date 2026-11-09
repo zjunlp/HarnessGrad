@@ -110,6 +110,21 @@ def test_the_raw_event_survives_beside_the_translation(codex):
     assert {"codex_event": event} in rows, "a field the contract does not name is still there"
 
 
+def test_subagent_usage_is_not_misreported_as_parent_total(codex):
+    rows, facts = _feed(codex, [
+        {"type": "item.started", "item": {"type": "collab_tool_call", "tool": "spawn_agent"}},
+        {"type": "item.completed", "item": {"type": "collab_tool_call", "tool": "spawn_agent",
+                                                  "receiver_thread_ids": ["child"]}},
+        {"type": "item.completed", "item": {"type": "agent_message", "text": "done"}},
+        {"type": "turn.completed", "usage": {"input_tokens": 100, "output_tokens": 10}},
+    ])
+    usage = [row['usage'] for row in rows if 'usage' in row][-1]
+    assert usage['input_tokens'] is None and usage['output_tokens'] is None
+    assert usage['parent_thread']['input_tokens'] == 100
+    assert usage['scope'] == 'subagent_usage_incomplete'
+    assert usage['calls'] == facts['model_calls'] == 1
+
+
 def test_a_malformed_line_is_kept_and_does_not_stop_the_stream(codex):
     rows, facts = _feed(codex, [
         "not json at all",

@@ -92,3 +92,9 @@ The same identity is checked before task-cache, whole-point and H0 reuse, and
 before restoring completed progress or checkpoints. Existing historical records
 remain readable; prepare a new Harness copy and run ID when evidence is missing.
 This binds declared application dependencies, not a hermetic host OS or shell.
+
+The task defines its own deliverable; the adapter does not require every task to
+modify a file. Native delegation depends on the installed CLI and its configuration.
+When a child session is detected but complete child usage is unavailable, the trace
+retains observed parent usage and marks the total unknown. Use a fresh baseline
+after this adapter change.

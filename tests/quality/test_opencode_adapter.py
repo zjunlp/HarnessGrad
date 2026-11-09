@@ -123,6 +123,8 @@ class AdapterTests(unittest.TestCase):
              "parts": [{"type": "text", "text": "alpha"}]},
         ]}, "1")
         self.assertEqual(stream.final_text(), "alpha")
+        self.assertIsNone(stream.usage()['input_tokens'])
+        self.assertEqual(stream.usage()['scope'], 'native_v1_session_partial')
 
     def test_rejects_wrong_session_failed_or_truncated_export(self):
         for variation in ("session", "outcome", "finish"):
@@ -172,6 +174,72 @@ class AdapterTests(unittest.TestCase):
         self.assertIn("\u591a\u6b65\u4efb\u52a1", prompt)
         self.assertIn("report.xlsx", prompt)
         self.assertNotIn("briefly describe", prompt)
+        self.assertNotIn("Do not use subagents", prompt)
+
+    def test_child_export_adds_cost_without_replacing_parent_answer(self):
+        stream, records = self.collect([
+            event("text", text="parent answer"),
+            event("tool_use", tool="subagent", state={"status": "completed",
+                  "input": {}, "metadata": {"metadata": {"sessionID": "ses_child"}}}),
+            event("step_finish", reason="stop", tokens={"input": 10, "output": 2}),
+        ])
+        stream.reconcile(self.snapshot())
+        child = {"info": {"id": "ses_child", "outcome": "succeeded", "tokens": {
+            "input": 20, "output": 3, "reasoning": 0, "cache": {"read": 5, "write": 0}}},
+            "messages": [{"id": "child-msg", "type": "assistant", "finish": "stop",
+                          "content": [{"type": "text", "text": "child answer"}]}]}
+        self.adapter.collect_child_sessions(stream, lambda _: child, "2")
+        self.assertEqual(stream.final_text(), "alpha")
+        self.assertEqual(stream.usage()["input_tokens"], 105)
+        self.assertEqual(stream.usage()["scope"], "session_tree_including_auxiliary")
+        self.assertEqual(stream.usage()["subagent_messages"], 1)
+        self.assertEqual(len([r for r in records if "opencode_subagent_session" in r]), 1)
+
+    def test_missing_child_usage_is_unknown_not_parent_cost(self):
+        stream, _ = self.collect([
+            event("tool_use", tool="subagent", state={"status": "completed", "input": {},
+                  "metadata": {"sessionID": "ses_missing"}}),
+            event("text", text="alpha"), event("step_finish", reason="stop"),
+        ])
+        stream.reconcile(self.snapshot())
+        def missing(_):
+            raise ValueError('missing')
+        self.adapter.collect_child_sessions(stream, missing, "2")
+        self.assertIsNone(stream.usage()["input_tokens"])
+        self.assertIsNone(stream.usage()["subagent_messages"])
+        self.assertEqual(stream.usage()["scope"], "subagent_usage_incomplete")
+
+    def test_unidentified_child_also_makes_usage_unknown(self):
+        stream, _ = self.collect([
+            event("tool_use", tool="task", state={"status": "completed", "input": {}, "output": "done"}),
+            event("text", text="alpha"), event("step_finish", reason="stop"),
+        ])
+        stream.reconcile(self.snapshot())
+        self.assertIsNone(stream.usage()["input_tokens"])
+
+    def test_nested_and_repeated_child_sessions_are_deduplicated(self):
+        stream, _ = self.collect([event("text", text="alpha"), event("step_finish", reason="stop")])
+        stream.reconcile(self.snapshot())
+        stream.child_sessions.add('ses_child')
+        tokens = {"input": 3, "output": 1, "reasoning": 0, "cache": {"read": 0, "write": 0}}
+        def child(session):
+            content = ([{"type": "tool", "name": "subagent", "state": {"status": "completed",
+                        "metadata": {"sessionID": "ses_grandchild"}}}] if session == 'ses_child' else [])
+            return {"info": {"id": session, "outcome": "succeeded", "tokens": tokens},
+                    "messages": [{"id": session, "type": "assistant", "finish": "stop", "content": content}]}
+        self.adapter.collect_child_sessions(stream, child, "2")
+        self.assertEqual(stream.usage()["input_tokens"], 86)
+        self.assertEqual(stream.usage()["subagent_sessions"], 2)
+
+    def test_child_stream_does_not_become_parent_answer(self):
+        stream, records = self.collect([
+            event("text", text="parent"),
+            {"type": "text", "sessionID": "ses_child", "part": {"messageID": "c", "text": "child"}},
+            event("step_finish", reason="stop"),
+        ])
+        self.assertEqual(stream.final_text(), "parent")
+        self.assertEqual(stream.usage()["calls"], 1)
+        self.assertTrue(any("opencode_child_event" in r for r in records))
 
     def test_short_platform_deadline_is_respected(self):
         self.assertLessEqual(self.adapter.timeout_seconds({

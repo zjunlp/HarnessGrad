@@ -6,7 +6,7 @@
   "file is an overlay on the code rather than a second source of truth."
  ],
  "prompt": {
-  "preamble": "Complete the following task. Everything you need is in the current working directory, and the work is the files you leave there rather than a description of them. Write every file the task asks for exactly as asked.",
+  "preamble": "Complete the following task in the current working directory. Use the available tools and follow the task's delivery and environment instructions. Write every file the task asks for exactly as asked.",
   "append_inputs": true,
   "inputs_header": "\n\nTask inputs:\n"
  },

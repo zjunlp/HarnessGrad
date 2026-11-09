@@ -65,7 +65,7 @@ def warn_unverified(identity: dict) -> None:
 
 
 def _helper(harness: Path):
-    for name in ("harness.json", "runtime-identity.json", "agent.py", "openclaw_runtime.py"):
+    for name in ("harness.json", "runtime-identity.json", "agent.py", "openclaw_runtime.py", "task_gateway.py"):
         path = harness / name
         if not path.is_file() or not path.resolve().is_relative_to(harness):
             raise ValueError(f"OpenClaw candidate needs its owned {name}")

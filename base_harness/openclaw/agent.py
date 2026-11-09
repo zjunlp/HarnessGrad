@@ -8,6 +8,7 @@ No gateway daemon, user config, messaging channel or benchmark scorer is used.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import hashlib
 import importlib.util
 import json
@@ -22,6 +23,13 @@ import time
 from typing import Callable, NamedTuple
 
 ROOT = Path(__file__).resolve().parent
+
+
+def gateway_helper():
+    spec = importlib.util.spec_from_file_location('_task_openclaw_gateway', ROOT / 'task_gateway.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class AdapterError(ValueError):
@@ -100,7 +108,9 @@ def child_environment(parent: dict, state: Path, config: Path, work: Path) -> di
         child[name] = str(target)
     child.update({"OPENCLAW_STATE_DIR": str(state), "OPENCLAW_CONFIG_PATH": str(config),
                   "OPENCLAW_AGENT_DIR": str(state / "agents" / "main" / "agent"),
-                  "OPENCLAW_NO_BANNER": "1", "NODE_DISABLE_COMPILE_CACHE": "1", "PWD": str(work)})
+                  "OPENCLAW_NO_BANNER": "1", "OPENCLAW_SKIP_CHANNELS": "1",
+                  "OPENCLAW_SKIP_CRON": "1", "OPENCLAW_SKIP_GMAIL_WATCHER": "1",
+                  "OPENCLAW_SKIP_CANVAS_HOST": "1", "NODE_DISABLE_COMPILE_CACHE": "1", "PWD": str(work)})
     return child
 
 
@@ -247,10 +257,11 @@ def _session_rows(state: Path, session_id: str, _argv: list[str], _env: dict, _t
     return _read_jsonl(paths[-1]) if paths else []
 
 
-def _export_session_rows(state: Path, session_key: str, argv: list[str], env: dict, timeout: float) -> list[dict]:
+def _export_session_rows(state: Path, session_key: str, argv: list[str], env: dict, timeout: float,
+                         output: str | None = None) -> list[dict]:
     if timeout <= 0:
         raise AdapterError("OpenClaw task deadline expired before session export")
-    output = "harnessgrad"
+    output = output or ('harnessgrad-' + os.urandom(8).hex())
     command = [*argv, "sessions", "export-trajectory", "--agent", "main", "--session-key", session_key,
                "--workspace", str(state), "--output", output, "--json"]
     result = subprocess.run(command, cwd=state, env=env, capture_output=True, text=True,
@@ -290,7 +301,8 @@ def redact(value, env: dict):
     return json.loads(text)
 
 
-def translate_trace(rows: list[dict], record, *, backend: str) -> dict:
+def translate_trace(rows: list[dict], record, *, backend: str,
+                    children: list[dict] | None = None, children_complete: bool = True) -> dict:
     calls = 0
     totals = {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
     complete = {name: True for name in totals}
@@ -313,7 +325,7 @@ def translate_trace(rows: list[dict], record, *, backend: str) -> dict:
             content = message.get("content") or []
             text = _text(content)
             record({"reply": text, "openclaw_stop_reason": message.get("stopReason")})
-            if text.strip():
+            if text.strip() and message.get('stopReason') in ('stop', 'end_turn') and not message.get('error'):
                 final = text
             for item in content if isinstance(content, list) else []:
                 if not isinstance(item, dict) or item.get("type") != "toolCall":
@@ -327,7 +339,7 @@ def translate_trace(rows: list[dict], record, *, backend: str) -> dict:
             call = tools.pop(message.get("toolCallId"), None)
             if call is None:
                 continue
-            details = message.get("details") or {}
+            details = message.get("details") if isinstance(message.get("details"), dict) else {}
             text = _text(message.get("content"))
             obs = {"kind": observation_kind(call["name"]),
                    "returncode": details.get("exitCode"), "output_chars": len(text),
@@ -347,6 +359,41 @@ def translate_trace(rows: list[dict], record, *, backend: str) -> dict:
              "cache_read_tokens": totals["cacheRead"] if calls and complete["cacheRead"] and not ambiguous else None,
              "cache_write_tokens": totals["cacheWrite"] if calls and complete["cacheWrite"] and not ambiguous else None,
              "source": "openclaw_session"}
+    if children or not children_complete:
+        parent_usage = dict(usage)
+        child_totals = {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
+        child_calls = 0
+        child_complete = children_complete
+        for child in children or []:
+            if not isinstance(child.get('outcome'), dict) or child['outcome'].get('status') != 'ok':
+                child_complete = False
+            records = child.get('rows') or []
+            record({'openclaw_subagent_session': {'session_key': child.get('session_key'),
+                    'outcome': child.get('outcome'), 'messages': records}})
+            for row in records:
+                message = row.get('message') if isinstance(row, dict) else None
+                if not isinstance(message, dict) or message.get('role') != 'assistant':
+                    continue
+                child_calls += 1
+                values = message.get('usage') if isinstance(message.get('usage'), dict) else {}
+                for name in child_totals:
+                    value = values.get(name)
+                    if type(value) is int and value >= 0:
+                        child_totals[name] += value
+                    else:
+                        child_complete = False
+        if children and child_calls == 0:
+            child_complete = False
+        if backend != 'mock' and children and not any(child_totals.values()):
+            child_complete = False
+        mapping = {'input_tokens': 'input', 'output_tokens': 'output',
+                   'cache_read_tokens': 'cacheRead', 'cache_write_tokens': 'cacheWrite'}
+        for output, source in mapping.items():
+            usage[output] = (parent_usage[output] + child_totals[source]
+                             if child_complete and parent_usage[output] is not None else None)
+        usage.update({'source': 'openclaw_session_tree' if child_complete else 'openclaw_subagent_usage_incomplete',
+                      'parent_session': parent_usage, 'subagent_sessions': len(children or []),
+                      'subagent_messages': child_calls if child_complete else None})
     record({"usage": usage})
     return {"final": final, "calls": calls}
 
@@ -387,6 +434,7 @@ def run(task: dict, work: Path) -> int:
     server = None
     proc = None
     timeout = timeout_seconds(env)
+    deadline = time.monotonic() + timeout
     previous_signals = {}
     def interrupted(signum, _frame):
         raise AdapterError(f"OpenClaw interrupted by signal {signum}")
@@ -409,8 +457,9 @@ def run(task: dict, work: Path) -> int:
                 raise AdapterError("HG_AGENT_BASE_URL, HG_AGENT_MODEL and HG_AGENT_API_KEY are required")
         record({"harness_identity": {"harness": "openclaw", "agent_model": model,
                 "agent_backend": backend, "config": {"runtime": runtime, "timeout_s": timeout,
-                "editable": ["agent.py", "prompt.md", "config.json"], "mode": "local"}}, "task_id": task_id})
-        with tempfile.TemporaryDirectory(prefix="hg-openclaw-state-") as temporary:
+                "editable": ["agent.py", "prompt.md", "config.json", "task_gateway.py"],
+                "mode": "task-local-gateway"}}, "task_id": task_id})
+        with tempfile.TemporaryDirectory(prefix="hg-openclaw-state-") as temporary, ExitStack() as resources:
             state = Path(temporary)
             config = state / "openclaw.json"
             profile_name = runtime["source_identity"].get("adapter_profile", "list")
@@ -418,23 +467,34 @@ def run(task: dict, work: Path) -> int:
             if profile is None:
                 raise AdapterError(f"unknown OpenClaw adapter profile {profile_name!r}")
             cfg = configuration(env, base, model, work, timeout, profile=profile)
+            gateway = gateway_helper()
+            gateway_port = gateway.configure(cfg, profile=profile_name)
+            # Keep the task-local gateway token out of every translated trace.
+            # child_environment strips OPENCLAW_* before launching the CLI.
+            env['OPENCLAW_GATEWAY_SECRET'] = cfg['gateway']['auth']['token']
             config.write_text(json.dumps(cfg), encoding="utf-8")
             config.chmod(0o600)
             child = child_environment(env, state, config, work)
             child["PATH"] = os.pathsep.join((str(Path(runtime["node"]).parent), child.get("PATH", os.defpath)))
+            resources.enter_context(gateway.running(runtime['argv'], state=state, work=work, env=child,
+                                                    port=gateway_port, deadline=deadline, stop=stop_process))
             session_id = "hg-" + hashlib.sha256((task_id + str(time.time_ns())).encode()).hexdigest()[:20]
             session = profile.session_prefix + session_id
-            command = [*runtime["argv"], "agent", "--local", "--json",
-                       "--agent", "main", profile.session_option, session, "--timeout", str(max(1, int(timeout))),
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise AdapterError('OpenClaw task deadline expired during gateway startup')
+            # Newer OpenClaw uses the gateway as the owner of session storage;
+            # embedded --local cannot create a session while that owner runs.
+            command = [*runtime["argv"], "agent", *([] if profile_name == 'entries' else ['--local']), "--json",
+                       "--agent", "main", profile.session_option, session, "--timeout", str(max(1, int(remaining))),
                        "--message", prompt]
             timed_out = False
             stderr = ""
-            deadline = time.monotonic() + timeout
             try:
                 proc = subprocess.Popen(command, cwd=work, env=child, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE, text=True, errors="replace", start_new_session=True)
                 try:
-                    stdout, stderr = proc.communicate(timeout=timeout)
+                    stdout, stderr = proc.communicate(timeout=max(.01, deadline - time.monotonic()))
                 except subprocess.TimeoutExpired:
                     timed_out = True
                     stop_process(proc)
@@ -448,7 +508,19 @@ def run(task: dict, work: Path) -> int:
                 if not (timed_out or proc.returncode):
                     raise
                 native = []
-            summary = translate_trace(native, record, backend=backend)
+            def export_child(key):
+                remaining = deadline - time.monotonic()
+                output = 'child-' + hashlib.sha256(key.encode()).hexdigest()[:24]
+                return _export_session_rows(state, key, runtime['argv'], child, remaining, output=output)
+
+            children, children_complete = gateway.collect(state, native, deadline=deadline,
+                                                           profile=profile_name, export_child=export_child)
+            if children:
+                # Completion announcements can append another parent turn.
+                native = profile.read_session(state, session, runtime["argv"], child,
+                                              deadline - time.monotonic())
+            summary = translate_trace(native, record, backend=backend,
+                                      children=children, children_complete=children_complete)
             final = summary["final"]
             if timed_out:
                 raise AdapterError(f"OpenClaw timed out after {timeout:g}s")
@@ -456,6 +528,8 @@ def run(task: dict, work: Path) -> int:
                 raise AdapterError(f"OpenClaw exited {proc.returncode}: " + stderr[-2000:])
             if not native:
                 raise AdapterError("OpenClaw left no session trace: " + stderr[-2000:])
+            if not children_complete:
+                raise AdapterError("OpenClaw subagent work or usage could not be fully collected before the task deadline")
             answer, source = save_answer(work, task, before, final)
             record({"submitted": True, "answer": answer, "answer_source": source})
             return 0

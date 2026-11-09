@@ -11,6 +11,7 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import signal
 import subprocess
@@ -54,7 +55,7 @@ def task_prompt(task: dict) -> str:
         "Complete this task in the current working directory using real tools. "
         "Follow the task's exact submission format and its supplied tool/CLI instructions. "
         "Create all requested artifacts and perform required environment submissions. "
-        + delivery + "Do not use subagents.\n\n" + goal
+        + delivery + "\n\n" + goal
     )
     if task.get("inputs") is not None:
         prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
@@ -192,6 +193,51 @@ def observation_kind(tool: str) -> str:
     return "other"
 
 
+def child_reference(part: dict) -> tuple[bool, str | None]:
+    """Read only a native task/subagent tool receipt, never arbitrary model text."""
+    if part.get("tool", part.get("name")) not in ("task", "subagent"):
+        return False, None
+    state = part.get("state") if isinstance(part.get("state"), dict) else {}
+    metadata = state.get("metadata") if isinstance(state.get("metadata"), dict) else {}
+    metadata = metadata.get("metadata") if isinstance(metadata.get("metadata"), dict) else metadata
+    child = metadata.get("sessionID") or metadata.get("sessionId")
+    if not child:
+        content = state.get("output") or state.get("content") or ""
+        if isinstance(content, list):
+            content = "\n".join(str(x.get("text") or "") for x in content if isinstance(x, dict))
+        match = re.search(r'(?:sessionID|id)=["\'](ses_[A-Za-z0-9_-]+)["\']', str(content))
+        child = match.group(1) if match else None
+    if isinstance(child, str) and re.fullmatch(r'ses_[A-Za-z0-9_-]{1,128}', child):
+        return True, child
+    # A rejected call has no child to count. A completed receipt with no ID
+    # cannot prove that its child usage was captured.
+    return state.get("status") not in ("error", "failed"), None
+
+
+def snapshot_children(snapshot: dict, profile: str) -> tuple[set[str], bool]:
+    children, incomplete = set(), False
+    for message in snapshot.get("messages", []):
+        if not isinstance(message, dict):
+            continue
+        parts = message.get("parts", []) if profile == "1" else message.get("content", [])
+        for part in parts if isinstance(parts, list) else []:
+            if not isinstance(part, dict):
+                continue
+            relevant, child = child_reference(part)
+            if child:
+                children.add(child)
+            elif relevant:
+                incomplete = True
+    return children, incomplete
+
+
+def complete_session_tokens(tokens) -> bool:
+    if not isinstance(tokens, dict) or not isinstance(tokens.get('cache'), dict):
+        return False
+    return (all(type(tokens.get(k)) is int and tokens[k] >= 0 for k in ('input', 'output', 'reasoning'))
+            and all(type(tokens['cache'].get(k)) is int and tokens['cache'][k] >= 0 for k in ('read', 'write')))
+
+
 class EventCollector:
     def __init__(self, record):
         self.record = record
@@ -202,7 +248,13 @@ class EventCollector:
         self.invalid_lines = 0
         self.step_count = 0
         self.sessions = set()
+        self.primary_session = None
+        self.child_sessions = set()
+        self.child_tokens = []
+        self.child_messages = 0
+        self.child_usage_incomplete = False
         self.session_tokens = None
+        self.profile = None
 
     def feed(self, line: str):
         if not line.strip():
@@ -217,8 +269,15 @@ class EventCollector:
             self.invalid_lines += 1
             return
         self.record({"opencode_event": event})
-        if event.get("sessionID"):
-            self.sessions.add(event["sessionID"])
+        session = event.get("sessionID")
+        if session:
+            self.sessions.add(session)
+            if self.primary_session is None:
+                self.primary_session = session
+            elif session != self.primary_session:
+                # Child output must not become the parent's final answer or steps.
+                self.record({"opencode_child_event": event})
+                return
         kind, part = event.get("type"), event.get("part") or {}
         message = part.get("messageID", "")
         if kind == "text":
@@ -242,6 +301,12 @@ class EventCollector:
                 shell = part.get("tool") in ("bash", "shell")
                 metadata = state.get("metadata") or {}
                 metadata = metadata.get("metadata") or metadata
+                if part.get("tool") in ("task", "subagent"):
+                    relevant, child = child_reference(part)
+                    if child:
+                        self.child_sessions.add(child)
+                    elif relevant:
+                        self.child_usage_incomplete = True
                 exit_code = metadata.get("exit")
                 record = {"tool": part.get("tool"), "tool_call_id": part.get("id"),
                           "tool_input": arguments, "tool_status": state.get("status"),
@@ -265,13 +330,14 @@ class EventCollector:
 
     def reconcile(self, snapshot: dict, profile: str = "2"):
         """The CLI's persisted replay can omit step_finish; use its public export."""
+        self.profile = profile
         info = snapshot.get("info") or {}
         if profile == "1":
             messages = [{**m["info"], "content": m["parts"]} for m in snapshot.get("messages", [])
                         if m.get("info", {}).get("role") == "assistant"]
         else:
             messages = [m for m in snapshot.get("messages", []) if m.get("type") == "assistant"]
-        if self.sessions != {info.get("id")}:
+        if self.primary_session != info.get("id"):
             raise ValueError("OpenCode session export does not match emitted session")
         if self.provider_errors or (profile == "2" and info.get("outcome") != "succeeded"):
             raise ValueError("OpenCode session did not succeed")
@@ -292,6 +358,9 @@ class EventCollector:
                 self.record({"step": len(self.finishes), "reply": json.dumps(reply, ensure_ascii=False),
                              "source": "session_export"})
         self.session_tokens = info.get("tokens")
+        children, incomplete = snapshot_children(snapshot, profile)
+        self.child_sessions.update(children)
+        self.child_usage_incomplete |= incomplete
         self.record({"opencode_session": {"id": info["id"], "outcome": "succeeded"}})
 
     @staticmethod
@@ -314,14 +383,85 @@ class EventCollector:
         tokens = [p["tokens"] for p in self.finishes if isinstance(p.get("tokens"), dict)]
         steps = self.token_totals(tokens)
         usage = self.token_totals([self.session_tokens]) if isinstance(self.session_tokens, dict) else dict(steps)
+        scope = "session_including_auxiliary" if self.session_tokens is not None else "task_steps_partial"
+        parent_usage = dict(usage)
+        if self.sessions - {self.primary_session} - self.child_sessions:
+            self.child_usage_incomplete = True
+        if self.profile == '1':
+            # Native v1's export omits separately generated title/auxiliary
+            # requests even when the session's own token fields are present.
+            usage = {key: None for key in usage}
+            scope = 'native_v1_session_partial'
+        if self.child_sessions or self.child_usage_incomplete:
+            if (self.child_usage_incomplete or len(self.child_tokens) != len(self.child_sessions)
+                    or not complete_session_tokens(self.session_tokens) or self.profile == '1'):
+                usage = {key: None for key in usage}
+                scope = "subagent_usage_incomplete"
+            else:
+                usage = self.token_totals([self.session_tokens, *self.child_tokens])
+                scope = "session_tree_including_auxiliary"
         return {**usage, "task_steps": steps,
                 # The contract's `usage.calls`: completed model turns. The platform's
                 # `loop_facts` counts `reply` records, and one is written per `step_finish`,
                 # so these two numbers are the same fact written twice -- which is what
                 # makes a disagreement worth catching (`tools/check_trace_contract.py`).
                 "calls": len(self.finishes),
-                "scope": "session_including_auxiliary" if self.session_tokens is not None else "task_steps_partial",
+                "scope": scope, "parent_session": parent_usage,
+                "subagent_sessions": len(self.child_sessions),
+                "subagent_messages": None if self.child_usage_incomplete else self.child_messages,
                 "reported_steps": len(tokens), "completed_steps": len(self.finishes)}
+
+
+def collect_child_sessions(stream, export_one, profile: str) -> None:
+    """Collect referenced child exports once; never replace the parent's answer.
+
+    If any child is missing or lacks complete usage, the total is unknown rather
+    than the parent's partial cost. This also handles resumed and nested sessions.
+    """
+    pending = list(sorted(stream.child_sessions))
+    seen = set()
+    while pending:
+        if len(seen) >= 64:
+            stream.child_usage_incomplete = True
+            break
+        session_id = pending.pop(0)
+        if session_id in seen:
+            continue
+        if session_id == stream.primary_session:
+            stream.child_usage_incomplete = True
+            continue
+        seen.add(session_id)
+        try:
+            snapshot = export_one(session_id)
+            if not isinstance(snapshot, dict) or not isinstance(snapshot.get("info"), dict):
+                raise ValueError("invalid child export")
+            info = snapshot["info"]
+            if info.get("id") != session_id:
+                raise ValueError("child export identity mismatch")
+            messages = snapshot.get("messages")
+            if not isinstance(messages, list):
+                raise ValueError("missing child messages")
+            assistants = [m.get("info", {}) if profile == "1" else m for m in messages if isinstance(m, dict)]
+            assistants = [m for m in assistants if m.get("role", m.get("type")) == "assistant"]
+            if (not assistants or assistants[-1].get("error") or assistants[-1].get("finish") != "stop"
+                    or (profile == "2" and info.get("outcome") != "succeeded")):
+                raise ValueError("child session not complete")
+            tokens = info.get("tokens")
+            if not complete_session_tokens(tokens):
+                raise ValueError("child token usage is incomplete")
+            stream.child_tokens.append(tokens)
+            stream.child_messages += len(assistants)
+            children, incomplete = snapshot_children(snapshot, profile)
+            stream.child_usage_incomplete |= incomplete
+            stream.child_sessions.update(children)
+            pending.extend(sorted(children - seen))
+            stream.record({"opencode_subagent_session": {"id": session_id,
+                           "outcome": info.get("outcome"), "tokens": tokens, "messages": messages}})
+        except (OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as exc:
+            stream.child_usage_incomplete = True
+            stream.record({"opencode_subagent_session": {"id": session_id, "error": type(exc).__name__}})
+    if stream.sessions - {stream.primary_session} - stream.child_sessions:
+        stream.child_usage_incomplete = True
 
 
 def stop_process_tree(process):
@@ -390,27 +530,37 @@ def run(task: dict, work: Path) -> int:
                 else:
                     print("OpenCode execution failed; inspect trace.jsonl", file=sys.stderr)
                 return 1
-            if len(stream.sessions) != 1:
-                raise ValueError("Expected exactly one OpenCode session in the JSON stream")
-            export_argv = [*prefix, *export_command, next(iter(stream.sessions))]
-            export = subprocess.Popen(export_argv, cwd=work, env=env,
-                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                      text=True, encoding="utf-8", errors="replace",
-                                      start_new_session=os.name != "nt")
+            if stream.primary_session is None:
+                raise ValueError("OpenCode did not identify its primary session")
+
+            def export_one(session_id):
+                remaining = expires - time.monotonic()
+                if remaining <= 0:
+                    raise ValueError("OpenCode session export exceeded the task deadline")
+                export = subprocess.Popen([*prefix, *export_command, session_id], cwd=work, env=env,
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                          text=True, encoding="utf-8", errors="replace",
+                                          start_new_session=os.name != "nt")
+                try:
+                    text, error = export.communicate(timeout=remaining)
+                except subprocess.TimeoutExpired:
+                    stop_process_tree(export)
+                    export.communicate()
+                    raise ValueError("OpenCode session export exceeded the task deadline")
+                if export.returncode or not text.strip():
+                    raise ValueError("OpenCode session export failed: " + redact(error[-800:], parent))
+                return json.loads(redact(text, parent))
+
             try:
-                snapshot_text, export_error = export.communicate(timeout=max(0.01, expires - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                stop_process_tree(export)
-                export.communicate()
-                raise ValueError("OpenCode session export exceeded the task deadline")
-            if export.returncode or not snapshot_text.strip():
-                record({"export": {"ok": False,
-                                   "exit_code": export.returncode,
-                                   "detail": redact(export_error[-800:], parent)}})
+                snapshot = export_one(stream.primary_session)
+            except (OSError, ValueError, TypeError) as exc:
+                record({"export": {"ok": False, "detail": redact(str(exc), parent)}})
+                if stream.child_sessions:
+                    stream.child_usage_incomplete = True
             else:
-                snapshot_text = redact(snapshot_text, parent)
-                (work / "opencode.session.json").write_text(snapshot_text, encoding="utf-8")
-                stream.reconcile(json.loads(snapshot_text), profile)
+                (work / "opencode.session.json").write_text(json.dumps(snapshot, ensure_ascii=False), encoding="utf-8")
+                stream.reconcile(snapshot, profile)
+                collect_child_sessions(stream, export_one, profile)
             answer, origin = save_answer(work, before, stream.final_text(), task=task)
             record({"submitted": True, "answer": answer, "answer_source": origin,
                     **({"submitted_files": submission_paths(task)} if origin == "files" else {})})

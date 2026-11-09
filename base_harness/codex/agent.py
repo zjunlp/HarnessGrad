@@ -65,6 +65,7 @@ class CodexTrace:
         self.record = record
         self.turns = 0
         self.reply = ""
+        self.delegated = False
 
     def feed(self, stdout: str) -> None:
         for line in (stdout or "").splitlines():
@@ -79,6 +80,11 @@ class CodexTrace:
             if not isinstance(event, dict):
                 continue
             kind, item = event.get("type"), event.get("item") or {}
+            if (isinstance(item, dict) and item.get("type") in ("collab_tool_call", "collab_agent_tool_call")
+                    and item.get("tool") in ("spawn_agent", "send_input", "resume_agent")):
+                # The exec JSON stream reports the parent turn's usage, not a
+                # verified complete accounting of the child threads.
+                self.delegated = True
             if kind != "item.completed" or not isinstance(item, dict):
                 if kind == "turn.completed" and isinstance(event.get("usage"), dict):
                     self.turns += 1
@@ -86,7 +92,12 @@ class CodexTrace:
                     # step; `calls` says the same thing in the usage record so a reader
                     # comparing the two can see them disagree.
                     self.record({"reply": self.reply})
-                    self.record({"usage": {**event["usage"], "calls": self.turns}})
+                    usage = {**event["usage"], "calls": self.turns}
+                    if self.delegated:
+                        usage = {**{key: None for key in event['usage']},
+                                 'calls': self.turns, 'scope': 'subagent_usage_incomplete',
+                                 'parent_thread': dict(event['usage'])}
+                    self.record({"usage": usage})
                 continue
             if item.get("type") == "agent_message":
                 self.reply = str(item.get("text") or "")
@@ -124,6 +135,18 @@ def _answer_stamp(path: Path):
         return None
 
 
+def task_prompt(task: dict) -> str:
+    goal = task.get("goal") or task.get("instruction")
+    if not isinstance(goal, str) or not goal.strip():
+        raise ValueError("task requires a non-empty goal")
+    prompt = ("Complete the following task in the current working directory. "
+              "Use the available tools and follow the task's delivery and environment instructions. "
+              "Write every file the task asks for exactly as asked.\n\n" + goal)
+    if task.get("inputs"):
+        prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+    return prompt
+
+
 def run(task: dict, workdir: Path) -> int:
     selected = _runtime()
     workdir = workdir.resolve()
@@ -139,9 +162,6 @@ def run(task: dict, workdir: Path) -> int:
     # answer (gsm8k's own goal names `answer.txt`), so a file the agent wrote is kept and
     # only the absence of one falls back to the CLI's channel.
     before = _answer_stamp(answer)
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise ValueError("task requires a non-empty goal")
     # **The final message is the hand-over, so do not ask for a description of it.**
     # Measured 2026-11-01 on `demo/t01` ("Answer with the word alpha"): this prompt said
     # "your final message should briefly describe the result", the model obliged with
@@ -149,12 +169,7 @@ def run(task: dict, workdir: Path) -> int:
     # exact-match verifier scored 0 -- for a reason the harness had created. The four
     # harnesses that scored 1.000 on the same task all say "answer only" instead
     # (`opencode`, `miniagent`, `openclaw`, and DSH's knobs.json preamble).
-    prompt = ("Complete the following task in the current working directory. "
-              "Use your tools to inspect and modify the actual task files. "
-              "Write every file the task asks for exactly as asked.\n\n"
-              + goal)
-    if task.get("inputs"):
-        prompt += "\n\nTask inputs:\n" + json.dumps(task["inputs"], ensure_ascii=False)
+    prompt = task_prompt(task)
     # Daily CLI defaults and other model roles must not select this task's
     # provider, credentials or profile. CODEX_HOME is supplied privately below.
     env = {k: v for k, v in os.environ.items()

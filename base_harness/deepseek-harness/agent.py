@@ -383,9 +383,9 @@ def _deadline() -> float:
 #: so the harness still runs when the file is absent or a key is dropped.
 KNOBS_FILE = Path(__file__).resolve().parent / "knobs.json"
 
-DEFAULT_PREAMBLE = ("Complete the following task. Everything you need is in the current working "
-                    "directory, and the work is the files you leave there rather than a "
-                    "description of them.\n\n")
+DEFAULT_PREAMBLE = ("Complete the following task in the current working directory. "
+                    "Use the available tools and follow the task's delivery and environment instructions. "
+                    "Write every file the task asks for exactly as asked.")
 DEFAULT_INPUTS_HEADER = "\n\nTask inputs:\n"
 
 
@@ -464,6 +464,18 @@ def _answer_stamp(path: Path):
         return None
 
 
+def task_prompt(task: dict, tun: dict) -> str:
+    goal = task.get("goal") or task.get("instruction")
+    if not isinstance(goal, str) or not goal.strip():
+        raise ValueError("task requires a non-empty goal")
+    prompt_cfg = tun.get("prompt") or {}
+    prompt = str(prompt_cfg.get("preamble") or DEFAULT_PREAMBLE).rstrip() + "\n\n" + goal
+    if task.get("inputs") and prompt_cfg.get("append_inputs", True):
+        prompt += str(prompt_cfg.get("inputs_header") or DEFAULT_INPUTS_HEADER) + json.dumps(
+            task["inputs"], ensure_ascii=False)
+    return prompt
+
+
 def run(task: dict, workdir: Path) -> int:
     workdir = workdir.resolve()
     workdir.mkdir(parents=True, exist_ok=True)
@@ -475,19 +487,13 @@ def run(task: dict, workdir: Path) -> int:
     # it answers. A file the agent wrote wins; the final message is the fallback.
     before = _answer_stamp(answer)
 
-    goal = task.get("goal") or task.get("instruction")
-    if not isinstance(goal, str) or not goal.strip():
-        raise ValueError("task requires a non-empty goal")
     tun = knobs()
-    prompt_cfg = tun.get("prompt") or {}
-    prompt = str(prompt_cfg.get("preamble") or DEFAULT_PREAMBLE) + goal
-    if task.get("inputs") and prompt_cfg.get("append_inputs", True):
-        prompt += str(prompt_cfg.get("inputs_header") or DEFAULT_INPUTS_HEADER) + json.dumps(
-            task["inputs"], ensure_ascii=False)
+    prompt = task_prompt(task, tun)
     prompt_path = workdir / ".dsh-task.txt"
     prompt_path.write_text(prompt, encoding="utf-8")
 
-    env = {k: v for k, v in os.environ.items() if not k.startswith("HG_METHOD_")}
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("HG_METHOD_", "HG_ENV_", "HG_JUDGE_"))}
     # **The one environment fact this harness has to add, and it is not optional.**
     #
     # DSH resolves loader-entry package names through Node's internal ESM loader, reached by
@@ -572,7 +578,7 @@ def run(task: dict, workdir: Path) -> int:
 
         measured = facts(env, home, prompt, patch, selected)
         record({"harness_identity": {"harness": "deepseek-harness",
-                                     "harness_version": "0.3.0",
+                                     "harness_version": "0.4.0",
                                      "agent_backend": "dsh-headless",
                                      "agent_model": model_ran,
                                      "agent_base_url": env.get("HG_AGENT_BASE_URL"),
@@ -781,6 +787,7 @@ def _record_session(events: list[dict], record) -> dict:
     turns = actions = 0
     tokens = {"input_tokens": 0, "output_tokens": 0, "cached_input_tokens": 0}
     seen_usage = False
+    delegated = False
     turn_end = format_version = None
     for event in events:
         kind, data = event.get("type"), event.get("data") or {}
@@ -797,6 +804,10 @@ def _record_session(events: list[dict], record) -> dict:
                     tokens[target] += value
                     seen_usage = True
         elif kind == "tool/call":
+            if str(data.get("name") or "").lower() in ("subagent", "spawn_agent"):
+                # DSH child sessions can have their own usage; this parent
+                # session log alone cannot establish the complete task cost.
+                delegated = True
             calls[str(data.get("callId"))] = {
                 "name": str(data.get("name") or ""),
                 "arguments": str(data.get("arguments") or ""),
@@ -831,6 +842,9 @@ def _record_session(events: list[dict], record) -> dict:
             format_version = event.get("version")
     if turns or seen_usage:
         usage = dict(tokens) if seen_usage else {}
+        if delegated:
+            usage = {**{name: None for name in tokens},
+                     "scope": "subagent_usage_incomplete", "parent_session": usage}
         usage["calls"] = turns
         record({"usage": usage})
     return {"events": len(events), "format_version": format_version, "turns": turns, "actions": actions,

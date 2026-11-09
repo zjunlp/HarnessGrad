@@ -214,9 +214,8 @@ what "cannot see the CLI's turns" costs.
 ### What a harness hands over, and who decides where
 
 **The task says what to deliver; the harness only keeps it.** That is the whole rule, and
-the reason there is no "write to `answer.txt`" sentence in any adapter's prompt (it was
-there until 2026-11-01, in six slightly different forms -- six places to drift, and two of
-them scored 0 for the harness's own wording).
+the reason adapter prompts must not impose a universal answer-file requirement.
+A prompt may mention `answer.txt` conditionally when the task calls for it.
 
 The platform knows the grading, so the platform writes the delivery requirement into the
 task's `goal` (`eval/run/task_contract.py:runtime_task`):
@@ -243,8 +242,7 @@ run wins (`answer_source: artifact`), otherwise the final message is written to
 `answer.txt` (`final_message`), and the source is on the trace either way.
 
 Verified on `demo/t01` ("Answer with the word alpha", an `answer`-kind fixture) after the
-move: all six adapters score 1.000 with a conformant trace, and no adapter prompt mentions
-`answer.txt` at all.
+move: all six adapters scored 1.000 with a conformant trace for that fixture.
 
 **What a harness cannot see.** `task.json` carries `goal`, `task_id`, `inputs` and
 `submission`; it does not carry the verifier kind. The injection happens *before* the task
@@ -293,8 +291,7 @@ lets its final message be the answer. Whichever it is, the adapter records which
    exit non-zero on failure.
 3. Model: read the six variables in section 1 and translate them into the CLI's own
    config; add a `mock` path so the harness runs with no network.
-4. Environment: write to the workdir, never read a verifier, and produce `answer.txt` per
-   section 5.
+4. Environment: work in the workdir, never read a verifier, and follow the task's delivery contract per section 5.
 5. Trace: the five clauses of section 4 — run `tools/check_trace_contract.py` until it says
    `OK`.
 6. Validate the source and run the smoke check for the declared runtime.
@@ -308,3 +305,7 @@ lets its final message be the answer. Whichever it is, the adapter records which
 Language, tools, prompts, control flow, memory, how many model calls, whether the harness
 calls a model at all. Those are what a method exists to change, and specifying them would
 make every harness the same harness.
+
+Native delegation can produce child sessions outside the parent transcript. Adapters
+should preserve available child evidence separately and mark total token usage unknown
+when the full session tree or its usage cannot be verified.

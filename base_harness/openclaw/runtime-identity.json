@@ -4,6 +4,7 @@
   "upstream_commit": "61d171a",
   "editable": [
     "agent.py",
+    "task_gateway.py",
     "prompt.md",
     "config.json",
     "mock_model.py"

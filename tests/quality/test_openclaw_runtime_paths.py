@@ -37,6 +37,7 @@ def package(root, version="2026.3.13"):
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import net from 'node:net';
 const args = process.argv.slice(2);
 const metadata = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url)));
 if (args.includes('--version')) {
@@ -47,6 +48,12 @@ if (args.includes('--version')) {
     console.log(metadata.version);
     process.exit(0);
 }
+if (args[0] === 'gateway') {
+    const port = Number(args[args.indexOf('--port') + 1]);
+    const server = net.createServer(s => s.end());
+    server.listen(port, '127.0.0.1');
+    process.on('SIGTERM', () => server.close(() => process.exit(0)));
+} else {
 assert.equal(args[0], 'agent');
 assert(args.includes('--local') && args.includes('--json'));
 const config = JSON.parse(fs.readFileSync(process.env.OPENCLAW_CONFIG_PATH));
@@ -78,6 +85,7 @@ const sessions = path.join(process.env.OPENCLAW_STATE_DIR, 'agents/main/sessions
 fs.mkdirSync(sessions, {recursive: true});
 fs.writeFileSync(path.join(sessions, session + '.jsonl'), rows.map(r => JSON.stringify(r)).join('\\n'));
 console.log(JSON.stringify({status: 'ok'}));
+}
 ''')
     entry.chmod(0o755)
     return entry

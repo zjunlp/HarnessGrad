@@ -97,6 +97,14 @@ def test_usage_is_real_and_calls_matches_the_turns(dsh):
                      "cached_input_tokens": 40, "calls": 1}
 
 
+def test_subagent_cost_is_unknown_when_only_parent_log_is_available(dsh):
+    rows, _, _ = _translate(dsh, _events('subagent'))
+    usage = [row['usage'] for row in rows if 'usage' in row][-1]
+    assert usage['input_tokens'] is None and usage['output_tokens'] is None
+    assert usage['parent_session']['input_tokens'] == 120
+    assert usage['scope'] == 'subagent_usage_incomplete'
+
+
 def test_the_command_carries_its_arguments_so_calls_are_not_counted_as_repeats(dsh):
     """`loop_facts` treats two equal `command` strings as a re-issue; a bare tool name would
     make every `web_fetch` look like a repeat of the previous one."""

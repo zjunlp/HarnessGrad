@@ -41,3 +41,10 @@ the transport, start a new run and measure again.
 To resume an experiment with a schema 2 OpenCode source binding, use the
 original platform revision and source binding. Start a new run when moving
 that experiment to an npm release.
+
+The task prompt does not prohibit native subagents. Parent and child sessions are
+recorded separately; child text cannot replace the parent answer. For 2.x, token
+usage is combined only when the complete session tree is available. The 1.x CLI
+can omit auxiliary requests from exports, so delegated total usage is marked
+unknown even when partial usage is available. Delegation can increase time and
+cost. Use a fresh baseline after this adapter change.
