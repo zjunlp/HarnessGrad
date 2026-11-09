@@ -118,6 +118,21 @@ def test_a_tool_without_an_exit_code_is_null_not_zero(dsh):
     assert facts["nonzero_returns"] == 0
 
 
+def test_v4_bash_result_without_exit_code_is_translated(dsh):
+    events = _events(result_text="(no output)", exit_code=None)
+    events[0]["version"] = 4
+    events[5]["data"].update(
+        message={"role": "tool", "source": {"kind": "tool", "callId": "call_1"},
+                 "toolCallId": "call_1", "content": [{"type": "text", "text": "(no output)"}]},
+        meta={"cwd": "/tmp"},
+    )
+    rows, summary, _ = _translate(dsh, events)
+    action = next(row for row in rows if "command" in row)
+    assert action["observation"] == {"kind": "shell", "returncode": None,
+                                     "output_chars": 11, "truncated": False}
+    assert summary["format_version"] == 4
+
+
 def test_a_failed_tool_result_keeps_its_error(dsh):
     events = _events(result_text="boom")
     events[5]["data"]["error"] = {"name": "ToolError", "code": "E_FAIL"}

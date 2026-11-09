@@ -7,7 +7,6 @@ Neither lifecycle scripts nor package downloads are permitted here.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import os
 import platform
@@ -18,7 +17,6 @@ import tempfile
 import time
 from pathlib import Path
 
-from harnessgrad.paths import main_checkout
 from eval.ckpt.source_tree import runtime_spec, BUN_GENERATED
 from eval.ckpt.bun_dependencies import (RuntimeUnavailable, source_files, dependency_identity,
                                    _module_dirs, attach_layout)
@@ -34,47 +32,20 @@ def _links_owned(source):
 
 
 def runtime_settings():
-    bun = Path(os.environ.get("HG_BUN_BINARY") or os.environ.get("HG_AGENT_OPENCODE_BUN")
-               or shutil.which("bun") or "").resolve()
-    cache_value = (os.environ.get("HG_BUN_CACHE") or os.environ.get("HG_OPENCODE_DEPENDENCY_CACHE")
-                   or os.environ.get("BUN_INSTALL_CACHE_DIR"))
+    bun = Path(os.environ.get("HG_BUN_BINARY") or shutil.which("bun") or "").resolve()
+    cache_value = os.environ.get("HG_BUN_CACHE") or os.environ.get("BUN_INSTALL_CACHE_DIR")
     if not bun.is_file() or not cache_value or not Path(cache_value).is_dir():
         raise RuntimeUnavailable("Bun requires a configured Bun binary and a populated offline dependency cache")
     return bun, Path(cache_value).resolve()
 
 
 def _declared_roots(repo) -> list[Path]:
-    """The `runtime_paths` a harness declares: the trees the platform binds read-only.
-
-    A bun candidate normally carries its own source, and the platform's rule has been that it
-    must -- `state_after_round<N>/` is a copy of the tree, and a candidate whose source lives
-    somewhere else is not the artifact anyone measured. That rule broke on real harnesses:
-    `opencode` needs the opencode monorepo, 224 MB and 4,689 packages, and every round
-    would copy it into the run record and re-hash it.
-
-    So a harness may now **declare** its source outside the candidate: the path goes in the
-    manifest's `runtime_paths`, which is already the platform's own declaration of "bind this
-    for the harness". Nothing is admitted that the manifest did not name, and the platform
-    still binds it read-only -- the boundary moves from "must be inside" to "must be declared".
-    """
+    """Read the manifest paths the platform binds read-only for external sources."""
     try:
         manifest = json.loads((Path(repo) / "harness.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     return [Path(str(entry)).expanduser() for entry in manifest.get("runtime_paths") or []]
-
-
-def _prepared_installation(repo, env=None):
-    manifest = json.loads((Path(repo) / "harness.json").read_text(encoding="utf-8"))
-    if "_opencode_runtime" not in manifest:
-        return None
-    # Use the shipped trusted helper, never Python from a candidate checkout.
-    root = Path(__file__).resolve().parents[2]
-    path = root / "base_harness/opencode/opencode_runtime.py"
-    spec = importlib.util.spec_from_file_location("_platform_opencode_runtime", path)
-    helper = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(helper)
-    return helper.resolve(Path(repo), {} if env is None else env, forbidden=(root, main_checkout(root)))
 
 
 def owned_source(repo):
@@ -89,16 +60,12 @@ def owned_source(repo):
     if spec is None or spec["kind"] != "bun":
         return None
     root = Path(repo).resolve()
-    prepared = _prepared_installation(root)
-    if prepared is not None:
-        return spec, Path(prepared["source"]), Path(prepared["entrypoint"]), True
     candidates = [root] + _declared_roots(root)
     for index, base in enumerate(candidates):
         base = base.resolve()
         # A declared entry may *be* the source tree, or may *contain* a directory named by
         # `runtime.source`. Both are unambiguous once the entrypoint has to exist inside it,
-        # and the narrower one is what lets a manifest bind the source without binding its
-        # siblings: `.../prior-art/opencode` rather than all of `.../prior-art`.
+        # and the narrower one lets a manifest bind just the source directory.
         source = base if (index and base.name == spec["source"]) else (base / spec["source"]).resolve()
         if not index and not source.is_relative_to(root):
             continue
@@ -117,23 +84,15 @@ def owned_source(repo):
 
 
 def admit(repo, env):
-    """Formal execution cannot opt into the adapter's external-source diagnostic."""
+    """Resolve a declared Bun source and reject conflicting environment overrides."""
     try:
         spec = runtime_spec(repo)
-        if spec is not None and spec["kind"] != "bun":
-            return {}
-        if env.get("HG_AGENT_OPENCODE_EXTERNAL_SOURCE") not in (None, "", "0"):
-            raise RuntimeUnavailable("External source diagnostic mode is forbidden in formal execution")
         if spec is None or spec["kind"] != "bun":
             return {}
-        prepared = _prepared_installation(repo, env)
-        if prepared is not None:
-            return {"HG_HARNESS_SOURCE": prepared["source"], "HG_HARNESS_ENTRYPOINT": prepared["entrypoint"]}
         _, source, entry, _external = owned_source(repo)
-        for name, expected in (("HG_AGENT_OPENCODE_SOURCE", source),
-                               ("HG_HARNESS_SOURCE", source), ("HG_HARNESS_ENTRYPOINT", entry)):
+        for name, expected in (("HG_HARNESS_SOURCE", source), ("HG_HARNESS_ENTRYPOINT", entry)):
             if env.get(name) and Path(env[name]).resolve() != expected:
-                raise RuntimeUnavailable("Source override is diagnostic-only; execute the declared candidate")
+                raise RuntimeUnavailable(f"{name} differs from the declared Bun runtime")
         return {"HG_HARNESS_SOURCE": str(source), "HG_HARNESS_ENTRYPOINT": str(entry)}
     except (OSError, ValueError) as exc:
         raise RuntimeUnavailable(str(exc)) from exc
@@ -159,9 +118,7 @@ def validate_source(repo: Path, *, raise_runtime_errors: bool = False) -> list[s
             return []
         _, source, _, external = owned
         if external:
-            # An external tree is prepared by whoever installed it, not by this platform, and
-            # re-transpiling 4,689 packages on every round would cost more than the run. Its
-            # identity is recorded by the harness, not checked here.
+            # External trees are prepared by their installer and mounted read-only.
             return []
         bun, _ = runtime_settings()
         _links_owned(source)
@@ -323,43 +280,20 @@ def _prepare(repo: Path, *, build: bool, attach: bool = True) -> dict | None:
     declaration = runtime_spec(repo)
     if declaration is None or declaration["kind"] != "bun":
         return None
-    prepared = _prepared_installation(repo)
-    owned = ((declaration, Path(prepared["source"]), Path(prepared["entrypoint"]), True)
-             if prepared is not None else owned_source(repo))
+    owned = owned_source(repo)
     repo = repo.resolve()
     _owned_state(repo)
     spec, source, entry, external = owned
     if external:
-        if prepared is not None:
-            binary = prepared["binary"]
-            binary_sha256 = next(row["sha256"] for row in prepared["files"] if row["path"] == binary)
-            key = "external-" + hashlib.sha256(json.dumps(
-                {"source": str(source), "inventory": prepared["inventory"], "binary": binary_sha256,
-                 "files": prepared["files"], "runtime_paths": prepared["runtime_paths"],
-                 "declaration": spec}, sort_keys=True).encode()).hexdigest()
-            identity = {"kind": "bun", "binary_sha256": binary_sha256, "version": prepared["bun_version"],
-                        "dependency_key": key, "store_sha256": None, "declaration": spec,
-                        "external_source": str(source), "prepared_installation": {
-                            "inventory": prepared["inventory"], "files": prepared["files"],
-                            "runtime_paths": prepared["runtime_paths"]},
-                        "system": platform.system(), "arch": platform.machine(), "responses_overlay": None}
-            return {"kind": "bun", "dependency_key": key, "bun_version": prepared["bun_version"],
-                    "identity": identity, "binary": binary, "execution_binary": binary,
-                    "source": str(source), "external": True, "offline": True, "installed": True,
-                    "cache_hit": True, "backend": "prepared-external-tree", "system": platform.system(),
-                    "arch": platform.machine(), "runtime_paths": prepared["runtime_paths"], "seconds": 0.0}
         # **A declared external source is already installed; preparation is admitting it.**
         # Copying or linking into it would write to a tree the platform bound read-only, and
         # the offline store this function builds exists for candidates that carry their own
         # source and rely on a cache. This tree carries its own `node_modules`, so the receipt
         # names the paths the harness needs and nothing is touched.
-        bun = Path(os.environ.get("HG_BUN_BINARY")
-                   or os.environ.get("HG_AGENT_OPENCODE_BUN")
-                   or shutil.which("bun") or "").resolve()
+        bun = Path(os.environ.get("HG_BUN_BINARY") or shutil.which("bun") or "").resolve()
         if not bun.is_file():
             raise RuntimeUnavailable(
-                "An external Bun source needs a Bun binary: set HG_BUN_BINARY or "
-                "HG_AGENT_OPENCODE_BUN")
+                "An external Bun source needs a Bun binary; set HG_BUN_BINARY or put bun on PATH")
         with tempfile.TemporaryDirectory(prefix="hg-bun-version-") as neutral:
             version = _run([str(bun), f"--config={os.devnull}", "--no-env-file", "--no-install", "--no-macros", "--version"],
                            cwd=neutral, env={"PATH": os.defpath, "HOME": neutral}).strip()

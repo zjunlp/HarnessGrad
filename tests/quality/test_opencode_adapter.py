@@ -76,6 +76,15 @@ class AdapterTests(unittest.TestCase):
         self.assertTrue(stream.provider_errors)
         self.assertEqual(stream.usage()["input_tokens"], None)
 
+    def test_released_shell_events_report_observed_exit_codes(self):
+        for tool, metadata in (("bash", {"exit": 7}), ("shell", {"metadata": {"exit": 7}})):
+            with self.subTest(tool=tool):
+                _, records = self.collect([event("tool_use", tool=tool, state={
+                    "input": {"command": "exit 7"}, "metadata": metadata,
+                })])
+                command = next(row for row in records if "command" in row)
+                self.assertEqual(command["observation"]["returncode"], 7)
+
     def test_length_finish_is_not_a_completed_answer(self):
         stream, _ = self.collect([event("text", text="partial"),
                                   event("step_finish", reason="length")])
@@ -106,6 +115,14 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(stream.final_text(), "alpha")
         self.assertEqual(stream.usage()["task_steps"]["input_tokens"], 40)
         self.assertEqual(stream.usage()["completed_steps"], 1)
+
+    def test_v1_export_uses_assistant_info_and_parts(self):
+        stream, _ = self.collect([event("text", text="alpha")])
+        stream.reconcile({"info": {"id": "s1"}, "messages": [
+            {"info": {"id": "m1", "role": "assistant", "finish": "stop"},
+             "parts": [{"type": "text", "text": "alpha"}]},
+        ]}, "1")
+        self.assertEqual(stream.final_text(), "alpha")
 
     def test_rejects_wrong_session_failed_or_truncated_export(self):
         for variation in ("session", "outcome", "finish"):
@@ -155,17 +172,6 @@ class AdapterTests(unittest.TestCase):
         self.assertIn("\u591a\u6b65\u4efb\u52a1", prompt)
         self.assertIn("report.xlsx", prompt)
         self.assertNotIn("briefly describe", prompt)
-
-    def test_source_hash_changes_with_typescript_not_dependency_cache(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "main.ts").write_text("export const n = 1")
-            first = self.adapter.source_hash(root)
-            (root / "node_modules").mkdir()
-            (root / "node_modules/ignored.js").write_text("different cache")
-            self.assertEqual(first, self.adapter.source_hash(root))
-            (root / "main.ts").write_text("export const n = 2")
-            self.assertNotEqual(first, self.adapter.source_hash(root))
 
     def test_short_platform_deadline_is_respected(self):
         self.assertLessEqual(self.adapter.timeout_seconds({

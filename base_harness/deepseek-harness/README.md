@@ -1,4 +1,28 @@
-# DSH Harness runtime preparation
+# DeepSeek Harness installation
+
+On Linux x86-64, this command installs the verified npm release and binds it to
+an experiment Harness copy.
+
+```sh
+HARNESS_DIR=$(harnessgrad harness install deepseek-harness --version 0.2.2-rc.1)
+harnessgrad run --harness-path "$HARNESS_DIR" ...
+```
+
+Omit `--version` to select the latest verified release, currently the
+`0.2.2-rc.1` prerelease. The installer prints its selection on stderr. Explicit
+versions outside the verified list emit a warning and go through the same
+installation and sandbox probes.
+
+The installer uses Node.js `24.22.2` and npm `11.19.1` in the experiment store.
+Use `--install-root` to choose a store. It locks and installs `@deepseek-ai/dsh`
+with npm lifecycle scripts disabled, checks the CLI version, and boots the
+headless profile in a sandbox with network disabled. The prepared copy binds
+the installed npm tree and exact Node. The npm release resolves its plugins
+from that tree and uses a task-local DSH home. The bound Node also decodes
+compressed session logs. In this release the Bash session event omits the exit
+code, so the trace records `returncode: null` for that event.
+
+## Preparing a source checkout
 
 The shipped manifest contains no host installation paths. Prepare the Harness
 copy that will be measured with an existing, built DSH checkout and an isolated
@@ -54,7 +78,7 @@ For a Python wrapper, this includes the venv and any base interpreter installati
 not already provided by the sandbox.
 
 The selected argv is shared by task execution and configuration inspection. The
-loader probe and plugin farm use that same selected installation. A scratch HOME
+source loader probe and plugin farm use that same selected installation. A scratch HOME
 is still required; the existing operator-home refusal and model patch remain in
 effect.
 

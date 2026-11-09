@@ -585,8 +585,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     if bun_preparation:
         runtime_receipt["bun"] = bun_preparation
         execution_binary = bun_preparation.get("execution_binary", bun_preparation["binary"])
-        bun_environment.update(HG_AGENT_OPENCODE_BUN=execution_binary,
-                               HG_HARNESS_BUN=execution_binary)
+        bun_environment["HG_HARNESS_BUN"] = execution_binary
         if bun_preparation.get("responses_overlay"):
             bun_environment["HG_RESPONSES_OVERLAY_SHA256"] = bun_preparation["responses_overlay"]["identity"]["sha256"]
     runtime_paths = tuple(Path(p).expanduser()

@@ -20,13 +20,15 @@ HARNESS = ROOT / "base_harness" / "openclaw"
 
 @pytest.fixture(scope="module")
 def prepared_harness(tmp_path_factory):
-    from tools.configure_openclaw_harness import configure
+    from tools.configure_openclaw_harness import configure, source_identity
 
     selected = os.environ.get("HG_AGENT_OPENCLAW") or shutil.which("openclaw")
+    version = os.environ.get("HG_OPENCLAW_TEST_VERSION", "2026.3.13")
     if selected is None:
-        pytest.skip("OpenClaw 2026.3.13 is not installed; synthetic runtime controls run separately")
+        pytest.skip(f"OpenClaw {version} is not installed; synthetic runtime controls run separately")
     harness = tmp_path_factory.mktemp("openclaw-real-install") / "harness"
     shutil.copytree(HARNESS, harness)
+    (harness / "runtime-identity.json").write_text(json.dumps(source_identity(version)), encoding="utf-8")
     configure(harness, selected, env=dict(os.environ))
     return harness
 
@@ -107,6 +109,19 @@ def test_config_uses_one_platform_endpoint_and_model(tmp_path):
     assert providers["harnessgrad"]["models"][0]["maxTokens"] == 512
     assert config["agents"]["defaults"]["model"] == {"primary": "harnessgrad/test-model", "fallbacks": []}
     assert config["agents"]["defaults"]["workspace"] == str(tmp_path)
+
+
+def test_entries_configuration_uses_current_model_and_exec_fields(tmp_path):
+    agent = _agent()
+    config = agent.configuration({"HG_AGENT_CONTEXT_WINDOW": "16384"}, "http://127.0.0.1:9999/v1",
+                                 "test-model", tmp_path, 30, profile=agent._PROFILES["entries"])
+    assert config["agents"]["entries"] == {"main": {"workspace": str(tmp_path), "skills": []}}
+    defaults = config["agents"]["defaults"]
+    assert defaults["modelPolicy"]["allow"] == ["harnessgrad/test-model"]
+    assert "models" not in defaults and "contextTokens" not in defaults
+    provider_model = config["models"]["providers"]["harnessgrad"]["models"][0]
+    assert provider_model["contextTokens"] == 16384
+    assert config["tools"]["exec"] == {"host": "gateway", "mode": "full", "timeoutSeconds": 30}
 
 
 def test_task_deadline_is_distinct_from_provider_timeout():

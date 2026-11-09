@@ -223,7 +223,7 @@ def test_python_entrypoint_cannot_live_in_ignored_state(candidate, entry):
 
 def test_bun_admission_ignores_python_without_invoking_bun(candidate, monkeypatch):
     monkeypatch.setattr(bun_runtime, 'runtime_settings', Mock(side_effect=AssertionError('called Bun')))
-    assert bun_runtime.admit(candidate, {'HG_AGENT_OPENCODE_EXTERNAL_SOURCE': '1'}) == {}
+    assert bun_runtime.admit(candidate, {'HG_HARNESS_SOURCE': '/unused-bun-source'}) == {}
     assert bun_runtime.prepare(candidate) is None and bun_runtime.identity(candidate) is None
 
 

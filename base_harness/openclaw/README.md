@@ -1,9 +1,9 @@
 # OpenClaw harness
 
-This is a wrapper around **OpenClaw 2026.3.13 (`61d171a`)**. The checked-in
-Harness is a portable adapter template; OpenClaw and Node are external read-only
-dependencies. The installed Node must be at least 22.12.0. Selecting a different
-OpenClaw release requires a separate adapter compatibility review.
+Harness adapter `0.3.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
+**2026.3.13 (`61d171a`)**. The checked-in Harness is a portable adapter template. OpenClaw
+and Node are external read-only dependencies. Each reviewed release selects an
+adapter profile for its configuration and session format.
 
 `agent.py --task task.json --workdir <dir>` runs the real installed CLI via
 `node openclaw.mjs agent --local --json`. It does not start a gateway daemon,
@@ -12,7 +12,35 @@ fresh HOME/XDG/config/auth/session directories which are removed on exit.
 
 ## Prepare a local installation
 
-Copy the template, then prepare that copy before recording its candidate identity:
+On Linux x86-64 with Bubblewrap and network access, install a dedicated copy
+with the bundled HarnessGrad command. Both supported releases use Node.js
+24.22.2 and npm 11.19.1.
+
+```sh
+harnessgrad harness list
+harnessgrad harness install openclaw
+```
+
+The installer defaults to the latest verified release in `harnessgrad harness list`,
+currently `2026.11.2`. It reports the selected version on stderr. Use `--version`
+to select an exact `YYYY.M.D` release. An unlisted release produces a warning
+on stderr and is tried with the latest verified release's adapter profile.
+The binding records the exact release and its unverified status. Its config
+and session format must work with that profile for evaluation to succeed.
+
+The command prints the prepared directory for `harnessgrad run --harness-path`.
+Use `--install-root` to choose a dedicated runtime store outside the platform
+checkout and `/tmp`. The default is `harnessgrad/base-harnesses` under the user
+data directory. The installer retains the npm lockfile and rechecks the binding
+when reusing an installation. It uses `npm ci --ignore-scripts` to install from
+the lockfile. For 2026.11.2 and unverified releases, it then targets the locked
+OpenClaw package directory with `npm rebuild` to run that package's lifecycle
+scripts in the installation sandbox. Verified releases use a pinned package
+digest. For other releases, npm checks the archive against the digest recorded
+in the lockfile for the exact registry tarball.
+
+The checked-in template carries the portable identity of 2026.3.13. To bind
+an existing installation of that release, copy and prepare the template:
 
 ```sh
 cp -a base_harness/openclaw /path/to/openclaw-harness-copy
@@ -25,6 +53,10 @@ Preparation discovers `openclaw` and `node` on PATH once. To choose an installat
 python3 tools/configure_openclaw_harness.py /path/to/openclaw-harness-copy \
   --openclaw /path/to/openclaw --node /path/to/node
 ```
+
+To bind a different installed release, add `--version` with its exact version.
+Preparation warns for unverified releases and checks the package metadata and
+CLI output against that selection.
 
 The corresponding optional settings are `HG_AGENT_OPENCLAW` and `HG_OPENCLAW_NODE`.
 The tool reads the main checkout `.env`, a worktree `.env` if present, then the
@@ -54,28 +86,44 @@ python3 tools/configure_openclaw_harness.py /path/to/openclaw-harness-copy \
 The preparation-only setting `HG_OPENCLAW_RUNTIME_PATHS` accepts a JSON array of
 path strings, for example `'["/path/to/dedicated-dependency"]'`. Repeatable
 `--runtime` arguments replace that list. The same setting is accepted by the
-real-CLI mock test fixture. Additional aliases select physical dependencies once.
+real-CLI mock test fixture, which takes `HG_OPENCLAW_TEST_VERSION` to select a
+reviewed release. Additional aliases select physical dependencies once.
 Linked package targets can be collected automatically when their lookup links
 are inside an existing binding. npm-link/pnpm layouts with lookup links outside
 those bindings require an explicit directory containing the links and must pass
 the native projection check. A launcher or `package.json` symlink escaping its
 package is refused.
 
-The tool checks package and CLI versions, and runs Node/OpenClaw version probes on
-the host and in a network-isolated native sandbox. The probes use fresh HOME/XDG/
+The tool checks package and CLI versions, and runs Node/OpenClaw version probes
+in a network-isolated native sandbox. Verified releases also get a matching
+host probe. The package and CLI versions must match the exact selection or the
+copy's portable identity when no selection is supplied. The probes use fresh HOME/XDG/
 OpenClaw state directories and an environment without personal settings or model
 credentials. Bubblewrap is required. Hidden `/tmp` installations, overlap with the
 platform or Harness copy, shared temporary roots and broad HOME/system/configuration
 directory bindings are refused before writing the manifest.
 
 One atomic `harness.json` replacement records both `runtime_paths` and the
-adapter-owned `_openclaw_runtime` identity. `runtime-identity.json` retains only
-portable version/source metadata. Tasks use the recorded Node and launcher, verify
-file hashes, the npm dependency graph, binding types and symlink targets, and
-report them in `trace.jsonl`.
+adapter-owned `_openclaw_runtime` identity. `runtime-identity.json` holds the
+portable version/source identity and the profile for 2026.11.2. Tasks use the
+recorded Node and launcher, verify file hashes, the npm dependency graph,
+binding types and symlink targets, and report them in `trace.jsonl`.
 Changing PATH does not select a new installation. An override must match the
 prepared choice; an unprepared template, changed installation or inconsistent
 record produces a preparation diagnostic. Prepare again to select another installation.
+
+With `harnessgrad run --harness-path`, the evaluation entrypoint checks the
+supplied copy's prepared binding, including its version identity and file
+hashes. It does not consult the installer's release list. A custom copy bound
+to another version can pass runtime admission if its binding validates. Its
+adapter must also support that version's configuration and session format for
+the task to complete.
+
+The 2026.11.2 profile writes the keyed agent configuration and reads transcript
+messages through `sessions export-trajectory`. The export stays in the task's
+private OpenClaw state. The 2026.3.13 profile reads the native JSONL session.
+Both profiles translate replies, completed tool calls and usage into the same
+HarnessGrad trace format.
 
 ## Editable surface
 

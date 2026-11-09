@@ -24,10 +24,16 @@ def digest(path: Path) -> str:
 
 def identity(harness: Path) -> dict:
     expected = json.loads((harness / "runtime-identity.json").read_text(encoding="utf-8"))
+    return _source_identity(expected)
+
+
+def _source_identity(expected: dict) -> dict:
     if (not isinstance(expected, dict) or expected.get("source") != "openclaw"
             or not isinstance(expected.get("version"), str)
             or not re.fullmatch(r"\d{4}\.\d+\.\d+", expected["version"])
-            or not isinstance(expected.get("upstream_commit"), str)
+            or (not isinstance(expected.get("upstream_commit"), str)
+                and not (expected.get("verified") is False and expected.get("upstream_commit") is None))
+            or not isinstance(expected.get("adapter_profile", "list"), str)
             or any(name in expected for name in ("entrypoint", "package_root", "node"))):
         raise ValueError(f"invalid portable OpenClaw identity; {REMEDY}")
     return expected
@@ -260,7 +266,8 @@ def _resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...]) -> dict:
     if not isinstance(record, dict) or record.get("schema") != 1:
         raise ValueError(f"OpenClaw Harness is not prepared; {REMEDY}")
     expected = identity(harness)
-    if record.get("source_identity") != expected or record.get("version") != expected["version"]:
+    source = _source_identity(record.get("source_identity"))
+    if record.get("template_identity", source) != expected or record.get("version") != source["version"]:
         raise ValueError(f"OpenClaw prepared source identity changed; {REMEDY}")
     names = ("node", "entrypoint", "package_root")
     files, bindings = record.get("files"), record.get("runtime_paths")
@@ -324,8 +331,11 @@ def _resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...]) -> dict:
         if override and override != record["selection"][name] and executable(override, env) != prepared:
             raise ValueError(f"OpenClaw {variable} override differs from the prepared installation; {REMEDY}")
     node_version(record["node_version"])
-    cli_version(record["version_output"], expected["version"])
+    cli_version(record["version_output"], source["version"])
     check_files(record, forbidden=(*forbidden, harness))
+    metadata = json.loads((package / "package.json").read_text(encoding="utf-8"))
+    if metadata.get("name") != "openclaw" or metadata.get("version") != source["version"]:
+        raise ValueError(f"OpenClaw prepared package version differs from the binding; {REMEDY}")
     executable(str(node), {"PATH": ""})
     return record
 

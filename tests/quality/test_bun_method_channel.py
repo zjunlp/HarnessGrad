@@ -175,19 +175,19 @@ def test_formal_round_preserves_public_channel_and_cli_dispatch(tmp_path, monkey
             train_ids=["train"], improver=improver)
 
 
-def _bun_candidate(root, source_name="opencode"):
+def _bun_candidate(root, source_name="engine"):
     root.mkdir(parents=True, exist_ok=True)
     (root / "harness.json").write_text(json.dumps({
-        "name": "opencode-agent", "version": "0.1.0", "entrypoint": "agent.py",
+        "name": "bun-fixture", "version": "0.1.0", "entrypoint": "agent.py",
         "backend": "cli",
         "runtime": {"kind": "bun", "source": source_name,
-                    "entrypoint": "packages/cli/src/index.ts", "package": "@opencode/cli"},
+                    "entrypoint": "packages/cli/src/index.ts", "package": "@sample/cli"},
     }))
     (root / "agent.py").write_text("raise SystemExit(0)\n")
     return root
 
 
-def _external_source(base, source_name="opencode"):
+def _external_source(base, source_name="engine"):
     source = base / source_name
     (source / "packages/cli/src").mkdir(parents=True, exist_ok=True)
     (source / "packages/cli/src/index.ts").write_text("// entry\n")
@@ -195,13 +195,7 @@ def _external_source(base, source_name="opencode"):
 
 
 def test_a_declared_external_bun_source_is_admitted(tmp_path):
-    """A harness may name its source outside the candidate, through `runtime_paths`.
-
-    `opencode` is a 224 MB monorepo with 4,689 packages. Requiring it inside the candidate
-    would put 224 MB into every `state_after_round<N>/` and into every content address, so the
-    rule is "inside the candidate, or declared in the manifest" -- and declared is executable:
-    the platform binds exactly the paths a manifest names.
-    """
+    """A harness may name its source outside the candidate through `runtime_paths`."""
     from eval.containers import bun_runtime
 
     external = _external_source(tmp_path / "prior-art")
@@ -230,7 +224,7 @@ def test_a_source_inside_the_candidate_is_still_owned(tmp_path):
     from eval.containers import bun_runtime
 
     candidate = _bun_candidate(tmp_path / "candidate")
-    _external_source(candidate, "opencode")
+    _external_source(candidate)
     spec, source, entry, is_external = bun_runtime.owned_source(candidate)
     assert is_external is False
     assert source.is_relative_to(candidate.resolve())

@@ -523,9 +523,9 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     if selftest:
         guide = ("Prepared dependencies are attached before this turn; do not install packages.\n"
                  "Workspace imports resolve into this candidate; third-party packages are shared read-only.\n"
-                 "Run public source tests from the candidate root (OpenCode examples):\n"
-                 "  .state/self-test unit packages/core test/tool-read-filesystem.test.ts\n"
-                 "  .state/self-test typecheck packages/core\n"
+                 "Run public source tests from the candidate root using the declared workspace paths.\n"
+                 "  .state/self-test unit packages/example test/example.test.ts\n"
+                 "  .state/self-test typecheck packages/example\n"
                  "Other packages/test files may be selected. Each call has a 120-second limit, "
                  "no network and no inherited credentials. Test failures/timeouts are not passes.\n"
                  "The runtime dependency cache may omit root development dependencies: full typecheck "

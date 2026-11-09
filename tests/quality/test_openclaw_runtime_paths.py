@@ -14,6 +14,7 @@ import pytest
 
 from base_harness.openclaw import openclaw_runtime as runtime
 from tools import configure_openclaw_harness as preparation
+from tools import install_harness
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -583,6 +584,57 @@ def test_override_cannot_switch_installations(installed):
     with pytest.raises(ValueError, match="differs from the prepared"):
         runtime.resolve(harness, {"HG_AGENT_OPENCLAW": str(other)})
     assert runtime.resolve(harness, {"HG_OPENCLAW_NODE": str(node)})["node"] == str(node)
+
+
+@needs_bwrap
+def test_explicit_unverified_version_binds_with_a_warning(installed, monkeypatch, capsys):
+    harness, launcher, node, _ = installed
+    version = "2026.11.3"
+    declare(launcher.resolve(), version=version)
+    probe = preparation._probe
+
+    def sandbox_only(selected, *, native):
+        assert native
+        return probe(selected, native=native)
+
+    monkeypatch.setattr(preparation, "_probe", sandbox_only)
+    record = preparation.configure(harness, str(launcher), node=str(node),
+                                   env={"PATH": os.defpath}, version=version)
+    assert f"Warning: OpenClaw {version} is unverified" in capsys.readouterr().err
+    assert record["source_identity"]["verified"] is False
+    assert record["source_identity"]["upstream_commit"] is None
+    assert record["source_identity"]["adapter_profile"] == "entries"
+    assert runtime.resolve(harness, {})["version"] == version
+
+
+@needs_bwrap
+def test_install_and_reuse_explicit_unverified_version(installed, monkeypatch, capsys):
+    _, _, node, root = installed
+    version = "2026.11.3"
+    integrity = preparation.RELEASES["2026.11.2"].integrity
+    monkeypatch.setattr(install_harness, "_toolchain", lambda _root: node.parent.parent)
+
+    def install_package(instance, _node_root, release):
+        assert release.version == version and release.integrity is None
+        project = instance / "package"
+        package(project / "node_modules/openclaw", version)
+        lockfile = project / "package-lock.json"
+        lockfile.write_text(json.dumps({"packages": {"node_modules/openclaw": {
+            "version": version, "integrity": integrity,
+            "resolved": f"https://registry.npmjs.org/openclaw/-/openclaw-{version}.tgz",
+        }}}))
+        return lockfile
+
+    monkeypatch.setattr(install_harness, "_install_package", install_package)
+    args = ["install", "openclaw", "--version", version, "--install-root", str(root / "store")]
+    assert install_harness.main(args) == 0
+    first = capsys.readouterr()
+    assert first.err.count(f"Warning: OpenClaw {version} is unverified") == 1
+    assert runtime.resolve(Path(first.out.strip()), {})["source_identity"]["verified"] is False
+    assert install_harness.main(args) == 0
+    reused = capsys.readouterr()
+    assert reused.out == first.out
+    assert reused.err == first.err
 
 
 @needs_bwrap

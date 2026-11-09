@@ -19,8 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULES = ("responses_transport.mjs", "responses_capture.mjs", "responses_preload.mjs")
 LIMITS = {"maxRequestBytes": 4*1024*1024, "maxRunBytes": 16*1024*1024,
           "maxEventBytes": 1024*1024, "maxEvents": 20000}
-ARTIFACTS = (".responses/http.jsonl", ".responses/status.json", "opencode.events.jsonl",
-             "opencode.stderr.log", "opencode.session.json")
+ARTIFACTS = (".responses/http.jsonl", ".responses/status.json")
 
 
 def digest(value):
@@ -37,9 +36,8 @@ def _spec(bun, route, mode, allow_loopback):
     if mode not in ("observe", "repair"):
         raise ValueError("Responses overlay mode must be observe or repair")
     bun = Path(bun).resolve(strict=True)
-    # /bin/sh resets inherited PWD to cwd. OpenCode deliberately launches from
-    # its package directory with PWD naming the task. Recover that trusted task
-    # directory from the runner-owned capture path before executing real Bun.
+    # /bin/sh resets inherited PWD to cwd. When the source directory is cwd,
+    # recover the task directory from the runner-owned capture path.
     launcher = ('#!/bin/sh\ncase "$HG_RESPONSES_ARTIFACT_DIR" in\n'
                 '  /*/.responses) export PWD="${HG_RESPONSES_ARTIFACT_DIR%/.responses}" ;;\n'
                 '  *) echo "Responses launcher requires a task capture directory" >&2; exit 64 ;;\n'

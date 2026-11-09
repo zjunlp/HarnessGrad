@@ -1,6 +1,6 @@
 {
   "name": "opencode",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
@@ -10,13 +10,7 @@
     "exec"
   ],
   "runtime_paths": [],
-  "runtime": {
-    "kind": "bun",
-    "source": "opencode",
-    "entrypoint": "packages/opencode/src/index.ts",
-    "package": "opencode"
-  },
-  "notes": "Prepare an external OpenCode v1 installation with tools/configure_opencode_harness.py. The prepared manifest fixes the source tree, Bun executable and read-only bindings; checkpoints carry the adapter and its installation identity, not a copy of the source/dependency tree. Candidate-owned Bun source continues to use tools/configure_bun_harness.py. Container environments still require compatible runtime provisioning.",
+  "notes": "Install a dedicated OpenCode release with harnessgrad harness install opencode. The prepared manifest pins the native CLI and its package metadata.",
   "components": {
     "control": [
       "harness.json"

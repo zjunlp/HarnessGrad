@@ -7,9 +7,9 @@
       "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}}]
   }}},
   "agents": {"defaults": {"model": {"primary": "harnessgrad/task-model", "fallbacks": []},
-    "models": {"harnessgrad/task-model": {}}, "skipBootstrap": true,
+    "skipBootstrap": true,
     "thinkingDefault": "off"}},
   "tools": {"allow": ["read", "write", "edit", "exec"],
-    "exec": {"host": "gateway", "security": "full", "ask": "off", "timeoutSec": 300}},
+    "exec": {"host": "gateway"}},
   "skills": {"allowBundled": []}
 }
