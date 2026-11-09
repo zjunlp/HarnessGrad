@@ -53,7 +53,10 @@ def test_launch_method_options(language, default):
         assert options[1:] == [['gepa', 'GEPA'], ['noop', 'No-op'], ['A', 'A'], ['future_<"&', 'future_<"&']]
         assert options[0][0] == 'none'
         assert options[0][1] == ('No method (single-point measurement)' if language == 'en' else '不使用方法（只测一个点）')
+        assert '4' in page.locator('#preset-hint').inner_text()
         assert page.locator('#f-method').input_value() == 'none'
+        assert page.locator('#f-rounds').input_value() == '0'
+        assert previews[-1]['rounds'] == 0
         page.locator('#f-method').select_option('future_<"&')
         page.wait_for_function("() => document.querySelector('#f-method').value === 'future_<\"&'")
         page.wait_for_timeout(100)

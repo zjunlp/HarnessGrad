@@ -34,7 +34,8 @@
     const methodRows = window.HGLaunchMethods.rows(FORM.methods || [], t("ls.47"));
     card.method = window.HGLaunchMethods.selected(methodRows, card.method, d.method);
     if (d.rounds) card.rounds = d.rounds;
-    $("preset-hint").textContent = t("ls.78").replace("{d}", FORM.datasets.length).replace("{h}", FORM.harnesses.length).replace("{m}", (FORM.improvers || []).length);
+    if (card.method === "none") card.rounds = 0;
+    $("preset-hint").textContent = t("ls.78").replace("{d}", FORM.datasets.length).replace("{h}", FORM.harnesses.length).replace("{m}", Math.max(0, methodRows.length - 1));
     const authored = FORM.datasets.filter((x) => x.name.startsWith("authored_"));
     $("fields").innerHTML = [
       field(t("ls.46"), select("f-dataset",
@@ -68,7 +69,15 @@
       preview();
     };
     bind("f-task-model", "task_model", null, "input"); bind("f-task-base-url", "task_base_url", null, "input");
-    bind("f-task-api-key", "task_api_key", null, "input"); bind("f-method", "method");
+    bind("f-task-api-key", "task_api_key", null, "input");
+    $("f-method").onchange = (event) => {
+      card.method = event.target.value;
+      if (card.method === "none") {
+        card.rounds = 0;
+        $("f-rounds").value = "0";
+      }
+      preview();
+    };
     bind("f-improver", "improver"); bind("f-improver-model", "improver_model", null, "input");
     bind("f-meta-base-url", "meta_base_url", null, "input"); bind("f-meta-api-key", "meta_api_key", null, "input");
     bind("f-rounds", "rounds", Number, "input"); bind("f-jobs", "jobs", Number, "input");

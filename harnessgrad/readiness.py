@@ -607,6 +607,17 @@ def _bwrap_check(args) -> Check:
     return Check("bwrap", True, True, f"{exe}: namespace builds ({version})")
 
 
+def sandbox_check(*, required: bool = True) -> Check:
+    """Public, side-effect-free sandbox probe for launch front ends.
+
+    The console must answer the same bubblewrap question as ``--check-only`` before it
+    enables Launch.  Keeping the public adapter here avoids a second, weaker
+    ``shutil.which('bwrap')`` implementation in the web service.
+    """
+    from types import SimpleNamespace
+    return _bwrap_check(SimpleNamespace(sandbox=required))
+
+
 def _dataset_check(args) -> Check:
     """Published, provisioned, and loadable -- three separate ways to fail, named apart.
 

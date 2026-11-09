@@ -461,8 +461,14 @@ def new_run_id(form: dict) -> str:
 
 def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_key_pending: bool = False) -> tuple[int, dict]:
     return launch.validate_launch_request(form, paths=_launch_paths(), catalogue=_launch_catalogue(),
-        python_supported=python_supported, budget_capacity=budget_capacity, launch_env=launch_env,
+        python_supported=python_supported, sandbox_supported=sandbox_supported,
+        budget_capacity=budget_capacity, launch_env=launch_env,
         preview_key_pending=preview_key_pending, preview_meta_key_pending=preview_meta_key_pending)
+
+
+def sandbox_supported():
+    from harnessgrad.readiness import sandbox_check
+    return sandbox_check(required=True)
 
 
 def api_launch(form: dict) -> tuple[int, dict]:

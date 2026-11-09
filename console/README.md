@@ -121,8 +121,10 @@ userinfo、查询、片段或控制字符的实际地址，需重新配置；合
 ```
 
 前端仅在 `preflight.ok=true` 时启用“确认启动”。服务端预检查共享预算配置、Python 3.12+、
-`driver.py`、可写 runs 根目录和参数合法性；数字参数也会在浏览器中即时检查：
-轮数 `1..20`、并发 `1..64`、trials `1..3`。
+`driver.py`、可用的 bubblewrap namespace、可写 runs 根目录和参数合法性；数字参数也会在
+浏览器中即时检查：轮数 `0..20`、并发 `1..64`、trials `1..3`。选择“不使用方法
+（只测一个点）”时，预览与实际命令都会规范成 `rounds=0 --improver none`，不会把未执行的
+meta-harness 记进 run id 或运行声明。
 
 ### `POST /api/runs`
 
