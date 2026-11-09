@@ -138,23 +138,30 @@ def describe(catalogue, *, load_settings, pools) -> dict:
                          "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
 
 
+def _single_measurement(form: dict) -> bool:
+    return str(form.get("rounds")) == "0" or str(form.get("method") or "").strip() == "none"
+
+
 def build_argv(form: dict, run_id: str, *, paths, budget_capacity) -> list[str]:
     """预览与真正起跑**共用这一个函数** —— 否则"预览的命令"和"实际跑的命令"迟早分叉。"""
     jobs = int(form["jobs"])
+    single = _single_measurement(form)
+    improver = "none" if single else str(form["improver"])
+    improver_model = str(form.get("improver_model") or "")
     return [sys.executable, str(paths.driver),
             "--harness", str(form["harness"]),
             "--dataset", str(form["dataset"]),
             "--split", "declared",
             "--side", "train",
             "--sampling", str(form.get("sampling") or "all"),
-            "--rounds", str(int(form["rounds"])),
+            "--rounds", "0" if single else str(int(form["rounds"])),
             "--trials", str(int(form["trials"])),
             "--jobs", str(jobs),
             *(["--method-entrypoint",
                str(paths.methods_root / str(form["method"]) / "run.py")]
               if str(form.get("method") or "").strip() not in ("", "none") else []),
-            "--improver", str(form["improver"]),
-            "--improver-model", str(form["improver_model"]),
+            "--improver", improver,
+            *(["--improver-model", improver_model] if improver_model and not single else []),
             "--run-id", run_id,
             "--runs-root", str(paths.runs),
             *(["--work-root", str(paths.state_root / "work")] if paths.external_state else []),
@@ -188,7 +195,8 @@ def new_run_id(form: dict) -> str:
     stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     tag = re.sub(r"[^A-Za-z0-9]+", "_", str(form["dataset"])) or "run"
     import uuid
-    return f"console-{stamp}-{tag}-{form['improver']}-{uuid.uuid4().hex[:8]}"
+    actor = "measurement" if _single_measurement(form) else str(form["improver"])
+    return f"console-{stamp}-{tag}-{actor}-{uuid.uuid4().hex[:8]}"
 
 
 def _field_types(form):
@@ -200,7 +208,7 @@ def _field_types(form):
     return None
 
 
-def _host_capabilities(form, paths, catalogue, python_supported):
+def _host_capabilities(form, paths, catalogue, python_supported, sandbox_supported):
     # Parallel drivers are coordinated through the shared lease; they are not
     # globally rejected merely because another deployment is running.
     if not python_supported():
@@ -209,6 +217,9 @@ def _host_capabilities(form, paths, catalogue, python_supported):
                                 "HarnessGrad 需要 Python 3.12+")}
     if not paths.driver.is_file():
         return 400, {"error": "no-driver", "detail": f"找不到 driver.py：{paths.driver}"}
+    sandbox = sandbox_supported()
+    if not sandbox.ok:
+        return 400, {"error": "sandbox-unavailable", "detail": sandbox.detail}
     method = str(form.get("method") or "").strip()
     if method not in ("", "none"):
         entry = paths.methods_root / method / "run.py"
@@ -279,6 +290,8 @@ def _solver_credentials(form, env, backend, model, preview_key_pending):
 
 
 def _editor_credentials(form, catalogue, env, preview_meta_key_pending):
+    if _single_measurement(form):
+        return None
     if not form.get("improver"):
         return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
     selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
@@ -309,14 +322,17 @@ def _count_bounds(form):
     return None
 
 
-def validate_launch_request(form: dict, *, paths, catalogue, python_supported,
+def validate_launch_request(form: dict, *, paths, catalogue, python_supported, sandbox_supported,
                             budget_capacity, launch_env, preview_key_pending=False,
                             preview_meta_key_pending=False) -> tuple[int, dict]:
     """Validate in the historical fail-closed order, without starting anything."""
     problem = _field_types(form)
     if problem:
         return problem
-    problem = _host_capabilities(form, paths, catalogue, python_supported)
+    problem = _count_bounds(form)
+    if problem:
+        return problem
+    problem = _host_capabilities(form, paths, catalogue, python_supported, sandbox_supported)
     if problem:
         return problem
     problem = _storage_and_budget(paths, budget_capacity)
@@ -340,7 +356,7 @@ def validate_launch_request(form: dict, *, paths, catalogue, python_supported,
     problem = _editor_credentials(form, catalogue, env, preview_meta_key_pending)
     if problem:
         return problem
-    return _count_bounds(form) or (200, {})
+    return 200, {}
 
 
 def _write_improver_override(paths, selected, form, environment, run_id):
@@ -382,20 +398,21 @@ def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_enviro
 
 def scope_preview(form: dict, effective_env: dict, *, catalogue) -> dict:
     """Describe requested scope without loading datasets or contacting model endpoints."""
-    selected = next((row for row in catalogue.improvers() if row.get('name') == form.get('improver')), {})
+    single = _single_measurement(form)
+    selected = {} if single else next((row for row in catalogue.improvers() if row.get('name') == form.get('improver')), {})
     kind = selected.get('kind') or None
-    model = (effective_env.get('HG_METHOD_MODEL') or form.get('improver_model')
-             or selected.get('model') or None)
+    model = None if single else (effective_env.get('HG_METHOD_MODEL') or form.get('improver_model')
+                                 or selected.get('model') or None)
     return {
         "dataset": form.get("dataset"), "side": "train", "split": "declared",
         "sampling": form.get("sampling") or "all", "task_count": None,
-        "rounds": form.get("rounds"), "trials_per_task": form.get("trials"),
+        "rounds": 0 if single else form.get("rounds"), "trials_per_task": form.get("trials"),
         "jobs": form.get("jobs"),
         "solver": {"backend": effective_env.get("HG_AGENT_BACKEND"),
                    "model": effective_env.get("HG_AGENT_MODEL") or None},
-        "editor": {"method": form.get("method") or "none", "improver": form.get("improver"),
+        "editor": {"method": form.get("method") or "none", "improver": "none" if single else form.get("improver"),
                    "model": model, "kind": kind,
-                   "active": False if str(form.get("rounds")) == "0" else None},
+                   "active": False if single else None},
         # Dataset-specific model use and CLI improver connections are resolved at runtime.
         "environment": None, "judge": None,
     }

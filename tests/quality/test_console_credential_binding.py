@@ -6,6 +6,7 @@ import importlib.util
 import json
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -67,6 +68,7 @@ def ready(console, tmp_path, monkeypatch):
                         "BUDGET_CAPACITY": "1"}.items():
         monkeypatch.setattr(console, name, value)
     monkeypatch.setattr(console, "python_supported", lambda: True)
+    monkeypatch.setattr(console, "sandbox_supported", lambda: SimpleNamespace(ok=True, detail="fixture"))
     monkeypatch.setattr(console, "adapters", lambda: [{"name": "demo"}])
     monkeypatch.setattr(console, "base_harnesses", lambda: ["loop"])
     monkeypatch.setattr(console, "improvers", lambda: [{"name": "noop", "kind": "cli", "model": ""}])

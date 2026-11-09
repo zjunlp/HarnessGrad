@@ -30,6 +30,7 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.setattr(m, 'SETTINGS', tmp_path / 'settings.json')
     monkeypatch.setattr(m, 'LLM_CONFIG', tmp_path / 'absent.json')
     monkeypatch.setattr(m, 'python_supported', lambda: True)
+    monkeypatch.setattr(m, 'sandbox_supported', lambda: SimpleNamespace(ok=True, detail='fixture'))
     monkeypatch.setattr(m, 'procfs_readable', lambda: True)
     monkeypatch.setattr(m, 'live_drivers_by_run', lambda: {})
     monkeypatch.setattr(m, 'adapters', lambda: [{'name': 'demo'}])

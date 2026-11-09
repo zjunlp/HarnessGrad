@@ -32,9 +32,9 @@ def test_preview_describes_all_tasks_and_unknown_count_without_execution(monkeyp
     assert scope['sampling'] == 'all' and scope['task_count'] is None
     assert (scope['rounds'], scope['trials_per_task'], scope['jobs']) == (0, 1, 3)
     assert scope['solver']['model'] == 'synthetic-solver'
-    assert scope['editor']['improver'] == 'synthetic-editor'
-    assert scope['editor']['model'] == 'synthetic-model'
-    assert scope['editor']['active'] is False and scope['editor']['kind'] == 'cli'
+    assert scope['editor']['improver'] == 'none'
+    assert scope['editor']['model'] is None
+    assert scope['editor']['active'] is False and scope['editor']['kind'] is None
     assert scope['environment'] is None and scope['judge'] is None
     assert result['preflight']['ok']
 
@@ -61,11 +61,13 @@ def test_launch_scope_uses_effective_solver_and_editor_registry_fallback(monkeyp
     effective = {'HG_AGENT_BACKEND': 'mock', 'HG_AGENT_MODEL': 'effective-solver'}
     scope = server.launch_scope_preview(form, effective)
     assert scope['solver'] == {'backend': 'mock', 'model': 'effective-solver'}
-    assert scope['editor']['model'] == 'registry-default'
-    assert scope['editor']['kind'] == 'cli' and scope['editor']['active'] is False
+    assert scope['editor']['improver'] == 'none' and scope['editor']['model'] is None
+    assert scope['editor']['kind'] is None and scope['editor']['active'] is False
     monkeypatch.setattr(server, 'budget_capacity', lambda: 1)
     argv = server.launch_argv(form, 'fixture-run')
     assert argv[argv.index('--side') + 1] == scope['side'] == 'train'
     assert argv[argv.index('--split') + 1] == scope['split'] == 'declared'
     assert argv[argv.index('--sampling') + 1] == scope['sampling'] == 'all'
     assert argv[argv.index('--rounds') + 1] == '0'
+    assert argv[argv.index('--improver') + 1] == 'none'
+    assert '--improver-model' not in argv

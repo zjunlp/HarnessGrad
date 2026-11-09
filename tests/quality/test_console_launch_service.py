@@ -30,7 +30,9 @@ def ready(tmp_path):
     store = settings.SettingsStore(tmp_path / 'settings.json', tmp_path / 'legacy.json', {})
     environment = lambda data: launch.build_environment(data, load_settings=store.read)
     validate = lambda data, **kwargs: launch.validate_launch_request(data, paths=paths,
-        catalogue=catalog, python_supported=lambda: True, budget_capacity=lambda: 3,
+        catalogue=catalog, python_supported=lambda: True,
+        sandbox_supported=lambda: SimpleNamespace(ok=True, detail='fixture sandbox'),
+        budget_capacity=lambda: 3,
         launch_env=environment, **kwargs)
     plan = launch.InvocationPort(validate,
         lambda data, run_id: launch.build_argv(data, run_id, paths=paths, budget_capacity=lambda: 3),
@@ -61,13 +63,37 @@ def test_invalid_field_precedes_capability_storage_and_catalogue(ready, monkeypa
         pytest.fail('invalid field reached later launch stages')
     code, body = launch.validate_launch_request(form(dataset=1), paths=ready.paths,
         catalogue=SimpleNamespace(adapters=forbidden), python_supported=forbidden,
-        budget_capacity=forbidden, launch_env=forbidden)
+        sandbox_supported=forbidden, budget_capacity=forbidden, launch_env=forbidden)
     assert code == 400 and body['error'] == 'bad-value'
     ready.paths.driver.unlink()
     code, body = launch.validate_launch_request(form(), paths=ready.paths,
         catalogue=ready.catalogue, python_supported=lambda: False,
-        budget_capacity=forbidden, launch_env=forbidden)
+        sandbox_supported=forbidden, budget_capacity=forbidden, launch_env=forbidden)
     assert code == 400 and body['error'] == 'unsupported-python'
+
+
+def test_failed_sandbox_probe_blocks_launch_before_storage_or_catalogue(ready):
+    def forbidden(*args, **kwargs):
+        pytest.fail('sandbox failure reached a later launch stage')
+    code, body = launch.validate_launch_request(form(), paths=ready.paths,
+        catalogue=SimpleNamespace(adapters=forbidden), python_supported=lambda: True,
+        sandbox_supported=lambda: SimpleNamespace(ok=False, detail='fixture namespace failed'),
+        budget_capacity=forbidden, launch_env=forbidden)
+    assert code == 400
+    assert body == {'error': 'sandbox-unavailable', 'detail': 'fixture namespace failed'}
+
+
+def test_single_measurement_does_not_claim_or_configure_an_editor(ready):
+    request = form(method='none', rounds=10, improver='endpoint', improver_model='unused')
+    argv = launch.build_argv(request, 'measurement', paths=ready.paths, budget_capacity=lambda: 3)
+    assert argv[argv.index('--rounds') + 1] == '0'
+    assert argv[argv.index('--improver') + 1] == 'none'
+    assert '--improver-model' not in argv
+    assert launch.new_run_id(request).split('-')[-2] == 'measurement'
+    scope = launch.scope_preview(request, ready.plan.environment(request), catalogue=ready.catalogue)
+    assert scope['rounds'] == 0
+    assert scope['editor'] == {'method': 'none', 'improver': 'none', 'model': None,
+                               'kind': None, 'active': False}
 
 
 def test_preview_and_budget_preflight_are_read_only_and_do_not_probe(ready, monkeypatch, tmp_path):

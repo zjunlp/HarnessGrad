@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +48,7 @@ def _prepare(module, monkeypatch, budget_dir: Path):
     monkeypatch.setattr(module, "DRIVER", driver)
     monkeypatch.setattr(module, "RUNS", runs)
     monkeypatch.setattr(module, "python_supported", lambda: True)
+    monkeypatch.setattr(module, "sandbox_supported", lambda: SimpleNamespace(ok=True, detail="fixture"))
     monkeypatch.setattr(module, "live_drivers_by_run", lambda: {})
     monkeypatch.setattr(module, "adapters", lambda: [{"name": "demo"}])
     monkeypatch.setattr(module, "base_harnesses", lambda: ["loop"])
