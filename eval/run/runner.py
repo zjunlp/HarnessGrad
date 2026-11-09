@@ -64,8 +64,11 @@ from eval.policy.unobserved_diagnostic import Authorization
 
 
 def harness_env() -> dict:
-    """Delegate the canonical HG_METHOD_/HG_ENV_/HG_JUDGE_ actor-role policy."""
-    return actor_environment.harness_env(credential_names=lambda: _improver_credentials())
+    """Keep the user manager's connection settings on the host launcher."""
+    env = actor_environment.harness_env(credential_names=lambda: _improver_credentials())
+    for name in sandbox_mod.MANAGER_ENV:
+        env.pop(name, None)
+    return env
 
 
 def _improver_credentials() -> set[str]:

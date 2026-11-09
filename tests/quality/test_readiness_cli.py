@@ -42,7 +42,7 @@ import data.scaffolds.registry as datasets   # noqa: E402
 import harnessgrad.readiness as readiness    # noqa: E402
 
 #: Method admission is present even when zero rounds make it optional.
-CHECKS = ["python", "git", "bwrap", "dataset", "harness", "writable", "disk", "method"]
+CHECKS = ["python", "git", "bwrap", "dataset", "harness", "loop-runtime", "writable", "disk", "method"]
 
 #: The key the `--prepare-only` test plants. A value nothing else on this machine can
 #: contain, so finding it in `run_meta.json` is a leak and not a coincidence.
@@ -250,17 +250,55 @@ def test_check_only_creates_no_run_directory(tmp_path):
     """
     runs = tmp_path / "runs"
     work = tmp_path / "work"
+    runtime = tmp_path / "runtime"
     proc = _driver(
         "--check-only", "--dataset", "demo", "--harness", "loop", "--run-id",
         "readiness-probe", "--runs-root", str(runs), "--work-root", str(work),
-        "--rounds", "0", "--no-sandbox")
+        "--rounds", "0", "--no-sandbox",
+        env={"HG_AGENT_BACKEND": "mock", "HG_REVIEWED_ENVIRONMENT_ONLY": "1",
+             "HG_HARNESS_RUNTIME_ROOT": str(runtime)})
 
     assert proc.returncode == 0, f"{proc.returncode}\n{proc.stdout[-1200:]}\n{proc.stderr[-800:]}"
     assert "check" in proc.stdout, "the table is what --check-only prints"
     assert "fixture" in proc.stdout, "the fixture is named as one, not as a published dataset"
+    assert "warning: optional check(s) failed: loop-runtime" in proc.stdout
+    assert "python tools/configure_harness.py --harness base_harness/loop --fetch" in proc.stdout
+    assert not runtime.exists()
     assert not runs.exists(), list(runs.iterdir()) if runs.exists() else runs
     assert not work.exists(), "the work root is a run artifact, not a preflight one"
     assert not (tmp_path / "readiness-probe").exists()
+
+
+@pytest.mark.parametrize(("linked", "diagnostic"), [
+    (False, "Invalid managed Harness publication"),
+    (True, "Harness runtime publication must not be a link"),
+])
+def test_check_only_reports_corrupt_loop_runtime(tmp_path, linked, diagnostic):
+    from harnessgrad import python_harness_runtime
+
+    runtime = tmp_path / "runtime"
+    declaration = python_harness_runtime.descriptor(ROOT / "base_harness/loop")
+    publication = runtime / python_harness_runtime._key(declaration) / "ready.json"
+    publication.parent.mkdir(parents=True)
+    if linked:
+        publication.symlink_to(publication.parent / "missing.json")
+    else:
+        publication.write_text("{}")
+
+    proc = _driver(
+        "--check-only", "--dataset", "demo", "--harness", "loop", "--rounds", "0",
+        "--runs-root", str(tmp_path / "runs"), "--work-root", str(tmp_path / "work"),
+        "--no-sandbox", env={"HG_AGENT_BACKEND": "mock", "HG_REVIEWED_ENVIRONMENT_ONLY": "1",
+                             "HG_HARNESS_RUNTIME_ROOT": str(runtime)})
+
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert diagnostic in proc.stdout
+    assert "--fetch" not in proc.stdout
+    if linked:
+        assert publication.is_symlink()
+    else:
+        assert publication.read_text() == "{}"
+    assert not (tmp_path / "runs").exists() and not (tmp_path / "work").exists()
 
 
 def test_prepare_only_writes_a_redacted_run_meta_and_launches_nothing(tmp_path):
