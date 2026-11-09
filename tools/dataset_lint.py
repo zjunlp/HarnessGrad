@@ -113,27 +113,22 @@ def _outside_platform(path: Path, root: Path) -> bool:
     return p != root.resolve() and root.resolve() not in p.parents
 
 
-#: Keys an entry may carry, by kind. Used to catch the one mistake a dict makes silently:
-#: a **duplicate key**, which Python keeps the last value of, so the entry that runs is not
-#: the entry that was read. Measured: a `--fetch` built `.../valid.jsonl/valid.jsonl` from
-#: an entry that set `dst` twice, and the 404 it produced named the far end of the URL
-#: rather than the dict.
+# Known download keys shared by the existing declarations. The schema adds
+# optional keys that belong to a single download kind.
 _ENTRY_KEYS = {
     "kind", "name", "version", "size", "note", "url", "repo", "file", "files",
-    "sha256", "dst", "extract_to", "package", "manifest",
+    "sha256", "dst", "extract_to", "package", "manifest", "prepare",
     # `authored` uses a repository-local bundle path.
     "path",
 }
 
 
-def lint_entry_keys(entry: dict, where: str, result: Result) -> None:
-    """Duplicate detection needs the *source text*; `json`/Python have already collapsed
-    it. So this reads the module source for the `downloads()` return and looks for a key
-    appearing twice inside one brace group -- a heuristic, and it is reported as one."""
-    unknown = sorted(set(entry) - _ENTRY_KEYS)
+def lint_entry_keys(entry: dict, where: str, result: Result, *, optional=()) -> None:
+    allowed = _ENTRY_KEYS.union(optional)
+    unknown = sorted(set(entry) - allowed)
     if unknown:
         result.error(f"{where} has unknown key(s) {unknown}; known keys are "
-                     f"{sorted(_ENTRY_KEYS)}")
+                     f"{sorted(allowed)}")
 
 
 def lint_downloads(downloads, schema: dict, result: Result) -> None:
@@ -150,9 +145,9 @@ def lint_downloads(downloads, schema: dict, result: Result) -> None:
         if kind not in spec["kinds"]:
             result.error(f"{where} has kind {kind!r}; known kinds are {spec['kinds']}")
             continue
-        lint_entry_keys(entry, where, result)
-        required = list(spec["common_required"]) + list(
-            spec["by_kind"].get(kind, {}).get("required", []))
+        kind_spec = spec["by_kind"].get(kind, {})
+        lint_entry_keys(entry, where, result, optional=kind_spec.get("optional", ()))
+        required = list(spec["common_required"]) + list(kind_spec.get("required", []))
         missing = [key for key in required if not entry.get(key)]
         if missing:
             result.error(f"{where} ({entry.get('name')!r}) is missing {missing}")
@@ -654,6 +649,7 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
     # built to avoid.
     try:
         _, setups, verifiers = registry.load_tasks(name)
+        setup_ids = set(setups)
     except ConfigMissing as exc:
         result.readiness = Readiness("config_missing", "adapter-configuration", str(exc))
         result.unprovisioned = f"needs platform configuration: {exc}"
@@ -664,17 +660,26 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
         # first structural problem, and a lint that reports one violation per run makes
         # the next reader fix one thing and run it again -- so the broken-copy test below
         # would have to be run eleven times to see eleven rules fire.
-        verifiers = {tid: dict(spec) for tid, spec in
-                     (getattr(module, "VERIFY", None) or {}).items()
-                     if isinstance(spec, dict)}
-        setups = dict(getattr(module, "SETUP", None) or {})
+        try:
+            declared = getattr(module, "VERIFY", None) or {}
+            verifiers = {tid: dict(spec) for tid, spec in declared.items()
+                         if isinstance(spec, dict)}
+        except Exception as exc:  # noqa: BLE001 - lazy values can fail to build
+            result.error(f"VERIFY inspection: {type(exc).__name__}: {exc}")
+            verifiers = None
+        try:
+            # Only the declared task IDs are needed for the SETUP check.
+            setup_ids = set(getattr(module, "SETUP", None) or {})
+        except Exception as exc:  # noqa: BLE001 - declarations can fail to enumerate
+            result.error(f"SETUP inspection: {type(exc).__name__}: {exc}")
+            setup_ids = set()
     try:
         registry.load_envs(name)
     except Exception as exc:  # noqa: BLE001
         result.error(f"registry.load_envs: {type(exc).__name__}: {exc}")
 
     known = {t["task_id"] for t in tasks}
-    unknown_setup = set(setups) - known
+    unknown_setup = setup_ids - known
     if unknown_setup:
         result.error(f"SETUP names unknown task(s) {sorted(unknown_setup)}")
     lint_verify(verifiers, known, schema, result)

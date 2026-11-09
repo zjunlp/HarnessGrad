@@ -1,0 +1,9 @@
+{
+  "source_repository": "https://github.com/zjunlp/HarnessGrad",
+  "source_commit": "34448936c4a1a98016ffc221fb4d3b9df3bdd8f7",
+  "source_path": "harnessgrad/env_file.py",
+  "fixture_path": "env_file.py",
+  "sha256": "52635dadf60e52f33e7f7cd52ca78338fb1a1ce3e24e143492ff12a129a6bda8",
+  "license": "MIT",
+  "purpose": "Reviewed ChessBench native scorer source bytes retained for synthetic admission tests."
+}

@@ -52,6 +52,33 @@ def test_lint_accepts_every_published_dataset(schema):
     assert "authored_example_fix_bug" in checked
 
 
+def test_lint_checks_reasoning_gym_generated_download(schema):
+    from data.datasets import reasoning_gym
+
+    entries = reasoning_gym.downloads()
+    result = dataset_lint.Result("reasoning_gym")
+    dataset_lint.lint_downloads(entries, schema, result)
+    assert result.ok, result.errors
+
+    generated, = (entry for entry in entries if entry["kind"] == "generated")
+    incomplete = dict(generated)
+    for key in ("dst", "sha256", "prepare"):
+        del incomplete[key]
+    result = dataset_lint.Result("reasoning_gym")
+    dataset_lint.lint_downloads([incomplete], schema, result)
+    assert any("is missing ['dst', 'sha256', 'prepare']" in error for error in result.errors)
+
+
+def test_lint_accepts_diagnostics_for_authored_downloads(schema):
+    from data.datasets import authored_example_fix_bug
+
+    entry, = authored_example_fix_bug.downloads()
+    result = dataset_lint.Result("authored_example_fix_bug")
+    dataset_lint.lint_downloads(
+        [{**entry, "availability": "invalid", "detail": "authored diagnostic"}], schema, result)
+    assert result.ok, result.errors
+
+
 #: A module that breaks one rule per line, so a failure names its own cause. It is
 #: written into `data/` only for the duration of the test: `lint_dataset` imports
 #: `data.datasets.<name>`, and a copy that is not imported as a dataset is not a copy.
@@ -79,6 +106,7 @@ def downloads():
     return [{{
         "kind": "http", "name": "thing", "version": "main", "size": "1 MB",
         "note": "too short",
+        "availability": "ready",       # authored-only key
         # `url` and `dst` missing
     }}]
 '''
@@ -124,6 +152,7 @@ def test_lint_rejects_a_deliberately_broken_copy(schema, tmp_path):
         "is nested",                              # nested dst
         "neither `content` nor `from`",           # unusable input
         "is not pinned",                          # version=main
+        "has unknown key(s) ['availability']",     # authored-only key
         "is missing ['url', 'dst']",              # incomplete http entry
         "plain-language note",                    # note too short
         "`ORACLE_SOURCE` must be one of",         # oracle provenance not declared

@@ -1,4 +1,5 @@
 """Authored metadata only: no released benchmark data or official verifier runs."""
+from hashlib import sha256
 import json
 import os
 from pathlib import Path
@@ -8,20 +9,36 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_metadata_and_readiness_are_available_before_preparation(tmp_path):
+    code = """import sys
+sys.modules['numpy'] = None
+from data.datasets import livecodebench
+assert livecodebench.downloads()
+assert livecodebench.provision_status()['status'] == 'data_missing'
+"""
+    env = dict(os.environ, HG_DATA_LIVECODEBENCH=str(tmp_path / 'missing'),
+               HG_REVIEWED_ENVIRONMENT_ONLY='1', PYTHONDONTWRITEBYTECODE='1')
+    result = subprocess.run([sys.executable, '-B', '-c', code], cwd=ROOT, env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_loader_does_not_import_numpy_or_expose_private_test_inputs(tmp_path):
     data = tmp_path / 'dataset'
     data.mkdir()
     references = sorted(p.stem for p in (ROOT / 'data/datasets/livecodebench/references').glob('*.py'))
     ids = references + [f'authored-{i}' for i in range(1055 - len(references))]
     (data / 'tests').mkdir()
+    payload = b'{"synthetic": true}'
     for ident in ids:
-        (data / 'tests' / (ident + '.json')).write_text('{"synthetic": true}')
+        (data / 'tests' / (ident + '.json')).write_bytes(payload)
     with (data / 'pool.jsonl').open('w') as stream:
         stream.write(json.dumps({'problems': 1055}) + '\n')
         for index, ident in enumerate(ids):
             row = {'question_id': ident, 'question_title': 'Authored', 'question_content': 'Synthetic question',
                    'platform': 'fixture', 'contest_id': 'fixture', 'contest_date': '2020-01-01',
-                   'difficulty': 'easy', 'starter_code': '', 'n_public': 1, 'n_private': 1}
+                   'difficulty': 'easy', 'starter_code': '', 'n_public': 1, 'n_private': 1,
+                   'tests_sha256': sha256(payload).hexdigest()}
             stream.write(json.dumps(row) + '\n')
     code = '''import importlib.abc, json, os, sys
 class Block(importlib.abc.MetaPathFinder):

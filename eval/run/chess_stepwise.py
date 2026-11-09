@@ -77,6 +77,11 @@ class _ProviderSession:
             raise ValueError("puzzle session is already terminal")
         if len(self._history) >= 256:
             raise ValueError("trusted ChessBench submission limit exceeded")
+        # Let the board controller return invalid_answer for malformed moves,
+        # including JSON numbers that overflow before the provider exchange.
+        if (not isinstance(answer, dict) or set(answer) != {"uci"}
+                or not isinstance(answer["uci"], str)):
+            answer = {}
         try:
             encoded = json.dumps(answer, allow_nan=False)
             if len(encoded.encode("utf-8")) > 4096:

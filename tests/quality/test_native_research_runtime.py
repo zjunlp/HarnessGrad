@@ -44,21 +44,38 @@ def test_verifier_carries_exact_runtime(monkeypatch):
     assert spec['runtime_paths'] is selected['runtime_paths']
 
 
-def test_preparation_uses_component_and_records_only_worker_manifest(tmp_path, monkeypatch):
+@pytest.mark.parametrize(('name', 'profile'), [
+    ('travelplanner', 'native_qa'),
+    ('widesearch', 'widesearch'),
+    ('harvey_lab', 'harvey_lab'),
+])
+def test_preparation_uses_component_and_records_only_worker_manifest(tmp_path, monkeypatch, name, profile):
     from harnessgrad import dataset_runtime
+    from tools.prepare_native_research import prepare
+
+    source = tmp_path / 'authored.jsonl'
+    source.write_text('{}\n')
+    output = tmp_path / 'prepared'
     selected = {'python':'/owned/bin/python','runtime_paths':['/owned']}
-    monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda name: selected)
-    monkeypatch.setattr(dataset_runtime, 'bind', lambda runtime, role: runtime)
+    def resolve(selected_profile):
+        assert selected_profile == profile
+        return selected
+    def bind(runtime, role):
+        assert runtime is selected and role == 'service'
+        return selected
+    monkeypatch.setattr(dataset_runtime, 'resolve_execution', resolve)
+    monkeypatch.setattr(dataset_runtime, 'bind', bind)
     def run(argv, **kwargs):
         assert argv[:3] == ['/owned/bin/python','-I','-B']
         request = json.loads(kwargs['input'])
         assert request['runtime'] == selected
-        assert request['name'] == 'travelplanner'
+        assert request['name'] == name and request['fetch'] is False
         assert 'PYTHONPATH' not in kwargs['env']
-        (tmp_path/'manifest.json').write_text('{"prepared":true}')
+        output.mkdir()
+        (output/'manifest.json').write_text('{"prepared":true}')
         return subprocess.CompletedProcess(argv, 0)
     monkeypatch.setattr(preparation.subprocess, 'run', run)
-    assert preparation.prepare_component('travelplanner', tmp_path, {}) == {'prepared':True}
+    assert prepare(name, output, {'data_path': str(source)}) == {'prepared':True}
 
 
 def test_manifest_publication_never_replaces_an_existing_result(tmp_path):

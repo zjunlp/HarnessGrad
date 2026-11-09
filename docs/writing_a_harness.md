@@ -384,9 +384,10 @@ Stated so that their absence is not read as an oversight:
 python tools/validate_harness.py path/to/your/harness
 ```
 
-It checks the required fields, that the entrypoint exists, and — with `--smoke` —
-that the harness runs a trivial task and writes an answer. Getting this to pass is
-the whole contribution requirement.
+This checks the manifest and source, including the entrypoint and any managed
+runtime declaration. For a legacy harness, add `--smoke` to run a trivial local
+task. For a managed Python harness, follow the [managed preparation and sandbox
+smoke steps](#21-managed-python-dependencies).
 
 The whole path, from a directory that already has an entrypoint to a point on a
 measured curve, with every command and its real output, is

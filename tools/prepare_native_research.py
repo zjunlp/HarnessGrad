@@ -146,14 +146,15 @@ def _prepare(name, output, config, *, fetch=False, judge_model=None, preparation
 
 
 def prepare(name, output, config, *, fetch=False, judge_model=None):
-    # Local stdlib readers need no dependency environment. Acquisition and the
-    # dataframe-backed native converters run only in an admitted component.
+    # Local stdlib readers need no dependency environment. Acquisition and
+    # converters that import third-party packages use an admitted component.
     if not isinstance(config, dict):
         raise ValueError('native configuration must be an object')
-    source = Path(config.get('data_path') or '')
-    parquet = source.suffix.lower() == '.parquet' or (source.is_dir() and any(source.rglob('*.parquet')))
-    if not fetch and not parquet and name not in ('travelplanner', 'widesearch'):
-        return _prepare(name, output, config, fetch=fetch, judge_model=judge_model)
+    if not fetch and name not in ('harvey_lab', 'travelplanner', 'widesearch'):
+        source = Path(config.get('data_path') or '')
+        parquet = source.suffix.lower() == '.parquet' or (source.is_dir() and any(source.rglob('*.parquet')))
+        if not parquet:
+            return _prepare(name, output, config, fetch=fetch, judge_model=judge_model)
     from data.scaffolds.native_research.preparation import prepare_component
     return prepare_component(name, output, config, fetch=fetch, judge_model=judge_model)
 

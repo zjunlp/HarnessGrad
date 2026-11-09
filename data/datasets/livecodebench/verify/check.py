@@ -54,8 +54,10 @@ if __name__ == '__main__' and not sys.flags.isolated:
     raise SystemExit('LiveCodeBench checks require Python isolated mode (-I)')
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
 import json
 import multiprocessing
+import os
 from pathlib import Path
 from types import ModuleType
 
@@ -109,12 +111,12 @@ def _child(tests_text: str, solution: str, queue, source_dir: str | None = None)
         queue.put({"error": f"the pinned executor will not import: {type(exc).__name__}: {exc}"})
         return
     try:
-        results, metadata = run_test({"input_output": tests_text}, test=solution, debug=False,
-                                     timeout=PER_TEST_TIMEOUT)
-        queue.put({"results": [_json_scalar(value) for value in results],
-                   "metadata": str(metadata)[:2000]})
+        with open(os.devnull, "w") as sink, redirect_stdout(sink), redirect_stderr(sink):
+            results, _ = run_test({"input_output": tests_text}, test=solution, debug=False,
+                                  timeout=PER_TEST_TIMEOUT)
+        queue.put({"results": [_json_scalar(value) for value in results]})
     except Exception as exc:                   # noqa: BLE001
-        queue.put({"error": f"run_test raised {type(exc).__name__}: {exc}"})
+        queue.put({"error": f"run_test raised {type(exc).__name__}"})
 
 
 def _positive(value) -> bool:
@@ -139,11 +141,18 @@ def _write(path: str, payload: str) -> None:
 
 
 def _measure(args, reward: float, why: str, total: int, passed: int, results) -> int:
+    numpy = sys.modules.get("numpy")
+    observation = {"python": sys.executable, "prefix": sys.prefix,
+                   "isolated": bool(sys.flags.isolated), "no_bytecode": sys.dont_write_bytecode,
+                   "readonly": bool(os.statvfs(sys.prefix).f_flag & os.ST_RDONLY)}
+    if numpy is not None:
+        observation.update(numpy_version=numpy.__version__, numpy_origin=numpy.__file__)
     _write(args.reward_file, f"{reward:g}\n")
     _write(args.evidence_file, json.dumps(
         {"scorer_input": args.scorer_input_receipt, "measured": True, "metric": "pass@1 (one generation, all released tests)",
          "reward": reward, "tests": {"total": total, "passed": passed},
-         "per_test": results, "why": why}, sort_keys=True) + "\n")
+         "per_test": results, "why": why, "runtime_observation": observation},
+        sort_keys=True) + "\n")
     print(f"reward {reward:g}: {why}")
     return 0
 
@@ -232,8 +241,6 @@ def _score(args, inputs, receipt) -> int:
                                      f"{type(exc).__name__}: {exc}")
     why = (f"all {total} released tests passed" if reward else
            f"{passed} of {total} released tests passed")
-    if outcome.get("metadata") and not reward:
-        why += f"; executor metadata {outcome['metadata'][:200]}"
     return _measure(args, reward, why, total, passed, results)
 
 

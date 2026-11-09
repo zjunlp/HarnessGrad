@@ -165,6 +165,7 @@ def test_real_hg_actor_files_private_native_dual_verifier(tmp_path,monkeypatch,p
     from tools.prepare_native_research import prepare
     from eval.ckpt.git_state import stage_workspace
     from eval.run.runner import run_one
+    from harnessgrad import dataset_runtime
     task_root=tmp_path/'native/tasks/control/document-product';task_root.mkdir(parents=True)
     (task_root/'documents').mkdir()
     (task_root/'documents/public.md').write_text('PUBLIC_MATTER_DOCUMENT_MARKER\n')
@@ -173,7 +174,10 @@ def test_real_hg_actor_files_private_native_dual_verifier(tmp_path,monkeypatch,p
             'match_criteria':'PRIVATE_RUBRIC_NEVER_FOR_ACTOR','deliverables':['deliverable.md']}]}
     (task_root/'task.json').write_text(json.dumps(task))
     prepared=tmp_path/'prepared'
-    prepare('harvey_lab',prepared,{'data_path':str(task_root)},fetch=False)
+    manifest = prepare('harvey_lab', prepared, {'data_path': {'test': [str(task_root)]}})
+    selected = dataset_runtime.resolve_execution('harvey_lab')
+    assert manifest['preparation_runtime'] == dataset_runtime.bind(selected, 'service')
+    assert manifest['records'][0]['source_split'] == 'test'
     monkeypatch.setenv('HG_DATA_HARVEY_LAB',str(prepared))
     source=tmp_path/'actor';source.mkdir()
     (source/'harness.json').write_text(json.dumps({'name':'harvey-file-transport-control','version':'1','entrypoint':'agent.py','env_kinds':['files'],'role':'control'}))

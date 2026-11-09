@@ -60,6 +60,7 @@ import hashlib
 import json
 import pickle
 import zlib
+from functools import lru_cache
 from pathlib import Path
 
 class _LazyNumpy:
@@ -72,7 +73,7 @@ class _LazyNumpy:
 
 np = _LazyNumpy()
 
-from harnessgrad.paths import dataset_root
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 
 KIND = "dataset"
@@ -227,7 +228,7 @@ def task_id(index: int) -> str:
 
 
 def _row_for(task: dict) -> dict:
-    return _raw()[int(task["task_id"].rsplit("/", 1)[1])]
+    return _indexed()[task["task_id"]]
 
 
 def _tests_path(row: dict) -> Path:
@@ -319,13 +320,35 @@ def _verify(row: dict) -> dict:
     files = spec['scorer_input']['files']
     if files['testing_util.py'] != EXECUTOR_SHA256 or files['pass_k_utils.py'] != PASS_K_SHA256:
         raise ValueError('LiveCodeBench pinned scorer source changed while binding')
+    if files['tests.json'] != row['tests_sha256']:
+        raise ValueError(f"{task_id(row['index'])}: tests.json does not match the pinned SHA-256")
     return spec
 
 
-_INDEXED = [{**row, "index": index} for index, row in enumerate(_raw())]
+@lru_cache(maxsize=1)
+def _indexed() -> dict[str, dict]:
+    rows = {task_id(index): {**row, "index": index} for index, row in enumerate(_raw())}
+    unknown = set(_reference_ids()) - {row["question_id"] for row in rows.values()}
+    if unknown:
+        raise ValueError(f"references/{sorted(unknown)} do not name a problem in the pool")
+    return rows
+
+
+class _Declarations(Mapping):
+    def __init__(self, build):
+        self._build = build
+
+    def __getitem__(self, tid):
+        return self._build(_indexed()[tid])
+
+    def __iter__(self):
+        return iter(_indexed())
+
+    def __len__(self):
+        return len(_indexed())
 
 DEFAULT_ENV = {"kind": "files"}
-ENV = {task_id(row["index"]): {"kind": "files"} for row in _INDEXED}
+ENV = _Declarations(lambda row: dict(DEFAULT_ENV))
 SPLIT = None
 
 #: `None`: release_v6 publishes no study split, so the pool **is** the scored split and every
@@ -338,28 +361,8 @@ OFFICIAL_EVAL = None
 #: 2026-10-24; `--split default` still names the platform's hash rule at run time.
 SPLIT_SOURCE = "none"
 
-SETUP = {task_id(row["index"]): _setup(row) for row in _INDEXED}
-class _Verifiers(Mapping):
-    def __iter__(self):
-        return (task_id(row['index']) for row in _INDEXED)
-
-    def __len__(self):
-        return len(_INDEXED)
-
-    def __getitem__(self, key):
-        if not isinstance(key, str) or not key.startswith('livecodebench/'):
-            raise KeyError(key)
-        try:
-            index = int(key.removeprefix('livecodebench/'))
-            if index < 0 or task_id(index) != key:
-                raise ValueError
-            row = _INDEXED[index]
-        except (ValueError, IndexError) as exc:
-            raise KeyError(key) from exc
-        return _verify(row)
-
-
-VERIFY = _Verifiers()
+SETUP = _Declarations(_setup)
+VERIFY = _Declarations(_verify)
 
 
 # ----------------------------------------------------------------------------- the oracle ---
@@ -375,12 +378,12 @@ def references() -> dict[str, str]:
             for path in sorted(REFERENCES.glob("*.py"))}
 
 
+def _reference_ids() -> list[str]:
+    return sorted(path.stem for path in REFERENCES.glob("*.py"))
+
+
 def _coverage() -> str:
-    have = sorted(references())
-    known = {row["question_id"] for row in _INDEXED}
-    unknown = [qid for qid in have if qid not in known]
-    if unknown:
-        raise ValueError(f"references/{unknown} do not name a problem in the pool")
+    have = _reference_ids()
     return f"{len(have)} of {PROBLEMS} problems ({', '.join(have) if have else 'none'})"
 
 
@@ -411,9 +414,9 @@ def oracle_files(task: dict) -> dict[str, str]:
 
 
 def load() -> tuple[list[dict], dict[str, str]]:
-    tasks = [{"task_id": task_id(row["index"]), "goal": _question(row), "inputs": [],
+    tasks = [{"task_id": tid, "goal": _question(row), "inputs": [],
               "submission": {"kind": "files", "paths": ["solution.py"]}}
-             for row in _INDEXED]
+             for tid, row in _indexed().items()]
     # The scorable map is the human-readable grade slot. This dataset's grade is a program's
     # behaviour, so the value names the metric rather than pretending to be a gold answer.
     return tasks, {task["task_id"]: "pass@1 over the released tests" for task in tasks}
@@ -437,14 +440,22 @@ def downloads() -> list[dict]:
 
 
 def provision_status() -> dict:
-    tests = DATASET_ROOT / TESTS_DIR
-    return {"root": str(DATASET_ROOT),
-            "present": ((DATASET_ROOT / POOL).is_file()
-                        and (DATASET_ROOT / EXECUTOR).is_file()
-                        and tests.is_dir() and any(tests.glob("*.json"))),
-            "pool": str(DATASET_ROOT / POOL),
-            "tests": str(tests),
-            "tasks": len(_RAW) if _RAW else 0}
+    from harnessgrad.dataset_runtime import check_execution
+
+    try:
+        root = Path(DATASET_ROOT)
+    except DataRootNotConfigured as error:
+        return {"present": False, "status": "config_missing", "detail": str(error)}
+    tests = root / TESTS_DIR
+    status = {"root": str(root), "pool": str(root / POOL), "tests": str(tests),
+              "tasks": len(_RAW) if _RAW else 0}
+    if not (all((root / path).is_file() for path in (POOL, EXECUTOR, PASS_K))
+            and any(tests.glob("*.json"))):
+        return {**status, "present": False, "status": "data_missing",
+                "detail": "fetch the pinned sources and materialize the task pool with prepare.py"}
+    execution = check_execution(MANAGED_EXECUTION_RUNTIME)
+    return {**status, "present": execution["present"], "status": execution["status"],
+            "detail": execution["detail"], "execution_runtime": execution}
 
 
 __all__ = ["KIND", "ORACLE_SOURCE", "ORACLE_VALIDATED_BY", "ORACLE_COVERAGE",

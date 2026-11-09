@@ -7,7 +7,7 @@ from harnessgrad import dataset_runtime
 
 
 def prepare_component(name, output, config, *, fetch=False, judge_model=None):
-    profile = 'widesearch' if name == 'widesearch' else 'native_qa'
+    profile = name if name in ('harvey_lab', 'widesearch') else 'native_qa'
     runtime = dataset_runtime.resolve_execution(profile)
     selected = dataset_runtime.bind(runtime, 'service')
     worker = Path(__file__).with_name('prepare_worker.py')
