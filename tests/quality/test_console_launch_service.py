@@ -96,6 +96,21 @@ def test_single_measurement_does_not_claim_or_configure_an_editor(ready):
                                'kind': None, 'active': False}
 
 
+@pytest.mark.parametrize('mode', [{'method': 'none', 'rounds': 10}, {'rounds': 0}])
+def test_single_measurement_ignores_stale_editor_configuration(ready, mode):
+    request = form(improver='endpoint', improver_model='unused',
+                   meta_base_url='http://editor.invalid/v1', meta_api_key='unused-key', **mode)
+    calls = []
+    code, result = launch.start(request, paths=ready.paths, catalogue=ready.catalogue,
+        plan=ready.plan, make_run_id=lambda data: 'measurement',
+        spawn=lambda argv, **kwargs: calls.append((argv, kwargs)), base_environment={})
+    assert code == 202 and len(calls) == 1
+    assert calls[0][0][calls[0][0].index('--improver') + 1] == 'none'
+    assert not any(key.startswith('HG_METHOD_') for key in calls[0][1]['env'])
+    assert 'HG_IMPROVER_CONFIG' not in calls[0][1]['env']
+    assert list(ready.paths.launch_dir.glob('*.improvers.json')) == []
+
+
 def test_preview_and_budget_preflight_are_read_only_and_do_not_probe(ready, monkeypatch, tmp_path):
     def forbidden(*args, **kwargs):
         pytest.fail('preview attempted spawn or endpoint probe')
