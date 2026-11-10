@@ -56,7 +56,9 @@ def cgroup(tmp_path, monkeypatch):
         (tmp_path / "cpu.max").write_text(cpu_max + "\n", encoding="utf-8")
         (tmp_path / "memory.max").write_text(memory_max + "\n", encoding="utf-8")
         (tmp_path / "pids.max").write_text(pids_max + "\n", encoding="utf-8")
-        monkeypatch.setattr(co, "_cgroup_dir", lambda pid: tmp_path)
+        monkeypatch.setattr(co, "_cgroup_dir", lambda pid: co.cgroups.Layout('cgroup-v2',
+            dict.fromkeys(('cpu', 'memory', 'pids'), tmp_path),
+            dict.fromkeys(('cpu', 'memory', 'pids'), tmp_path)))
     return install
 
 

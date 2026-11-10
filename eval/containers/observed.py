@@ -17,7 +17,7 @@ import time
 import uuid
 
 from eval.admission.runner_admission import admit_runtime
-from eval.containers import container
+from eval.containers import container, cgroups
 from data.scaffolds.runtime_extensions import validate_container_runtime as validate
 
 HELPER = Path(__file__).with_name('observed_helper.py')
@@ -126,17 +126,17 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts, comma
     """Kernel reads are collected before actor launch; never accept adapter facts."""
     info = json.loads(command('inspect', name))[0]
     pid = info['State']['Pid']
-    group = Path(f'/proc/{pid}/cgroup').read_text().strip().splitlines()
-    unified = [line[3:] for line in group if line.startswith('0::')]
-    if len(unified) != 1:
-        raise RuntimeError('observed-v1 requires cgroup v2')
-    cg = Path('/sys/fs/cgroup') / unified[0].lstrip('/')
-    raw = {key: (cg / key).read_text().strip() for key in
-           ('cpu.max', 'memory.max', 'memory.swap.max', 'pids.max')}
-    pids, pids_hierarchy = observe_pids(cg)
-    quota, period = map(int, raw['cpu.max'].split())
-    if quota * 1000 % period:
+    layout = cgroups.resolve(pid)
+    resource = cgroups.limits(layout)
+    if any(resource[key] is None for key in ('cpu_millis', 'memory_bytes', 'swap_bytes')) or not resource['pids_observed']:
+        raise RuntimeError('container kernel resource limits unavailable: ' + layout.backend)
+    if resource['cpu_millis'] % 1:
         raise RuntimeError('kernel CPU quota is not whole millicores')
+    # Prove that post-run OOM observation is available before actor execution.
+    cgroups.oom_events(layout)
+    raw = resource['raw']
+    pids, pids_hierarchy = resource['pids'], resource['pids_hierarchy']
+    cg = layout.paths['memory']
     kernel = json.loads(command('exec', name, python, '-I', '-S',
                                RUNTIME + '/helper.py', 'probe'))
     actual_mounts = {row['Destination']: row for row in info['Mounts'] if row['Type'] == 'bind'}
@@ -164,14 +164,16 @@ def observe(name, binding, policy, *, supervisor, python, expected_mounts, comma
         attachments.append('kernel-interfaces:' + ','.join(kernel['interfaces']))
     root = next(row for row in mounts if row['path'] == '/')
     facts = {'binding': binding, 'resources': {
-        'cpu_millis': quota * 1000 // period, 'memory_bytes': int(raw['memory.max']),
-        'swap_bytes': int(raw['memory.swap.max']), 'pids': pids,
+        'cpu_millis': int(resource['cpu_millis']), 'memory_bytes': resource['memory_bytes'],
+        'swap_bytes': resource['swap_bytes'], 'pids': pids,
         'timeout_ms': supervisor['timeout_ms']},
-        'resource_backend': 'cgroup-v2', 'timeout_backend': 'host-supervisor',
+        'resource_backend': layout.backend, 'timeout_backend': 'host-supervisor',
         'network': info['HostConfig']['NetworkMode'], 'attachments': attachments,
         'read_only_root': not root['writable'], 'filesystems': writable}
     evidence = {'container_id': info['Id'], 'image_id': info['Image'], 'pid': pid,
-                'cgroup': str(cg), 'cgroup_values': raw, 'pids_hierarchy': pids_hierarchy, 'kernel': kernel,
+                'cgroup': str(cg), 'cgroup_values': raw, 'cgroup_paths': resource['paths'],
+                'cgroup_roots': resource['roots'], 'resource_backend': layout.backend,
+                'pids_hierarchy': pids_hierarchy, 'kernel': kernel,
                 'supervisor': supervisor, 'special_mounts': special, 'readonly_binds': expected_mounts}
     facts['evidence_sha256'] = digest(evidence)
     receipt = admit_runtime(binding, policy, facts)
@@ -291,9 +293,12 @@ class Runtime:
                 self.started = False
                 self.receipt['timeout_action'] = 'container killed'
                 raise
-            cgroup = Path(self.receipt['evidence']['cgroup'])
-            events = dict(line.split() for line in (cgroup / 'memory.events').read_text().splitlines())
-            self.receipt['memory_events'] = {key: int(value) for key, value in events.items()}
+            evidence = self.receipt['evidence']
+            layout = cgroups.Layout(evidence['resource_backend'],
+                {k: Path(v) for k, v in evidence['cgroup_paths'].items()},
+                {k: Path(v) for k, v in evidence['cgroup_roots'].items()})
+            events = cgroups.oom_events(layout)
+            self.receipt['memory_events'] = events
             if int(events.get('oom_kill', 0)):
                 raise RuntimeError('worker cgroup reported an OOM kill')
             return subprocess.CompletedProcess(argv, proc.returncode,
