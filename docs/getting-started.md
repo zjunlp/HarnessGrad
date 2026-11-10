@@ -37,7 +37,12 @@ services and scorers can have separate dependencies.
 
 ## Prepare the components you will use
 
-Prepare Loop's locked dependencies outside the platform venv:
+The bundled Loop is 0.3.0. For a historical 0.2.0 source, use
+`harnessgrad harness install loop --version 0.2.0`, then pass the printed absolute
+directory through `--harness-path`. See [Loop version selection](../base_harness/loop/README.md#select-a-source-version).
+The installer exports source; dependency preparation follows the selected version.
+
+Prepare the default Loop's locked dependencies outside the platform venv:
 
 ```bash
 python tools/configure_harness.py --harness base_harness/loop --fetch
