@@ -40,12 +40,14 @@ def test_actor_environment_keeps_role_and_python_projection_without_mutating_inp
     monkeypatch.setattr(runner, '_improver_credentials', lambda: {'IMPROVER_SENTINEL'})
     for key, value in {'HG_AGENT_API_KEY': 'actor', 'HG_ENV_API_KEY': 'environment-secret',
         'HG_JUDGE_API_KEY': 'scorer-secret', 'HG_METHOD_API_KEY': 'method-secret',
-        'HARNESSGRAD_SEED': 'service-seed', 'IMPROVER_SENTINEL': 'improver-secret'}.items():
+        'HARNESSGRAD_SEED': 'service-seed', 'IMPROVER_SENTINEL': 'improver-secret',
+        'XDG_RUNTIME_DIR': '/run/user/test', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/test/bus'}.items():
         monkeypatch.setenv(key, value)
     filtered = runner.harness_env()
     assert filtered['HG_AGENT_API_KEY'] == 'actor'
     assert not {'HG_ENV_API_KEY', 'HG_JUDGE_API_KEY', 'HG_METHOD_API_KEY',
-                'HARNESSGRAD_SEED', 'IMPROVER_SENTINEL'} & filtered.keys()
+                'HARNESSGRAD_SEED', 'IMPROVER_SENTINEL',
+                'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS'} & filtered.keys()
     base = {'PATH': '/task/bin', 'PYTHONPATH': 'ambient', 'HG_AGENT_API_KEY': 'actor'}
     before = dict(base)
     home = tmp_path / 'not-created'

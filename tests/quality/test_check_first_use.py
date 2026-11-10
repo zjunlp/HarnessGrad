@@ -84,10 +84,16 @@ def test_failed_preparation_is_not_a_pass(tmp_path, monkeypatch):
 def test_execution_enforces_isolation_and_preservation(tmp_path, monkeypatch, corrupt_duplicate):
     from harnessgrad import python_exec_runtime
     monkeypatch.setattr(python_exec_runtime, 'prepare', lambda *a, **k: {'installed': False})
+    monkeypatch.setenv('XDG_RUNTIME_DIR', '/run/user/test')
+    monkeypatch.setenv('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/test/bus')
+    monkeypatch.setenv('HTTP_PROXY', 'http://proxy.invalid')
+    monkeypatch.setenv('HG_AGENT_API_KEY', 'synthetic-key')
     observed = []
     def fake_run(argv, *, env, log, timeout=check.TIMEOUT):
         assert env['HG_AGENT_BACKEND'] == 'mock'
         assert env['HG_REVIEWED_ENVIRONMENT_ONLY'] == '1'
+        assert env['XDG_RUNTIME_DIR'] == '/run/user/test'
+        assert env['DBUS_SESSION_BUS_ADDRESS'] == 'unix:path=/run/user/test/bus'
         assert 'HTTP_PROXY' not in env and 'HG_AGENT_API_KEY' not in env
         assert '--improver' in argv and argv[argv.index('--improver') + 1] == 'none'
         run_id = argv[argv.index('--run-id') + 1]

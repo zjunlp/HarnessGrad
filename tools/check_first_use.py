@@ -131,6 +131,8 @@ def check_console(control, runs):
 
 
 def execute(control, runtime_root):
+    from eval.containers.sandbox import MANAGER_ENV
+
     # Read-only admission: refuse a missing store before the driver can prepare it.
     from harnessgrad import python_exec_runtime
     python_exec_runtime.prepare(ROOT / "base_harness/loop", root=runtime_root, build=False)
@@ -140,6 +142,7 @@ def execute(control, runtime_root):
     env = {'PATH': os.environ.get('PATH', os.defpath), 'HOME': str(home),
            'TMPDIR': str(temporary), 'LANG': 'C.UTF-8', 'HG_REVIEWED_ENVIRONMENT_ONLY': '1',
            'HG_AGENT_BACKEND': 'mock', 'HG_HARNESS_RUNTIME_ROOT': str(runtime_root)}
+    env.update({name: os.environ[name] for name in MANAGER_ENV if name in os.environ})
     common = [sys.executable, str(ROOT / 'driver.py'), '--scenario', 'demo-smoke',
               '--harness', 'loop', '--improver', 'none',
               '--runs-root', str(runs), '--work-root', str(work)]

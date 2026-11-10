@@ -109,6 +109,7 @@ def plan_checks(args) -> list[Check]:
         ("bwrap", bool(getattr(args, "sandbox", True)), _bwrap_check),
         ("dataset", True, _dataset_check),
         ("harness", True, _harness_check),
+        ("loop-runtime", False, _loop_runtime_check),
         ("writable", True, _writable_check),
         ("disk", False, _disk_check),
     ]
@@ -117,10 +118,11 @@ def plan_checks(args) -> list[Check]:
     checks: list[Check] = []
     for name, required, probe in guards:
         try:
-            checks.append(probe(args))
+            check = probe(args)
         except Exception as exc:                              # noqa: BLE001 - see module doc
-            checks.append(Check(name, required, False,
-                                f"probe raised {type(exc).__name__}: {exc}"))
+            check = Check(name, required, False, f"probe raised {type(exc).__name__}: {exc}")
+        if check is not None:
+            checks.append(check)
     try:
         checks.extend(configuration_checks(args))
     except (OSError, ValueError, TypeError, AttributeError):
@@ -737,6 +739,29 @@ def _harness_check(args) -> Check:
     return Check("harness", True, True,
                  f"{path} ({manifest['backend']}, entrypoint {manifest['entrypoint']}, "
                  f"env_kinds {shown})")
+
+
+def _loop_runtime_check(args) -> Check | None:
+    """Check the bundled Loop store for fresh runs without a recorded binding."""
+    path, problem = _harness_dir(args)
+    if problem or path.resolve() != (PLATFORM_ROOT / "base_harness/loop").resolve():
+        return None
+    if any(getattr(args, flag, None) for flag in ("resume", "h0_from", "harness_runtime_binding")):
+        return None
+
+    from harnessgrad import python_exec_runtime
+    from harnessgrad.python_harness_runtime import RuntimeNotPrepared, RuntimeUnavailable
+
+    # A normal launch can build from cached wheels, so a missing publication is advisory.
+    try:
+        python_exec_runtime.prepare(path, build=False)
+    except RuntimeUnavailable as exc:
+        receipt = exc.receipt or {}
+        if receipt.get("error_type") == RuntimeNotPrepared.__name__:
+            return Check("loop-runtime", False, False,
+                         "Missing. Run: python tools/configure_harness.py --harness base_harness/loop --fetch")
+        return Check("loop-runtime", True, False, receipt.get("detail", str(exc)))
+    return Check("loop-runtime", False, True, "prepared native Loop runtime is ready")
 
 
 def _writable_check(args) -> Check:

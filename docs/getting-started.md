@@ -44,6 +44,10 @@ wheels. The interpreter must already exist; `--python /absolute/path/to/python`
 selects one explicitly. Installation inherits configured HTTP(S)/ALL proxy settings
 only when downloads are allowed; actor execution does not inherit those settings.
 Use `--runtime-root` or `HG_HARNESS_RUNTIME_ROOT` to select another external store.
+For a fresh run with the bundled Loop, `--check-only` prints the preparation
+command when the native runtime has not been prepared. This is a warning because
+the run can also build the runtime from cached wheels. If a published runtime
+fails validation, the check exits with its specific error.
 
 Data download and dependency preparation are separate operations. For a research
 recipe using GSM8K, set an external data root and prepare its loading environment:
@@ -111,7 +115,10 @@ prepared-run consumption, then starts its own temporary loopback Console to
 check result inspection and evidence export. It does not install dependencies,
 download data or contact models. Logs and `report.json` remain under the printed
 control directory; a failed check exits nonzero. Use `--runtime-root` when your
-prepared Loop store is in a custom location.
+prepared Loop store is in a custom location. When a systemd user session is
+available, the checker retains its connection settings for the host launcher so
+mock runs can use the configured resource limits. Harness processes do not
+inherit the session settings.
 
 ## Configure a research run
 

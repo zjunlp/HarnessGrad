@@ -49,6 +49,10 @@ class RuntimeUnavailable(ValueError):
         self.receipt = receipt
 
 
+class RuntimeNotPrepared(RuntimeUnavailable):
+    """The selected dependency store has no runtime publication."""
+
+
 def _package(name):
     return re.sub(r"[-_.]+", "-", name).lower()
 
@@ -415,10 +419,10 @@ def admit_binding(repo, binding):
 
 def _published(repo, spec, folder):
     ready_path = folder / "ready.json"
-    if not ready_path.exists():
-        raise RuntimeUnavailable("Prepared Python Harness runtime missing; run python tools/configure_harness.py --harness <dir> first")
     if ready_path.is_symlink():
         raise RuntimeUnavailable("Harness runtime publication must not be a link")
+    if not ready_path.exists():
+        raise RuntimeNotPrepared("Prepared Python Harness runtime missing; run python tools/configure_harness.py --harness <dir> first")
     ready = json.loads(ready_path.read_bytes())
     if (not isinstance(ready, dict) or set(ready) != {"instance", "runtime_id"}
             or not isinstance(ready["instance"], str)
@@ -546,7 +550,8 @@ def prepare(repo, *, binding=None, build=True, allow_downloads=False, python=Non
                 receipt["cache_hit"] = True
             else:
                 with locked(folder, timeout_s=timeout_s):
-                    if (folder / "ready.json").exists() and not force:
+                    publication = folder / "ready.json"
+                    if not force and (publication.is_symlink() or publication.exists()):
                         reference = _published(repo, spec, folder)
                         if python is not None:
                             uv = shutil.which("uv")
@@ -563,8 +568,8 @@ def prepare(repo, *, binding=None, build=True, allow_downloads=False, python=Non
                         receipt["installed"] = True
                         if source_fingerprint(repo) != source_sha or descriptor(repo) != spec:
                             raise RuntimeUnavailable("Harness source changed during preparation")
-                        atomic_json(folder / "ready.json", {"instance": instance.name,
-                                                            "runtime_id": reference["runtime_id"]})
+                        atomic_json(publication, {"instance": instance.name,
+                                                  "runtime_id": reference["runtime_id"]})
                         instance = None  # Published immutable dependencies survive later source failures.
             selected = _bind(repo, spec, reference, source_sha)
             admit_binding(repo, selected)
