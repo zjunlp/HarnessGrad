@@ -1,5 +1,34 @@
 # Loop
 
+## Select a source version
+
+The default `--harness loop` uses **0.3.0**. To select the historical 0.2.0
+source with the existing version installer:
+
+```bash
+LOOP_DIR=$(harnessgrad harness install loop --version 0.2.0)
+harnessgrad run --harness-path "$LOOP_DIR" --dataset demo --improver none --rounds 0
+```
+
+`harnessgrad harness list` lists both 0.2.0 and 0.3.0. Omit `--version` to export
+0.3.0. `--install-root` selects the external source store. This command exports
+source only: no Node, Git checkout, dependency installation or downloads are needed.
+Prepare dependencies separately when required by the selected version.
+
+0.2.0 is the exact three-file source tree `7a811b3ab930a3f902eb50e18c504288f5eea0dc`,
+from platform revision `b87be212e901d26262a1d3cc1b6356847899d19e`, immediately before
+Loop's 0.3.0 runtime migration. Its manifest and `openai>=1.0` requirement are retained
+unchanged. The archive digest and source inventory are checked; installation
+provenance stays beside the Harness, not inside its source tree. Edited exports
+are preserved and refused on reuse rather than overwritten.
+
+Historical runs can have different source despite sharing the 0.2.0 label. Exact
+score reuse still requires matching source, model, task, scorer and runtime
+identities. Use a retained run checkpoint when its source differs from this release;
+selecting a version never bypasses those checks or guarantees identical dependencies.
+
+## Current runtime
+
 The reference ReAct Harness runs in an immutable, explicitly prepared Python
 environment. Its agent logic and budgets remain candidate-owned. Methods can edit
 the source and locks; each measured checkpoint binds its exact source and artifacts.
