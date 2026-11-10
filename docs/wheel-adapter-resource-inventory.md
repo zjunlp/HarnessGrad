@@ -72,3 +72,9 @@ components, including exclusion of synthetic untracked non-Python data.
 It also demonstrates the known remaining untracked
 Python module discovery risk. Neither this file nor that test authorizes a real
 benchmark or proves all external dependencies are installed.
+
+The current public-native scoring route ships `execution-runtime.json` for
+`bird_minidev` and `chessbench_puzzles`, plus BIRD's empty standard-library scoring
+requirements. The other three native scorer datasets share their published service
+execution recipes. Historical native archive manifests remain packaged as old
+evidence, not default evaluation prerequisites.

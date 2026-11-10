@@ -1,3 +1,9 @@
+Current evaluation uses the public-native-local-v1 profile. Prepare this dataset's
+execution dependencies with `python tools/prepare_dataset.py --dataset chessbench_puzzles --runtime execution`.
+No original scorer-machine archive is required. See [public native scoring](../../../docs/public-native-scoring.md).
+The exact-byte archive material below is retained as historical evidence or explicit
+legacy reproduction guidance; it is not the current default installation requirement.
+
 # Independent ChessBench native scorer
 
 The managed `chess==1.11.2` provider is for loading and interactive board state.

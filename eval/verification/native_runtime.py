@@ -1,11 +1,8 @@
-"""Sealed native userland pins for explicitly supported host scorer routes.
+"""Native scoring admission: public local recipes and explicit historical archives.
 
-Hash while copying into sealed memfds; execute only those snapshots in an empty
-bubblewrap root. Never hash then execute a mutable source path. Missing bytes,
-manifest drift, missing namespace support, and startup failure are unmeasured.
-The host kernel/CPU and namespace launcher remain platform compatibility/TCB.
-The captured kernel release is build metadata; admission checks Linux capabilities
-and records the actual execution host instead of requiring an identical release.
+Current dataset defaults select public-native-local-v1. The retained schema 1/2
+implementation authenticates and seals old userland snapshots only when those
+historical bindings are explicitly selected; it is not a new-machine prerequisite.
 """
 from __future__ import annotations
 
@@ -240,7 +237,15 @@ def _check_host(runtime: FrozenRuntime) -> dict:
 
 @contextmanager
 def admit(binding: dict):
-    """Authenticate the selected manifest and retain exact sealed bytes until exit."""
+    """Admit a public local scorer, or an explicitly selected historical snapshot."""
+    if isinstance(binding, dict) and binding.get('profile') == 'public-native-local-v1':
+        from eval.verification.public_native_runtime import admit as admit_public
+        try:
+            with admit_public(binding) as runtime:
+                yield runtime
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError, AttributeError, subprocess.SubprocessError) as exc:
+            raise NativeRuntimeUnavailable(f'public native runtime unavailable: {exc}') from exc
+        return
     fds = {}
     launcher = None
     try:

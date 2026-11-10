@@ -81,7 +81,9 @@ def test_actual_original_native_scorer_authored_trajectories(tmp_path, monkeypat
             'answer': 'e7e5 b8c6', 'puzzle_id': 'PUBLIC-AUTHORED-CHESS-CONTROL',
             'private_reference': 'PRIVATE-AUTHORED-REFERENCE'}
     spec = dataset.verify_for({'task_id': 'chessbench_puzzles/test/0', 'gold': gold})
-    assert spec['native_runtime'] == prepare.BINDING
+    # This opt-in control deliberately exercises the retained historical archive.
+    assert spec['native_runtime']['profile'] == 'public-native-local-v1'
+    spec['native_runtime'] = prepare.BINDING.copy()
     work = tmp_path / 'work'
     work.mkdir()
     (work / 'answer.txt').write_text(prediction)

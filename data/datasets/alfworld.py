@@ -57,7 +57,8 @@ prints are never consulted -- the log holds actions and actions are re-executed.
 The environment is `kind: "files"`. Dataset discovery and the actor's socket client
 use only the standard library. The trusted relay explicitly binds the separately
 prepared `alfworld` execution artifact; no host Python package fallback is allowed.
-The native verifier retains its independently pinned, sealed scorer runtime.
+The native verifier uses public scorer source and locally prepared execution dependencies;
+a historical machine archive is not required.
 
 What the agent can read, and what that used to cost
 --------------------------------------------------
@@ -88,16 +89,10 @@ it is the bytes the relay is given (and the bytes `VERIFY.inputs` grades from), 
 environment the agent acts in and the environment the check replays are built from one
 text -- `tests/quality/test_alfworld_relay.py` pins that byte identity for all 134 games.
 
-Two things about this are **not** in this repository yet, and both are required before
-an end-to-end run: (1) the runner must stage those bytes outside the sandbox and start
-`relay.py`, then pass the socket to the sandbox as `tool_socket=` so it is published at
-`/run/harnessgrad-tool/tool.sock` where the CLI imports and calls it (the mount wiring
-lives in `eval/containers/`, a separate task -- and this migration is the first to
-require `PLAN_VERSION` 4 -> 5, because from then on what a subject sees has changed);
-(2) a relay fault currently makes `alf` exit nonzero, and nothing yet maps that to an
-**unmeasured** task rather than a 0 -- `Relay.receipt` is the evidence the runner needs
-for that. Neither is faked here. `control.py --oracle` (the local arm) publishes the
-same pair into a temp directory itself and is unaffected.
+The runner stages the selected game outside the actor's namespace, starts the
+managed relay and publishes only its socket and stdlib client. Relay failures
+remain unmeasured rather than becoming an agent's zero. `control.py --oracle`,
+`--noop` and `--platform` use this lifecycle and the public native verifier.
 
 The metric, and what is deliberately not added
 ----------------------------------------------
@@ -496,9 +491,8 @@ def _verifier(record: dict) -> dict:
         "evidence_file": EVIDENCE_FILE,
         "timeout_s": 300,
     }
-    from data.runtimes import NATIVE_PINS
-    spec["native_runtime"] = NATIVE_PINS["alfworld"].copy()
-    return bind_scorer_input(spec, record["task_id"], [GAME_IN_WORKDIR])
+    from data.scaffolds.public_native import bind as bind_public_native
+    return bind_public_native("alfworld", bind_scorer_input(spec, record["task_id"], [GAME_IN_WORKDIR]))
 
 
 def downloads() -> list[dict]:

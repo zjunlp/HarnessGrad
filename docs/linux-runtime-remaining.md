@@ -1,3 +1,9 @@
+Current default for the five Python/native host scorers is described in
+[public native scoring](public-native-scoring.md). They use locally prepared public
+dependencies, not original-machine archives. The archive recovery receipts and
+blockers below preserve historical observations; they are not current new-machine
+installation requirements.
+
 # Linux runtime acceptance remaining work
 
 The [2026-11-08 final-source Linux validation](linux-release-validation.md) records

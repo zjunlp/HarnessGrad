@@ -1,4 +1,8 @@
-"""Reviewed independent admission pins; never recalculate expectations at runtime."""
+"""Historical sealed scorer pins for explicit archive reproduction.
+
+Current built-in scoring uses public-native-local-v1 and local execution recipes.
+These immutable pins preserve old evidence; they are not new-machine prerequisites.
+"""
 
 NATIVE_PINS = {
     "alfworld": {

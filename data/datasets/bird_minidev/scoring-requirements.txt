@@ -1,0 +1,1 @@
+# BIRD EX uses Python standard-library sqlite3; no external Python packages.

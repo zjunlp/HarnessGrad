@@ -39,8 +39,8 @@ def test_private_control_keeps_reference_out_of_task_and_actor_files(tmp_path, m
     snapshot = jericho.command_control('authored')
     assert snapshot['oracle_files'] == {'.oracle/actions.json': json.dumps(item['walkthrough'])}
     assert 'PRIVATE-AUTHORED-REFERENCE' not in json.dumps(snapshot['task'])
-    from data.runtimes import NATIVE_PINS
-    assert snapshot['verifier']['native_runtime'] == NATIVE_PINS['jericho']
+    assert snapshot['verifier']['native_runtime']['profile'] == 'public-native-local-v1'
+    assert 'manifest' not in snapshot['verifier']['native_runtime']
 
 
 def test_rom_content_changes_verification_context(tmp_path):

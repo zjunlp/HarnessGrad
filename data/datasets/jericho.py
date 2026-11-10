@@ -276,9 +276,8 @@ def _verifier(record: dict) -> dict:
         "evidence_file": EVIDENCE_FILE,
         "timeout_s": VERIFY_TIMEOUT_S,
     }
-    from data.runtimes import NATIVE_PINS
-    spec["native_runtime"] = NATIVE_PINS["jericho"].copy()
-    return bind_scorer_input(spec, record["task_id"], [GAME_FILE, record["rom"]])
+    from data.scaffolds.public_native import bind as bind_public_native
+    return bind_public_native("jericho", bind_scorer_input(spec, record["task_id"], [GAME_FILE, record["rom"]]))
 
 
 def downloads() -> list[dict]:

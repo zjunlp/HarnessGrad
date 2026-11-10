@@ -270,9 +270,8 @@ def _verify(record: dict) -> dict:
             {"path": "database.sqlite", "from": str(database)},
         ],
     }
-    from data.runtimes import NATIVE_PINS
-    spec["native_runtime"] = NATIVE_PINS["bird_minidev"].copy()
-    return bind_scorer_input(spec, record["task_id"], ["gold.sql", "database.sqlite"])
+    from data.scaffolds.public_native import bind as bind_public_native
+    return bind_public_native("bird_minidev", bind_scorer_input(spec, record["task_id"], ["gold.sql", "database.sqlite"]))
 
 
 def setup_map() -> dict:

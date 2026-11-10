@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Capture supported sealed native scorer userlands, without running a dataset.
 
+Historical archive tooling only. Current dataset evaluation uses public native
+scoring; prepare local dependencies with tools/prepare_dataset.py --runtime execution.
+
+
 The manifest is a reviewed admission pin, not auto-updated during verification.
 Collection resolution is evidence only; execution sees only the captured files.
 Portable captures use /opt/hg-python for Python and its standard library.

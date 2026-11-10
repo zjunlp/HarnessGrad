@@ -161,7 +161,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.scaffolds.native_research.vendor.flashrsi.benchmarks.travelplanner" = ["upstream.json"]
 "data.scaffolds.native_research.vendor.flashrsi.benchmarks.widesearch" = ["upstream.json"]
 "data.datasets.livecodebench" = ["execution-runtime.json", "requirements.lock", "LOADER_RUNTIME.md", "cli/lcb"]
-"data.datasets.chessbench_puzzles" = ["runtime.json", "requirements-load.txt", "LOADER_RUNTIME.md", "NATIVE_RUNTIME.md"]
+"data.datasets.chessbench_puzzles" = ["execution-runtime.json", "runtime.json", "requirements-load.txt", "LOADER_RUNTIME.md", "NATIVE_RUNTIME.md"]
 "data.datasets.appworld" = ["execution-runtime.json", "requirements.lock", "PREPARATION.md", "cli/aw"]
 "data.runtimes" = ["chessbench_puzzles-native.json", "alfworld-native.json", "bird_minidev-native.json",
                    "jericho-native.json", "scienceworld-native.json"]
@@ -192,7 +192,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "source-manifest.json", "prepared-manifest.json", "README.md"]
 "data.datasets.alfworld" = ["cli/alf", "execution-runtime.json", "execution-requirements.in",
     "execution-requirements.txt", "execution-recipe.md", "native-source-version-evidence.json"]
-"data.datasets.bird_minidev" = ["cli/bird"]
+"data.datasets.bird_minidev" = ["execution-runtime.json", "scoring-requirements.txt", "cli/bird"]
 "data.datasets.gaia" = ["cli/ask", "PREPARATION.md"]
 "data.datasets.jericho" = ["cli/jer", "cli/jer-relay", "runtime.json", "execution-runtime.json",
                            "requirements.lock", "LICENSE.upstream", "RUNTIME_PROVENANCE.json",
