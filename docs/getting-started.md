@@ -59,6 +59,11 @@ command when the native runtime has not been prepared. This is a warning because
 the run can also build the runtime from cached wheels. If a published runtime
 fails validation, the check exits with its specific error.
 
+ALFWorld, BIRD Mini-Dev, ChessBench puzzles, Jericho and ScienceWorld use public
+native scoring with locally prepared execution dependencies. They do not require
+the original scorer-machine archive. See [public native scoring](public-native-scoring.md)
+for the five recipes and preparation commands.
+
 Data download and dependency preparation are separate operations. For a research
 recipe using GSM8K, set an external data root and prepare its loading environment:
 

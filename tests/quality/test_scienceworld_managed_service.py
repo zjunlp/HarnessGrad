@@ -78,8 +78,8 @@ def test_setup_and_verifier_do_not_find_platform_package(tmp_path,monkeypatch):
     assert spec['task']=={'task_name':'boil','variation':1,'simplifications':''}
     assert spec['java_sha256']==hashlib.sha256(b'authored java').hexdigest()
     verify=dataset._verifier(record)
-    from data.runtimes import NATIVE_PINS
-    assert verify['native_runtime']==NATIVE_PINS['scienceworld']
+    assert verify['native_runtime']['profile']=='public-native-local-v1'
+    assert 'manifest' not in verify['native_runtime']
     assert next(p for p in verify['inputs'] if p['path']=='scienceworld.jar')['from']==str(jar)
 
 

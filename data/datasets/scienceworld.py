@@ -468,9 +468,8 @@ def _verifier(record: dict, *, world_jar=None) -> dict:
         "evidence_file": EVIDENCE_FILE,
         "timeout_s": 900,
     }
-    from data.runtimes import NATIVE_PINS
-    spec['native_runtime'] = NATIVE_PINS['scienceworld'].copy()
-    return bind_scorer_input(spec, record["task_id"], [TASK_IN_WORKDIR, "scienceworld.jar"])
+    from data.scaffolds.public_native import bind as bind_public_native
+    return bind_public_native("scienceworld", bind_scorer_input(spec, record["task_id"], [TASK_IN_WORKDIR, "scienceworld.jar"]))
 
 
 def downloads() -> list[dict]:

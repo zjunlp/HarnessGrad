@@ -3,7 +3,7 @@ ALFWorld trusted interactive service
 
 Discovery, task filtering, game stripping, the actor CLI and action-log parsing
 use the standard library. Third-party imports occur only in `gym_env.build()` in
-the trusted service or the independently sealed native verifier. Task setup binds
+the trusted service or the public native verifier. Task setup binds
 a prepared execution artifact with role `service`; a missing or changed artifact
 is an error, without host interpreter fallback or implicit installation.
 
@@ -31,9 +31,9 @@ without importing those packages. `native-source-version-evidence.json` records
 these limited identity checks; it does not claim a complete original inventory. The exact pins
 in `execution-requirements.txt` are a **new service dependency resolution**, made
 on 2026-11-07 with uv using the public Tsinghua index for CPython 3.12/Linux. They
-are not a reconstruction of the historical scorer environment. The existing
-`data/runtimes/alfworld-native.json`, its hashes and the native scoring algorithm
-are unchanged and continue to define verification.
+are not a reconstruction of the historical scorer environment. Current verification uses the public source scorer and this locally prepared
+execution recipe. `data/runtimes/alfworld-native.json` remains historical provenance;
+it is not required for new evaluations. See [public native scoring](../../../docs/public-native-scoring.md).
 
 Only three source files are mounted for the service: relay.py, lib/gym_env.py and
 the platform tool_transport.py. The runner separately stages the selected stripped
@@ -54,8 +54,7 @@ python -m pytest -q tests/quality/test_alfworld_managed_runtime.py \
 ```
 
 The legacy `control.py --oracle` / `--noop` and `--platform` spellings now all
-use the normal runner with the complete managed relay declaration and original
-sealed native verifier. `--budget` is carried consistently to service, actor CLI
+use the normal runner with the complete managed relay declaration and public native verifier. `--budget` is carried consistently to service, actor CLI
 and replay; missing scores or relay failures remain unmeasured. The older helper
 API also starts the admitted service through the runner's relay lifecycle and
 scores through the native verifier; it never imports the engine in platform Python.

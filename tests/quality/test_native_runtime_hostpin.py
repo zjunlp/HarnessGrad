@@ -181,14 +181,15 @@ def test_missing_payload_cannot_fall_back_to_host(tmp_path, local_runtime):
     assert got['native_runtime']['verified'] is False
 
 
-def test_adapter_declares_independently_fixed_runtime_without_reading_dataset(tmp_path, monkeypatch):
+def test_adapter_declares_public_scoring_without_reading_dataset(tmp_path, monkeypatch):
     import data.datasets.bird_minidev as adapter
     dbroot = tmp_path / 'dbs'
     (dbroot / 'authored').mkdir(parents=True)
     (dbroot / 'authored/authored.sqlite').write_bytes(b'authored input pin only')
     monkeypatch.setattr(adapter, 'DBS', dbroot)
     selected = adapter._verify({'task_id': 'authored', 'db_id': 'authored', 'gold_sql': 'select 1'})
-    assert selected['native_runtime']['sha256'] == binding()['sha256']
+    assert selected['native_runtime']['profile'] == 'public-native-local-v1'
+    assert 'manifest' not in selected['native_runtime']
     assert selected['native_runtime']['dataset'] == 'bird_minidev'
 
 

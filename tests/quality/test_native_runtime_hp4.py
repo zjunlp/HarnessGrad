@@ -2,6 +2,7 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -34,9 +35,10 @@ def authored_package_locator(tmp_path, tmp_path_factory, monkeypatch):
     (jre / 'bin').mkdir(parents=True)
     (jre / 'bin/java').write_bytes(b'authored locator only; never executed')
     monkeypatch.setattr(scienceworld, 'JRE_STAGED', jre)
+    monkeypatch.setattr(scienceworld, '_runtime_payload', lambda: package / 'scienceworld.jar')
 
 
-def adapter_spec(dataset):
+def public_adapter_spec(dataset):
     if dataset == 'scienceworld':
         from data.datasets import scienceworld
         # Intentionally unknown authored name: no released task/variation is loaded.
@@ -53,11 +55,19 @@ def binding(dataset):
     return NATIVE_PINS[dataset].copy()
 
 
+def adapter_spec(dataset):
+    """Explicit historical route for the sealed-archive regression controls below."""
+    spec = public_adapter_spec(dataset)
+    spec['native_runtime'] = binding(dataset)
+    return spec
+
+
 @pytest.mark.parametrize('dataset', DATASETS)
-def test_adapter_binds_independent_pin(dataset, authored_package_locator):
-    selected = adapter_spec(dataset)['native_runtime']
+def test_adapter_defaults_to_public_source_contract(dataset, authored_package_locator):
+    selected = public_adapter_spec(dataset)['native_runtime']
     assert selected['dataset'] == dataset
-    assert selected['sha256'] == hashlib.sha256((ROOT / selected['manifest']).read_bytes()).hexdigest()
+    assert selected['profile'] == 'public-native-local-v1'
+    assert 'manifest' not in selected and selected['sources']
 
 
 def test_java_prefers_sealed_home_and_refuses_missing(monkeypatch, tmp_path):
@@ -104,6 +114,7 @@ def test_route_manifest_payload_and_sandbox_refusal(dataset, tmp_path, authored_
             pytest.fail('modified provider admitted')
 
 
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_chess_actual_bound_check_shadow_zero_and_input_refusal(tmp_path):
     spec = adapter_spec('chessbench_puzzles')
     (tmp_path / 'chess.py').write_text('raise RuntimeError("actor package")')
@@ -128,6 +139,7 @@ def test_chess_actual_bound_check_shadow_zero_and_input_refusal(tmp_path):
                       'input_mismatch': bad, 'evidence': evidence}, sort_keys=True))
 
 
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_scienceworld_actual_check_unknown_authored_task_is_unmeasured(tmp_path):
     spec = adapter_spec('scienceworld')
     # This is an intentional no-task failure control, never a measured zero.
@@ -150,6 +162,7 @@ def test_scienceworld_actual_check_unknown_authored_task_is_unmeasured(tmp_path)
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_parent_and_child_native_maps_and_lifecycle(dataset, tmp_path, monkeypatch):
     monkeypatch.setenv('PYTHONPATH', '/task')
     monkeypatch.setenv('LD_PRELOAD', '/task/evil.so')
@@ -222,4 +235,4 @@ def test_chess_declared_verify_map_also_binds_pin(monkeypatch):
                                                'puzzle_id':'authored-map'}}
     monkeypatch.setattr(dataset._SPEC,'ensure',lambda:[record])
     selected=dataset.__getattr__('VERIFY')['authored/chess-map']['native_runtime']
-    assert selected==binding('chessbench_puzzles')
+    assert selected['profile']=='public-native-local-v1' and 'manifest' not in selected

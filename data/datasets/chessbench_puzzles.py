@@ -442,13 +442,12 @@ def setup_for(record: dict) -> dict:
 
 
 def verify_for(record: dict) -> dict:
-    from data.runtimes import NATIVE_PINS
+    from data.scaffolds.public_native import bind as bind_public_native
     spec = _SPEC.verifier(record)
-    # The native runner supplies -I -S from its independently pinned manifest;
-    # retain its fixed script-at-argv[1] route contract.
+    # The public native runner supplies isolated Python flags; retain its
+    # script-at-argv[1] route contract.
     spec['argv'].remove('-I')
-    spec['native_runtime'] = NATIVE_PINS['chessbench_puzzles'].copy()
-    return spec
+    return bind_public_native('chessbench_puzzles', spec)
 
 
 __all__ = ["KIND", "DATASET_ROOT", "REVISION", "load", "load_selected", "control_task",

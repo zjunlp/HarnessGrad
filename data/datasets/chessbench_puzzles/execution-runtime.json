@@ -1,0 +1,6 @@
+{
+  "schema": "harnessgrad.dataset-execution-runtime.v1",
+  "dataset": "chessbench_puzzles",
+  "python": "3.12",
+  "requirements": "requirements-load.txt"
+}

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Import, export or verify reviewed native scorer packages without running tasks.
 
+Historical archive tooling only. Current dataset evaluation uses public native
+scoring; prepare local dependencies with tools/prepare_dataset.py --runtime execution.
+
+
 The store follows HG_DATA_NATIVE_RUNTIMES, or HG_DATA_ROOT/native-runtimes.
 Assembly can recover the exact pinned bytes from explicit legacy source ledgers
 and archives. It never captures the current interpreter as a replacement.

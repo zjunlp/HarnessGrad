@@ -8,7 +8,7 @@ both are run and both are asserted here, and the same two runs are what the brie
 a reader to be able to reproduce.
 
 Both legacy `--oracle`/`--noop` and `--platform` use the normal runner,
-managed trusted service and independently sealed native verifier. Dependencies
+managed trusted service and public native verifier. Dependencies
 must be prepared explicitly; platform Python and the actor CLI remain stdlib.
 `--no-sandbox` selects the runner's weaker diagnostic mode for either spelling.
 

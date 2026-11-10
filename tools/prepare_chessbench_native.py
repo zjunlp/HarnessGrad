@@ -1,4 +1,9 @@
-"""Prepare/check the independently pinned Chess scorer, never the chess provider."""
+"""Prepare/check the independently pinned historical Chess scorer.
+
+Historical archive tooling only. Current dataset evaluation uses public native
+scoring; prepare local dependencies with tools/prepare_dataset.py --runtime execution.
+"""
+
 from __future__ import annotations
 import argparse
 import hashlib

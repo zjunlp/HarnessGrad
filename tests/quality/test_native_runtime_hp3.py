@@ -1,6 +1,7 @@
 """Authored native replay controls; no benchmark inputs or model calls."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -13,7 +14,7 @@ from eval.verification import native_runtime, verifier
 DATASETS = ['jericho', 'alfworld']
 
 
-def adapter_spec(dataset, tmp_path):
+def public_adapter_spec(dataset, tmp_path):
     if dataset == 'jericho':
         from data.datasets import jericho
         rom = tmp_path / 'authored.z3'
@@ -22,6 +23,13 @@ def adapter_spec(dataset, tmp_path):
                                  'path': rom, 'seed': 1})
     from data.datasets import alfworld
     return alfworld._verifier({'task_id': 'authored/alfworld', 'stripped_game': '{}'})
+
+
+def adapter_spec(dataset, tmp_path):
+    """Explicit historical route for the sealed-archive regression controls below."""
+    spec = public_adapter_spec(dataset, tmp_path)
+    spec['native_runtime'] = selected_binding(dataset)
+    return spec
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
@@ -39,11 +47,11 @@ def test_admission_receipt_uses_selected_dataset(dataset, tmp_path, captured_nat
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
-def test_adapter_binds_independent_pin(dataset, tmp_path):
-    selected = adapter_spec(dataset, tmp_path)['native_runtime']
+def test_adapter_defaults_to_public_source_contract(dataset, tmp_path):
+    selected = public_adapter_spec(dataset, tmp_path)['native_runtime']
     assert selected['dataset'] == dataset
-    path = ROOT / selected['manifest']
-    assert selected['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert selected['profile'] == 'public-native-local-v1'
+    assert 'manifest' not in selected and selected['sources']
 
 
 def selected_binding(dataset):
@@ -96,6 +104,7 @@ def authored_spec(dataset, tmp_path):
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_actual_bound_replay_and_input_refusal(dataset, tmp_path):
     work = tmp_path / 'task'
     work.mkdir()
@@ -134,6 +143,7 @@ def test_actual_bound_replay_and_input_refusal(dataset, tmp_path):
 
 
 @pytest.mark.parametrize('dataset', DATASETS)
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_parent_and_child_replay_only_load_admitted_bytes(dataset, tmp_path, monkeypatch):
     monkeypatch.setenv('PYTHONPATH', '/task')
     monkeypatch.setenv('LD_PRELOAD', '/task/evil.so')
@@ -189,6 +199,7 @@ print(json.dumps({'maps':pathlib.Path('/proc/self/maps').read_text(),'ctypes':lo
                           'parent': parent, 'child': child}, sort_keys=True))
 
 
+@pytest.mark.skipif(not os.environ.get('HG_DATA_NATIVE_RUNTIMES'), reason='opt-in historical archive control; default public scoring needs no archive')
 def test_admitted_runtime_can_repeat_readline_startup(tmp_path):
     (tmp_path / 'verifier').mkdir()
     with native_runtime.admit(selected_binding('alfworld')) as runtime:
