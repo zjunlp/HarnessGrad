@@ -16,7 +16,9 @@ def install(monkeypatch, tmp_path, *, failure='', networks=None, internal=True, 
     defaults = defaults or {'User': '', 'WorkingDir': '', 'Entrypoint': None}
     for name, value in [('cpu.max', '100000 100000'), ('memory.max', str(512*2**20)), ('pids.max', '1024')]:
         (tmp_path/name).write_text(value)
-    monkeypatch.setattr(co, '_cgroup_dir', lambda pid: tmp_path)
+    monkeypatch.setattr(co, '_cgroup_dir', lambda pid: co.cgroups.Layout('cgroup-v2',
+            dict.fromkeys(('cpu', 'memory', 'pids'), tmp_path),
+            dict.fromkeys(('cpu', 'memory', 'pids'), tmp_path)))
     if failure == 'cgroup':
         (tmp_path/'cpu.max').unlink()
     def create(name, **kwargs):

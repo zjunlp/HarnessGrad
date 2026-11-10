@@ -18,6 +18,52 @@ These observations do not implement arbitrary filesystem/resource/artifact polic
 or certify every image. See [the current interface](../INTERFACE.md)
 and [scoped runtime evidence](linux-runtime-remaining.md).
 
+**Update (2026-11-10):** Docker resource observation now detects cgroup v1 or v2
+from the container PID's procfs membership and the observer's mountinfo. This covers
+AppWorld's service-backed actor admission and the strict `observed-v1` worker route.
+`observed-v1` names the observation protocol, not a required cgroup version.
+
+On cgroup v1 the observer reads CPU CFS quota/period, `memory.limit_in_bytes` and
+`pids.max` from their separate controller mounts. Combined `cpu,cpuacct` mounts,
+subtree mounts and hybrid hosts with the required controllers on v1 are supported. The receipt records the actual
+`resource_backend`, controller paths and raw kernel values. Unlimited, malformed,
+missing or unreadable values never authorize a declared limit. PID observation
+retains tighter visible ancestor ceilings.
+
+Strict workers also require swap and OOM evidence. On v1, swap allowance is the
+combined `memory.memsw.limit_in_bytes` minus `memory.limit_in_bytes`; a missing
+memsw controller is unknown, not zero. `memory.oom_control` must expose an
+`oom_kill` counter. This does not add swap/OOM policy requirements to the legacy
+AppWorld actor probe, which measures its existing CPU/memory/PID contract.
+
+The observer must see the Docker container PID and its controller files on the
+Docker host. Some hosted notebooks use a remote/outside Docker daemon or hide host
+procfs/cgroups. Version support alone cannot authorize that topology: an unreadable
+PID or inaccessible controller is reported in `cgroup_error` and remains unobserved.
+No host cgroup files, Docker daemon settings or shared services are changed.
+No option is needed to select v1. To diagnose the host, collect the following
+read-only output alongside the failure receipt:
+
+```sh
+docker info --format '{{.CgroupVersion}} {{.CgroupDriver}}'
+cat /proc/self/cgroup
+```
+
+Validation uses synthetic procfs/controller fixtures for v1 and v2. A local v2
+Docker smoke verifies the existing AppWorld actor image resource probe. Actual v1
+Docker validation still needs a v1 host; synthetic coverage is not a benchmark run.
+For an opt-in, model-free check on the target machine, select an **already installed**
+Python image (with `/usr/local/bin/python3` and `sleep`) and run:
+
+```sh
+HG_CGROUP_TEST_IMAGE=harnessgrad/appworld-agent:20261009 python -m pytest -q \
+  tests/quality/test_cgroup_versions.py -k native_existing_image_probe
+```
+
+The actor control checks AppWorld's existing resource contract. The worker control
+also verifies the stricter swap/OOM policy. Both create and remove only their own
+test containers, with network disabled; neither pulls an image or runs AppWorld tasks.
+
 ## The gap, precisely
 
 `eval/admission/runner_admission.py::admit_runtime` is a strict checker. It compares a

@@ -25,8 +25,8 @@ Starts one throwaway container with the *same* flags the runner will use, then r
 
   * ``HostConfig.NanoCpus`` / ``Memory`` / ``PidsLimit`` / ``NetworkMode`` / ``ReadonlyRootfs``
     from ``docker inspect`` -- what Docker says it applied;
-  * ``cpu.max`` and ``memory.max`` from the container's cgroup directory -- what the kernel
-    says it applied, which is the value that actually binds;
+  * v2 ``cpu.max`` / ``memory.max`` or v1 CPU quota/period and memory-limit files
+    from the container's controller mounts -- what the kernel says it applied;
   * ``Config.User`` / ``Config.WorkingDir`` / ``Config.Entrypoint`` -- the exec defaults.
 
 Declared and observed are compared, and every disagreement is named. A value the probe could
@@ -55,6 +55,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import eval.service.netpool as netpool
+from eval.containers import cgroups
 
 SCHEMA = "harnessgrad.container-observation.v1"
 #: The policy fields this probe measures back. `_refuse_unobserved_policies` admits only these,
@@ -146,50 +147,9 @@ def _inspect_fields(runner, container: str) -> dict:
                                for name, row in ((entry.get("NetworkSettings") or {}).get("Networks") or {}).items())}
 
 
-def _cgroup_dir(pid: int) -> Path | None:
-    """The unified (v2) cgroup path of a process, as a path under /sys/fs/cgroup."""
-    try:
-        lines = Path(f"/proc/{pid}/cgroup").read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return None
-    for line in lines:
-        if line.startswith("0::"):
-            return Path("/sys/fs/cgroup") / line[3:].lstrip("/")
-    return None
-
-
-def _read_cgroup(path: Path | None, name: str) -> str | None:
-    if path is None:
-        return None
-    try:
-        return (path / name).read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-
-
-def _parse_cpu_max(raw: str | None) -> float | None:
-    """`cpu.max` is "quota period" (`max 100000` when unlimited)."""
-    if not raw:
-        return None
-    parts = raw.split()
-    if len(parts) != 2 or parts[0] == "max":
-        return None
-    try:
-        quota, period = int(parts[0]), int(parts[1])
-    except ValueError:
-        return None
-    return quota / period if period else None
-
-
-def _parse_bytes(raw: str | None) -> int | None:
-    if not raw:
-        return None
-    if raw == "max":
-        return None
-    try:
-        return int(raw)
-    except ValueError:
-        return None
+def _cgroup_dir(pid: int) -> cgroups.Layout | None:
+    """Resolve host-visible v1 controller mounts or the unified v2 mount."""
+    return cgroups.resolve(pid)
 
 
 def _default_runner(timeout_s: float):
@@ -232,10 +192,15 @@ def observe(image: str, spec: dict, *, network: str | None = None,
                                                    read_only=read_only))
         fields = _inspect_fields(runner, container)
         image_defaults = (json.loads(_exec(runner, ["docker", "image", "inspect", image]))[0].get("Config") or {}) if container_state else None
-        cgroup = _cgroup_dir(int(fields["pid"])) if fields.get("pid") else None
-        cpu_max = _read_cgroup(cgroup, "cpu.max")
-        memory_max = _read_cgroup(cgroup, "memory.max")
-        pids_max = _read_cgroup(cgroup, "pids.max")
+        cgroup_error = None
+        try:
+            cgroup = _cgroup_dir(int(fields["pid"])) if fields.get("pid") else None
+        except (OSError, ValueError) as exc:
+            cgroup, cgroup_error = None, str(exc)
+        resource = cgroups.limits(cgroup) if cgroup is not None else {}
+        cpu_max = resource.get('raw', {}).get('cpu.max')
+        memory_max = resource.get('raw', {}).get('memory.max')
+        pids_max = resource.get('raw', {}).get('pids.max')
     finally:
         if container:
             try:                                   # cleanup must never mask a probe failure
@@ -252,11 +217,14 @@ def observe(image: str, spec: dict, *, network: str | None = None,
                 "user": spec.get("user"), "workdir": spec.get("workdir")}
     observed = {
         "cpus_docker": (fields["nano_cpus"] or 0) / 1e9 or None,
-        "cpus_cgroup": _parse_cpu_max(cpu_max),
+        "cpus_cgroup": resource["cpu_millis"] / 1000 if resource.get("cpu_millis") is not None else None,
         "memory_mb_docker": (fields["memory"] or 0) / 2**20 or None,
-        "memory_mb_cgroup": ((_parse_bytes(memory_max) or 0) / 2**20) or None,
+        "memory_mb_cgroup": (resource.get("memory_bytes") or 0) / 2**20 or None,
         "pids_docker": fields["pids"],
-        "pids_cgroup": _parse_bytes(pids_max),
+        "pids_cgroup": resource.get("pids"),
+        "resource_backend": resource.get("backend"),
+        "cgroup_evidence": resource,
+        "cgroup_error": cgroup_error,
         "network": fields["network"],
         "rootfs_readonly": fields["rootfs_readonly"],
         "user": fields["user"],
@@ -277,10 +245,12 @@ def observe(image: str, spec: dict, *, network: str | None = None,
             problems.append(f"{name}: declared {want!r}, observed {got!r}")
 
     compare("cpus (docker)", declared["cpus"], observed["cpus_docker"], tolerance=1e-9)
-    compare("cpus (cgroup cpu.max)", declared["cpus"], observed["cpus_cgroup"], tolerance=0.01)
+    cpu_file = "cpu.cfs_quota_us/cpu.cfs_period_us" if resource.get("backend") == "cgroup-v1" else "cpu.max"
+    memory_file = "memory.limit_in_bytes" if resource.get("backend") == "cgroup-v1" else "memory.max"
+    compare(f"cpus (cgroup {cpu_file})", declared["cpus"], observed["cpus_cgroup"], tolerance=0.01)
     compare("memory_mb (docker)", declared["memory_mb"], observed["memory_mb_docker"],
             tolerance=1.0)
-    compare("memory_mb (cgroup memory.max)", declared["memory_mb"],
+    compare(f"memory_mb (cgroup {memory_file})", declared["memory_mb"],
             observed["memory_mb_cgroup"], tolerance=1.0)
     compare("pids (docker)", declared["pids"], observed["pids_docker"])
     compare("pids (cgroup pids.max)", declared["pids"], observed["pids_cgroup"])
