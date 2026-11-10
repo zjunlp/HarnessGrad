@@ -178,3 +178,46 @@ def test_native_existing_image_probe(profile):
         assert result.returncode == 0 and 'CGROUP_COMPAT_OK' in result.stdout
         assert runtime.receipt['memory_events']['oom_kill'] == 0
     assert runtime.receipt['cleanup']['complete']
+
+
+def test_notebook_hybrid_root_namespace_and_nonstandard_readonly_mounts(tmp_path, monkeypatch):
+    """A 0::/ entry without a cgroup2 mount is not unified v2 evidence."""
+    proc = tmp_path / 'proc'; (proc / '42').mkdir(parents=True); (proc / 'self').mkdir()
+    cpu = tmp_path / 'cpuset,cpu,cpuacct'; cpu.mkdir()
+    (tmp_path / 'cpu').symlink_to(cpu, target_is_directory=True)
+    memory = tmp_path / 'vendor-memory'; memory.mkdir()
+    pids = tmp_path / 'vendor-processes'; pids.mkdir()
+    paths = {'cpu': cpu, 'memory': memory, 'pids': pids}
+    (proc / '42' / 'cgroup').write_text('0::/\n2:cpuset,cpu,cpuacct:/\n3:memory:/\n4:pids:/\n5:name=systemd:/')
+    mounts = [f'{i} 0 0:{i} / {paths[key]} ro - cgroup cgroup ro,{controllers}'
+              for i,key,controllers in ((2,'cpu','cpuset,cpu,cpuacct'),(3,'memory','memory'),(4,'pids','pids'))]
+    (proc / 'self' / 'mountinfo').write_text('\n'.join(mounts))
+    for path,name,value in ((cpu,'cpu.cfs_quota_us','200000'),(cpu,'cpu.cfs_period_us','100000'),
+                            (memory,'memory.limit_in_bytes',str(512 << 20)),(pids,'pids.max','64')):
+        (path / name).write_text(value)
+    def refuse_write(*args, **kwargs):
+        raise AssertionError('cgroup observer attempted a write')
+    monkeypatch.setattr(Path, 'write_text', refuse_write)
+    monkeypatch.setattr(Path, 'mkdir', refuse_write)
+    layout = cgroups.resolve(42,proc=proc)
+    assert layout.backend == 'cgroup-v1' and layout.paths == paths
+    actual = cgroups.limits(layout)
+    assert actual['cpu_millis'] == 2000 and actual['memory_bytes'] == 512 << 20
+    assert actual['pids'] == 64
+    assert actual['swap_bytes'] is None  # Readable local caps do not imply swap accounting.
+
+
+def test_unified_membership_without_any_cgroup2_mount_is_not_evidence(tmp_path):
+    proc = tmp_path / 'proc'; (proc / '42').mkdir(parents=True); (proc / 'self').mkdir()
+    (proc / '42' / 'cgroup').write_text('0::/')
+    (proc / 'self' / 'mountinfo').write_text('')
+    with pytest.raises(ValueError, match='outside visible controller mounts'):
+        cgroups.resolve(42,proc=proc)
+
+
+def test_namespace_membership_is_not_guessed_against_incompatible_mount_root(tmp_path):
+    proc, paths, roots = fixture(tmp_path,mount_root='/host/private')
+    file = proc / '42' / 'cgroup'
+    file.write_text(file.read_text().replace('/host/private/container','/'))
+    with pytest.raises(ValueError, match='outside visible controller mounts'):
+        cgroups.resolve(42,proc=proc)
