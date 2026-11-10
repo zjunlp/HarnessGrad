@@ -18,6 +18,7 @@ from urllib.request import urlopen
 from eval.containers import sandbox
 from harnessgrad.paths import main_checkout
 from harnessgrad.python_artifacts import atomic_json, digest, locked
+from tools import loop_releases as loop
 from tools import configure_codex_harness as codex
 from tools import configure_dsh_harness as dsh
 from tools import configure_opencode_harness as opencode
@@ -49,7 +50,7 @@ DSH_RELEASES = {
     "0.2.2-rc.1": "sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==",
 }
 EXACT_SEMVER = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
-LABELS = {"openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode",
+LABELS = {"loop": "Loop", "openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode",
           "deepseek-harness": "DeepSeek Harness"}
 
 
@@ -244,6 +245,8 @@ def _version_key(version: str) -> tuple:
 def install_harness(name: str, version: str, root: Path) -> Path:
     if name not in LABELS:
         raise ValueError(f"unknown base harness {name!r}")
+    if name == "loop":
+        return loop.install(version, root)
     recipe = _recipe(name, version)
     if name == "codex":
         template = ROOT / "base_harness/codex"
@@ -330,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
     actions = parser.add_subparsers(dest="action", required=True)
     actions.add_parser("list", help="list verified harness versions")
     install = actions.add_parser("install", help="install and bind a harness version")
-    catalogs = {"openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES, "opencode": OPENCODE_RELEASES,
+    catalogs = {"loop": loop.RELEASES, "openclaw": openclaw.RELEASES, "codex": CODEX_RELEASES, "opencode": OPENCODE_RELEASES,
                 "deepseek-harness": DSH_RELEASES}
     install.add_argument("harness", choices=catalogs)
     install.add_argument("--version", help="exact release version (default: latest verified version)")
@@ -339,7 +342,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.action == "list":
         for name, releases in catalogs.items():
             for version in releases:
-                print(f"{name} {version} (Node.js {NODE_VERSION}, npm {NPM_VERSION}, Linux x86-64)")
+                if name == "loop":
+                    print(f"loop {version} (bundled Python source; prepare dependencies separately)")
+                else:
+                    print(f"{name} {version} (Node.js {NODE_VERSION}, npm {NPM_VERSION}, Linux x86-64)")
         return 0
     try:
         version = args.version

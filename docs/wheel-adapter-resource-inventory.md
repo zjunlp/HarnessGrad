@@ -73,6 +73,10 @@ It also demonstrates the known remaining untracked
 Python module discovery risk. Neither this file nor that test authorizes a real
 benchmark or proves all external dependencies are installed.
 
+Loop version selection also ships the pinned `tools/assets/loop-0.2.0.zip` source archive.
+It is exported by `harnessgrad harness install loop --version 0.2.0` without Git, Node
+or downloads; preparation of the selected version's dependencies remains separate.
+
 The current public-native scoring route ships `execution-runtime.json` for
 `bird_minidev` and `chessbench_puzzles`, plus BIRD's empty standard-library scoring
 requirements. The other three native scorer datasets share their published service

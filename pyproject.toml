@@ -60,6 +60,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 # A wheel must carry the same local demo and runtime contracts as a checkout.
 # Namespace discovery alone only includes Python modules, not these resources.
 [tool.setuptools.package-data]
+"tools" = ["assets/loop-0.2.0.zip"]
 "console" = [
     "LICENSE-DSH", "DEVELOPMENT.md", "WORKBENCH.md", "static/app.css", "static/author.html", "static/author.js",
     "static/console.js", "static/detail-i18n.js", "static/evidence.css",

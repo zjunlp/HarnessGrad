@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import shutil
+from harnessgrad.bubblewrap import executable as bubblewrap_executable
 
 
 def environment(directory: Path, inherited: dict | None) -> dict:
@@ -30,9 +30,10 @@ def command(argv: list[str], *, directory: Path, runtime_paths: list[str],
             read_paths: list[str], model_socket: str | None = None,
             info_fd: int | None = None) -> list[str]:
     """Mount declared inputs/runtime read-only and only this instance writable."""
-    bwrap = shutil.which("bwrap", path=os.defpath)
-    if bwrap is None:
-        raise RuntimeError("bound Python services require bubblewrap")
+    try:
+        bwrap = bubblewrap_executable()
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
     if not isinstance(read_paths, list) or any(not isinstance(p, str) for p in read_paths):
         raise ValueError("bound Python service read_paths must be absolute paths")
     directory = directory.resolve(strict=True)

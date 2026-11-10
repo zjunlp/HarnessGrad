@@ -147,7 +147,7 @@ def test_installed_adapter_resource_readers_without_checkout(tmp_path):
     expected.update(f'data/{path}' for path in AUTHORED_EXAMPLE)
     expected.update({'base_harness/deepseek-harness/dsh_runtime.py',
                      'data/datasets/jericho/authored_story.py',
-                     'tools/check_costbench_lifecycle.py',
+                     'tools/check_costbench_lifecycle.py', 'tools/assets/loop-0.2.0.zip',
                      'tools/prepare_chessbench_native.py'})
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
@@ -188,6 +188,11 @@ from data.datasets import strongreject, memoryagentbench, personamem_v2
 installed = Path(os.environ['RESOURCE_TEST_VENV']).resolve()
 root = Path(strongreject.__file__).resolve().parents[2]
 assert root.is_relative_to(installed)
+from tools import loop_releases
+legacy_loop = loop_releases.install('0.2.0', Path.cwd()/'installed-loop-sources')
+assert json.loads((legacy_loop/'harness.json').read_text())['version'] == '0.2.0'
+assert {p.name for p in legacy_loop.iterdir()} == loop_releases.LEGACY_FILES
+assert loop_releases.ARCHIVE.is_relative_to(installed)
 from data.scaffolds import registry
 tasks, setups, verifiers = registry.load_tasks('authored_example_fix_bug')
 assert [task['task_id'] for task in tasks] == ['t01']
