@@ -23,6 +23,7 @@ import time
 
 from eval.ckpt.source_tree import PYTHON_BYTECODE, PYTHON_GENERATED, python_spec, runtime_spec
 from harnessgrad.paths import configured_path, main_checkout
+from harnessgrad.bubblewrap import executable as bubblewrap_executable
 from harnessgrad.python_artifacts import (
     atomic_json, canonical, digest, freeze, inventory, locked, remove_instance,
 )
@@ -289,9 +290,10 @@ def _cache(repo, store):
 
 
 def _builder(argv, *, instance, uv, base, cache, allow_downloads, timeout_s, wheelhouse=None):
-    bwrap = shutil.which("bwrap", path=os.defpath)
-    if bwrap is None:
-        raise RuntimeUnavailable("Managed Python preparation requires bubblewrap")
+    try:
+        bwrap = bubblewrap_executable()
+    except ValueError as exc:
+        raise RuntimeUnavailable(str(exc)) from exc
     home = instance / "home"
     for path in (home, home / "tmp", home / "config", home / "cache"):
         path.mkdir(exist_ok=True)

@@ -25,6 +25,11 @@ platform or task files. `--check` changes no system packages; if a prerequisite
 is missing, follow its diagnostic before proceeding. Do not bypass a failed
 sandbox check to obtain a successful run.
 
+For a Bubblewrap binary outside the system search path, export
+`HG_BWRAP=/absolute/path/to/bwrap` before installation, runtime preparation and
+service launch. Managed Python preparation and bound Python services honor the
+same explicit override; an invalid override fails instead of selecting a different binary.
+
 Creating Python/venvs or installing the project can download Python, pip or build
 tools. Offline installation requires these prerequisites to be available already.
 The platform uses only the standard library at runtime. Harnesses, datasets,
