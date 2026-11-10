@@ -45,7 +45,7 @@ from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
 # `verifier` decides what a task's score is, and `container_state` is the long path for
 # a task whose state is the container's own filesystem.
 from eval.containers.container_state import _run_one_container_state
-from eval.run.task_contract import runtime_task
+from eval.run.task_contract import runtime_task, with_cli_task
 from eval.run.outcomes import (
     _PROVIDER_FAILURES, _provider_failure, _stopped_by_signals, _invalid,
     timeout_verdict, _spread, _harness_failure,
@@ -636,7 +636,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             actor_task = ({**task, "goal": chess_stepwise.GOAL}
                           if stepwise_session is not None else task)
             task_file = workspace.write_public_task(
-                runtime_task(actor_task, setup, verdict_kind=(verifier or {}).get("kind")))
+                with_cli_task(runtime_task(actor_task, setup, verdict_kind=(verifier or {}).get("kind"))))
 
         # Services come up before the harness and are health-checked before it starts
         # (INTERFACE.md §2.5.7, steps 1-3). A harness that starts against a service

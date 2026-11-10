@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from eval.run.task_contract import cli_task_text, runtime_task
+from eval.run.task_contract import cli_task_text, runtime_task, with_cli_task
 from eval.run.task_workspace import TaskWorkspace
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -30,7 +30,7 @@ def test_platform_renders_public_content_once_without_private_metadata(tmp_path)
     assert 'Write the answer, and nothing else' not in public
     workspace = TaskWorkspace()
     try:
-        saved = json.loads(workspace.write_public_task({**rendered, 'cli_task': 'forged'}).read_text())
+        saved = json.loads(workspace.write_public_task(with_cli_task({**rendered, 'cli_task': 'forged'})).read_text())
         assert saved['cli_task'] == public
         for name in ('codex', 'deepseek-harness', 'openclaw', 'opencode'):
             mod = adapter(name)
