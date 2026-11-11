@@ -616,14 +616,17 @@ def test_explicit_unverified_version_binds_with_a_warning(installed, monkeypatch
 
 
 @needs_bwrap
-def test_install_and_reuse_explicit_unverified_version(installed, monkeypatch, capsys):
+def test_install_reuses_unverified_version_then_promotes_it(installed, monkeypatch, capsys):
     _, _, node, root = installed
     version = "2099.1.1"
     integrity = preparation.RELEASES["2026.11.2"].integrity
     monkeypatch.setattr(install_harness, "_toolchain", lambda _root: node.parent.parent)
 
+    installs = []
+
     def install_package(instance, _node_root, release):
-        assert release.version == version and release.integrity is None
+        assert release.version == version
+        installs.append(release.integrity)
         project = instance / "package"
         package(project / "node_modules/openclaw", version)
         lockfile = project / "package-lock.json"
@@ -634,15 +637,58 @@ def test_install_and_reuse_explicit_unverified_version(installed, monkeypatch, c
         return lockfile
 
     monkeypatch.setattr(install_harness, "_install_package", install_package)
-    args = ["install", "openclaw", "--version", version, "--install-root", str(root / "store")]
+    default_args = ["install", "openclaw", "--install-root", str(root / "store")]
+    args = [*default_args, "--version", version]
     assert install_harness.main(args) == 0
     first = capsys.readouterr()
     assert first.err.count(f"Warning: OpenClaw {version} is unverified") == 1
-    assert runtime.resolve(Path(first.out.strip()), {})["source_identity"]["verified"] is False
+    old_harness = Path(first.out.strip())
+    old_identity = runtime.resolve(old_harness, {})["source_identity"]
+    assert old_identity["verified"] is False
     assert install_harness.main(args) == 0
     reused = capsys.readouterr()
     assert reused.out == first.out
     assert reused.err == first.err
+
+    receipt = old_harness.parent.parent / "installation.json"
+    old_receipt = receipt.read_bytes()
+    old_manifest = (old_harness / "harness.json").read_bytes()
+    old_instance = old_harness.parent
+    archive = old_instance / "installation.json"
+    monkeypatch.setitem(preparation.RELEASES, version, preparation.Release(
+        "fixture", "sha512-" + "A" * 86 + "==", adapter_profile="entries", rebuild=True))
+    assert install_harness.main(default_args) == 1
+    assert "npm lock does not match the published" in capsys.readouterr().err
+    assert receipt.read_bytes() == old_receipt
+    assert installs == [None]
+
+    monkeypatch.setitem(preparation.RELEASES, version, preparation.Release(
+        "fixture", integrity, adapter_profile="entries", rebuild=True))
+
+    def fail_publish(path, _value):
+        assert path == receipt
+        assert archive.read_bytes() == old_receipt
+        raise OSError("fixture publication failed")
+
+    with monkeypatch.context() as attempt:
+        attempt.setattr(install_harness, "atomic_json", fail_publish)
+        assert install_harness.main(default_args) == 1
+        assert "fixture publication failed" in capsys.readouterr().err
+    assert receipt.read_bytes() == old_receipt
+    assert set(receipt.parent.glob("install-*")) == {old_instance}
+
+    assert install_harness.main(default_args) == 0
+    promoted = capsys.readouterr()
+    new_harness = Path(promoted.out.strip())
+    assert new_harness != old_harness
+    assert json.loads(receipt.read_bytes())["instance"] == new_harness.parent.name
+    assert runtime.resolve(new_harness, {})["source_identity"] == preparation.source_identity(version)
+    assert (old_harness / "harness.json").read_bytes() == old_manifest
+    assert runtime.resolve(old_harness, {})["source_identity"] == old_identity
+    assert archive.read_bytes() == old_receipt
+    assert install_harness.main(args) == 0
+    assert capsys.readouterr().out == promoted.out
+    assert installs == [None, integrity, integrity]
 
 
 @needs_bwrap

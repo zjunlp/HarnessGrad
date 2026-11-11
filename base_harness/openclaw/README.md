@@ -41,6 +41,13 @@ scripts in the installation sandbox. Verified releases use a pinned package
 digest. For other releases, npm checks the archive against the digest recorded
 in the lockfile for the exact registry tarball.
 
+When a previously unverified release becomes verified, rerun the install command
+in the same store. The installer checks that the previous package digest matches
+the verified digest and validates the existing binding. It then installs and
+publishes a new verified copy. The original copy keeps its identity and a copy
+of its original installation receipt, so historical runs can still use that
+path.
+
 The checked-in template carries the portable identity of 2026.3.13. To bind
 an existing installation of that release, copy and prepare the template:
 
