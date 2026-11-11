@@ -188,6 +188,13 @@ from data.datasets import strongreject, memoryagentbench, personamem_v2
 installed = Path(os.environ['RESOURCE_TEST_VENV']).resolve()
 root = Path(strongreject.__file__).resolve().parents[2]
 assert root.is_relative_to(installed)
+from base_harness.openclaw import task_gateway
+gateway_config = {}
+task_gateway.configure(gateway_config, profile='entries')
+plugin_path, = gateway_config['plugins']['load']['paths']
+plugin = Path(plugin_path)
+assert plugin.is_relative_to(installed), plugin
+assert plugin.is_file(), plugin
 from tools import loop_releases
 legacy_loop = loop_releases.install('0.2.0', Path.cwd()/'installed-loop-sources')
 assert json.loads((legacy_loop/'harness.json').read_text())['version'] == '0.2.0'
