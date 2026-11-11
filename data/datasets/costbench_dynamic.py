@@ -9,6 +9,7 @@ from harnessgrad.paths import dataset_root
 from data.scaffolds.asset_module import load as load_asset
 
 KIND = 'dataset'
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = 'costbench'
 ORACLE_SOURCE = 'released'
 SPLIT_SOURCE = 'declared'

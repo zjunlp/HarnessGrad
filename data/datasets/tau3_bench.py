@@ -16,6 +16,7 @@ import os
 from harnessgrad.paths import configured_path, dataset_root
 
 KIND = 'dataset'
+VERIFIER_KIND = 'command'
 ORACLE_SOURCE = 'released'
 # Upstream's full-base reporting protocol, distinct from the held-out split.
 OFFICIAL_EVAL = None
@@ -93,7 +94,7 @@ def model_spec(role, tools=None):
 
 
 def _execution_runtime():
-    """Resolve and revalidate the selected dependency artifact on every declaration.
+    """Resolve the selected dependency artifact within the current declaration batch.
 
     This is an external store reference, not a relocatable copy or a sealed OS.
     The manager inventories the venv and base executable; host libraries and the

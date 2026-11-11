@@ -16,6 +16,7 @@ from pathlib import Path
 from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None
 #: `"none"`: the benchmark states no division, so this adapter declares none. It used to

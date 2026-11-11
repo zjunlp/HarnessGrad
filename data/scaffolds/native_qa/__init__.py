@@ -144,11 +144,16 @@ class _Verifiers(Mapping):
     def __len__(self):
         return len(self.rows)
 
+    def __contains__(self, key):
+        return key in self.rows
+
     def __getitem__(self, key):
         return self.dataset.verifier(self.rows[key])
 
 
 class Dataset:
+    VERIFIER_KIND = "command"
+
     def __init__(self,name,root=None):
         self.name=name; self.source=CATALOG[name]
         if root is None:

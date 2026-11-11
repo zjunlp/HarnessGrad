@@ -77,6 +77,7 @@ from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "livecodebench"
 #: The reference solutions are **ours** and the released tests validate them; see the module
 #: docstring and `data/dataset.schema.json` (`module.oracle_about`).

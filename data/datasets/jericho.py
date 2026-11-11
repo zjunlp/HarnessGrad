@@ -68,6 +68,9 @@ What is deliberately not added
 """
 from __future__ import annotations
 
+from data.scaffolds.declarations import TaskDeclarations
+from data.scaffolds.scorer_input import source_digest
+
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 from pathlib import Path
@@ -75,6 +78,7 @@ from pathlib import Path
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "jericho"
 
 #: The oracle control submits the benchmark's own released reference; see
@@ -217,13 +221,12 @@ def _goal(record: dict) -> str:
 
 def _setup(record: dict) -> dict:
     """Publish only a stdlib client and bind the trusted single-game service."""
-    import hashlib
     import json
     from harnessgrad.dataset_runtime import bind, resolve_execution
 
     binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "service")
     rom = Path(record["path"]).resolve(strict=True)
-    digest = hashlib.sha256(rom.read_bytes()).hexdigest()
+    digest = source_digest(rom)
     return {
         "files": [
             {"path": LOG_FILE, "content": ""},
@@ -379,8 +382,8 @@ def load() -> tuple[list[dict], dict[str, str]]:
     return tasks, {r["task_id"]: "" for r in records}
 
 
-def _map(builder) -> dict:
-    return {r["task_id"]: builder(r) for r in __getattr__("_RECORDS")}
+def _map(builder):
+    return TaskDeclarations(__getattr__("_RECORDS"), builder)
 
 
 def __getattr__(name: str):

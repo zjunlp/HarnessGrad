@@ -110,6 +110,9 @@ had to be stripped out of a file the agent receives.
 """
 from __future__ import annotations
 
+from data.scaffolds.declarations import TaskDeclarations
+from data.scaffolds.scorer_input import source_digest
+
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 import os
@@ -119,6 +122,7 @@ from harnessgrad.paths import dataset_root
 
 #: See `data/scaffolds/registry.py:KIND_DATASET`.
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "scienceworld"
 
 #: The oracle control submits the benchmark's own released reference; see
@@ -405,15 +409,14 @@ def _goal(record: dict) -> str:
 
 def _setup(record: dict, *, binding=None, world_jar=None) -> dict:
     """Publish a stdlib client and bind a fixed-task managed service."""
-    import hashlib
     from harnessgrad.dataset_runtime import bind, resolve_execution
     binding = binding or bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
     jar = world_jar or _runtime_payload(binding)
     task = {'task_name': record['task_name'], 'variation': record['variation'], 'simplifications': ''}
     java = JRE_STAGED / 'bin/java'
     context = {'task': task, 'jar': str(jar), 'java_home': str(JRE_STAGED.resolve()),
-               'java_sha256': hashlib.sha256(java.read_bytes()).hexdigest(),
-               'source_sha256': hashlib.sha256((ASSETS/'relay.py').read_bytes()).hexdigest()}
+               'java_sha256': source_digest(java),
+               'source_sha256': source_digest(ASSETS/'relay.py')}
     return {'files': [
         {'path': TASK_IN_WORKDIR, 'content': json.dumps(task)},
         {'path': LOG_IN_WORKDIR, 'content': ''},
@@ -603,12 +606,10 @@ def _split() -> dict | None:
 
 
 class _Lazy:
-    """`ENV`, `SETUP` and `VERIFY`, built on first use.
+    """Index tasks on first use; build SETUP/VERIFY only for requested keys.
 
-    Three dicts with one entry per task, and there are 7,207 tasks. Building them at import
-    would make importing this adapter cost a JVM start plus 21,621 dict constructions -- the
-    lesson the QA batch recorded in `docs/dataset-onboarding-skill.md` §15.7. The platform
-    asks for them through module `__getattr__` below.
+    Cataloguing the 7,207-task pool does not prepare services or hash the JAR.
+    Shared resources are reused only within the registry's declaration scope.
     """
 
     def __init__(self) -> None:
@@ -620,13 +621,9 @@ class _Lazy:
             if name == 'ENV':
                 self._cache[name] = {r['task_id']: {'kind':'files'} for r in records}
             elif name == 'SETUP':
-                from harnessgrad.dataset_runtime import bind, resolve_execution
-                binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
-                jar = _runtime_payload(binding)
-                self._cache[name] = {r['task_id']: _setup(r, binding=binding, world_jar=jar) for r in records}
+                self._cache[name] = TaskDeclarations(records, _setup)
             else:
-                jar = _runtime_payload()
-                self._cache[name] = {r['task_id']: _verifier(r, world_jar=jar) for r in records}
+                self._cache[name] = TaskDeclarations(records, _verifier)
         return self._cache[name]
 
 

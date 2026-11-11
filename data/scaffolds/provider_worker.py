@@ -99,7 +99,10 @@ def _inventory(name):
     setups, verifiers = {}, {}
     if sample is not None:
         _, setups, verifiers = registry.load_tasks(name, task_ids=[sample['task_id']])
-    declared = getattr(getattr(module, '_SPEC', None), 'VERIFIER_KIND', None)
+    declared = getattr(module, 'VERIFIER_KIND', None)
+    for owner in ('_SPEC', '_spec', 'ADAPTER'):
+        if declared is None:
+            declared = getattr(getattr(module, owner, None), 'VERIFIER_KIND', None)
     kinds = ([declared] if declared else sorted({v['kind'] for v in getattr(module, 'VERIFY', {}).values()}))
     return {'metadata': metadata, 'tasks': len(tasks), 'sample': sample,
             'env_kinds': sorted({env.get('kind', 'files') for env in (envs or {}).values()}),
@@ -160,7 +163,8 @@ def dispatch(request: dict) -> dict:
         if binding is None or binding.get("dataset") != execution_name:
             raise ValueError("provider requires the selected execution artifact")
     bindings = {} if binding is None else {binding["dataset"]: binding}
-    with registry._local_provider(), dataset_runtime.execution_snapshot(bindings):
+    from data.scaffolds.declarations import scope
+    with registry._local_provider(), dataset_runtime.execution_snapshot(bindings), scope():
         if operation == 'inventory':
             return _inventory(name)
         if operation == 'control':

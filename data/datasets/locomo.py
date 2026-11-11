@@ -19,6 +19,7 @@ from pathlib import Path
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "locomo"
 ORACLE_SOURCE = "released"
 OFFICIAL_EVAL = None

@@ -6,6 +6,8 @@ remain private and must never be copied into an actor's task JSON.
 """
 from __future__ import annotations
 
+from copy import deepcopy
+
 import json
 import math
 import os
@@ -96,6 +98,7 @@ class DatasetProvider:
         self.freeze_runtime = freeze_runtime
         self.runtime = None
         self.execution_runtime = None
+        self._catalog_cache = {}
 
     def _request(self, operation: str, *, task_ids=None, config_snapshot=None) -> dict:
         configuration = _configuration(self.name, config_snapshot)
@@ -176,10 +179,18 @@ class DatasetProvider:
 
     def catalog(self, *, config_snapshot: dict | None = None) -> dict:
         """Return public tasks separately from the trusted fallback answer map."""
+        key = None
+        if getattr(self, 'freeze_runtime', False):
+            configuration = _configuration(self.name, config_snapshot)
+            key = tuple(sorted(configuration.items()))
+            if key in self._catalog_cache:
+                return deepcopy(self._catalog_cache[key])
         result = self._request("catalog", config_snapshot=config_snapshot)
         if (not isinstance(result.get("tasks"), list) or not isinstance(result.get("scorable"), dict)
                 or not isinstance(result.get("metadata"), dict)):
             raise DatasetProviderError(self.name, "catalog", "malformed catalog", error_type="ProtocolError")
+        if key is not None:
+            self._catalog_cache[key] = deepcopy(result)
         return result
 
     def resolve(self, task_ids=None, config_snapshot: dict | None = None) -> dict:

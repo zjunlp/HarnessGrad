@@ -64,6 +64,7 @@ from harnessgrad.paths import dataset_root
 
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
