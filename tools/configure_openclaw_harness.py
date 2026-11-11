@@ -36,6 +36,8 @@ RELEASES = {
     "2026.3.13": Release("61d171a", "sha512-/juSUb070Xz8K8CnShjaZQr7CVtRaW4FbR93lgr1hLepcRSbyz2PQR+V4w5giVWkea61opXWPA6Vb8dybaztFg=="),
     "2026.11.2": Release("b556fdf", "sha512-SgBml4WLp8V1DdAYkrTPLzVdA/iYo3iuHCtm4788GjaG83QZdd1VeOTlue0HBJGdn3SbFE06b6uPs+AM5ShMgg==",
                          adapter_profile="entries", rebuild=True),
+    "2026.11.3": Release("847611d", "sha512-FBq/q0TCaoA2b7qfdV0q81fHhI6RBB1zAQfJQREc1u2TlK5khVgCUsAlXskLWthyVqRz5PWEj+oOmfYgK58dHg==",
+                         adapter_profile="entries", rebuild=True),
 }
 
 

@@ -597,7 +597,7 @@ def test_override_cannot_switch_installations(installed):
 @needs_bwrap
 def test_explicit_unverified_version_binds_with_a_warning(installed, monkeypatch, capsys):
     harness, launcher, node, _ = installed
-    version = "2026.11.3"
+    version = "2099.1.1"
     declare(launcher.resolve(), version=version)
     probe = preparation._probe
 
@@ -618,7 +618,7 @@ def test_explicit_unverified_version_binds_with_a_warning(installed, monkeypatch
 @needs_bwrap
 def test_install_and_reuse_explicit_unverified_version(installed, monkeypatch, capsys):
     _, _, node, root = installed
-    version = "2026.11.3"
+    version = "2099.1.1"
     integrity = preparation.RELEASES["2026.11.2"].integrity
     monkeypatch.setattr(install_harness, "_toolchain", lambda _root: node.parent.parent)
 
