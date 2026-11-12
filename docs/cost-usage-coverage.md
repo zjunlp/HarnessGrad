@@ -67,3 +67,36 @@ missing/partial/zero usage, mixed tasks, all retained trials, failed responses,
 retries, multiple service recordings, progress/resume, and cost rendering. They
 do not establish universal accounting completeness for external adapters that
 omit both reports and evidence of their requests.
+
+CLI improver audit receipts also include `*-transcript-metadata.log` and
+`*-usage-ledger.log` JSON files in the existing method-log collection. The display
+transcript still retains at most 200,000 Unicode characters (stdout followed by
+stderr); metadata records the original length, retained half-open range and
+truncation flag. Usage is parsed from the full in-memory transcript, independently
+of that display limit. This change does not imply that previously recorded usage
+was lost when display logs were truncated.
+
+The ledger contains only numeric usage, fixed status labels and validated SHA
+identities; it excludes tool content, environment values and credentials. Absent
+provider reports produce `status: unknown` and `usage: null`. Provider completeness
+is unknown; retry counts and provider timing remain null without evidence. Parent,
+evidence and patch-base SHA fields remain `unknown` unless explicitly supplied as
+validated identities. These receipts do not reconstruct historical missing traces
+or establish benchmark success.
+
+The ledger additionally allowlists each `dsh-usage` record with a one-based ordinal,
+zero-based transcript line index, input/output/cache counts and per-field coverage.
+Missing or invalid fields remain null; malformed records retain only fixed status
+and null values. Original lines and extra provider JSON fields are never copied.
+The compatible aggregate remains the existing `parse_usage_lines` result under
+`canonical_usage_aggregate`; `usage` totals become null for any field missing or
+invalid in a recognized usage line, rather than filling gaps with zero.
+`evidence_sha` is an alias of `evidence_harness_sha`: the measured harness identity,
+not a hash of evidence bytes. Optional selected-parent and evidence round numbers
+are retained only as nonnegative integers.
+
+Parent/evidence bindings come from platform-staged round records and state indexes.
+`selected_parent_sha` and `patch_base_sha` name the source being edited;
+`evidence_harness_sha` names the measured harness described by the evidence.
+They may differ for a historical source and current-run evidence. These are declared
+harness-tree identities, not Git HEAD guesses or evidence-content digests.

@@ -32,6 +32,7 @@ from __future__ import annotations
 import itertools
 import json
 import os
+import re
 import shutil
 import stat
 import sys
@@ -1302,6 +1303,97 @@ def _keep_improver_transcript(result: dict, improver_ws: Path) -> list[str]:
     return written
 
 
+def _keep_improver_audit(result: dict, improver_ws: Path) -> list[str]:
+    """Persist bounded-log metadata and reported usage, never transcript/tool content.
+
+    Usage is parsed from the full in-memory transcript, before display truncation.
+    This does not establish provider completeness or reconstruct missing history.
+    JSON uses the existing *.log collection contract.
+    """
+    destination = _method_workspace()
+    if not destination.is_dir():
+        return []
+    transcript = str(result.get("transcript") or "")
+    length = len(transcript)
+    usage = parse_usage_lines(transcript)
+    # Accept only explicit SHA identities. Paths, free text and environment are
+    # deliberately excluded from these machine-readable audit records.
+    identities = {}
+    supplied = result.get("audit_identity") or {}
+    for field in ("parent_sha", "evidence_sha", "patch_base_sha"):
+        value = supplied.get(field) if isinstance(supplied, dict) else None
+        if field == "parent_sha" and isinstance(supplied, dict):
+            value = supplied.get("selected_parent_sha", value)
+        if field == "evidence_sha" and isinstance(supplied, dict):
+            value = supplied.get("evidence_harness_sha", value)
+        identities[field] = (value if isinstance(value, str) and len(value) == 40
+                             and all(c in "0123456789abcdef" for c in value)
+                             else "unknown")
+    identities["selected_parent_sha"] = identities["parent_sha"]
+    identities["evidence_harness_sha"] = identities["evidence_sha"]
+    for field in ("selected_parent_round", "evidence_round"):
+        value = supplied.get(field) if isinstance(supplied, dict) else None
+        identities[field] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+    metadata = {
+        "schema_version": 1, "unit": "unicode_characters",
+        "original_chars": length, "retained_start": max(0, length - 200_000),
+        "retained_end": length, "retained_chars": min(length, 200_000),
+        "truncated": length > 200_000, "stream_order": "stdout_then_stderr",
+        **identities,
+    }
+    records = []
+    for line_index, line in enumerate(transcript.splitlines()):
+        line = line.strip()
+        if not line.startswith(DASH_USAGE_PREFIX):
+            continue
+        record = {"ordinal": len(records) + 1, "line_index": line_index,
+                  "retries": None, "provider_seconds": None}
+        try:
+            payload = json.loads(line[len(DASH_USAGE_PREFIX):])
+        except (ValueError, TypeError):
+            payload = None
+        valid = isinstance(payload, dict)
+        coverage = {}
+        for provider_field, field in (("input_tokens", "input"),
+                                      ("output_tokens", "output"),
+                                      ("cache_read_tokens", "cache_read")):
+            value = payload.get(provider_field) if valid else None
+            accepted = type(value) is int and value >= 0
+            record[field] = value if accepted else None
+            coverage[field] = ("reported" if accepted else
+                               "missing" if valid and provider_field not in payload
+                               else "invalid")
+        record["status"] = "parsed" if valid else "malformed"
+        record["coverage"] = coverage
+        records.append(record)
+    complete_usage = None
+    if records:
+        complete_usage = {}
+        for field in ("input", "output", "cache_read"):
+            complete_usage[field] = (sum(record[field] for record in records)
+                                     if all(record[field] is not None for record in records) else None)
+        complete_usage["calls"] = len(records) if all(record["status"] == "parsed" for record in records) else None
+    ledger = {
+        "schema_version": 1, "source": "full_in_memory_transcript",
+        "status": ("reported" if complete_usage and all(v is not None for v in complete_usage.values())
+                   else "partially_reported" if records else "unknown"),
+        "usage": complete_usage, "canonical_usage_aggregate": usage,
+        "records": records, "line_index_base": 0,
+        "provider_completeness": "unknown",
+        "retries": None, "provider_seconds": None, **identities,
+    }
+    written = []
+    for suffix, payload in (("transcript-metadata", metadata), ("usage-ledger", ledger)):
+        name = f"improver-{improver_ws.name}-{suffix}.log"
+        try:
+            (destination / name).write_text(json.dumps(payload, sort_keys=True) + "\n",
+                                            encoding="utf-8")
+        except OSError:
+            continue
+        written.append(name)
+    return written
+
+
 def artifact_path_error(name) -> str | None:
     """Artifact keys are relative to artifacts/, with no parent traversal."""
     if (not isinstance(name, str) or not name or "\x00" in name
@@ -1377,6 +1469,41 @@ def _read_cli_artifacts(workspace: Path) -> dict[str, str]:
     return artifacts
 
 
+def _editor_audit_identity(parent: Path, evidence_root: Path | None) -> dict:
+    """Describe staged source/evidence bindings; never infer identity from Git HEAD.
+
+    SHA fields are the platform's declared harness tree identities, not hashes of
+    evidence contents. Unknown metadata remains unknown.
+    """
+    result = {"selected_parent_round": None, "selected_parent_sha": "unknown",
+              "evidence_round": None, "evidence_harness_sha": "unknown",
+              "patch_base_sha": "unknown"}
+    if evidence_root is None:
+        return result
+    try:
+        point = json.loads((evidence_root / "round.json").read_text())
+        number = point.get("round")
+        if type(number) is int and number >= 0:
+            result["evidence_round"] = number
+        result["evidence_harness_sha"] = (point.get("identity") or {}).get("harness_sha", "unknown")
+        source = Path(parent).resolve(strict=True)
+        if source == evidence_root.parent.resolve(strict=True):
+            result["selected_parent_round"] = result["evidence_round"]
+            result["selected_parent_sha"] = result["evidence_harness_sha"]
+        elif source.parent == evidence_root.resolve(strict=True) / "states" and re.fullmatch(r"round-[0-9]+", source.name):
+            index = json.loads((evidence_root / "states/index.json").read_text())
+            entry = index.get(source.name) or {}
+            declared = entry.get("harness_dir")
+            if (source.name in index.get("kept", []) and isinstance(declared, str)
+                    and Path(declared).resolve(strict=True) == source):
+                result["selected_parent_round"] = int(source.name[6:])
+                result["selected_parent_sha"] = entry.get("sha", "unknown")
+        result["patch_base_sha"] = result["selected_parent_sha"]
+    except (OSError, TypeError, ValueError, AttributeError):
+        pass
+    return result
+
+
 def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
              evidence_channel=None) -> dict:
     """Propose through a **CLI** improver and return the result as an edit sequence.
@@ -1426,7 +1553,9 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
         req["harness_runtime"] = json.loads(runtime_receipt.read_text())
     pointer = evidence_pointer(context) if context is not None else "No evidence requested."
     result = cli_improver.propose(req, parent, prompt=prompt, facts=facts, evidence=pointer)
+    result["audit_identity"] = _editor_audit_identity(parent, evidence_root)
     _keep_improver_transcript(result, workspace)
+    _keep_improver_audit(result, workspace)
     artifacts = _read_cli_artifacts(workspace)
     # **What the improver itself cost, as far as anyone can see.** `propose` returns a
     # `reported` block -- exit code, wall-clock seconds, which files moved, and what the
@@ -1456,6 +1585,12 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
         "prompt_tokens_estimate": round(len(prompt) / 4),
         "spend_reported": bool(usage),
         **({"usage": usage} if usage else {}),
+        **result["audit_identity"],
+        **({"dsh_identity": {field: reported["dsh_identity"][field]
+                            for field in ("model", "provider", "profile")}}
+           if isinstance(reported.get("dsh_identity"), dict)
+           and all(isinstance(reported["dsh_identity"].get(field), str)
+                   for field in ("model", "provider", "profile")) else {}),
     })
     if not usage:
         _SPENT["unknown_cli_usage"] = True
@@ -1607,7 +1742,9 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     evidence_root = (_evidence_channel(base, evidence_channel)
                      if base is not None or evidence_channel is not None else None)
     context = evidence_root.parent if evidence_root is not None else None
-    cli = None if endpoint_only else cli_improver_identity(context)
+    # Opting out of task evidence must not switch a resolved CLI to an endpoint.
+    # The base's identity lookup reads configuration only; it stages no task data.
+    cli = None if endpoint_only else cli_improver_identity(context if context is not None else base)
     if cli is not None:
         tree = Path(parent) if parent is not None else Path(base)
         return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli,
