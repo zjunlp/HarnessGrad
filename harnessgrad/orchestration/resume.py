@@ -20,7 +20,7 @@ from eval.containers import external_runtime
 from eval.observe.console import CONSOLE as console
 from harnessgrad import candidate_runtime, dataset_runtime_identity, scoring_identity
 from .candidate_stage import WorkspaceOps
-from .historical_evidence import base_from_point, read_trace_bodies, read_progress_results, require_verification_context
+from .historical_evidence import reused_measurement, read_progress_results, require_verification_context
 
 
 class ResumeRefused(RuntimeError):
@@ -294,8 +294,7 @@ def admit_restored_candidate(run_dir, existing, last, work, staged_sha):
 def restore_train_workspace(request, run_dir, existing, last, view, work, ops):
     h0_sha, staged_sha, restored_base = restore_checkpoint_tree(
         request, run_dir, existing[0], last, view, work, ops)
-    base = base_from_point(existing[0])
-    base["traces"], base["trial_traces"] = read_trace_bodies(run_dir / "round0_traces")
+    base = reused_measurement(run_dir, existing[0], existing)
     recorded_sha, binding = admit_restored_candidate(run_dir, existing, last, work, staged_sha)
     return {"existing": existing, "last": last, "base": base, "h0_sha": h0_sha or staged_sha,
             "recorded_sha": recorded_sha, "staged_sha": staged_sha, "restored_base": restored_base}, binding
