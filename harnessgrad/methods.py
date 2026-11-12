@@ -200,6 +200,12 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     # with `llm-pi-ai` providers nobody chose for it.
     if (improver or {}).get("home"):
         env["HG_IMPROVER_DSH_HOME"] = str(improver["home"])
+    if (improver or {}).get("argv_style") == "dsh":
+        for field in ("model", "provider", "profile"):
+            value = str((improver or {}).get(field) or "").strip()
+            if not value:
+                raise ValueError("DSH resolved identity missing required field: " + field)
+            env["HG_IMPROVER_" + field.upper()] = str(improver[field])
     dsh_runtime = (improver or {}).get("dsh_runtime") or {}
     if dsh_runtime:
         env["HG_DSH_ROOT"] = str(dsh_runtime["root"])
