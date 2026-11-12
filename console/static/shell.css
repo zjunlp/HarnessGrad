@@ -749,4 +749,11 @@ a { color: var(--accent-ink); }
   .settings__nav { flex-direction: row; border-right: 0; border-bottom: var(--line); }
   .settings__row { grid-template-columns: minmax(0, 1fr); }
   .settings__control { justify-content: flex-start; }
+  .launch-actions { flex-wrap: wrap; }
+  .launch-actions #state {
+    flex: 1 1 100%; min-width: 0; white-space: normal; line-height: 1.35;
+    border-radius: var(--r-2);
+  }
+  .launch-actions .spacer { display: none; }
+  .launch-actions #go { margin-left: auto; }
 }

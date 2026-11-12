@@ -156,19 +156,61 @@
     el.textContent = text;
   }
 
+  function launchFailure(out, message) {
+    out.className = "wlog";
+    out.textContent = message;
+  }
+
+  function launchSuccess(out, data) {
+    const runId = String(data.run_id || "");
+    const argv = Array.isArray(data.argv) ? data.argv.map(String).join(" ") : "";
+    const runHref = `/index.html#/runs/${encodeURIComponent(runId)}`;
+    out.className = "card";
+    out.innerHTML = `<div class="card__body hg-stack">
+      <div><strong>${esc(t("ls.130"))}</strong><div class="field__hint">${esc(t("ls.131"))}</div></div>
+      <dl class="kv"><dt>${esc(t("ls.132"))}</dt><dd class="hg-mono">${esc(runId || "—")}</dd></dl>
+      <div class="hg-row" style="flex-wrap:wrap">
+        <a class="btn btn--primary" id="open-launched-run" href="${esc(runHref)}">${esc(t("ls.133"))}</a>
+        <button class="btn" type="button" id="show-launched-log">${esc(t("ls.134"))}</button>
+      </div>
+      <pre class="wlog" id="launched-log" hidden></pre>
+      ${argv ? `<details><summary>${esc(t("ls.135"))}</summary><pre class="wcmd hg-mono">${esc(argv)}</pre></details>` : ""}
+    </div>`;
+    const button = out.querySelector("#show-launched-log");
+    const log = out.querySelector("#launched-log");
+    if (!runId) {
+      button.disabled = true;
+      return;
+    }
+    button.addEventListener("click", async () => {
+      log.hidden = false;
+      log.textContent = t("ls.136");
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/launch-log`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || payload.error || response.status);
+        log.textContent = t("ls.137") + (payload.truncated ? "…\n" : "") + (payload.text || t("ls.138"));
+      } catch (error) {
+        log.textContent = `${t("ls.85")}${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
   async function go() {
     $("go").disabled = true;
-    const out = $("result"); out.hidden = false; out.textContent = t("ls.60");
+    const out = $("result"); out.hidden = false; launchFailure(out, t("ls.60"));
     try {
       const response = await fetch("/api/runs", { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(card) });
       const d = await response.json();
-      out.textContent = response.ok
-        ? [`run: ${d.run_id}`, `log: ${d.log}`, "", (d.argv || []).join(" ")].join("\n")
-        : `${t("ls.84")}${d.detail || d.error || response.status}`;
+      if (response.ok) launchSuccess(out, d);
+      else launchFailure(out, `${t("ls.84")}${d.detail || d.error || response.status}`);
       if (!response.ok) state("bad", t("ls.61"));
     } catch (error) {
-      out.textContent = `${t("ls.85")}${error.message}`;
+      launchFailure(out, `${t("ls.85")}${error.message}`);
     } finally {
       preview();
     }
