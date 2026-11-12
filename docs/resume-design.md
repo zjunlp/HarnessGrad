@@ -42,15 +42,20 @@ Behaviour when the checks pass:
 
 * `start_steps = last`; the loop's step budget is **total measured rounds**, so re-running
   the same command twice is idempotent rather than doubling the curve.
-* `base` and the round-0 traces are rebuilt **from the record** (`_base_from_point` +
-  `round0_traces/`), exactly as `--h0-from` does for a donor run. Nothing is re-measured.
+* H0 and its native verdicts/traces are rebuilt **from the record**. The next method
+  invocation receives the latest measured state's evidence, while `pristine_harness`
+  remains the saved H0 source. Nothing is re-measured.
+* Identical-source and declared-no-change reuse restore in-memory traces and verdicts,
+  not just scores. `reused_evidence` records the original measurement round and missing
+  trace/verdict task IDs. Reuse chains retain source/context checks and never invent
+  absent receipts or costs.
 * The workspace is reused when it still holds the commit the last point names; otherwise
   `state_after_round<last>/` is staged into a fresh workspace and committed, and the new
   commit is recorded as `resumed.restaged_sha`. The old commits may be gone; the curve's
   recorded numbers are the record, not the git objects.
 * `run_meta.json` gains `resumed: [{at, from_round, recorded_sha, restaged_sha,
   platform_content_sha}]`, and every point written after the resume carries
-  `"resumed": true` so a stitched curve is never mistaken for a continuous one.
+  `"resumed_from": <round>` so a stitched curve is never mistaken for a continuous one.
 * The method sees `history=curve` (the whole curve), so a rule that reads its own history
   behaves as if it had never been interrupted.
 

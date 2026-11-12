@@ -66,6 +66,7 @@ def base_from_point(point: dict) -> dict:
         "per_task": point.get("per_task") or {},
         "invalid": point.get("invalid"),
         "harness_failed": point.get("harness_failed"),
+        "timeouts": point.get("timeouts"),
         "model_gateway": point.get("model_gateway"),
         "harness_runtime": (point.get("env") or {}).get("harness_runtime", point.get("harness_runtime")),
         "evaluation_protocols": point.get("evaluation_protocols"),
@@ -77,6 +78,58 @@ def base_from_point(point: dict) -> dict:
         "cached_tasks": point.get("cached_tasks"),
     }
     return base
+
+
+def reused_measurement(run_dir: Path, point: dict, history: list[dict]) -> dict:
+    """Restore the actual evidence behind an admitted reused curve point.
+
+    A copied point is an alias, not a fresh execution. Follow its recorded lineage
+    so older aliases with incomplete verdict files do not erase native receipts.
+    Admission of the current task/runtime identities remains the caller's job.
+    """
+    origin = point
+    by_round = {entry["round"]: entry for entry in history}
+    while origin.get("reused_from") is not None:
+        number = origin["reused_from"]
+        if type(number) is not int or number < 0 or number >= origin["round"] or number not in by_round:
+            raise ValueError("invalid reused measurement lineage")
+        earlier = by_round[number]
+        if ((earlier.get("identity") or {}).get("harness_sha") !=
+                (origin.get("identity") or {}).get("harness_sha")):
+            raise ValueError("reused measurement source tree changed")
+        ids = list(origin.get("per_task") or {})
+        if any((earlier.get("per_task") or {}).get(tid) != origin["per_task"][tid] for tid in ids):
+            raise ValueError("reused measurement scores changed")
+        require_verification_context(earlier.get("verification_context"),
+                                     origin.get("verification_context"), ids)
+        origin = earlier
+    number = origin["round"]
+    result = base_from_point(point)
+    wanted = set(result["per_task"])
+    traces, trials = read_trace_bodies(run_dir / f"round{number}_traces")
+    result["traces"] = {tid: body for tid, body in traces.items() if tid in wanted}
+    result["trial_traces"] = {tid: bodies for tid, bodies in trials.items() if tid in wanted}
+    result["verdicts"], result["trial_verdicts"], result["harness_output"] = {}, {}, {}
+    for path in sorted((run_dir / "verdicts" / f"round-{number}").rglob("*.json")):
+        record = json.loads(path.read_text())
+        tid = record.get("task_id")
+        if tid not in wanted:
+            continue
+        result["verdicts"][tid] = {k: v for k, v in record.items()
+                                   if k not in ("task_id", "round", "harness", "trials", "trial_scores")}
+        if record.get("harness"):
+            result["harness_output"][tid] = record["harness"]
+        if isinstance(record.get("trials"), list):
+            scores = record.get("trial_scores") or []
+            result["trial_verdicts"][tid] = [
+                {**cell, **({"score": scores[i]} if i < len(scores) else {})}
+                for i, cell in enumerate(record["trials"])]
+    result["reused_evidence"] = {
+        "source_round": number,
+        "missing_trace_tasks": sorted(wanted - result["traces"].keys()),
+        "missing_verdict_tasks": sorted(wanted - result["verdicts"].keys()),
+    }
+    return result
 
 
 def read_progress_results(run_dir: Path) -> dict[str, dict]:
