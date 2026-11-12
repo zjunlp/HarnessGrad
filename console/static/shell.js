@@ -1,6 +1,6 @@
 /* 两个模式的外壳：模式条 + 每个模式自己的左侧分区。
  *
- * 为什么这样切：构造环境和优化 Harness 是两件独立的事。实验/轨迹/版本 只在优化 Harness
+ * 为什么这样切：领域定制和优化 Harness 是两件独立的事。实验/轨迹/版本 只在优化 Harness
  * 里说得通；造出来的环境是给优化 Harness 用的输入。所以不是"一个更多按钮的导航"，而是
  * 两套导航，共用一个模式开关。
  *
@@ -31,7 +31,6 @@
       label: t("build"),
       sections: [
         [t("environment"), [
-          { label: t("scenarios"), href: "/author.html#/scenarios" },
           { label: t("draft"), href: "/author.html#/draft" },
           { label: t("import"), href: "/author.html#/import" },
         ]],
@@ -43,14 +42,13 @@
   };
 
   const KEY = "hg.mode";
-  const here = location.pathname + location.hash;
 
   function currentMode() {
     const fromUrl = new URLSearchParams(location.search).get("mode");
     if (fromUrl && MODES[fromUrl]) return fromUrl;
     const saved = window.HGStorage.getItem(KEY);
     if (saved && MODES[saved]) return saved;
-    // 构造环境的页面自己就是证据：作者页默认落在 build 模式。
+    // 领域定制的页面自己就是证据：作者页默认落在 build 模式。
     return location.pathname.startsWith("/author") ? "build" : "harness";
   }
 
@@ -61,7 +59,8 @@
 
   function isActive(item) {
     if (item.href.startsWith("/author")) {
-      return location.pathname === "/author.html" && here.endsWith(item.href.split("#")[1] || "");
+      const hash = ["", "#/scenarios", "#/artifacts"].includes(location.hash) ? "#/draft" : location.hash;
+      return location.pathname === "/author.html" && hash === `#${item.href.split("#")[1] || ""}`;
     }
     if (item.href === "/") return location.pathname === "/" && !location.hash;
     if (item.href.startsWith("/#/")) {
@@ -315,7 +314,7 @@
         const mode = btn.dataset.mode;
         setMode(mode);
         if (mode === "build" && !location.pathname.startsWith("/author")) {
-          location.href = "/author.html#/scenarios";
+          location.href = "/author.html#/draft";
         } else if (mode === "harness" && location.pathname.startsWith("/author")) {
           location.href = "/";
         }

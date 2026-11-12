@@ -1,22 +1,27 @@
-/* 场景工坊的前端：场景列表 / 起草 / 导入。
+/* 任务包工坊的前端：任务包列表 / 构建 / 导入。
  *
- * 一条规则写在最前面：**浏览器不判断"这场景好不好"**。结构校验和那三道门都在服务端
+ * 一条规则写在最前面：**浏览器不判断"这任务包好不好"**。结构校验和那三道门都在服务端
  * （`tools/scenario_builder.py` 的同一份代码），页面只负责把结果原样显示。否则页面上
  * 的绿勾和真实门禁就是两套逻辑，读的人会信错那一个。
  */
 (() => {
   "use strict";
   const tr = (key) => window.HGI18n ? window.HGI18n.t(key) : key;
+  const fmt = (key, values) => tr(key).replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? ""));
   const $ = (id) => document.getElementById(id);
-  const PANELS = { scenarios: [tr("场景"), tr("已经构造好的环境")], draft: ["起草", tr("一段说明 → 一场景")], import: ["导入", tr("把做好的场景拿进来")] };
+  const PANELS = { artifacts: [tr("已有产物"), tr("已经构造好的环境")], draft: [tr("经验构建"), tr("一段说明 → 一个任务包")], import: [tr("导入"), tr("把做好的任务包拿进来")] };
 
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pill = (tone, text) => `<span class="pill" data-tone="${tone}">${esc(text)}</span>`;
 
   function route() {
-    const hash = (location.hash || "#/scenarios").replace(/^#\/?/, "");
-    return PANELS[hash] ? hash : "scenarios";
+    const hash = (location.hash || "#/draft").replace(/^#\/?/, "");
+    if (!location.hash || !PANELS[hash]) {
+      history.replaceState(null, "", `${location.pathname}${location.search}#/draft`);
+      return "draft";
+    }
+    return hash;
   }
 
   function paint() {
@@ -25,14 +30,15 @@
       node.hidden = node.dataset.panel !== panel;
     });
     const [title, sub] = PANELS[panel];
+    document.title = `HarnessGrad · ${tr("领域定制")}`;
     $("page-title").textContent = title;
     $("page-sub").textContent = sub;
     document.querySelectorAll(".side .nav-item").forEach((item) => {
-      const target = (item.getAttribute("href") || "").split("#")[1] || "";
-      item.setAttribute("aria-current", target === panel ? "page" : "false");
-      if (target !== panel) item.removeAttribute("aria-current");
+      const target = (item.getAttribute("href") || "").split("#/")[1] || "";
+      item.setAttribute("aria-current", target === (panel === "artifacts" ? "draft" : panel) ? "page" : "false");
+      if (target !== (panel === "artifacts" ? "draft" : panel)) item.removeAttribute("aria-current");
     });
-    if (panel === "scenarios") loadBundles();
+    if (panel === "artifacts") loadBundles();
   }
 
   async function loadBundles() {
@@ -42,7 +48,7 @@
       $("author-root").textContent = (payload.root || "").replace(/^.*\/data\//, "data/");
       const rows = payload.rows || [];
       if (!rows.length) {
-        body.innerHTML = `<tr><td colspan="6" class="hint">${esc(tr("还没有场景。去「起草」写一段说明，或「导入」一个归档。"))}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="6" class="hint">${esc(tr("还没有产物。去「经验构建」写一段说明，或「导入」一个归档。"))}</td></tr>`;
         return;
       }
       body.innerHTML = rows.map((row) => {
@@ -77,7 +83,7 @@
     const log = $("draft-log");
     if (!note) { log.hidden = false; log.textContent = tr("先写一段任务说明。"); return; }
     log.hidden = false;
-    log.textContent = tr("起草中…（要跑模型，通常 30-90 秒；可能会重写几次）");
+    log.textContent = tr("构建中…（要跑模型，通常 30-90 秒；可能会重写几次）");
     $("draft-go").disabled = true;
     try {
       const response = await fetch("/api/author/draft", {
@@ -92,14 +98,14 @@
       }
       const row = payload.row || {};
       log.textContent = [
-        `场景 ${row.slug} 已起草`,
-        `题数 ${row.tasks} · 结构 ${row.valid ? tr("通过") : tr("未过")} · 三道门 ${row.gates_ok ? tr("通过") : tr("未过")}`,
-        ...(row.gates || []).map((g) => `  ${g.task_id}: oracle ${g.oracle ? "✓" : "✗"} · 空手 ${g.empty ? "✓" : "✗"} · 两次一致 ${g.deterministic ? "✓" : "✗"}`),
+        fmt("任务包 {slug} 已构建", row),
+        fmt("题数 {tasks} · 结构 {valid} · 三道门 {gates}", {tasks: row.tasks, valid: row.valid ? tr("通过") : tr("未过"), gates: row.gates_ok ? tr("通过") : tr("未过")}),
+        ...(row.gates || []).map((g) => fmt("  {task_id}: 参考解 {oracle} · 空手 {empty} · 两次一致 {deterministic}", {task_id: g.task_id, oracle: g.oracle ? "✓" : "✗", empty: g.empty ? "✓" : "✗", deterministic: g.deterministic ? "✓" : "✗"})),
         ...(row.problems || []).map((p) => `  - ${p}`),
         "",
         payload.output || "",
       ].join("\n").trim();
-      location.hash = "#/scenarios";
+      location.hash = "#/artifacts";
     } catch (error) {
       log.textContent = `${tr("请求失败：")}${error.message}`;
     } finally {
@@ -113,7 +119,7 @@
     const log = $("import-log");
     if (!chosen) return;
     log.hidden = false;
-    log.textContent = `导入 ${chosen.name}（${(chosen.size / 1024).toFixed(0)} KB）…`;
+    log.textContent = fmt("导入 {name}（{size} KB）…", {name: chosen.name, size: (chosen.size / 1024).toFixed(0)});
     $("upload").disabled = true;
     try {
       const slug = $("slug").value.trim();
@@ -127,10 +133,10 @@
         log.textContent = `${payload.error || tr("拒绝")}\n\n${JSON.stringify(payload.detail || payload, null, 1)}`;
         return;
       }
-      log.textContent = `已导入 ${payload.row.slug} → ${payload.imported}\n题数 ${payload.row.tasks} · 三道门 ${payload.row.gates_ok ? tr("通过") : tr("未过")}`;
+      log.textContent = fmt("已导入 {slug} → {imported}\n题数 {tasks} · 三道门 {gates}", {slug: payload.row.slug, imported: payload.imported, tasks: payload.row.tasks, gates: payload.row.gates_ok ? tr("通过") : tr("未过")});
       chosen = null;
       $("drop").textContent = tr("把归档拖到这里，或点一下选择文件");
-      location.hash = "#/scenarios";
+      location.hash = "#/artifacts";
     } catch (error) {
       log.textContent = `${tr("请求失败：")}${error.message}`;
     } finally {
