@@ -195,8 +195,10 @@ def _invoke(mod, request: dict, monkeypatch, reply: dict) -> dict:
 
     captured: dict = {}
 
-    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False):
+    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False, evidence_channel=None):
         captured["prompt"] = prompt
+        captured["evidence_channel"] = evidence_channel
+        captured["source"] = base
         return reply
 
     monkeypatch.setattr(editor, "ask", fake_ask)
@@ -225,6 +227,7 @@ def test_main_puts_the_version_table_and_the_selection_in_the_prompt(tmp_path, m
     got = _invoke(DR, _request(base, tmp_path / "ws", tmp_path / "traj.json", history),
                   monkeypatch, {"no_change": "nothing to add"})
     prompt = got["prompt"]
+    assert got["evidence_channel"] == base / "_harnessgrad"
     assert "| version | quality | cost (kilo-tokens) | k | V |" in prompt
     assert "| r1 |" in prompt
     assert "guarantee V* >= V^0 holds: True" in prompt
