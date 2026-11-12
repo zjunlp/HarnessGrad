@@ -264,7 +264,8 @@ def main() -> int:
         reply, dest, apply_problems = editor.propose_and_apply(
             edit_base, req, DREAM_RSI_SYSTEM,
             lambda problems: build_prompt(edit_base, incumbent, req, selection, base_why)
-                             + editor.repair_block(problems, expect=editor.EDIT_EXPECT))
+                             + editor.repair_block(problems, expect=editor.EDIT_EXPECT),
+            evidence_channel=editor.channel(incumbent))
         if apply_problems:
             return report(harness_dir=dest, changed=False, stop=False, edit_kind="none",
                           hypothesis=f"the edit sequence did not apply: {apply_problems}",

@@ -316,3 +316,13 @@ make every harness the same harness.
 Native delegation can produce child sessions outside the parent transcript. Adapters
 should preserve available child evidence separately and mark total token usage unknown
 when the full session tree or its usage cannot be verified.
+
+DSH improvers require explicit `model`, `provider`, and `profile` in their resolved
+registry identity. The method environment supplies these three settings, and the CLI
+boundary restores only these settings after credential filtering, alongside the resolved
+DSH installation. Ambient `HG_IMPROVER_*` values cannot select another DSH identity.
+The launcher requires all three for task execution (its `--version` probe remains
+independent), pins quoted provider/model values through `--patch`, and selects the
+resolved profile. Older custom DSH registry entries must declare these fields rather
+than relying on launcher defaults. The method receipt records them as `dsh_identity`;
+credential values remain excluded.

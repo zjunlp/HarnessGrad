@@ -47,6 +47,22 @@ fi
   exit 2
 }
 
+# Task execution requires explicit resolved identity; version probes need no model.
+for identity_name in HG_IMPROVER_MODEL HG_IMPROVER_PROVIDER HG_IMPROVER_PROFILE; do
+  [ -n "${!identity_name:-}" ] || {
+    echo "dsh improver: missing required resolved identity $identity_name" >&2
+    exit 2
+  }
+  case "${!identity_name}" in
+    *$'\n'*|*$'\r'*)
+      echo "dsh improver: resolved identity $identity_name must be a single line" >&2
+      exit 2 ;;
+  esac
+done
+# Quote YAML scalars so punctuation in a model/provider cannot change the pin.
+provider_yaml="${HG_IMPROVER_PROVIDER//\'/\'\'}"
+model_yaml="${HG_IMPROVER_MODEL//\'/\'\'}"
+
 # The pin goes in the candidate's *parent* -- the method's workspace -- rather than in
 # /tmp: the method sandbox binds the work root, and a namespace need not have a writable
 # /tmp. The workspace is also where `improver.log` lands, so it is known writable, and a
@@ -66,11 +82,11 @@ trap 'rm -f "$pin"' EXIT
 cat >"$pin" <<EOF
 - id: agent-default-model
   config:
-    provider: ${HG_IMPROVER_PROVIDER:-deepseek-official}
-    model: ${HG_IMPROVER_MODEL:-deepseek-flash}
+    provider: '$provider_yaml'
+    model: '$model_yaml'
 EOF
 
 exec "$node" "$bin" \
-  --profile "${HG_IMPROVER_PROFILE:-headless}" \
+  --profile "${HG_IMPROVER_PROFILE}" \
   --patch "$pin" \
   "$@"

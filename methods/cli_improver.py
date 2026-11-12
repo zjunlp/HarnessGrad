@@ -392,6 +392,18 @@ def _restrict_env(env: dict, improver: dict) -> list[str]:
     return withheld
 
 
+def _set_dsh_identity(env: dict, improver: dict) -> set[str]:
+    """Restore only resolved, non-secret identity after credential narrowing."""
+    fields = {"provider": "HG_IMPROVER_PROVIDER", "model": "HG_IMPROVER_MODEL",
+              "profile": "HG_IMPROVER_PROFILE"}
+    missing = [field for field in fields if not str(improver.get(field) or "").strip()]
+    if missing:
+        raise ValueError("DSH resolved identity missing required fields: " + ", ".join(missing))
+    for field, name in fields.items():
+        env[name] = str(improver[field])
+    return set(fields.values())
+
+
 def _stage_evidence(workspace: Path, req: dict) -> Path:
     """Put the platform's channel where the improver will look for it.
 
@@ -565,6 +577,8 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     # The CLI's own state, seeded into the workspace because the sandbox binds the
     # improver's trees read-only and nothing under `$HOME` is reachable from inside it.
     if style == "dsh":
+        restored = _set_dsh_identity(env, req.get("improver") or {})
+        withheld = [name for name in withheld if name not in restored]
         _seed_dsh_home(workspace, env)
     else:
         _seed_codex_home(workspace, env)
@@ -602,6 +616,9 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
         # *could* reach and not only by what they did. Generic entries retain
         # credentials/configuration; only ambient loader names are withheld there.
         "env_withheld": withheld,
+        **({"dsh_identity": {field: str((req.get("improver") or {})[field])
+                            for field in ("model", "provider", "profile")}}
+           if style == "dsh" else {}),
     }
     return {"candidate": candidate, "changed": changed, "files": changed,
             "protected": protected, "exit_code": code, "seconds": reported["seconds"],

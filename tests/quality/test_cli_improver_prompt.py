@@ -350,7 +350,8 @@ def test_the_launcher_pins_the_model_on_the_command_line(tmp_path):
     candidate = workspace / "candidate"
     candidate.mkdir(parents=True)
     env = {**os.environ, "PATH": f"{stub}{os.pathsep}{os.environ['PATH']}",
-           "HG_DSH_ROOT": str(root), "HG_IMPROVER_MODEL": "deepseek-flash"}
+           "HG_DSH_ROOT": str(root), "HG_IMPROVER_MODEL": "deepseek-flash",
+           "HG_IMPROVER_PROVIDER": "deepseek-official", "HG_IMPROVER_PROFILE": "headless"}
 
     def run(extra_env=None):
         proc = subprocess.run([str(ROOT / "methods" / "dsh-improver"), "TASK TEXT"],
@@ -368,10 +369,10 @@ def test_the_launcher_pins_the_model_on_the_command_line(tmp_path):
     # 在候选里 `_changed_files` 会把它报成改进器对 harness 的改动
     assert patch.parent == workspace
     assert patch.name == ".dsh-model-pin.yml"
-    assert "model: deepseek-flash" in patch.read_text()
+    assert "model: 'deepseek-flash'" in patch.read_text()
 
     # 环境里换一个模型,pin 跟着换 —— 说明这个默认值不是写死的
     argv = run({"HG_IMPROVER_MODEL": "another-model"})
     patch = Path(argv[argv.index("--patch") + 1])
-    assert "model: another-model" in patch.read_text()
+    assert "model: 'another-model'" in patch.read_text()
 

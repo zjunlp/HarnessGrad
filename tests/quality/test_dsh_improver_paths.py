@@ -49,6 +49,8 @@ if sys.argv[2:] == ['--version']:
 else:
     print(json.dumps({{
         'cli': str(cli), 'node': __file__, 'root': os.environ.get('HG_DSH_ROOT'),
+        'profile': sys.argv[sys.argv.index('--profile') + 1],
+        'pin': Path(sys.argv[sys.argv.index('--patch') + 1]).read_text(),
         'agent_key_present': 'HG_AGENT_API_KEY' in os.environ,
         'other_key_present': 'OTHER_API_KEY' in os.environ,
         'declared_key_present': 'DSH_TEST_KEY' in os.environ,
@@ -84,7 +86,7 @@ def bundled_entry(root='', home=''):
         'root': str(root), 'home': str(home),
         'runtime': ['{root}', '{home}'],
         'build_command': ['git', '-C', '{root}', 'rev-parse', '--short', 'HEAD'],
-        'model': 'test-model', 'api_key_env': 'DSH_TEST_KEY',
+        'model': 'test-model', 'provider': 'fixture-provider', 'profile': 'fixture-profile', 'api_key_env': 'DSH_TEST_KEY',
     }
 
 
@@ -121,7 +123,10 @@ def test_selected_installation_survives_identity_staging_and_restricted_executio
     monkeypatch.setenv('HG_AGENT_API_KEY', 'unused-agent-test-key')
     monkeypatch.setenv('OTHER_API_KEY', 'unused-other-test-key')
     monkeypatch.setenv('DSH_TEST_KEY', 'unused-declared-test-key')
+    for field in ('MODEL', 'PROVIDER', 'PROFILE'):
+        monkeypatch.setenv('HG_IMPROVER_' + field, 'ambient-wrong')
     env = _method_env(workspace, selected)
+    assert {field: env['HG_IMPROVER_' + field.upper()] for field in ('model', 'provider', 'profile')} == {field: selected[field] for field in ('model', 'provider', 'profile')}
     assert env['HG_DSH_ROOT'] == str(root) and env['HG_DSH_NODE'] == str(node)
     assert env['HG_IMPROVER_DSH_HOME'] == str(home)
     # Mutating ambient settings after the probe must not select another installation.
@@ -134,6 +139,8 @@ def test_selected_installation_survives_identity_staging_and_restricted_executio
     executed = json.loads(result['transcript'].splitlines()[0])
     assert executed == {'cli': str(root / 'apps/cli/lib/bin.js'), 'node': str(node),
                         'root': str(root), 'home_marker': '9.9.9',
+                        'profile': 'fixture-profile',
+                        'pin': '- id: agent-default-model\n  config:\n    provider: \'fixture-provider\'\n    model: \'test-model\'\n',
                         'agent_key_present': False, 'other_key_present': False,
                         'declared_key_present': True}
     assert result['changed'] == ['agent.py']
@@ -463,3 +470,100 @@ def test_configuration_records_dsh_locations_without_credentials():
     assert declared['dsh_node'] == '/configured/node'
     assert declared['dsh_home'] == '/configured/home'
     assert 'private' not in json.dumps(declared)
+
+
+@pytest.mark.parametrize('field', ['model', 'provider', 'profile'])
+def test_missing_resolved_identity_refuses_ambient_defaults(tmp_path, monkeypatch, field):
+    identity = {'argv_style': 'dsh', 'model': 'fixture', 'provider': 'fixture', 'profile': 'fixture'}
+    identity.pop(field)
+    monkeypatch.setenv('HG_IMPROVER_' + field.upper(), 'ambient-wrong')
+    with pytest.raises(ValueError, match='missing required field'):
+        _method_env(tmp_path, identity)
+    with pytest.raises(ValueError, match='missing required fields'):
+        cli_improver._set_dsh_identity({}, identity)
+
+
+@pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
+def test_resolved_identity_reaches_real_launcher_in_actual_method_sandbox(tmp_path, monkeypatch):
+    from eval.containers import sandbox
+
+    root, home, node = installation(tmp_path / 'installation')
+    entry = bundled_entry(root, home)
+    entry.update(interpreter=str(node), build_command=[])
+    selected = resolve(entry)
+    assert selected['ok'], selected
+    identity = _improver_identity(selected)
+    work = tmp_path / 'work'
+    workspace = work / 'round/workspace'
+    workspace.mkdir(parents=True)
+    parent = work / 'parent'
+    parent.mkdir()
+    (parent / 'agent.py').write_text('# fixture\n')
+    (parent / 'harness.json').write_text('{"entrypoint": "agent.py"}')
+    private = tmp_path / 'unrelated-credential'
+    private.write_text('fixture credential')
+    protected_work = tmp_path / 'protected-work'
+    protected_work.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(protected_work))
+    monkeypatch.setenv('DSH_TEST_KEY', 'fake-declared-key')
+    monkeypatch.setenv('OTHER_API_KEY', 'fake-other-key')
+    monkeypatch.setenv('HG_AGENT_API_KEY', 'fake-agent-key')
+    env = _method_env(workspace, selected)
+    script = f'''
+import json, pathlib, sys
+sys.path.insert(0, {str(improver.ROOT / 'methods')!r})
+import cli_improver
+assert not pathlib.Path({str(private)!r}).exists()
+assert not pathlib.Path({str(improver.ROOT / 'driver.py')!r}).exists()
+result = cli_improver.propose({{'workspace': {str(workspace)!r}, 'improver': {identity!r}}}, pathlib.Path({str(parent)!r}), prompt='Fixture only.')
+assert result['exit_code'] == 0, result['transcript']
+print(json.dumps({{'executed': json.loads(result['transcript']), 'reported': result['reported']}}))
+'''
+    plan = _method_sandbox_plan(workspace, [sys.executable, str(improver.ROOT / 'methods/cli_improver.py')],
+                                workspace.parent, readonly=(parent,), runtime=tuple(selected['runtime']))
+    command = sandbox.command([sys.executable, '-c', script], env=env, **plan)
+    ran = subprocess.run(command, cwd=workspace, capture_output=True, text=True, timeout=20)
+    assert ran.returncode == 0, ran.stderr
+    receipt = json.loads(ran.stdout)
+    executed = receipt['executed']
+    assert executed['profile'] == identity['profile']
+    assert "provider: 'fixture-provider'" in executed['pin']
+    assert "model: 'test-model'" in executed['pin']
+    assert executed['cli'] == str(root / 'apps/cli/lib/bin.js')
+    assert executed['node'] == str(node)
+    assert executed['declared_key_present']
+    assert not executed['agent_key_present'] and not executed['other_key_present']
+    assert receipt['reported']['dsh_identity'] == {field: identity[field] for field in ('model', 'provider', 'profile')}
+    assert 'fake-declared-key' not in ran.stdout
+
+
+@pytest.mark.parametrize('field', ['MODEL', 'PROVIDER', 'PROFILE'])
+def test_direct_launcher_refuses_missing_identity(tmp_path, field):
+    root, _, node = installation(tmp_path / 'installation')
+    candidate = tmp_path / 'workspace/candidate'
+    candidate.mkdir(parents=True)
+    env = {'PATH': os.defpath, 'HG_DSH_ROOT': str(root), 'HG_DSH_NODE': str(node),
+           **{'HG_IMPROVER_' + name: 'fixture' for name in ('MODEL', 'PROVIDER', 'PROFILE')}}
+    env.pop('HG_IMPROVER_' + field)
+    ran = subprocess.run([str(improver.ROOT / 'methods/dsh-improver'), 'fixture'],
+                         cwd=candidate, env=env, capture_output=True, text=True, timeout=5)
+    assert ran.returncode == 2
+    assert 'missing required resolved identity HG_IMPROVER_' + field in ran.stderr
+    assert not (candidate.parent / '.dsh-model-pin.yml').exists()
+
+
+def test_launcher_quotes_yaml_identity_without_changing_values(tmp_path):
+    import yaml
+
+    root, _, node = installation(tmp_path / 'installation')
+    candidate = tmp_path / 'workspace/candidate'
+    candidate.mkdir(parents=True)
+    model, provider = "model: # 'quoted'", "provider: # 'quoted'"
+    env = {'PATH': os.defpath, 'HG_DSH_ROOT': str(root), 'HG_DSH_NODE': str(node),
+           'DSH_HOME': str(tmp_path / 'installation/prepared home'),
+           'HG_IMPROVER_MODEL': model, 'HG_IMPROVER_PROVIDER': provider,
+           'HG_IMPROVER_PROFILE': 'fixture-profile'}
+    ran = subprocess.run([str(improver.ROOT / 'methods/dsh-improver'), 'fixture'],
+                         cwd=candidate, env=env, capture_output=True, text=True, timeout=5)
+    assert ran.returncode == 0, ran.stderr
+    assert yaml.safe_load(json.loads(ran.stdout)['pin'])[0]['config'] == {'model': model, 'provider': provider}
