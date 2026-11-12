@@ -1,6 +1,0 @@
-node_modules/
-.state/
-.opencode-state/
-_harnessgrad/
-__pycache__/
-*.pyc

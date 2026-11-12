@@ -5,17 +5,18 @@ On Linux x86-64 with Bubblewrap, install the verified npm releases with:
 
 ```sh
 harnessgrad harness install opencode --version 1.19.5
-HARNESS_DIR=$(harnessgrad harness install opencode --version 2.2.6)
+HARNESS_DIR=$(harnessgrad harness install opencode --version 2.2.7)
 ```
 
 Use the printed directory with `harnessgrad run --harness-path`. Omitting
-`--version` selects the latest verified release, currently `2.2.6`.
+`--version` selects the latest verified release, currently `2.2.7`.
 `--install-root` selects the dedicated store, which defaults to
 `harnessgrad/base-harnesses` under the user data directory.
 
 The installer uses Node.js 24.22.2 and npm 11.19.1 to install the exact native
 package. It checks the npm archive digest and retains the lockfile.
-`1.19.5` uses `opencode-linux-x64`; `2.2.6` uses `@opencode/cli-linux-x64`.
+`1.19.5` uses `opencode-linux-x64`. `2.2.6` and `2.2.7` use
+`@opencode/cli-linux-x64`.
 Tasks invoke the native executable directly. The prepared manifest records
 the executable and its package metadata as read-only bindings, together with
 their hashes and modes. Preparation checks the version in a network-isolated

@@ -40,11 +40,16 @@ CODEX_RELEASES = {
         "sha512-1FSQgbTIKAdTub5Ln6z36NT4eXDmBRkinfigzycbgn9yLZdJ3UdkQZqr0N7jnl8/D1xxT/Pz3Fl2l7S2dmRaFA==",
         "sha512-FNc7danfUng9Sp6w+Fh7kofNHHZpA6VMyNKWsWrS3OwHly69gywTWeiuwrUPXpJSho8Df4xqRsHfHRPzj7zYQg==",
     ),
+    "0.167.1": (
+        "sha512-39uApTRT9bkhE8tMXTIfZxaZ27oi7hPqWoF2Coyp+iQFAD3NVHgH838IYVUfJaX85leMSP2s4JOmVw0mMSCN5Q==",
+        "sha512-qZteglyvMCj1QVymMyPyKdtw38HaXCv5gvw8WN+N0+JJstu3k/d8xiYj9ciL7OwFLhcujgP8bCGJgaREeqrHkw==",
+    ),
 }
 OPENCODE_PACKAGES = {"1": "opencode-linux-x64", "2": "@opencode/cli-linux-x64"}
 OPENCODE_RELEASES = {
     "1.19.5": "sha512-i1qh7VooLGML9xX6ud93y0JA8j/1aPeDYRKjsmYXrJX1TjIWHgBBMkEbEJPZthpWbsJg//XfBgR6Kb7+NPaJiQ==",
     "2.2.6": "sha512-g1NShGt+20y/7nzQvqAnO7bQshC8nZGaz8WC7J8vjgXIOZ1uzoxz5OiLnCbUWertf2CM3Dlh9tzrmZJf0ic9Aw==",
+    "2.2.7": "sha512-wk/DPHxr4maiW+FmQp8ztoXlo/vC5qsmEIHsLNaNLZL2iaIYfhyqFRe6CRsCVxy+ib0sfK07X2IepFw7ZSKqNQ==",
 }
 DSH_RELEASES = {
     "0.2.2-rc.1": "sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==",
@@ -287,15 +292,21 @@ def install_harness(name: str, version: str, root: Path) -> Path:
         prefix = [] if name == "opencode" else [str(node)]
         if source is None and recipe.integrity is None:
             print(f"Warning: {LABELS[name]} {version} is unverified. Trying its adapter.", file=sys.stderr)
+        archived_receipt = None
         if receipt_path.exists():
             harness = _existing(receipt_path, recipe)
             record = helper(harness).resolve(harness, {})
             _check_binding(record, [*prefix, str(harness.parent / launcher_path)], expected_version)
-            if source is not None:
-                if recipe.integrity is not None and record["source_identity"] != source:
-                    raise ValueError(f"installed OpenClaw source identity differs from the verified release: {harness}")
-                openclaw.warn_unverified(record["source_identity"])
-            return harness
+            if source is None:
+                return harness
+            installed_source = record["source_identity"]
+            if recipe.integrity is None or installed_source == source:
+                openclaw.warn_unverified(installed_source)
+                return harness
+            if installed_source.get("verified") is not False or installed_source.get("upstream_commit") is not None:
+                raise ValueError(f"installed OpenClaw source identity differs from the verified release: {harness}")
+            archived_receipt = harness.parent / receipt_path.name
+            print(f"Preparing a new verified OpenClaw {version} installation.", file=sys.stderr)
         if source is not None:
             openclaw.warn_unverified(source)
         instance = Path(tempfile.mkdtemp(prefix="install-", dir=release))
@@ -318,13 +329,22 @@ def install_harness(name: str, version: str, root: Path) -> Path:
                 record = openclaw.configure(harness, str(launcher), node=str(node),
                                              runtime_paths=(lockfile.parent,), env=env, warn=False)
             _check_binding(record, [*prefix, str(launcher)], expected_version)
-            atomic_json(receipt_path, {"schema": 1, "version": version, "node_version": NODE_VERSION,
-                        "npm_version": NPM_VERSION, "instance": instance.name,
-                        "package_integrity": _locked_integrity(lockfile, recipe),
-                        "lock_sha256": digest(lockfile), "manifest_sha256": digest(harness / "harness.json")})
-        finally:
-            if not receipt_path.exists():
+            receipt = {"schema": 1, "version": version, "node_version": NODE_VERSION,
+                       "npm_version": NPM_VERSION, "instance": instance.name,
+                       "package_integrity": _locked_integrity(lockfile, recipe),
+                       "lock_sha256": digest(lockfile), "manifest_sha256": digest(harness / "harness.json")}
+            if archived_receipt is not None:
+                # Keep the original receipt when the active path is atomically replaced.
+                try:
+                    os.link(receipt_path, archived_receipt, follow_symlinks=False)
+                except FileExistsError:
+                    if archived_receipt.is_symlink() or not archived_receipt.samefile(receipt_path):
+                        raise ValueError(f"cannot preserve original OpenClaw receipt: {archived_receipt}")
+            atomic_json(receipt_path, receipt)
+        except BaseException:
+            if not receipt_path.exists() or json.loads(receipt_path.read_text()).get("instance") != instance.name:
                 shutil.rmtree(instance)
+            raise
         return harness
 
 

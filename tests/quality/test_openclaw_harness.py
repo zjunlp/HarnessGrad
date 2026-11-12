@@ -20,26 +20,25 @@ HARNESS = ROOT / "base_harness" / "openclaw"
 
 @pytest.fixture(scope="module")
 def prepared_harness(tmp_path_factory):
-    from tools.configure_openclaw_harness import configure, source_identity
+    from tools.configure_openclaw_harness import configure, latest_verified_version
 
     selected = os.environ.get("HG_AGENT_OPENCLAW") or shutil.which("openclaw")
-    version = os.environ.get("HG_OPENCLAW_TEST_VERSION", "2026.3.13")
+    version = latest_verified_version()
     if selected is None:
-        pytest.skip(f"OpenClaw {version} is not installed; synthetic runtime controls run separately")
+        pytest.skip(f"set HG_AGENT_OPENCLAW to an OpenClaw {version} launcher")
     harness = tmp_path_factory.mktemp("openclaw-real-install") / "harness"
     shutil.copytree(HARNESS, harness)
-    (harness / "runtime-identity.json").write_text(json.dumps(source_identity(version)), encoding="utf-8")
-    configure(harness, selected, env=dict(os.environ))
+    configure(harness, selected, version=version, env=dict(os.environ))
     return harness
 
 
-def _run(tmp_path: Path, harness: Path):
-    task = tmp_path / "task.json"
-    task.write_text(json.dumps({"task_id": "mock", "goal": "Write the mock answer."}), encoding="utf-8")
+def _run(tmp_path: Path, harness: Path, task: dict):
+    task_path = tmp_path / "task.json"
+    task_path.write_text(json.dumps(task), encoding="utf-8")
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("OPENCLAW_", "CLAWDBOT_", "PI_"))}
     env["HG_AGENT_BACKEND"] = "mock"
-    return subprocess.run([sys.executable, str(harness / "agent.py"), "--task", str(task),
+    return subprocess.run([sys.executable, str(harness / "agent.py"), "--task", str(task_path),
                            "--workdir", str(tmp_path)], cwd=tmp_path, env=env,
                           capture_output=True, text=True, errors="replace", timeout=90)
 
@@ -56,12 +55,13 @@ def test_unprepared_runtime_has_actionable_failure():
 
 
 def test_native_cli_mock_writes_answer_and_trace(tmp_path, prepared_harness):
-    proc = _run(tmp_path, prepared_harness)
+    proc = _run(tmp_path, prepared_harness, {"task_id": "mock", "goal": "Write the mock answer."})
     assert proc.returncode == 0, proc.stderr[-4000:]
     assert (tmp_path / "answer.txt").read_text(encoding="utf-8").strip() == "OPENCLAW_MOCK"
     rows = [json.loads(line) for line in (tmp_path / "trace.jsonl").read_text().splitlines()]
     assert rows[0]["harness_identity"]["harness"] == "openclaw"
     assert rows[0]["harness_identity"]["agent_backend"] == "mock"
+    assert rows[0]["harness_identity"]["config"]["mode"] == "task-local-gateway"
     assert sum("reply" in row for row in rows) >= 2
     actions = [row for row in rows if "command" in row]
     assert len(actions) == 1
@@ -76,17 +76,14 @@ def test_native_cli_mock_writes_answer_and_trace(tmp_path, prepared_harness):
 
 
 def test_file_submission_is_kept_in_place(tmp_path, prepared_harness):
-    task = tmp_path / "task.json"
-    task.write_text(json.dumps({"task_id": "mock-files", "goal": "Write the mock answer.",
-                                "submission": {"kind": "files", "paths": ["answer.txt"]}}))
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("OPENCLAW_", "CLAWDBOT_", "PI_"))}
-    env["HG_AGENT_BACKEND"] = "mock"
-    proc = subprocess.run([sys.executable, str(prepared_harness / "agent.py"), "--task", str(task),
-                           "--workdir", str(tmp_path)], cwd=tmp_path, env=env,
-                          capture_output=True, text=True, errors="replace", timeout=90)
+    task = {"task_id": "mock-files", "goal": "Write the mock answer.",
+            "submission": {"kind": "files", "paths": ["answer.txt"]}}
+    proc = _run(tmp_path, prepared_harness, task)
     assert proc.returncode == 0, proc.stderr[-2000:]
+    assert (tmp_path / "answer.txt").read_text(encoding="utf-8").strip() == "OPENCLAW_MOCK"
     final = [json.loads(line) for line in (tmp_path / "trace.jsonl").read_text().splitlines() if line.strip()][-1]
-    assert final["answer_source"] == "files"
+    assert final["submitted"] and final["answer_source"] == "files"
+    assert final["submitted_files"] == ["answer.txt"]
 
 
 def _agent():

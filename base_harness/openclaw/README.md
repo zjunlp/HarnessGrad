@@ -1,7 +1,8 @@
 # OpenClaw harness
 
-Harness adapter `0.6.0` was verified with **OpenClaw 2026.11.2 (`b556fdf`)** and
-**2026.3.13 (`61d171a`)**. The checked-in Harness is a portable adapter template. OpenClaw
+Harness adapter `0.6.1` supports **OpenClaw 2026.11.3 (`847611d`)**,
+**2026.11.2 (`b556fdf`)**, and **2026.3.13 (`61d171a`)**. The checked-in
+Harness is a portable adapter template. OpenClaw
 and Node are external read-only dependencies. Each reviewed release selects an
 adapter profile for its configuration and session format.
 
@@ -14,7 +15,7 @@ which are removed on exit. Gateway startup and child work count against the task
 ## Prepare a local installation
 
 On Linux x86-64 with Bubblewrap and network access, install a dedicated copy
-with the bundled HarnessGrad command. Both supported releases use Node.js
+with the bundled HarnessGrad command. All supported releases use Node.js
 24.22.2 and npm 11.19.1.
 
 ```sh
@@ -23,7 +24,7 @@ harnessgrad harness install openclaw
 ```
 
 The installer defaults to the latest verified release in `harnessgrad harness list`,
-currently `2026.11.2`. It reports the selected version on stderr. Use `--version`
+currently `2026.11.3`. It reports the selected version on stderr. Use `--version`
 to select an exact `YYYY.M.D` release. An unlisted release produces a warning
 on stderr and is tried with the latest verified release's adapter profile.
 The binding records the exact release and its unverified status. Its config
@@ -34,11 +35,18 @@ Use `--install-root` to choose a dedicated runtime store outside the platform
 checkout and `/tmp`. The default is `harnessgrad/base-harnesses` under the user
 data directory. The installer retains the npm lockfile and rechecks the binding
 when reusing an installation. It uses `npm ci --ignore-scripts` to install from
-the lockfile. For 2026.11.2 and unverified releases, it then targets the locked
-OpenClaw package directory with `npm rebuild` to run that package's lifecycle
+the lockfile. For 2026.11.2, 2026.11.3, and unverified releases, it then targets
+the locked OpenClaw package directory with `npm rebuild` to run that package's lifecycle
 scripts in the installation sandbox. Verified releases use a pinned package
 digest. For other releases, npm checks the archive against the digest recorded
 in the lockfile for the exact registry tarball.
+
+When a previously unverified release becomes verified, rerun the install command
+in the same store. The installer checks that the previous package digest matches
+the verified digest and validates the existing binding. It then installs and
+publishes a new verified copy. The original copy keeps its identity and a copy
+of its original installation receipt, so historical runs can still use that
+path.
 
 The checked-in template carries the portable identity of 2026.3.13. To bind
 an existing installation of that release, copy and prepare the template:
@@ -86,9 +94,8 @@ python3 tools/configure_openclaw_harness.py /path/to/openclaw-harness-copy \
 
 The preparation-only setting `HG_OPENCLAW_RUNTIME_PATHS` accepts a JSON array of
 path strings, for example `'["/path/to/dedicated-dependency"]'`. Repeatable
-`--runtime` arguments replace that list. The same setting is accepted by the
-real-CLI mock test fixture, which takes `HG_OPENCLAW_TEST_VERSION` to select a
-reviewed release. Additional aliases select physical dependencies once.
+`--runtime` arguments replace that list. The real-CLI mock tests also accept
+`HG_OPENCLAW_RUNTIME_PATHS`. Additional aliases select physical dependencies once.
 Linked package targets can be collected automatically when their lookup links
 are inside an existing binding. npm-link/pnpm layouts with lookup links outside
 those bindings require an explicit directory containing the links and must pass
@@ -106,7 +113,7 @@ directory bindings are refused before writing the manifest.
 
 One atomic `harness.json` replacement records both `runtime_paths` and the
 adapter-owned `_openclaw_runtime` identity. `runtime-identity.json` holds the
-portable version/source identity and the profile for 2026.11.2. Tasks use the
+portable version/source identity and the selected adapter profile. Tasks use the
 recorded Node and launcher, verify file hashes, the npm dependency graph,
 binding types and symlink targets, and report them in `trace.jsonl`.
 Changing PATH does not select a new installation. An override must match the
@@ -120,16 +127,17 @@ to another version can pass runtime admission if its binding validates. Its
 adapter must also support that version's configuration and session format for
 the task to complete.
 
-The 2026.11.2 profile writes the keyed agent configuration and reads transcript
-messages through `sessions export-trajectory`. The export stays in the task's
-private OpenClaw state. The 2026.3.13 profile reads the native JSONL session.
+The 2026.11.2 and 2026.11.3 releases share a profile that writes the keyed agent
+configuration and reads transcript messages through `sessions export-trajectory`.
+The export stays in the task's private OpenClaw state. The 2026.3.13 profile
+reads the native JSONL session.
 Both profiles translate replies, completed tool calls and usage into the same
 HarnessGrad trace format.
 
 ## Editable surface
 
 The candidate contains the adapter (`agent.py`), its `openclaw_runtime.py` and
-`task_gateway.py` helpers,
+`task_gateway.py` helpers, the `harnessgrad-retain-subagents.mjs` Gateway plugin,
 `prompt.md`, `config.json`, portable identity and mock fixture (`mock_model.py`).
 Changes to these files affect the run.
 OpenClaw's installed compiled package and Node executable are **external read-only
@@ -145,10 +153,11 @@ replaces the model/provider/credential/workspace/deadline fields with the
 platform's `HG_AGENT_*` contract. Only one custom provider is configured, with
 no fallback model. The template uses the native `full` tool profile, with no adapter allowlist;
 browser, messaging, plugins, bundled skills and native delegation are not
-disabled by the adapter. The task-local Gateway preserves channel, plugin, browser
-and service settings from the candidate configuration. Availability still depends
-on the installed release, task sandbox networking, compatible browser/plugin
-dependencies and explicitly provisioned task-local channel credentials. Operator
+disabled by the adapter. The task-local Gateway preserves candidate channel, browser
+and service settings, along with plugin settings subject to the retention requirement
+below. Availability depends on the installed release, task sandbox networking,
+compatible browser and plugin dependencies, and explicitly provisioned task-local
+channel credentials. Operator
 state and credentials are not imported automatically. Enabling an external channel
 may send task data outside the sandbox; provision only endpoints intended for the
 experiment. OpenClaw's exec approvals are
@@ -178,9 +187,10 @@ SSE server. It executes `printf 'OPENCLAW_MOCK\n' > answer.txt`, then finishes.
 It does not call a model endpoint and its output is deliberately not a task
 solution. The trace identifies the backend as `mock`.
 
-Two real-CLI mock checks require the supported installation on PATH or selected
-with `HG_AGENT_OPENCLAW` / `HG_OPENCLAW_NODE`; they skip if no installation is
-available. The separate runtime tests use synthetic packages with real Node and
+The two real-CLI mock checks target the latest verified OpenClaw release, the
+same version the installer selects by default. They find the CLI on PATH or use
+`HG_AGENT_OPENCLAW` with `HG_OPENCLAW_NODE` to select the runtime. They skip if
+the CLI is unavailable. The separate runtime tests use synthetic packages with real Node and
 bubblewrap to exercise relocation, identity refusal, isolation, answer and trace
 behavior. They make no model calls and require Node >=22.12.0 and bubblewrap for
 the native controls.
@@ -222,6 +232,32 @@ Enabling these capabilities changes the harness baseline and may add background
 network activity or resource usage.
 
 Native child sessions are retained in the trace separately from the parent answer.
+The shared 2026.11.2 and 2026.11.3 profile reads child runs stored inside the
+SQLite registry's `parentCompletion` wrapper. It waits for terminal execution,
+cleanup bookkeeping and any pending or dispatching requester continuation.
+A run with `delivery.status = "not_required"` needs no completion notification.
+The task-local Gateway loads the `harnessgrad-retain-subagents` plugin. Its
+tool-call hook runs `sessions_spawn` requests for `cleanup: "delete"` with
+`cleanup: "keep"`. This retains the registry records and child sessions until
+the adapter collects them. The adapter removes its private state at the end of
+the task.
+
+The `entries` profile requires this plugin for every run. The adapter registers
+it automatically and rejects `config.json` before starting the Gateway if
+`plugins.enabled` is `false`, `plugins.deny` contains the plugin ID, or
+`plugins.entries.harnessgrad-retain-subagents.enabled` is `false`. Remove the
+conflicting setting to run this profile.
+
 Usage is combined only when the session tree and its usage are available and
-complete; otherwise total usage is unknown. Delegation may increase model calls,
-time and cost. These adapter changes require a fresh baseline measurement.
+complete. The `openclaw_delegation` trace record reports execution status and
+trace completeness separately. After delegation settles, the adapter refreshes
+the parent session first and uses the remaining task time to export child
+sessions. An incomplete session export leaves total usage unknown and the
+parent can still submit its result. If the parent session refresh fails, the
+adapter requires valid declared files or a new nonempty `answer.txt`.
+A child or requester continuation still pending at
+the task deadline causes a timeout. If completion cannot be verified, the adapter
+reports that uncertainty separately. SIGTERM and SIGINT end the task with an
+error, including during session export. Delegation may increase model calls,
+time and cost.
+These adapter changes require a fresh baseline measurement.

@@ -36,6 +36,10 @@ class AdapterError(ValueError):
     pass
 
 
+class AdapterInterrupted(Exception):
+    """Signal cancellation must reach the outer task failure handler."""
+
+
 class AdapterProfile(NamedTuple):
     configure: Callable[[dict, str, str, int, int], None]
     session_option: str
@@ -299,7 +303,7 @@ def redact(value, env: dict):
 
 
 def translate_trace(rows: list[dict], record, *, backend: str,
-                    children: list[dict] | None = None, children_complete: bool = True) -> dict:
+                    children: list[dict] | None = None, child_traces_complete: bool = True) -> dict:
     calls = 0
     totals = {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
     complete = {name: True for name in totals}
@@ -356,11 +360,11 @@ def translate_trace(rows: list[dict], record, *, backend: str,
              "cache_read_tokens": totals["cacheRead"] if calls and complete["cacheRead"] and not ambiguous else None,
              "cache_write_tokens": totals["cacheWrite"] if calls and complete["cacheWrite"] and not ambiguous else None,
              "source": "openclaw_session"}
-    if children or not children_complete:
+    if children or not child_traces_complete:
         parent_usage = dict(usage)
         child_totals = {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}
         child_calls = 0
-        child_complete = children_complete
+        child_complete = child_traces_complete
         for child in children or []:
             if not isinstance(child.get('outcome'), dict) or child['outcome'].get('status') != 'ok':
                 child_complete = False
@@ -404,7 +408,7 @@ def _answer_bytes(work: Path) -> bytes | None:
     return path.read_bytes() if path.is_file() else None
 
 
-def save_answer(work: Path, task: dict, before: bytes | None, final: str) -> tuple[str, str]:
+def save_answer(work: Path, task: dict, before: bytes | None, final: str | None) -> tuple[str, str]:
     paths = submission_paths(task)
     if paths:
         missing = [name for name in paths if not (work / name).is_file()
@@ -417,6 +421,8 @@ def save_answer(work: Path, task: dict, before: bytes | None, final: str) -> tup
     now = _answer_bytes(work)
     if now is not None and now != before and now.strip():
         return now.decode("utf-8", "replace"), "artifact"
+    if final is None:
+        raise AdapterError("OpenClaw could not refresh the parent session after delegation and left no new answer.txt")
     if not final.strip():
         raise AdapterError("OpenClaw produced no final message and no new answer.txt")
     (work / "answer.txt").write_text(final, encoding="utf-8")
@@ -436,7 +442,7 @@ def run(task: dict, work: Path) -> int:
     deadline = time.monotonic() + timeout
     previous_signals = {}
     def interrupted(signum, _frame):
-        raise AdapterError(f"OpenClaw interrupted by signal {signum}")
+        raise AdapterInterrupted(f"OpenClaw interrupted by signal {signum}")
     for signum in (signal.SIGTERM, signal.SIGINT):
         previous_signals[signum] = signal.signal(signum, interrupted)
     record = lambda value: rows.append(redact(value, env))
@@ -456,7 +462,8 @@ def run(task: dict, work: Path) -> int:
                 raise AdapterError("HG_AGENT_BASE_URL, HG_AGENT_MODEL and HG_AGENT_API_KEY are required")
         record({"harness_identity": {"harness": "openclaw", "agent_model": model,
                 "agent_backend": backend, "config": {"runtime": runtime, "timeout_s": timeout,
-                "editable": ["agent.py", "prompt.md", "config.json", "task_gateway.py"],
+                "editable": ["agent.py", "prompt.md", "config.json", "task_gateway.py",
+                             "harnessgrad-retain-subagents.mjs"],
                 "mode": "task-local-gateway"}}, "task_id": task_id})
         with tempfile.TemporaryDirectory(prefix="hg-openclaw-state-") as temporary, ExitStack() as resources:
             state = Path(temporary)
@@ -512,28 +519,45 @@ def run(task: dict, work: Path) -> int:
                 output = 'child-' + hashlib.sha256(key.encode()).hexdigest()[:24]
                 return _export_session_rows(state, key, runtime['argv'], child, remaining, output=output)
 
-            children, children_complete = gateway.collect(state, native, deadline=deadline,
-                                                           profile=profile_name, export_child=export_child)
-            if children:
-                # Completion announcements can append another parent turn.
-                native = profile.read_session(state, session, runtime["argv"], child,
-                                              deadline - time.monotonic())
+            completion = gateway.wait_for_children(state, native, deadline=deadline, profile=profile_name)
+            parent_refresh_failed = False
+            if completion.outcomes:
+                # Completion announcements can append the final answer. Read it before child exports.
+                try:
+                    refreshed = profile.read_session(state, session, runtime["argv"], child,
+                                                     deadline - time.monotonic())
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    refreshed = []
+                parent_refresh_failed = not refreshed
+                if refreshed:
+                    native = refreshed
+                children, trace_complete = gateway.collect_child_sessions(
+                    state, completion.outcomes, deadline=deadline, profile=profile_name, export_child=export_child)
+                trace_complete = trace_complete and not parent_refresh_failed
+            else:
+                children = []
+                trace_complete = completion.execution_status == 'finished'
+            if completion.outcomes or not trace_complete:
+                record({'openclaw_delegation': {'execution_status': completion.execution_status,
+                                               'trace_complete': trace_complete}})
             summary = translate_trace(native, record, backend=backend,
-                                      children=children, children_complete=children_complete)
-            final = summary["final"]
+                                      children=children, child_traces_complete=trace_complete)
             if timed_out:
                 raise AdapterError(f"OpenClaw timed out after {timeout:g}s")
             if proc.returncode:
                 raise AdapterError(f"OpenClaw exited {proc.returncode}: " + stderr[-2000:])
             if not native:
                 raise AdapterError("OpenClaw left no session trace: " + stderr[-2000:])
-            if not children_complete:
-                raise AdapterError("OpenClaw subagent work or usage could not be fully collected before the task deadline")
+            if completion.execution_status == 'pending':
+                raise AdapterError("OpenClaw delegation timed out before completion")
+            if completion.execution_status == 'unknown':
+                raise AdapterError("OpenClaw subagent completion could not be verified")
+            final = None if parent_refresh_failed else summary["final"]
             answer, source = save_answer(work, task, before, final)
             record({"submitted": True, "answer": answer, "answer_source": source,
                     **({"submitted_files": submission_paths(task)} if source == "files" else {})})
             return 0
-    except (AdapterError, OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+    except (AdapterInterrupted, OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         if not rows:
             record({"harness_identity": {"harness": "openclaw", "agent_model": model,
                                          "agent_backend": backend}, "task_id": task_id})

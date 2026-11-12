@@ -1,6 +1,6 @@
 {
   "name": "openclaw",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "path": ".",
   "entrypoint": "agent.py",
   "backend": "cli",
@@ -22,7 +22,8 @@
     ],
     "delegation": [
       "agent.py",
-      "task_gateway.py"
+      "task_gateway.py",
+      "harnessgrad-retain-subagents.mjs"
     ],
     "reliability": [
       "runtime-identity.json",
