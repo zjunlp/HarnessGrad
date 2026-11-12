@@ -405,7 +405,18 @@ class CandidateStore:
         if (sys.platform != "linux" or not all(hasattr(os, x) for x in
                 ("O_NOFOLLOW", "O_DIRECTORY", "O_NONBLOCK")) or
                 os.open not in os.supports_dir_fd or os.scandir not in os.supports_fd):
-            return 503, {"error": "unsupported"}
+            return 503, {
+                "error": "unsupported-platform",
+                "detail": (
+                    "候选 Harness 的安全保存需要 Linux 以及 O_NOFOLLOW、O_DIRECTORY、"
+                    "dir_fd/fd 扫描等文件系统接口；请在具备这些接口的 Linux 主机或容器中"
+                    "运行 Console 后重试。实验启动还需要 bubblewrap。 / "
+                    "Secure Harness candidate saves require Linux and descriptor-relative "
+                    "filesystem APIs (O_NOFOLLOW, O_DIRECTORY and dir_fd/fd scanning). "
+                    "Run Console on a Linux host or container that provides them; launching "
+                    "experiments additionally requires bubblewrap."
+                ),
+            }
 
         operation = CandidateSave(self)
         try:

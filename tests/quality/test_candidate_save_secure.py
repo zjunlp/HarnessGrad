@@ -64,6 +64,15 @@ def test_save_preserves_seed_and_mode(env):
     assert server.harness_candidate_save("next", {"sub/x": "next"}, source="new")[0] == 201
     assert (candidates / "next/agent.py").read_text() == "edited"
 
+
+def test_unsupported_candidate_save_has_actionable_guidance(env, monkeypatch):
+    server, candidates, _ = env
+    monkeypatch.setattr(server.sys, "platform", "darwin")
+    status, result = server.harness_candidate_save("new", {"agent.py": "edited"})
+    assert status == 503 and result["error"] == "unsupported-platform"
+    assert "Linux" in result["detail"] and "bubblewrap" in result["detail"]
+    assert not (candidates / "new").exists()
+
 @pytest.mark.parametrize("name", [".", "..", "../bad"])
 def test_bad_name(env, name):
     assert env[0].harness_candidate_save(name, {"x": "x"})[0] == 400

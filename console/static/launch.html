@@ -53,12 +53,12 @@
         <div class="card__body">
           <pre class="wcmd" id="scope" aria-live="polite"></pre>
           <pre class="wcmd hg-mono" id="cmd">（参数齐了以后生成）</pre>
-          <div class="hg-row" style="margin-top:12px">
+          <div class="hg-row launch-actions" style="margin-top:12px">
             <span class="badge" id="state" data-tone="wait">预检中…</span>
             <span class="spacer hg-grow"></span>
             <button class="btn btn--primary" type="button" id="go" disabled data-i18n="ls.9">确认启动</button>
           </div>
-          <pre class="wlog" id="result" hidden></pre>
+          <div id="result" hidden aria-live="polite" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
