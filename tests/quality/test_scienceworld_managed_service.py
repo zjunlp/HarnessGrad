@@ -90,3 +90,79 @@ def test_environment_catalog_mapping_needs_no_managed_runtime(monkeypatch):
     mapping=dataset._Lazy().get('ENV')
     assert len(mapping)==1744
     assert all(value=={'kind':'files'} for value in mapping.values())
+
+
+def test_payload_hashes_actual_bytes_and_refuses_changed_or_symlinked_jar(tmp_path, monkeypatch):
+    import hashlib
+    runtime = module('scw_payload_bytes', 'data/datasets/scienceworld/runtime.py')
+    jar = tmp_path / 'lib/python3.12/site-packages/scienceworld/scienceworld.jar'
+    jar.parent.mkdir(parents=True)
+    jar.write_bytes(b'synthetic managed jar')
+    monkeypatch.setattr(runtime, 'JAR_SHA256', hashlib.sha256(jar.read_bytes()).hexdigest())
+    assert runtime.payload({'path': str(tmp_path)}) == jar
+    jar.write_bytes(b'changed managed jar')
+    with pytest.raises(RuntimeError, match='sealed scorer'):
+        runtime.payload({'path': str(tmp_path)})
+    target = jar.with_name('other.jar')
+    jar.rename(target)
+    jar.symlink_to(target)
+    monkeypatch.setattr(runtime, 'JAR_SHA256', hashlib.sha256(target.read_bytes()).hexdigest())
+    with pytest.raises(RuntimeError, match='sealed scorer'):
+        runtime.payload({'path': str(tmp_path)})
+
+
+def test_isolated_relay_starts_without_platform_scaffolds_or_task_execution(tmp_path, monkeypatch):
+    import hashlib
+    import json
+    import shutil
+    import subprocess
+    import sys
+    from eval.containers import python_service
+    import data.datasets.scienceworld as dataset
+    if shutil.which('bwrap') is None:
+        pytest.skip('bubblewrap is not installed')
+    # The real relay only imports the runtime constant; no environment/task is run.
+    # Substitute authored payload hashes in a test-only bootstrap, never source files.
+    inputs = tmp_path / 'inputs'
+    inputs.mkdir()
+    jar = inputs / 'fixture.jar'
+    jar.write_bytes(b'synthetic fixture jar')
+    java = inputs / 'jre/bin/java'
+    java.parent.mkdir(parents=True)
+    java.write_bytes(b'never executed')
+    monkeypatch.setattr(dataset, 'JRE_STAGED', java.parent.parent)
+    binding = {'python': sys.executable, 'path': str(inputs)}
+    setup = dataset._setup({'task_name': 'never loaded', 'variation': 0}, binding=binding, world_jar=jar)
+    declaration = setup['tool_relay']
+    bootstrap = inputs / 'bootstrap.py'
+    bootstrap.write_text(f'''
+import importlib.util, pathlib, runpy, sys
+assert not pathlib.Path({str(REPO / 'data/scaffolds')!r}).exists()
+assert not pathlib.Path({str(REPO / 'data/probe_set.py')!r}).exists()
+sys.path.insert(0, {str(dataset.ASSETS)!r})
+import runtime
+assert 'data.scaffolds.scorer_input' not in sys.modules
+sys.path.insert(0, {str(REPO)!r})
+assert importlib.util.find_spec('data.scaffolds') is None
+runtime.JAR_SHA256 = {hashlib.sha256(jar.read_bytes()).hexdigest()!r}
+runpy.run_path({str(dataset.ASSETS / 'relay.py')!r}, run_name='__main__')
+''')
+    directory = tmp_path / 'service'
+    (directory / 'state').mkdir(parents=True)
+    spec = directory / 'case.json'
+    spec.write_text(declaration['content'])
+    socket = directory / 'tool.sock'
+    receipt = directory / 'receipt.json'
+    argv = [sys.executable, '-I', '-B', str(bootstrap), '--case-spec', str(spec),
+            '--socket', str(socket), '--receipt', str(receipt), '--deadline-s', '1']
+    env = python_service.environment(directory, {})
+    command = python_service.command(argv, directory=directory, runtime_paths=[str(Path(sys.prefix).resolve())],
+        read_paths=[*declaration['read_paths'], str(bootstrap), str(jar)])
+    ran = subprocess.run(command, env=env, capture_output=True, text=True, timeout=10)
+    # Idle deadline ends the actual Relay loop with no requests or engine startup.
+    assert ran.returncode == 1, ran.stderr
+    assert receipt.exists(), ran.stderr
+    result = json.loads(receipt.read_text())
+    assert result['schema'] == 'harnessgrad.scienceworld-relay.v1'
+    assert result['transport']['calls'] == 0
+    assert 'ModuleNotFoundError' not in ran.stderr
