@@ -19,10 +19,12 @@ def read_trace_bodies(directory: Path) -> tuple[dict, dict]:
     trials: dict = {}
     if not directory.is_dir():
         return traces, trials
-    for path in sorted(directory.glob("*.jsonl")):
-        name = path.name[: -len(".jsonl")]
-        if ".trial" in name:
-            task, _, index = name.partition(".trial")
+    # task_file stores namespaced IDs as subdirectories (e.g. ScienceWorld's
+    # task-3-find-plant/41). Keep the complete relative ID when restoring evidence.
+    for path in sorted(directory.rglob("*.jsonl")):
+        name = path.relative_to(directory).as_posix()[: -len(".jsonl")]
+        if ".trial" in path.stem:
+            task, _, index = name.rpartition(".trial")
             try:
                 trials.setdefault(task, []).append((int(index), path.read_text()))
             except ValueError:
