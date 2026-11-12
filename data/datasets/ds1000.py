@@ -64,6 +64,7 @@ from data.scaffolds import command_control
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "ds1000"
 
 #: The oracle control submits the benchmark's own released reference; see
@@ -199,6 +200,13 @@ class _TaskDeclarations(Mapping):
     def __len__(self):
         return len(included_indices())
 
+    def __contains__(self, key):
+        try:
+            self._index(key)
+            return True
+        except KeyError:
+            return False
+
     @staticmethod
     def _index(key):
         if not isinstance(key, str) or not key.startswith("ds1000/"):
@@ -275,7 +283,12 @@ def verify_for(index: int) -> dict:
     return spec
 
 
-SETUP = {task_id(i): setup_for(i) for i in included_indices()}
+class _Setups(_TaskDeclarations):
+    def __getitem__(self, key):
+        return setup_for(self._index(key))
+
+
+SETUP = _Setups()
 
 
 class _Verifiers(_TaskDeclarations):

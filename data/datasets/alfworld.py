@@ -125,6 +125,8 @@ granularity is `1/n`.
 
 from __future__ import annotations
 
+from data.scaffolds.declarations import TaskDeclarations
+
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 from harnessgrad.paths import dataset_root
@@ -132,6 +134,7 @@ from harnessgrad.paths import dataset_root
 #: See `data/scaffolds/registry.py:KIND_DATASET`. A fixture is platform test material and is
 #: deliberately not offered as a choice in the Launch form.
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 
 #: The oracle control submits the benchmark's own released reference; see
 #: `data/dataset.schema.json` (`module.oracle_about`) for what the other value means.
@@ -676,8 +679,8 @@ def load() -> tuple[list[dict], dict[str, str]]:
 DEFAULT_ENV: dict = {"kind": "files"}
 
 ENV: dict[str, dict] = {r["task_id"]: {"kind": "files"} for r in _RECORDS}
-SETUP: dict[str, dict] = {r["task_id"]: _setup(r) for r in _RECORDS}
-VERIFY: dict[str, dict] = {r["task_id"]: _verifier(r) for r in _RECORDS}
+SETUP = TaskDeclarations(_RECORDS, _setup)
+VERIFY = TaskDeclarations(_RECORDS, _verifier)
 
 if _STUDY:
     # **The declared sides, without a hash.** The train side is exactly the study file and

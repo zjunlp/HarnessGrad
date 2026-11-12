@@ -810,6 +810,15 @@ def _selected_tasks(name: str, tasks: list[dict], task_ids) -> list[dict]:
     return [task for task in tasks if task["task_id"] in chosen]
 
 
+@contextmanager
+def _declaration_batch():
+    from data.scaffolds.declarations import scope
+    from harnessgrad.dataset_runtime import execution_declarations
+    with scope(), execution_declarations():
+        yield
+
+
+@_declaration_batch()
 def load_envs(name: str, *, task_ids=None) -> dict[str, dict]:
     """Resolve selected ENV values, falling back to DEFAULT_ENV or files.
 
@@ -1044,6 +1053,7 @@ def _check_verifier(spec, tid: str, name: str) -> None:
                 f"'exit0_stdout'")
 
 
+@_declaration_batch()
 def load_tasks(name: str, *, task_ids=None) -> tuple[list[dict], dict[str, dict], dict[str, dict]]:
     """Return selected (tasks, setups, verifiers) as a list and ordinary dicts.
 

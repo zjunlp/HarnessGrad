@@ -15,7 +15,6 @@ import hashlib
 import json
 import sys
 import tempfile
-from functools import lru_cache
 from pathlib import Path
 
 
@@ -23,15 +22,28 @@ def inventory_digest(files: dict) -> str:
     return hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-@lru_cache(maxsize=128)
-def _file_digest(path: str, stat_identity: tuple) -> str:
-    # Reuse source identities while building many specs for the same static DB/JAR.
+def _file_digest(path: str) -> str:
     # The consuming check always hashes its own private copy without this cache.
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def source_digest(path: Path) -> str:
+    """Reuse source hashes only within one declaration snapshot.
+
+    Metadata is part of the key, but not a process-wide trust decision: filesystems
+    may have coarse timestamps. Every new scope and each consuming checker reads
+    the bytes again, even if a caller restored the file's modification time.
+    """
+    from data.scaffolds.declarations import once
+    path = Path(path).resolve(strict=True)
+    stat = path.stat()
+    key = ('scorer-source', str(path), stat.st_dev, stat.st_ino, stat.st_size,
+           stat.st_mtime_ns, stat.st_ctime_ns)
+    return once(key, lambda: _file_digest(str(path)))
 
 
 def bind(spec: dict, task_id: str, paths: list[str]) -> dict:
@@ -42,10 +54,7 @@ def bind(spec: dict, task_id: str, paths: list[str]) -> dict:
         if "content" in entry:
             files[path] = hashlib.sha256(entry["content"].encode("utf-8")).hexdigest()
         else:
-            source = Path(entry["from"])
-            stat = source.stat()
-            files[path] = _file_digest(str(source), (stat.st_dev, stat.st_ino, stat.st_size,
-                                                     stat.st_mtime_ns, stat.st_ctime_ns))
+            files[path] = source_digest(Path(entry["from"]))
     digest = inventory_digest(files)
     spec["scorer_input"] = {"task_id": task_id, "path": "native-inputs",
                             "sha256": digest, "files": files}

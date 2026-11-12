@@ -67,6 +67,7 @@ from eval.policy.appworld_reporting import make_manifest
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 
 DATASET_ROOT = dataset_root('appworld')
 SRC_DIR = DATASET_ROOT / "_src"

@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
+from data.scaffolds.scorer_input import source_digest
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = 'public-native-local-v1'
@@ -30,12 +31,10 @@ def bind(dataset: str, spec: dict) -> dict:
             source = Path(entry['from']).resolve(strict=True)
             if not source.is_relative_to(ROOT) or not source.is_file():
                 raise ValueError('public scorer code must come from the installed platform')
-            content = source.read_bytes()
-            value = {'source': source.relative_to(ROOT).as_posix()}
+            value = {'source': source.relative_to(ROOT).as_posix(), 'sha256': source_digest(source)}
         else:
             content = entry['content'].encode('utf-8')
-            value = {'content': entry['content']}
-        value['sha256'] = hashlib.sha256(content).hexdigest()
+            value = {'content': entry['content'], 'sha256': hashlib.sha256(content).hexdigest()}
         if name in sources and sources[name] != value:
             raise ValueError('conflicting public scorer code entries')
         sources[name] = value

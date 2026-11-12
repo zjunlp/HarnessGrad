@@ -59,6 +59,7 @@ from pathlib import Path
 from harnessgrad.paths import dataset_root
 
 KIND = "dataset"
+VERIFIER_KIND = 'command'
 MANAGED_EXECUTION_RUNTIME = "spreadsheetbench"
 
 #: The oracle control submits the benchmark's own released reference; see
@@ -233,8 +234,8 @@ def _verifier(record: dict) -> dict:
     """
     from harnessgrad.dataset_runtime import bind, resolve_execution
     binding = bind(resolve_execution("spreadsheetbench"), "verifier")
-    from data.scaffolds.spreadsheet_runtime.native import require_runtime, snapshot_native_python
-    native = snapshot_native_python(require_runtime())
+    from data.scaffolds.spreadsheet_runtime.metadata import selected_native
+    native = selected_native()
     # Pin selected contents, never a mutable environment/path at worker launch.
     native.pop("soffice", None)
     native_content = json.dumps(native, sort_keys=True, separators=(",", ":"))

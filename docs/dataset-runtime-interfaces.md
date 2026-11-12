@@ -392,6 +392,14 @@ provider 和 execution 共用存储机制，但声明、索引和制品按 profi
 结构检查；启动前的 `admit_binding` 重读绑定指定的 manifest，核验 venv 内容、
 基础解释器、声明、精确依赖和路径，不读取最新索引换环境，不安装或静默回退。
 
+声明解析与实际启动是两个独立阶段。`registry.load_tasks/load_envs` 在有界的声明 scope 中，
+同一个执行环境只做一次完整库存校验和解释器探测；provider worker 的 `execution_snapshot`
+在进入时校验一次，逐任务查询仅复制该绑定。scope 结束后不保留“已校验”权限。
+ALFWorld、Jericho、ScienceWorld 和 DS-1000 的任务声明按键生成，枚举键不生成 setup/verifier。
+公共评分代码、JAR、ROM 等共享源摘要，以及 native research 清单/索引和表格 native 库存，
+只在声明快照中复用。新的解析、实际启动与评分输入消费仍重新读取、校验相关字节。
+不会仅凭文件时间戳把旧校验结果永久沿用到下一次运行。
+
 服务在 `SETUP.tool_relay.python_runtime` 放入 service 绑定，`python` 必须与绑定一致，
 并通过 `read_paths` 显式列出可信服务需要的代码和输入。平台以 `-I -B` 启动，
 只读挂载运行时与白名单路径，使用每任务私有的 HOME、临时目录、缓存、配置目录和 cwd，
@@ -794,7 +802,10 @@ provider 是可信适配器的依赖执行进程，不是额外的安全沙箱�
 当前 QA 后端不接收模型凭据或模型配置。运行时库存覆盖 venv 内容和基础解释器文件，
 不声称封闭宿主系统库或完整标准库。provider 回执含实际运行时身份。driver 在一次
 有界 loading session 中首次选择环境，随后请求核验同一个 manifest，不随 ready 索引
-变化重新选择。实际加载制品通过第 9.1 节接入 H0、结果缓存和恢复运行比较。
+变化重新选择。该 loading session 中相同存储配置的 catalog 复用已验证结果的副本，
+避免仅为读取 split/oracle 等元数据再次启动 provider；非冻结客户端仍保持逐次读取。
+实际 resolve/control 请求仍在启动 worker 前重新校验。实际加载制品通过第 9.1 节接入
+H0、结果缓存和恢复运行比较。
 
 ## 9. 可选评分身份
 

@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 from harnessgrad.config.areas import ConfigMissing
+from data.scaffolds.declarations import once
 from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
 from harnessgrad.paths import DatasetPath, dataset_root
 from .profiles import COMMIT, PROFILES, SOURCES
@@ -36,6 +37,8 @@ def owned(root, relative):
 
 
 class Adapter:
+    VERIFIER_KIND = 'command'
+
     def __init__(self, name, root=None):
         self.name = name
         self.profile = PROFILES[name]
@@ -48,6 +51,9 @@ class Adapter:
         return dataset_root(self.name)
 
     def manifest(self):
+        return once(('native-manifest', self, str(self.root)), self._read_manifest)
+
+    def _read_manifest(self):
         if self.root.resolve() == ROOT or self.root.resolve().is_relative_to(ROOT):
             raise ValueError('native dataset payloads must live outside the platform tree')
         path = self.root / 'manifest.json'
@@ -113,7 +119,8 @@ class Adapter:
                 raise ValueError('native world/database dependency digest mismatch')
 
     def records(self):
-        return {r['task_id']: r for r in self.manifest()['records']}
+        return once(('native-records', self, str(self.root)),
+                    lambda: {r['task_id']: r for r in self.manifest()['records']})
 
     def load(self):
         # The public inventory is independent of model/image provisioning.
@@ -252,7 +259,7 @@ class Adapter:
         if profile['judge']:
             spec['judge'] = self.judge(m)
         if self.name == 'travelplanner':
-            self.checked_world(m)
+            # readiness() already checked this world's bytes for this task.
             database = self.root / 'database'
             if not database.is_dir():
                 raise ConfigMissing('travelplanner: the complete native database is required')
@@ -284,6 +291,7 @@ class TaskMapping(Mapping):
     def __init__(self, adapter, fn): self.adapter, self.fn = adapter, fn
     def __iter__(self): return iter(self.adapter.records())
     def __len__(self): return len(self.adapter.records())
+    def __contains__(self, tid): return tid in self.adapter.records()
     def __getitem__(self, tid):
         if tid not in self.adapter.records(): raise KeyError(tid)
         return self.fn(tid)

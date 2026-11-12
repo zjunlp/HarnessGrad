@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 
 import hashlib
 import json
@@ -41,6 +42,7 @@ EXECUTION_SCOPE = "dataset-execution-runtime"
 RECIPE_VERSION = 1
 _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 _EXECUTION_SNAPSHOT = ContextVar("dataset_execution_snapshot", default=None)
+_DECLARATION_RUNTIMES = ContextVar("dataset_declaration_runtimes", default=None)
 _PIN = re.compile(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.!+_-]*)\Z")
 
 
@@ -405,8 +407,29 @@ def resolve_execution(name: str, *, root=None) -> dict:
     if snapshot is not None:
         if name not in snapshot:
             raise _unavailable(name, "execution artifact was not selected by the provider client", execution=True)
-        return admit_binding(snapshot[name], "service")
-    return _resolve_profile(name, execution_descriptor, root, execution=True)
+        # The provider scope admitted this exact binding at entry. Declaration
+        # lookup is metadata, not a launch; launchers still call admit_binding.
+        return deepcopy(snapshot[name])
+    cache = _DECLARATION_RUNTIMES.get()
+    if cache is None:
+        return _resolve_profile(name, execution_descriptor, root, execution=True)
+    key = (name, str(_store(root)))
+    if key not in cache:
+        cache[key] = _resolve_profile(name, execution_descriptor, root, execution=True)
+    return deepcopy(cache[key])
+
+
+@contextmanager
+def execution_declarations():
+    """Verify each execution artifact once while constructing task declarations."""
+    if _DECLARATION_RUNTIMES.get() is not None:
+        yield
+        return
+    token = _DECLARATION_RUNTIMES.set({})
+    try:
+        yield
+    finally:
+        _DECLARATION_RUNTIMES.reset(token)
 
 
 @contextmanager
@@ -417,8 +440,8 @@ def execution_snapshot(bindings):
         validated = validate_binding(binding, "service")
         if validated["dataset"] != name:
             raise ValueError("execution snapshot dataset mismatch")
-        admit_binding(validated, "service")
-        selected[name] = validated
+        admitted = admit_binding(validated, "service")
+        selected[name] = deepcopy(admitted)
     token = _EXECUTION_SNAPSHOT.set(selected)
     try:
         yield

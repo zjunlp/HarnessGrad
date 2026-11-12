@@ -20,6 +20,7 @@ from data.scaffolds.native_harbor import safe_file
 from data.scaffolds.scorer_input import bind as bind_scorer_input
 
 KIND = 'dataset'
+VERIFIER_KIND = 'command'
 ORACLE_SOURCE = 'released'
 OFFICIAL_EVAL = None
 SPLIT = None
@@ -83,9 +84,9 @@ def _setup(record):
 
 def _verify(record):
     from harnessgrad.dataset_runtime import bind, resolve_execution
-    from data.scaffolds.spreadsheet_runtime.native import require_runtime, snapshot_native_python
+    from data.scaffolds.spreadsheet_runtime.metadata import selected_native
     binding = bind(resolve_execution('spreadsheetbench2'), 'verifier')
-    native = snapshot_native_python(require_runtime())
+    native = selected_native()
     native.pop('soffice', None)  # Never execute an external, unbound launcher.
     native_content = json.dumps(native, sort_keys=True, separators=(',', ':'))
     sources = {
