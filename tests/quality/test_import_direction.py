@@ -52,7 +52,8 @@ EXTRACTED_UNIT_IMPORTS = {
         "harnessgrad.dataset_runtime_identity", "harnessgrad.orchestration.candidate_stage",
         "harnessgrad.orchestration.historical_evidence", "harnessgrad.scoring_identity"},
     "harnessgrad/orchestration/h0.py": {
-        "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil", "sys",
+        # stat preserves donor modes while granting owner-write on private copies.
+        "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil", "stat", "sys",
         "eval.run.metrics", "eval.containers.external_runtime", "harnessgrad.config",
         "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
         "harnessgrad.scoring_identity", "harnessgrad.verification_context", "harnessgrad.h0_identity",
