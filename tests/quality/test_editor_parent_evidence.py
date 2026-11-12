@@ -139,3 +139,21 @@ def test_real_bwrap_fake_cli_source_and_channel(tmp_path, mode):
     result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout.strip().splitlines()[-1])['private_visible'] is False
+
+
+def test_no_evidence_keeps_resolved_cli_identity_without_endpoint(monkeypatch, tmp_path):
+    base = tmp_path / 'base'
+    channel = base / '_harnessgrad'
+    channel.mkdir(parents=True)
+    identity = {'kind': 'cli', 'name': 'dsh', 'path': '/declared/fake-dsh',
+                'argv_style': 'dsh', 'model': 'fake-model', 'provider': 'fake-provider', 'profile': 'fake-profile'}
+    (channel / 'round.json').write_text(json.dumps({'identity': {'improver': identity}}))
+    monkeypatch.delenv('HG_IMPROVER', raising=False)
+    seen = {}
+    def fake_ask(prompt, source, parent, improver, **kw):
+        seen.update(improver=improver, evidence=kw.get('evidence_channel'))
+        return {'no_change': 'no task evidence needed'}
+    monkeypatch.setattr(editor, '_ask_cli', fake_ask)
+    reply = editor.ask('source-only edit', base=base, evidence_channel=False)
+    assert reply['no_change']
+    assert seen == {'improver': identity, 'evidence': False}
