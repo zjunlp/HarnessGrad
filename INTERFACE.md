@@ -2081,6 +2081,18 @@ default, so an ordinary run resolves an endpoint, `_method_env` injects its base
 and credential into the method, and the record and the run agree by construction -- every
 method in `methods/` reaches a model through `editor.ask`, which reads `HG_METHOD_*`.
 
+The editor keeps the source tree (`base` / `parent`) separate from run evidence.
+`ask`, `ask_for_json`, and `propose_and_apply` accept `evidence_channel=Path(...)`
+for the platform-staged `_harnessgrad` directory; `propose_and_apply` also accepts
+the request's `channel`. An explicit channel wins over source-path inference.
+Without one, only the current source tree's channel or a direct, existing
+`_harnessgrad/states/round-N` archive can supply evidence. Missing or invalid
+channels fail before dispatch; `evidence_channel=False` explicitly requests no
+run evidence. The reader validates the channel boundary and round record and
+refuses exam records; the platform still owns public-evidence staging. The CLI
+edits the selected parent while reading this run channel as `evidence/`; this
+does not change a method's parent-selection or acceptance rule.
+
 What that fixes, measured: with `codex` as the default, `identity.improver` on every point
 named a tool that composed nothing, and the method called whatever `.env` happened to hold.
 The same defect the `deepseek` entry was written to prevent (`tools/improver.py:resolve`,

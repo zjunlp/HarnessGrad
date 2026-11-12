@@ -151,11 +151,45 @@ def _enclosing_channel(base: Path) -> Path | None:
     0/90 on 90 tasks. `meta_harness` hit the same thing on two of its four generations.
     """
     base = Path(base)
-    for parent in base.parents:
-        if parent.name == CHANNEL:
-            return parent
+    # Only direct, existing archive states belong to an enclosing run. A directory
+    # merely nested somewhere below a channel (or a symlink out of it) does not.
+    root = base.parent.parent
+    if (base.name.startswith("round-") and base.name[6:].isdigit()
+            and base.parent.name == "states" and root.name == CHANNEL
+            and base.is_dir() and not base.is_symlink()
+            and base.resolve() == root.resolve() / "states" / base.name
+            and not root.is_symlink() and not base.parent.is_symlink()):
+        return root
     return None
 
+
+def _evidence_channel(base: Path | None, explicit=None) -> Path | None:
+    """Resolve a platform-staged channel independently of the source tree.
+
+    False explicitly requests no evidence. Otherwise missing/invalid evidence is
+    an error, never a reason to silently dispatch to another improver.
+    """
+    if explicit is False:
+        return None
+    root = (Path(explicit) if explicit is not None else
+            (channel(base) if base is not None and channel(base).is_dir()
+             else _enclosing_channel(base) if base is not None else None))
+    if root is None or root.name != CHANNEL or root.is_symlink():
+        raise ValueError("missing or invalid platform evidence channel")
+    try:
+        if not root.is_dir() or root.resolve() != root.absolute():
+            raise ValueError("evidence channel must not traverse symlinks")
+        point = root / "round.json"
+        if point.is_symlink():
+            raise ValueError("round evidence must not be a symlink")
+        summary = json.loads(point.read_text())
+        if not isinstance(summary, dict):
+            raise ValueError("invalid platform round evidence")
+        if summary.get("score_kind") == "exam":
+            raise ValueError("private exam evidence cannot enter an editor request")
+    except (OSError, ValueError) as exc:
+        raise ValueError("missing or invalid platform round evidence") from exc
+    return root
 
 
 def load_history(base: Path) -> list[dict]:
@@ -459,7 +493,8 @@ def evidence_pointer(base: Path) -> str:
     )
 
 
-def evidence_content(base: Path, trace_limit: int = 6, strict: bool = True) -> str:
+def evidence_content(base: Path, trace_limit: int = 6, strict: bool = True,
+                     evidence_base: Path | None = None, include_evidence: bool = True) -> str:
     """The same material **inlined**, for an improver that cannot read files.
 
     The two layers are not the same reader. A CLI improver has a working directory and tools,
@@ -472,7 +507,9 @@ def evidence_content(base: Path, trace_limit: int = 6, strict: bool = True) -> s
     sources = "\n\n".join(f"### {k}\n```\n{v}\n```" for k, v in shown.items())
     return ("## The harness's sources\n" + (sources or "(no text files)")
             + "\n\n## What the harness did, failing tasks first\n"
-            + load_traces(base, limit=trace_limit, order=failing_first(base)))
+            + (load_traces(evidence_base or base, limit=trace_limit,
+                           order=failing_first(evidence_base or base))
+               if include_evidence else "(no evidence explicitly requested)"))
 
 
 def failing_first(base: Path) -> list[str]:
@@ -1340,7 +1377,8 @@ def _read_cli_artifacts(workspace: Path) -> dict[str, str]:
     return artifacts
 
 
-def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
+def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
+             evidence_channel=None) -> dict:
     """Propose through a **CLI** improver and return the result as an edit sequence.
 
     The two improver layers have different shapes: an endpoint returns edits that the method
@@ -1359,7 +1397,10 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
     # a bare task and had to open `evidence/round.json` itself to learn the backend, the
     # model, the score, and what the harness did on each task. The numbers are one line per
     # task and they are what a hypothesis is made of (`loop_facts_block`).
-    facts = "\n\n".join(b for b in (run_facts(base), loop_facts_block(base)) if b)
+    evidence_root = _evidence_channel(base, evidence_channel)
+    context = evidence_root.parent if evidence_root is not None else None
+    facts = ("\n\n".join(b for b in (run_facts(context), loop_facts_block(context)) if b)
+             if context is not None else "Evidence explicitly unavailable for this request.")
     # **The evidence is named, not compiled in.** `propose` has staged the whole channel as
     # `evidence/` beside the tree the improver edits, so the paths are enough and the prompt
     # stops growing with the dataset (`evidence_pointer` states the ceiling this removes).
@@ -1376,15 +1417,15 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict) -> dict:
         "Absolute artifact keys, parent traversal and symlinks are forbidden.\n")
     req = {"platform_api_version": "0.1.0", "workspace": str(workspace),
            "base_harness": str(parent), "candidate": str(workspace / "candidate"),
-           "improver": improver, "channel": str(channel(base)),
+           "improver": improver, "channel": str(evidence_root) if evidence_root else "",
            "trajectory_out": "", "task_ids": [], "train_task_ids": []}
-    runtime_receipt = base / ".state/bun-runtime.json"
+    runtime_receipt = (context or base) / ".state/bun-runtime.json"
     if runtime_receipt.is_file():
         # Trusted preparation is staged on the incumbent. Archive parents may
         # have no generated state; propose still validates their dependency inputs.
         req["harness_runtime"] = json.loads(runtime_receipt.read_text())
-    result = cli_improver.propose(req, parent, prompt=prompt, facts=facts,
-                                   evidence=evidence_pointer(base))
+    pointer = evidence_pointer(context) if context is not None else "No evidence requested."
+    result = cli_improver.propose(req, parent, prompt=prompt, facts=facts, evidence=pointer)
     _keep_improver_transcript(result, workspace)
     artifacts = _read_cli_artifacts(workspace)
     # **What the improver itself cost, as far as anyone can see.** `propose` returns a
@@ -1513,7 +1554,7 @@ def _record_endpoint_call(prompt: str, system: str, reply: str, model: str,
 
 def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         skill: bool = True, parent: Path | None = None,
-        endpoint_only: bool = False) -> dict:
+        endpoint_only: bool = False, evidence_channel=None) -> dict:
     """One model call, with a bounded retry when the reply cannot be read.
 
     `base` adds the run's configuration block ahead of the method's own prompt. It is
@@ -1523,12 +1564,19 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     (`skill_block`), injected by default because it is staged for every method and named on
     every point; `skill=False` is how a method says it wants none.
 
+    `evidence_channel` explicitly names the platform-staged `_harnessgrad` directory,
+    independently of `base`/`parent` source selection. Missing or invalid channels
+    fail before dispatch; `False` explicitly requests no run evidence. Otherwise
+    compatibility inference accepts the current tree or a direct existing staged
+    `states/round-N` tree. The platform remains responsible for staging public
+    evidence; this reader validates directory boundaries and rejects exam records.
+
     **One dispatch point for the improver layer.** When the run resolved a *CLI* improver
     (codex), this call drives it instead of a chat endpoint -- on the tree named by `parent`
     (the one the rule chose to build on) -- and returns its edit as an ordinary edit
     sequence. A rule therefore runs on either layer without knowing which it got, which is
     what makes "the RSI rule is the rule; codex is the shell" true rather than aspirational.
-    `parent=None` means "build on the incumbent", which is what most A-shaped rules want.
+    `parent=None` means "build on base", which may itself be a selected archive state.
 
     **`endpoint_only=True` refuses that dispatch.** The caller that needs it is the one
     asking a *schema* question rather than for an edit: a CLI improver answers by editing a
@@ -1556,10 +1604,14 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     # writes them for an improver that carries a `base_url`. Called first, as it was, it
     # refused every CLI run with "a method brings its own credentials": the one layer with no
     # endpoint would have been the only one that could not start without one.
-    cli = None if endpoint_only else cli_improver_identity(base)
+    evidence_root = (_evidence_channel(base, evidence_channel)
+                     if base is not None or evidence_channel is not None else None)
+    context = evidence_root.parent if evidence_root is not None else None
+    cli = None if endpoint_only else cli_improver_identity(context)
     if cli is not None:
         tree = Path(parent) if parent is not None else Path(base)
-        return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli)
+        return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli,
+                        evidence_channel=evidence_root if evidence_root is not None else False)
 
     base_url, api_key, model = model_settings()
     try:
@@ -1585,12 +1637,14 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         # version of that request, so it fails here instead of letting the model rebuild a file
         # from the part it was shown (findings §117).
         facts = "\n\n".join(
-            b for b in (run_facts(base), loop_facts_block(base),
-                        evidence_content(source, strict=True)) if b)
+            b for b in (run_facts(context) if context else "",
+                        loop_facts_block(context) if context else "",
+                        evidence_content(source, strict=True, evidence_base=context,
+                                         include_evidence=context is not None)) if b)
         prompt = "\n\n".join(
             x for x in (cli_improver.CHANGE_REQUEST, cli_improver.HARD_RULES, facts, prompt) if x)
         if skill:
-            block = skill_block(base)
+            block = skill_block(context) if context else ""
             if block:
                 prompt = block + "\n\n" + prompt
     last = ""
@@ -1735,7 +1789,7 @@ EDIT_EXPECT = ("Return the complete corrected edit sequence as JSON, with the co
 def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
                  parent=None, endpoint_only: bool = False,
                  accept=None, what: str = "a JSON reply",
-                 skill: bool = True) -> tuple[dict, str]:
+                 skill: bool = True, evidence_channel=None) -> tuple[dict, str]:
     """Retry a JSON-producing model call with the failure fed back to the model.
 
     `accept(reply)` returns an empty string when the reply is usable, or the text that
@@ -1760,6 +1814,8 @@ def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
             # Passed only when set: the stub `ask` in the tests is the seam every rule is
             # tested through, and a keyword it has never heard of turns a formatting
             # question into a `TypeError` in the test that was asking it.
+            if evidence_channel is not None:
+                call["evidence_channel"] = evidence_channel
             if endpoint_only:
                 call["endpoint_only"] = True
             reply = ask(prompt_for(problems), **call)
@@ -1778,17 +1834,17 @@ def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
 
 def propose_and_apply(base: Path, req: dict, system: str, prompt_for, *,
                       parent=None,
-                      attempts: int = 3, skill: bool = True) -> tuple[dict, Path, str]:
+                      attempts: int = 3, skill: bool = True,
+                      evidence_channel=None) -> tuple[dict, Path, str]:
     """Two phases: propose an edit sequence, then apply and validate it.
 
     **`parent` is the tree the edits land on.** It is what the improver was driven against
     (`ask_for_json(..., parent=parent)` gives a CLI improver that tree to edit), so
     applying the returned sequence anywhere else silently produces a different candidate
     than the one the rule asked for -- `incumbent + parent's files` rather than `parent`.
-    Latent rather than observed: no caller passes a non-incumbent `parent` today, and
-    `methods/base.py` applies onto `rnd.parent` itself instead of coming through here.
-    Fixed anyway, because the next rule that selects an older state is the one this
-    parameter exists for.
+    `base` may itself be a selected historical tree, as in Dream-RSI. The explicit
+    evidence channel (or request channel) supplies the run context independently;
+    it never replaces the chosen source tree.
     """
     dest = candidate_path(req)
     tree = Path(parent) if parent is not None else base
@@ -1801,7 +1857,9 @@ def propose_and_apply(base: Path, req: dict, system: str, prompt_for, *,
 
     reply, problems = ask_for_json(
         prompt_for, system=system, base=base, attempts=attempts, parent=parent,
-        accept=accept, what="an edit sequence", skill=skill)
+        accept=accept, what="an edit sequence", skill=skill,
+        evidence_channel=(evidence_channel if evidence_channel is not None
+                          else req.get("channel")))
     return reply, dest, problems
 
 
