@@ -447,31 +447,27 @@ def test_the_method_environment_is_pointed_at_the_resolved_endpoint(monkeypatch)
         plain["HG_METHOD_BASE_URL"] == os.environ.get("HG_METHOD_BASE_URL")
 
 
-def test_a_model_the_project_does_not_use_is_refused_by_name(monkeypatch):
-    """项目规定只用 `deepseek-flash`。这条不能是"大家记得",必须是一次拒绝。
-
-    理由是可比的:一个悄悄用了另一个模型的 run,会在曲线上留一个谁也没法与之比较的数字,
-    而记录里没有一个字说明这件事。
-    """
+def test_a_registry_can_refuse_a_model_by_name(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", "k" * 12)
-    cfg = {"default": "deepseek", "_forbidden_models": {"deepseek-v4-pro": "we use flash"},
+    cfg = {"default": "deepseek", "_forbidden_models": {"restricted-model": "local policy"},
            "improvers": {"deepseek": {"name": "deepseek", "kind": "openai-compatible",
                                       "model": "deepseek-flash",
                                       "base_url": "https://api.deepseek.com/v1",
                                       "api_key_env": "DEEPSEEK_API_KEY"}}}
-    got = improver.resolve(cfg, requested="deepseek", model_override="deepseek-v4-pro")
+    got = improver.resolve(cfg, requested="deepseek", model_override="restricted-model")
     assert not got["ok"] and "not allowed" in got["reason"], got
     ok = improver.resolve(cfg, requested="deepseek")
     assert ok["ok"] and ok["model"] == "deepseek-flash", ok
 
 
-def test_the_registry_itself_ships_flash_and_names_the_banned_model():
-    """注册表是这条规则的家:`--improver deepseek` 不指定模型时必须就是 flash。"""
-    cfg = improver.load_config()
-    assert cfg["improvers"]["deepseek"]["model"] == "deepseek-flash"
-    assert "deepseek-v4-pro" in cfg.get("_forbidden_models", {})
-    assert improver.forbidden_reason(cfg, "deepseek-flash") == ""
-    assert improver.forbidden_reason(cfg, "deepseek-v4-pro") != ""
+def test_builtin_deepseek_defaults_to_flash_and_accepts_pro(monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fixture-key")
+    cfg = improver.load_config(improver.DEFAULT_CONFIG)
+    default = improver.resolve(cfg, requested="deepseek")
+    assert default["ok"] and default["model"] == "deepseek-flash"
+    pro = improver.resolve(cfg, requested="deepseek", model_override="deepseek-v4-pro")
+    assert pro["ok"] and pro["model"] == "deepseek-v4-pro"
+    assert pro["base_url"] == default["base_url"]
 
 
 def test_a_resolved_improver_reports_its_own_model_not_the_default_s(tmp_path, monkeypatch):

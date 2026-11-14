@@ -48,10 +48,6 @@ DATA = ROOT / "data" / "datasets"
 sys.path.insert(0, str(ROOT))
 import data.scaffolds.registry as registry   # noqa: E402
 
-#: Withdrawn model measurements are excluded by default and counted in the report.
-FORBIDDEN_MODELS = ("deepseek-v4-pro",)
-
-
 #: Band names, easiest first. Cut by tertile of the observed difficulties rather than by fixed
 #: thresholds: a fixed 0.33/0.66 would put every task of a hard dataset in `hard` and make the
 #: bands useless for ordering, which is the one thing they are for.
@@ -101,17 +97,8 @@ def states_for(runs_root: Path) -> dict[str, list[dict]]:
     return out
 
 
-def analyse(states: list[dict], *, model: str | None = None) -> tuple[dict, list[dict], int]:
-    """`(per-task rows, the states actually used, how many were dropped as forbidden)`."""
-    forbidden = 0
-    if model is None:
-        keep = []
-        for s in states:
-            if str(s.get("model")) in FORBIDDEN_MODELS:
-                forbidden += 1
-            else:
-                keep.append(s)
-        states = keep
+def analyse(states: list[dict], *, model: str | None = None) -> tuple[dict, list[dict]]:
+    """Return the per-task report and the states it used."""
     used = [s for s in states if model is None or s.get("model") == model]
     per_task: dict[str, list[float]] = {}
     contributed: dict[str, set] = {}
@@ -120,11 +107,11 @@ def analyse(states: list[dict], *, model: str | None = None) -> tuple[dict, list
     by_model: dict[str, dict[str, list[float]]] = {}
     for state in used:
         key = (state["run_id"], state["round"])
-        model = str(state.get("model"))
+        model_name = str(state.get("model"))
         for task, score in state["scores"].items():
             per_task.setdefault(task, []).append(score)
             contributed.setdefault(task, set()).add(key)
-            by_model.setdefault(task, {}).setdefault(model, []).append(score)
+            by_model.setdefault(task, {}).setdefault(model_name, []).append(score)
     rows = []
     for task, scores in per_task.items():
         perf = sum(scores) / len(scores)
@@ -138,7 +125,7 @@ def analyse(states: list[dict], *, model: str | None = None) -> tuple[dict, list
                          for m, v in sorted(by_model.get(task, {}).items())},
         })
     rows.sort(key=lambda r: (r["difficulty"], r["task_id"]))
-    return {"rows": rows}, used, forbidden
+    return {"rows": rows}, used
 
 
 def band_of(rows: list[dict]) -> dict[str, str]:
@@ -222,10 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         if not states:
             print(f"{dataset}: no measured state -- skipped")
             continue
-        report, used, dropped = analyse(states, model=args.model)
-        if dropped:
-            print(f"{dataset}: {dropped} state(s) dropped -- measured with "
-                  f"{', '.join(FORBIDDEN_MODELS)}, which is not evidence")
+        report, used = analyse(states, model=args.model)
         rows = report["rows"]
         bands = band_of(rows)
         for r in rows:

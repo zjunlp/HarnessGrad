@@ -111,11 +111,8 @@ def declared_model(config: dict | None = None, source: Path | None = None,
 def forbidden_reason(config: dict | None, model: str) -> str:
     """Why this model may not be used, or `""`.
 
-    A project rule kept as data (`improvers.json:_forbidden_models`) and enforced in the
-    one place that resolves a model, so it cannot be forgotten in a launch script. The
-    platform's own position is that a refusal with a reason beats a convention: a run that
-    quietly used a different model than the team agreed on puts a number on a curve that
-    cannot be compared with anything, and nothing in the record would say so.
+    A registry can declare `_forbidden_models` with a reason per model. The driver
+    checks this policy for the task agent, and the resolver checks it for endpoint improvers.
     """
     config = config if config is not None else load_config()
     banned = config.get("_forbidden_models") or {}
