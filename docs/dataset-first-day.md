@@ -1,7 +1,6 @@
 # A new dataset, the first day
 
-**This page is the reconnaissance. `docs/dataset-onboarding.md` is the procedure.
-the internal onboarding log (kept outside this repository) is the evidence behind both.**
+Use this page to check the data and scorer before following the [onboarding procedure](dataset-onboarding.md).
 
 Precedence, as everywhere in this repository: the programs win over this page. If a claim
 here and `data/dataset.schema.json` / `tools/dataset_lint.py` disagree about something a
@@ -30,11 +29,8 @@ wc -l -c <downloaded-file>          # the count is a claim you can falsify
 python3 -c "import csv,sys;print(sum(1 for _ in csv.DictReader(open(sys.argv[1]))))" <file>
 ```
 
-A task count that disagrees with the paper is a finding, not a nuisance. Do not resolve it by
-adopting whichever number is convenient; write down which one you measured and why the other
-is different. The internal benchmark survey (kept outside this repository) marks the numbers it could not verify against a
-primary source, and its correction notes name the ones it got wrong; the same directory states
-which of its pins were read only through a mirror.
+If the task count differs from the published count, record the observed count, the pinned source
+it came from, and any confirmed reason for the difference.
 
 Check access to each upstream source in your own environment. A pin verified only
 through a mirror is **mirror-verified**; record the mirror rather than claiming the
@@ -75,9 +71,7 @@ the failures cluster.
 
 Three outcomes, and they route everything that follows (§2). Two habits while doing it:
 
-* **Record the per-row results outside git**, under the dataset root, with the count and the
-  date. `datasets/ds1000/_src/oracle-sweep.json` and
-  `datasets/nestful/_src/gold-audit-isolated.json` are the two examples from the batch.
+* **Record the per-row results outside git**, under the dataset root, with the count and the date.
 * If the gold does not reach 1, **run it twice**. `nestful` gave 1857/4 on the first sweep and
   1854/7 on a repeat: a metric that moves under the same code is not reproducible, and one
   sweep would have hidden that.
