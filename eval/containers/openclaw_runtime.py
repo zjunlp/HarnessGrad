@@ -34,9 +34,6 @@ def identity(repo: Path, env: dict | None = None) -> dict | None:
             raise ValueError("Harness manifest must be an object")
         if "_openclaw_runtime" not in manifest:
             return None
-        metadata = repo / "runtime-identity.json"
-        if not metadata.resolve(strict=True).is_relative_to(repo):
-            raise ValueError("OpenClaw source identity must belong to the Harness")
         path = ROOT / "base_harness/openclaw/openclaw_runtime.py"
         spec = importlib.util.spec_from_file_location("_platform_openclaw_runtime", path)
         helper = importlib.util.module_from_spec(spec)

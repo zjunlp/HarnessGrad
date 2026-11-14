@@ -333,9 +333,8 @@ def install_harness(name: str, version: str, root: Path) -> Path:
                 record = codex.configure(harness, str(launcher), node=str(node), env=env,
                                          sandbox_only=recipe.integrity is None)
             else:
-                (harness / "runtime-identity.json").write_text(json.dumps(source, indent=2) + "\n", encoding="utf-8")
                 record = openclaw.configure(harness, str(launcher), node=str(node),
-                                             runtime_paths=(lockfile.parent,), env=env, warn=False)
+                                             runtime_paths=(lockfile.parent,), env=env, version=version, warn=False)
             _check_binding(record, [*prefix, str(launcher)], expected_version)
             receipt = {"schema": 1, "version": version, "node_version": NODE_VERSION,
                        "npm_version": NPM_VERSION, "instance": instance.name,
