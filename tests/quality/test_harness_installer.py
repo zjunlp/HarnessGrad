@@ -27,6 +27,7 @@ def test_invalid_version_never_creates_installation(tmp_path, capsys):
     assert "opencode 2.2.7" in supported
     assert "opencode 2.3.0" in supported
     assert "deepseek-harness 0.2.2-rc.1" in supported
+    assert "deepseek-harness 0.2.2-rc.3" in supported
     root = tmp_path / "store"
     assert main(["harness", "install", "openclaw", "--version", "latest",
                  "--install-root", str(root)]) == 1
@@ -64,7 +65,7 @@ def test_install_selects_latest_verified_version_only_when_omitted(tmp_path, cap
 
 
 def test_deepseek_default_accepts_verified_prereleases(tmp_path, capsys, monkeypatch):
-    version = "0.2.2-rc.1"
+    version = "0.2.2-rc.3"
     release = install_harness._recipe("deepseek-harness", version)
     assert release.package == "@deepseek-ai/dsh"
     assert release.integrity == install_harness.DSH_RELEASES[version]

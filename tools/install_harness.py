@@ -62,6 +62,7 @@ OPENCODE_RELEASES = {
 }
 DSH_RELEASES = {
     "0.2.2-rc.1": "sha512-ijR9UEVYkG15Q/Q79JzvzLBzQOQfc63VLr9n6flpwHPhr5IKn2UxthnSoto/P9l7qGd7pPvI1Ra6TW7LH3oKpg==",
+    "0.2.2-rc.3": "sha512-S+4oUYVKWuc1SCMMp1mpUa2llxVy0o9gIgp7TDg/Ea7PuvXVkAfnykqSH1/oDXVB+y5VzEm0QIJulo1LIB3qRg==",
 }
 EXACT_SEMVER = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 LABELS = {"loop": "Loop", "openclaw": "OpenClaw", "codex": "Codex", "opencode": "OpenCode",
