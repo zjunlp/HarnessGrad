@@ -170,6 +170,19 @@ def test_agent_description_and_gate_use_declared_configuration(backend, model, k
     assert bool(reason) is (backend != 'mock' and not live)
 
 
+def test_builtin_registry_admits_deepseek_v4_pro_as_agent():
+    from harnessgrad.orchestration import run_configuration
+    from tools import improver as registry
+
+    agent = SimpleNamespace(backend="openai", model="deepseek-v4-pro", api_key="fixture-key")
+    facts = run_configuration.describe_agent(agent)
+    assert run_configuration.agent_refusal(
+        facts,
+        load_improvers=lambda: registry.load_config(registry.DEFAULT_CONFIG),
+        forbidden_reason=registry.forbidden_reason,
+    ) is None
+
+
 def test_disabled_scenario_resume_never_reads_run_fields():
     import driver
     # Legacy callers may ask the disabled gate without constructing run options.
