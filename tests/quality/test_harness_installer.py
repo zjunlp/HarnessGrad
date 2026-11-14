@@ -25,6 +25,7 @@ def test_invalid_version_never_creates_installation(tmp_path, capsys):
     assert "codex 0.169.0" in supported
     assert "opencode 2.2.6" in supported
     assert "opencode 2.2.7" in supported
+    assert "opencode 2.3.0" in supported
     assert "deepseek-harness 0.2.2-rc.1" in supported
     root = tmp_path / "store"
     assert main(["harness", "install", "openclaw", "--version", "latest",
@@ -36,7 +37,7 @@ def test_invalid_version_never_creates_installation(tmp_path, capsys):
 @pytest.mark.parametrize("name, latest, earlier, label", [
     ("openclaw", "2026.11.3", "2026.11.2", "OpenClaw"),
     ("codex", "0.169.0", "0.167.2", "Codex"),
-    ("opencode", "2.2.7", "2.2.6", "OpenCode"),
+    ("opencode", "2.3.0", "2.2.7", "OpenCode"),
 ])
 @pytest.mark.parametrize("explicit", [False, True])
 def test_install_selects_latest_verified_version_only_when_omitted(tmp_path, capsys, monkeypatch,
