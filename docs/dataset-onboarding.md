@@ -120,14 +120,13 @@ onboarded without a way to show its grade is reachable.
 | the generator | `tools/new_dataset.py --kind qa\|command\|files` — see §3 |
 | the check that runs over *every* published dataset | `tests/quality/test_dataset_lint.py` |
 | the check that every dataset declares a control and a metric test, and runs the controls | `tests/quality/test_dataset_controls.py` |
-| the classification: derived axes plus the one judged axis, as a `(demand, surface)` pair | `tools/dataset_classes.py` |
-| current blocker families, work status, evidence and next actions; preserved historical incompletes | `registry/dataset-blockers.json`; validate with `python3 tools/check_dataset_blockers.py` without importing adapters. **The registry moved here from `docs/dataset-blockers.json`**, which no longer exists; citations of the old path elsewhere in this repository are historical records and are deliberately left alone |
+| the classification: derived axes plus the one judged axis, as a `(demand, surface)` pair | `tools/dataset_classes.py`. For a new adapter, also add its dataset row to `registry/dataset-blockers.json` and run `python3 tools/check_dataset_blockers.py` to check catalogue consistency |
+| dataset-specific dependencies, limitations, and validation instructions | the adapter's public documentation, for example the [AIME README](../data/datasets/aime/README.md) |
 | declared coverage gaps (demands the vocabulary names with no adapter yet) | `tools/dataset_classes.py::UNCOVERED_DEMANDS`; currently empty because all six demands have adapters |
 | which Harness function a dataset makes score-relevant, and which functions no dataset covers | `tools/dataset_classes.py::EXERCISES` / `FUNCTIONS` / `UNCOVERED_FUNCTIONS` |
 | the shared control for `command` datasets | `data/scaffolds/command_control.py` + `data/scaffolds/command_oracle_harness/` |
 | the download index (generated) | `DOWNLOADS.md` — written by `tools/datasets.py --write`; **never edit by hand** |
 | "which datasets exist" | `data/scaffolds/registry.py::published()` — a module appears iff `KIND == "dataset"` |
-| the judgement half | the internal onboarding log (kept outside this repository) |
 
 Anything that is not a dataset for a reader to run declares `KIND = "fixture"` (the
 default). That is why the platform's own scaffolding (`demo`, `probe_set`,
@@ -330,8 +329,6 @@ Three measured traps:
 
 ## 4. The order
 
-Copied from the skill doc §10 and paired with the command that proves each step.
-
 1. **Read the upstream scorer**, not the paper. Find the function that computes the number;
    every requirement in it must be in your check, and nothing that is not.
 2. **Find the reader of every field you declare**: `grep -rn "<field>" eval/ harnessgrad/`.
@@ -346,12 +343,8 @@ Copied from the skill doc §10 and paired with the command that proves each step
 8. **Name the reason in the evidence**, and keep "unmeasured" distinct from "failed": no
    reward file, exit 3, `evidence["measured"] is False` → the task is `unmeasured`, not 0.
 9. **Run `python3 tools/dataset_lint.py` and `python3 tools/datasets.py --write`.**
-10. **Record the noise and the task count** in this repository, where the next person
-    comparing two runs will see it.
-
-Then **append what this dataset taught you to the internal onboarding log (kept outside this repository)**, with the
-measurement that produced it, before starting the next one. Lessons written in a batch lose
-the measurement.
+10. **Document the validation scope and limitations** in the adapter's public documentation.
+    Include the commands, task counts, observed variation, and any limits on comparison with upstream results.
 
 ---
 
