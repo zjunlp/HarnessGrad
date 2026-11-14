@@ -195,6 +195,7 @@ plugin_path, = gateway_config['plugins']['load']['paths']
 plugin = Path(plugin_path)
 assert plugin.is_relative_to(installed), plugin
 assert plugin.is_file(), plugin
+assert not plugin.with_name('runtime-identity.json').exists()
 from tools import loop_releases
 legacy_loop = loop_releases.install('0.2.0', Path.cwd()/'installed-loop-sources')
 assert json.loads((legacy_loop/'harness.json').read_text())['version'] == '0.2.0'

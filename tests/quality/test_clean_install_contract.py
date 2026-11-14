@@ -219,8 +219,10 @@ import json
 from pathlib import Path
 from base_harness.openclaw import openclaw_runtime
 root = Path(openclaw_runtime.__file__).parent
-assert json.loads((root / "harness.json").read_text())["runtime_paths"] == []
-assert openclaw_runtime.identity(root)["version"] == "2026.3.13"
+manifest = json.loads((root / "harness.json").read_text())
+assert manifest["runtime_paths"] == []
+assert openclaw_runtime.RECORD not in manifest
+assert not (root / "runtime-identity.json").exists()
 try:
     openclaw_runtime.resolve(root, {})
 except ValueError as exc:

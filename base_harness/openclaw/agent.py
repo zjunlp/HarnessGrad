@@ -468,7 +468,7 @@ def run(task: dict, work: Path) -> int:
         with tempfile.TemporaryDirectory(prefix="hg-openclaw-state-") as temporary, ExitStack() as resources:
             state = Path(temporary)
             config = state / "openclaw.json"
-            profile_name = runtime["source_identity"].get("adapter_profile", "list")
+            profile_name = runtime["source_identity"]["adapter_profile"]
             profile = _PROFILES.get(profile_name)
             if profile is None:
                 raise AdapterError(f"unknown OpenClaw adapter profile {profile_name!r}")
