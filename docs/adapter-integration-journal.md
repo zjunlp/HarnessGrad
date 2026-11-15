@@ -2,8 +2,10 @@
 
 For current requirements, see [dataset onboarding](dataset-onboarding.md), the
 [adapter specification](adapter-spec.md), [dataset runtime interfaces](dataset-runtime-interfaces.md),
-and the dataset-specific documentation. Current known blockers and their evidence
-are maintained in the [blocker registry](../registry/dataset-blockers.json).
+and the dataset-specific documentation.
+
+The [blocker registry](../registry/dataset-blockers.json) tracks maintainer reviews,
+evidence gaps, and historical run records.
 
 The historical integration journal at local Git commit
 `68e1a0b1c5324593977ffa282552b552a8b48c3c`, path

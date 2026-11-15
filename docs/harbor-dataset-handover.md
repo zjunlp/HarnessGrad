@@ -190,7 +190,8 @@ look finished while being wrong:
 * the three files touched together: `data/datasets/<name>.py`, `tools/dataset_classes.py`,
   `registry/dataset-blockers.json` — the last two are drift-checked against each other, so a
   mismatch fails the suite;
-* the gate-3 test, quoting `metric.py` lines and citing the parity record;
+* the gate-3 test, citing the upstream scorer and any available parity record. If no
+  parity record is available, document the test coverage and limits on result comparison;
 * `REFUSED` rather than a nearby number, if the metric cannot be carried. A refusal must be reached
   by **measurement** — run the gold through the scorer and report what came back. "It looked hard"
   is not a refusal.

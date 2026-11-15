@@ -1,10 +1,10 @@
-# Blocker closure assessment — open blockers, clause by clause
+# Historical blocker closure assessment
 
-Parent assessment, 2026-10-15, opened at registry commit `21d6ebbf` and updated as blockers closed. This document does not change the
-registry. Its purpose is to answer one question for every open blocker: **which of its own
-`next_action` obligations are already discharged, which are not, and what class the rest belong to** —
-so that "14 open" becomes a set of concrete dispositions instead of a number. It currently describes
-**11** open blockers; the count and every supersession are recorded in the closure sections below.
+Historical assessment opened on 2026-10-15 at registry commit `21d6ebbf` and updated as blockers closed.
+For current AIME requirements, see the [adapter README](../data/datasets/aime/README.md).
+
+The original assessment documents the disposition of each blocker and the evidence available
+at the time. The closure sections below record later decisions and their effect on the count.
 
 The controlling rule is the objective's: a blocker closes only on the kind of evidence its own
 `next_action` names. Nothing here is a claim that an obligation is met unless the record already holds
@@ -33,7 +33,7 @@ the artefact.
 | `nestful / retain-contract-refusal` | external | refused by contract: the released Win Rate does not reproduce (1857/4 then 1854/7 on gold); not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
 | `sotuqa / retain-contract-refusal` | external | refused by contract: the headline judge resolved to a retired model; not a prohibition — `docs/refusal-policy.md` names the exit | `REFUSED` |
 | `tau2_bench / retain-contract-refusal` | code-solvable | closed 2026-11-04: v0.1.0 pin, the release's user simulator in a private trusted process, `EvaluationType.ALL` scorer, judge declared for the 58 tasks whose ALL evaluation calls one; control measured 1.0/0.0 on three released tasks, and the adapter no longer refuses (`docs/refusal-policy.md`) | `CLEARED` |
-| `aime / dataset-journal-gap` | measurement | the operator's bounded first-five custody packet, plus a comparability statement for the Harbor port | `PENDING-INPUT`, `PRE-DIAGNOSTIC` |
+| `aime / dataset-journal-gap` | measurement | original review awaited selection evidence and a comparability statement for the Harbor port | `PENDING-INPUT`, `PRE-DIAGNOSTIC` |
 | `cooperbench / runtime-group-coverage` | measurement | all 652 pair identities stay explicit; reference controls are not full-benchmark performance | `PRE-DIAGNOSTIC` |
 | `locomo / adapter-acceptance-pending` | measurement | accept the Conda receipt and pin scope/model/budget before any model evaluation | `PRE-DIAGNOSTIC` |
 | `memoryagentbench / judge-dependent-subset` | measurement | judge provider and resolved model on every point; without one the judge-dependent questions are unmeasured | `PRE-DIAGNOSTIC` |

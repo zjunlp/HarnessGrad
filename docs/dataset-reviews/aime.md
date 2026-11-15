@@ -1,5 +1,8 @@
 # AIME source-only journal review
 
+This page records the original AIME port review. For current setup, split options, and
+validation instructions, see the [AIME adapter README](../../data/datasets/aime/README.md).
+
 **Filing note.** This is the review for a dataset that arrived by **porting a Harbor adapter**
 rather than by reading an upstream release directly, so it is also the record of what that
 route costs. It was written after the five gates were run, not before: every number below is a
@@ -130,34 +133,19 @@ do-nothing controls by hand and through `--platform` (gates 1 and 2); the contra
 byte counts, row counts) and the payload census over all 60 rows. Every one of those closed with
 the measurement named above, and none of them is closed by reading a document.
 
-**OPEN:** four items, and the registry carries them as one `journal-coverage` blocker,
-`aime / dataset-journal-gap`, rather than as measurements this review claims.
+At the time of review, there was no AIME model run ID or measured benchmark coverage.
+Scorer equivalence evidence came from the transcription and differential tests. A
+side-by-side comparison with Harbor remained unmeasured.
 
-* **the operator-side bounded first-five selected-only custody packet**, which the 2026-10-15
-  closures treated as a required clause. This review cannot produce it: it is an operator
-  artefact about selection and privacy, and inventing one would be fabricating the record;
-* **an independent metric-comparability statement** in the sense the closed datasets carry in
-  `registry/w-metriccmp-comparability.md`. This port's statement is local and weak by
-  construction: our scorer is Harbor's transcribed, with no `parity_experiment.json` to confirm
-  that Harbor's number and ours are the same number;
-* **measured coverage.** AIME has **never been run here** — zero tasks, zero trials, no run ID.
-  Every coverage count is therefore absent rather than zero, and per the operator's 2026-10-15
-  closures a coverage obligation is a precondition on a future, separately authorized
-  diagnostic rather than a condition on this review;
-* **side-by-side parity with Harbor's own published number**, which needs a run on both sides
-  and is not authorized by this document.
+The 2026-10-16 AIME registration added a non-refusal blocker after the
+[evidence status decision](../evidence-status-decision.md). The entry was removed from the
+active list because it tracked a one-time review procedure.
 
-This review closes **no** measurement, claims **no** score, and authorizes **no** diagnostic.
-`registry/dataset-blockers.json`'s `production_authorized` stays false.
-
-**One consequence this registration has, stated plainly.** `aime` is the first non-refusal
-blocker this registry has carried since the 2026-10-15 closures, so the sentence "No non-refusal
-blocker remains; the registry now carries only the four permanent refusals" in
-`docs/evidence-status-decision.md` (operator decision 2026-10-16) is superseded from this
-registration onward. That operator decision is not edited; the supersession is recorded as a
-dated note in `registry/dataset-blockers.json`'s `review.notes`, which is where this repository
-keeps registry-level records. Nothing else in that decision changes, and the four permanent
-refusals are untouched.
+A later diagnostic on 2026-10-16 (`aime-diag-20261016T155636Z`) attempted one task on the
+training side of the hash split. The recorded outcome was unmeasured
+(`policy_enforcement_not_observed`), with zero measured trials and no published score.
+The original requirements, registration note, and diagnostic details are available in
+`f61f662c:registry/dataset-blockers.json`.
 
 ## What this route taught, in one paragraph
 
