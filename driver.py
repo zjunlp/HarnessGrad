@@ -586,9 +586,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         print("refusing staged policy: bind evidence to the live local agent endpoint",
               file=sys.stderr)
         return 2
-    # The project's model rule, enforced at the door next to the credential check: the
-    # harness's model is a run-level choice and the same rule covers it. `improvers.json`
-    # holds the list and the reason (`tools/improver.py:forbidden_reason`).
+    # Apply any model restrictions from the selected registry alongside the credential check.
     model_problem = run_configuration.agent_refusal(
         model, load_improvers=load_improvers, forbidden_reason=forbidden_reason)
     if model_problem:

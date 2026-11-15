@@ -2128,6 +2128,10 @@ Three properties, each of which is a refusal rather than a convenience:
   so a platform-side `HG_METHOD_MODEL` says nothing about it; `--improver-model` is the
   supported way to point it at a different model, and it is recorded as the model used.
 
+Select `deepseek-v4-pro` for the task agent with `HG_AGENT_MODEL` or for the endpoint
+improver with `--improver deepseek --improver-model deepseek-v4-pro`. The built-in
+`deepseek` improver defaults to `deepseek-flash`.
+
 The interface follows the same split as the record: the form has one control for the
 **method** (the rule) and a separate one for the **improver** (the tool), because they are
 different objects with different owners. A single "method" dropdown is what made the old

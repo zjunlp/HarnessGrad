@@ -59,10 +59,7 @@
             "model": "deepseek-flash",
             "base_url": "https://api.deepseek.com/v1",
             "api_key_env": "DEEPSEEK_API_KEY",
-            "note": "A hosted chat-completions provider used as the improver, through the platform's own client (`methods/editor.py`) -- the same code path as `local`, so a method does not need a second implementation. The model is DeepSeek-V4.1-Flash, and the project does not use any other DeepSeek model (`_forbidden_models`, enforced by `resolve()` and by `driver.py`); `--improver-model` can still choose a *different endpoint's* model, because that is a different experiment, but not a forbidden one. Declared here rather than left to `.env` because 'which improver ran' has to be a recorded fact: the entry names the endpoint and the model, and the platform injects both into the method's environment, so the number on the curve point and the endpoint the method called cannot disagree."
+            "note": "A hosted chat-completions provider used as the improver through the platform client (`methods/editor.py`). The default model is `deepseek-flash` (DeepSeek-V4.1-Flash). Use `--improver-model` to select a model served by this endpoint. The platform passes the endpoint and selected model to the method and records them with the run."
         }
-    },
-    "_forbidden_models": {
-        "deepseek-v4-pro": "we use `deepseek-flash` (DeepSeek-V4.1-Flash) instead: it scores better on our tasks and costs less. Recorded here as a refusal rather than a convention, because a run that quietly used a different model would put a number on a curve nobody can compare against anything."
     }
 }
