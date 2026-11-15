@@ -11,6 +11,7 @@ import tempfile
 
 
 RECORD = "_openclaw_runtime"
+SCHEMA = 2
 REMEDY = "prepare this Harness with tools/configure_openclaw_harness.py"
 NODE_MINIMUM = (22, 12, 0)
 SYSTEM = tuple(map(Path, ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc",
@@ -22,20 +23,15 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def identity(harness: Path) -> dict:
-    expected = json.loads((harness / "runtime-identity.json").read_text(encoding="utf-8"))
-    return _source_identity(expected)
-
-
 def _source_identity(expected: dict) -> dict:
     if (not isinstance(expected, dict) or expected.get("source") != "openclaw"
             or not isinstance(expected.get("version"), str)
             or not re.fullmatch(r"\d{4}\.\d+\.\d+", expected["version"])
             or (not isinstance(expected.get("upstream_commit"), str)
                 and not (expected.get("verified") is False and expected.get("upstream_commit") is None))
-            or not isinstance(expected.get("adapter_profile", "list"), str)
+            or expected.get("adapter_profile") not in ("list", "entries")
             or any(name in expected for name in ("entrypoint", "package_root", "node"))):
-        raise ValueError(f"invalid portable OpenClaw identity; {REMEDY}")
+        raise ValueError(f"invalid prepared OpenClaw source identity; {REMEDY}")
     return expected
 
 
@@ -263,12 +259,14 @@ def check_files(record: dict, *, forbidden: tuple[Path, ...] = ()) -> None:
 def _resolve(harness: Path, env: dict, *, forbidden: tuple[Path, ...]) -> dict:
     manifest = json.loads((harness / "harness.json").read_text(encoding="utf-8"))
     record = manifest.get(RECORD)
-    if not isinstance(record, dict) or record.get("schema") != 1:
+    if not isinstance(record, dict):
         raise ValueError(f"OpenClaw Harness is not prepared; {REMEDY}")
-    expected = identity(harness)
+    if record.get("schema") != SCHEMA:
+        raise ValueError("unsupported OpenClaw runtime record schema; prepare a fresh OpenClaw Harness template "
+                         "or install into a new store with --install-root")
     source = _source_identity(record.get("source_identity"))
-    if record.get("template_identity", source) != expected or record.get("version") != source["version"]:
-        raise ValueError(f"OpenClaw prepared source identity changed; {REMEDY}")
+    if record.get("version") != source["version"]:
+        raise ValueError(f"OpenClaw prepared source version differs from the binding; {REMEDY}")
     names = ("node", "entrypoint", "package_root")
     files, bindings = record.get("files"), record.get("runtime_paths")
     identities, links = record.get("binding_identities"), record.get("symlinks")

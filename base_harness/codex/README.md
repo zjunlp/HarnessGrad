@@ -12,13 +12,13 @@ digests against the release recipe and installs from the npm lockfile with
 lifecycle scripts disabled.
 
 ```sh
-harnessgrad harness install codex --version 0.167.0
-HARNESS_DIR=$(harnessgrad harness install codex --version 0.167.1)
+harnessgrad harness install codex --version 0.167.2
+HARNESS_DIR=$(harnessgrad harness install codex --version 0.169.0)
 ```
 
 Use the printed directory with `harnessgrad run --harness-path`. Omitting
 `--version` selects the latest verified Codex release listed by `harnessgrad
-harness list`, currently `0.167.1`, and reports the choice on stderr. Use
+harness list`, currently `0.169.0`, and reports the choice on stderr. Use
 `--install-root` to choose a dedicated store outside the platform checkout and
 shared temporary directories. By default the store is `harnessgrad/base-harnesses`
 under the user data directory. Each release has its own package lock and binding.

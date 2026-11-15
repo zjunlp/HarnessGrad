@@ -4,12 +4,12 @@ On Linux x86-64, this command installs the verified npm release and binds it to
 an experiment Harness copy.
 
 ```sh
-HARNESS_DIR=$(harnessgrad harness install deepseek-harness --version 0.2.2-rc.1)
+HARNESS_DIR=$(harnessgrad harness install deepseek-harness --version 0.2.2-rc.3)
 harnessgrad run --harness-path "$HARNESS_DIR" ...
 ```
 
 Omit `--version` to select the latest verified release, currently the
-`0.2.2-rc.1` prerelease. The installer prints its selection on stderr. Explicit
+`0.2.2-rc.3` prerelease. The installer prints its selection on stderr. Explicit
 versions outside the verified list emit a warning and go through the same
 installation and sandbox probes.
 

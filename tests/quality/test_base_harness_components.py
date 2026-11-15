@@ -55,8 +55,8 @@ someone who disagrees:
 * *`deepseek-harness/knobs.json` -> `context`*, because its payload is the prompt preamble and
   the task-inputs header, and that is the reason it was split out of the launcher;
   `limits.dump_config_timeout_s` is reliability. `deepseek-harness/surface.json` -> `safety`
-  (it is the editable-surface permission boundary). `openclaw/runtime-identity.json` ->
-  `reliability`, because `agent.py` refuses the run when the pinned version or path drifted.
+  (it is the editable-surface permission boundary). `openclaw/openclaw_runtime.py` ->
+  `reliability`, because it validates the pinned installation before execution.
 * *Mocks, licences, provenance and pure data are `unattributed`.* `mock_model.py` (miniswe,
   openclaw), `README.md`, `requirements.txt`, `LICENSE.upstream`, `PROVENANCE.json`,
   `dsh_farm.tsv`, `runtime/__init__.py` (empty package marker) and miniagent's

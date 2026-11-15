@@ -13,7 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_native_foreground_subagent_and_usage(tmp_path):
+def test_native_subagent_and_usage(tmp_path):
     source = os.environ.get('HG_OPENCODE_TEST_HARNESS')
     if not source:
         pytest.skip('set HG_OPENCODE_TEST_HARNESS to a prepared OpenCode copy')
@@ -33,10 +33,15 @@ def test_native_foreground_subagent_and_usage(tmp_path):
             tools = [(t.get('function') or {}).get('name') for t in request.get('tools', [])]
             if not tools:
                 text = 'SYNTHETIC_TITLE'
-            elif last.get('role') == 'tool':
-                text = 'PARENT_COMPLETE'
             elif 'SYNTHETIC_CHILD' in str(last.get('content', '')):
                 text = 'CHILD_COMPLETE'
+            elif any('CHILD_COMPLETE' in str(message.get('content', '')).replace(
+                         'SYNTHETIC_CHILD: return CHILD_COMPLETE.', '')
+                     for message in messages if message.get('role') in ('user', 'tool', 'system')):
+                text = 'PARENT_COMPLETE'
+            elif any(call.get('id') == 'call_child' for message in messages
+                     for call in message.get('tool_calls') or []):
+                text = 'WAITING_FOR_CHILD'
             else:
                 text = None
 

@@ -1,7 +1,7 @@
 # OpenClaw harness
 
-Harness adapter `0.6.1` supports **OpenClaw 2026.11.3 (`847611d`)**,
-**2026.11.2 (`b556fdf`)**, and **2026.3.13 (`61d171a`)**. The checked-in
+Harness adapter `0.7.0` has verified **OpenClaw 2026.11.3 (`847611d`)** and
+**2026.11.2 (`b556fdf`)**. The checked-in
 Harness is a portable adapter template. OpenClaw
 and Node are external read-only dependencies. Each reviewed release selects an
 adapter profile for its configuration and session format.
@@ -41,15 +41,14 @@ scripts in the installation sandbox. Verified releases use a pinned package
 digest. For other releases, npm checks the archive against the digest recorded
 in the lockfile for the exact registry tarball.
 
-When a previously unverified release becomes verified, rerun the install command
+When a release installed with schema 2 becomes verified, rerun the install command
 in the same store. The installer checks that the previous package digest matches
 the verified digest and validates the existing binding. It then installs and
 publishes a new verified copy. The original copy keeps its identity and a copy
 of its original installation receipt, so historical runs can still use that
 path.
 
-The checked-in template carries the portable identity of 2026.3.13. To bind
-an existing installation of that release, copy and prepare the template:
+To bind an existing OpenClaw installation, copy and prepare the template:
 
 ```sh
 cp -a base_harness/openclaw /path/to/openclaw-harness-copy
@@ -63,9 +62,9 @@ python3 tools/configure_openclaw_harness.py /path/to/openclaw-harness-copy \
   --openclaw /path/to/openclaw --node /path/to/node
 ```
 
-To bind a different installed release, add `--version` with its exact version.
-Preparation warns for unverified releases and checks the package metadata and
-CLI output against that selection.
+Preparation selects the version from the installed package's `package.json`.
+Use `--version` to require a specific version. Preparation checks the CLI
+output against the selected version and warns for unverified releases.
 
 The corresponding optional settings are `HG_AGENT_OPENCLAW` and `HG_OPENCLAW_NODE`.
 The tool reads the main checkout `.env`, a worktree `.env` if present, then the
@@ -104,21 +103,27 @@ package is refused.
 
 The tool checks package and CLI versions, and runs Node/OpenClaw version probes
 in a network-isolated native sandbox. Verified releases also get a matching
-host probe. The package and CLI versions must match the exact selection or the
-copy's portable identity when no selection is supplied. The probes use fresh HOME/XDG/
-OpenClaw state directories and an environment without personal settings or model
-credentials. Bubblewrap is required. Hidden `/tmp` installations, overlap with the
-platform or Harness copy, shared temporary roots and broad HOME/system/configuration
-directory bindings are refused before writing the manifest.
+host probe. The CLI version must match the selected package's metadata. If
+`--version` is supplied, the package must also match that version. The probes
+use fresh HOME/XDG/OpenClaw state directories and an environment without personal
+settings or model credentials. Bubblewrap is required. The tool rejects hidden
+`/tmp` installations, overlap with the platform or Harness copy, shared temporary
+roots and broad HOME, system or configuration directory bindings before writing
+the manifest.
 
 One atomic `harness.json` replacement records both `runtime_paths` and the
-adapter-owned `_openclaw_runtime` identity. `runtime-identity.json` holds the
-portable version/source identity and the selected adapter profile. Tasks use the
+adapter-owned `_openclaw_runtime` binding (schema 2), including the version, upstream
+commit when known, and adapter profile. Tasks use the
 recorded Node and launcher, verify file hashes, the npm dependency graph,
 binding types and symlink targets, and report them in `trace.jsonl`.
 Changing PATH does not select a new installation. An override must match the
 prepared choice; an unprepared template, changed installation or inconsistent
 record produces a preparation diagnostic. Prepare again to select another installation.
+
+Preparation rejects legacy templates and schema 1 bindings before writing the
+manifest. To install into a new store, pass `--install-root`. To reuse an
+existing CLI, bind it to a fresh copy of the template using the preparation
+command above.
 
 With `harnessgrad run --harness-path`, the evaluation entrypoint checks the
 supplied copy's prepared binding, including its version identity and file
@@ -129,16 +134,14 @@ the task to complete.
 
 The 2026.11.2 and 2026.11.3 releases share a profile that writes the keyed agent
 configuration and reads transcript messages through `sessions export-trajectory`.
-The export stays in the task's private OpenClaw state. The 2026.3.13 profile
-reads the native JSONL session.
-Both profiles translate replies, completed tool calls and usage into the same
-HarnessGrad trace format.
+The export stays in the task's private OpenClaw state. The adapter translates
+replies, completed tool calls and usage into the HarnessGrad trace format.
 
 ## Editable surface
 
 The candidate contains the adapter (`agent.py`), its `openclaw_runtime.py` and
 `task_gateway.py` helpers, the `harnessgrad-retain-subagents.mjs` Gateway plugin,
-`prompt.md`, `config.json`, portable identity and mock fixture (`mock_model.py`).
+`harness.json`, `prompt.md`, `config.json` and mock fixture (`mock_model.py`).
 Changes to these files affect the run.
 OpenClaw's installed compiled package and Node executable are **external read-only
 dependencies**, fixed by the prepared `harness.json`. The public template is

@@ -81,7 +81,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "base_harness.miniagent.tool_descriptions" = ["read_skill.json", "shell.json"]
 "base_harness.miniswe" = ["harness.json", "requirements.txt", "requirements.lock", "requirements-py310.lock", "requirements-py311.lock", "README.md"]
 "base_harness.openclaw" = [
-    "harness.json", "README.md", "config.json", "prompt.md", "runtime-identity.json",
+    "harness.json", "README.md", "config.json", "prompt.md",
     "harnessgrad-retain-subagents.mjs",
 ]
 "base_harness.opencode" = ["harness.json", "README.md"]

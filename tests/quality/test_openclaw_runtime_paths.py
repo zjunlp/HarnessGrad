@@ -29,7 +29,7 @@ def clear_overrides(monkeypatch):
     monkeypatch.delenv("HG_OPENCLAW_RUNTIME_PATHS", raising=False)
 
 
-def package(root, version="2026.3.13"):
+def package(root, version="2026.11.2"):
     root.mkdir(parents=True)
     (root / "package.json").write_text(json.dumps({"name": "openclaw", "version": version}))
     entry = root / "openclaw.mjs"
@@ -48,14 +48,25 @@ if (args.includes('--version')) {
     console.log(metadata.version);
     process.exit(0);
 }
-if (args[0] === 'gateway') {
+if (args[0] === 'sessions' && args[1] === 'export-trajectory') {
+    const option = name => args[args.indexOf(name) + 1];
+    const key = option('--session-key');
+    const dir = path.join(option('--workspace'), '.openclaw', 'trajectory-exports', option('--output'));
+    const transcript = path.join(process.env.OPENCLAW_STATE_DIR, 'fixture-transcript.json');
+    const events = JSON.parse(fs.readFileSync(transcript, 'utf8')).map(data => ({
+        source: 'transcript', sessionKey: key, data,
+        type: data.message.role === 'assistant' ? 'assistant.message' : 'tool.result'
+    }));
+    fs.mkdirSync(dir, {recursive: true});
+    fs.writeFileSync(path.join(dir, 'events.jsonl'), events.map(event => JSON.stringify(event)).join('\\n'));
+} else if (args[0] === 'gateway') {
     const port = Number(args[args.indexOf('--port') + 1]);
     const server = net.createServer(s => s.end());
     server.listen(port, '127.0.0.1');
     process.on('SIGTERM', () => server.close(() => process.exit(0)));
 } else {
 assert.equal(args[0], 'agent');
-assert(args.includes('--local') && args.includes('--json'));
+assert(args.includes('--session-key') && args.includes('--json') && !args.includes('--local'));
 const config = JSON.parse(fs.readFileSync(process.env.OPENCLAW_CONFIG_PATH));
 assert.deepEqual(Object.keys(config.models.providers), ['harnessgrad']);
 assert.equal(config.agents.defaults.workspace, process.cwd());
@@ -80,10 +91,7 @@ const rows = [
     {message: {role: 'toolResult', toolCallId: 'write', details: {exitCode: 0}, content: 'fixture wrote answer.txt'}},
     {message: {role: 'assistant', usage, content: [{type: 'text', text: 'fixture final text'}]}}
 ];
-const session = args[args.indexOf('--session-id') + 1];
-const sessions = path.join(process.env.OPENCLAW_STATE_DIR, 'agents/main/sessions');
-fs.mkdirSync(sessions, {recursive: true});
-fs.writeFileSync(path.join(sessions, session + '.jsonl'), rows.map(r => JSON.stringify(r)).join('\\n'));
+fs.writeFileSync(path.join(process.env.OPENCLAW_STATE_DIR, 'fixture-transcript.json'), JSON.stringify(rows));
 console.log(JSON.stringify({status: 'ok'}));
 }
 ''')
@@ -317,9 +325,41 @@ def test_portable_template_requires_preparation(tmp_path):
     assert manifest["runtime_paths"] == []
     assert manifest["env_kinds"] == ["files"]
     assert runtime.RECORD not in manifest
-    assert runtime.identity(harness)["version"] == "2026.3.13"
+    assert not (harness / "runtime-identity.json").exists()
     with pytest.raises(ValueError, match="not prepared.*configure_openclaw_harness"):
         agent(harness).runtime_identity({})
+
+
+@pytest.mark.parametrize("legacy_identity, legacy_binding", [
+    pytest.param(True, False, id="legacy-template"),
+    pytest.param(True, True, id="legacy-prepared"),
+    pytest.param(False, True, id="legacy-binding-without-identity-file"),
+])
+def test_preparation_rejects_legacy_copies_before_runtime_discovery(
+    tmp_path, monkeypatch, legacy_identity, legacy_binding,
+):
+    harness = tmp_path / "candidate"
+    shutil.copytree(SOURCE, harness)
+    identity_path = harness / "runtime-identity.json"
+    if legacy_identity:
+        identity_path.write_text('{"source":"openclaw","version":"2026.11.2"}')
+    manifest_path = harness / "harness.json"
+    if legacy_binding:
+        manifest = json.loads(manifest_path.read_text())
+        manifest[runtime.RECORD] = {"schema": 1}
+        manifest_path.write_text(json.dumps(manifest))
+    original = manifest_path.read_bytes()
+
+    def unexpected_discovery():
+        pytest.fail("legacy copy reached runtime discovery")
+
+    monkeypatch.setattr(preparation, "_environment", unexpected_discovery)
+    with pytest.raises(ValueError, match="legacy OpenClaw.*fresh.*template"):
+        preparation.configure(harness)
+    assert manifest_path.read_bytes() == original
+    assert identity_path.exists() == legacy_identity
+    if legacy_identity:
+        assert identity_path.read_text() == '{"source":"openclaw","version":"2026.11.2"}'
 
 
 @needs_bwrap
@@ -339,7 +379,24 @@ def test_path_discovery_aliases_and_atomic_record(installed):
     manifest = json.loads((harness / "harness.json").read_text())
     assert manifest["runtime_paths"] == selected["runtime_paths"]
     assert manifest[runtime.RECORD] == {k: v for k, v in receipt.items() if k != "harness"}
-    assert set(runtime.identity(harness)) == {"source", "version", "upstream_commit", "editable"}
+    assert selected["source_identity"] == {
+        "source": "openclaw", "version": "2026.11.2", "upstream_commit": "b556fdf", "adapter_profile": "entries",
+    }
+
+
+@needs_bwrap
+def test_manual_binding_infers_the_installed_release_and_profile(installed):
+    from eval.containers import openclaw_runtime as platform_runtime
+
+    harness, launcher, _, _ = installed
+    declare(launcher.resolve(), version="2026.11.3")
+    prepared = prepare(installed)
+    assert prepared["source_identity"] == {
+        "source": "openclaw", "version": "2026.11.3", "upstream_commit": "847611d", "adapter_profile": "entries",
+    }
+    assert not (harness / "runtime-identity.json").exists()
+    assert runtime.resolve(harness, {})["schema"] == 2
+    assert platform_runtime.identity(harness, {})["version"] == "2026.11.3"
 
 
 @needs_bwrap
@@ -348,7 +405,7 @@ def test_relative_choices_remain_fixed_after_cwd_changes(installed, monkeypatch)
     monkeypatch.chdir(base)
     preparation.configure(harness, "bin/openclaw", node="bin/node", env={"PATH": os.defpath})
     monkeypatch.chdir(harness)
-    assert runtime.resolve(harness, {"HG_AGENT_OPENCLAW": "bin/openclaw", "HG_OPENCLAW_NODE": "bin/node"})["version"] == "2026.3.13"
+    assert runtime.resolve(harness, {"HG_AGENT_OPENCLAW": "bin/openclaw", "HG_OPENCLAW_NODE": "bin/node"})["version"] == "2026.11.2"
 
 
 @needs_bwrap
@@ -552,7 +609,8 @@ def test_preparation_environment_layers_main_worktree_and_shell(installed, monke
 
 
 @needs_bwrap
-@pytest.mark.parametrize("name", ["node", "entry", "metadata", "bindings", "missing-file-pin", "missing-package-bind", "source"])
+@pytest.mark.parametrize("name", ["node", "entry", "metadata", "bindings", "missing-file-pin", "missing-package-bind",
+                                  "source-version", "source-profile", "schema"])
 def test_changed_or_incomplete_runtime_is_refused(installed, name):
     harness, launcher, node, base = installed
     if name == "node":
@@ -575,12 +633,14 @@ def test_changed_or_incomplete_runtime_is_refused(installed, name):
         record["runtime_paths"].remove(record["package_root"])
         record["binding_identities"] = [row for row in record["binding_identities"] if row["path"] != record["package_root"]]
         manifest["runtime_paths"] = record["runtime_paths"]
-    else:
-        identity = json.loads((harness / "runtime-identity.json").read_text())
-        identity["upstream_commit"] = "changed"
-        (harness / "runtime-identity.json").write_text(json.dumps(identity))
+    elif name == "source-version":
+        manifest[runtime.RECORD]["source_identity"]["version"] = "2026.11.3"
+    elif name == "source-profile":
+        manifest[runtime.RECORD]["source_identity"]["adapter_profile"] = "unknown"
+    elif name == "schema":
+        manifest[runtime.RECORD]["schema"] = 1
     (harness / "harness.json").write_text(json.dumps(manifest))
-    with pytest.raises(ValueError, match="changed|bindings differ|invalid prepared"):
+    with pytest.raises(ValueError, match="changed|differs? from|invalid prepared|unsupported.*schema"):
         runtime.resolve(harness, {})
 
 
@@ -683,6 +743,7 @@ def test_install_reuses_unverified_version_then_promotes_it(installed, monkeypat
     assert new_harness != old_harness
     assert json.loads(receipt.read_bytes())["instance"] == new_harness.parent.name
     assert runtime.resolve(new_harness, {})["source_identity"] == preparation.source_identity(version)
+    assert not (new_harness / "runtime-identity.json").exists()
     assert (old_harness / "harness.json").read_bytes() == old_manifest
     assert runtime.resolve(old_harness, {})["source_identity"] == old_identity
     assert archive.read_bytes() == old_receipt
@@ -697,14 +758,14 @@ def test_failed_admission_leaves_manifest_unchanged(installed, monkeypatch, fail
     harness, launcher, _, _ = installed
     before = (harness / "harness.json").read_bytes()
     if failure == "package-version":
-        launcher.resolve().with_name("package.json").write_text('{"name":"openclaw","version":"2026.3.14"}')
+        declare(launcher.resolve(), version="2026.11.3")
     else:
         probe = preparation._probe
         def fail(selected, *, native):
             if failure == "cli-version":
-                return "v22.22.0", "2026.3.14"
+                return "v22.22.0", "2026.11.3"
             if failure == "old-node":
-                return "v20.12.0", "2026.3.13"
+                return "v20.12.0", "2026.11.2"
             if native and failure == "sandbox-failure":
                 raise ValueError("synthetic sandbox-failure")
             result = probe(selected, native=native)
@@ -714,7 +775,7 @@ def test_failed_admission_leaves_manifest_unchanged(installed, monkeypatch, fail
             return result
         monkeypatch.setattr(preparation, "_probe", fail)
     with pytest.raises(ValueError, match="version mismatch|Node >=|sandbox-failure|changed"):
-        prepare(installed)
+        prepare(installed, version="2026.11.2")
     assert (harness / "harness.json").read_bytes() == before
     assert not list(harness.glob(".openclaw-manifest-*"))
 

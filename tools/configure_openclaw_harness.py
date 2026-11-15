@@ -28,12 +28,11 @@ TEMPLATE = ROOT / "base_harness/openclaw"
 class Release:
     commit: str
     integrity: str
-    adapter_profile: str | None = None
+    adapter_profile: str = "list"
     rebuild: bool = False
 
 
 RELEASES = {
-    "2026.3.13": Release("61d171a", "sha512-/juSUb070Xz8K8CnShjaZQr7CVtRaW4FbR93lgr1hLepcRSbyz2PQR+V4w5giVWkea61opXWPA6Vb8dybaztFg=="),
     "2026.11.2": Release("b556fdf", "sha512-SgBml4WLp8V1DdAYkrTPLzVdA/iYo3iuHCtm4788GjaG83QZdd1VeOTlue0HBJGdn3SbFE06b6uPs+AM5ShMgg==",
                          adapter_profile="entries", rebuild=True),
     "2026.11.3": Release("847611d", "sha512-FBq/q0TCaoA2b7qfdV0q81fHhI6RBB1zAQfJQREc1u2TlK5khVgCUsAlXskLWthyVqRz5PWEj+oOmfYgK58dHg==",
@@ -49,15 +48,12 @@ def source_identity(version: str) -> dict:
     if not isinstance(version, str) or not re.fullmatch(r"[0-9]{4}\.[0-9]+\.[0-9]+", version):
         raise ValueError("OpenClaw version must be an exact YYYY.M.D release")
     release = RELEASES.get(version)
-    expected = json.loads((TEMPLATE / "runtime-identity.json").read_text(encoding="utf-8"))
+    profile = release.adapter_profile if release else RELEASES[latest_verified_version()].adapter_profile
+    identity = {"source": "openclaw", "version": version, "upstream_commit": release.commit if release else None,
+                "adapter_profile": profile}
     if release is None:
-        profile = RELEASES[latest_verified_version()].adapter_profile or "list"
-        expected.update(version=version, upstream_commit=None, adapter_profile=profile, verified=False)
-        return expected
-    expected.update(version=version, upstream_commit=release.commit)
-    if release.adapter_profile is not None:
-        expected["adapter_profile"] = release.adapter_profile
-    return expected
+        identity["verified"] = False
+    return identity
 
 
 def warn_unverified(identity: dict) -> None:
@@ -67,7 +63,7 @@ def warn_unverified(identity: dict) -> None:
 
 
 def _helper(harness: Path):
-    for name in ("harness.json", "runtime-identity.json", "agent.py", "openclaw_runtime.py", "task_gateway.py"):
+    for name in ("harness.json", "agent.py", "openclaw_runtime.py", "task_gateway.py"):
         path = harness / name
         if not path.is_file() or not path.resolve().is_relative_to(harness):
             raise ValueError(f"OpenClaw candidate needs its owned {name}")
@@ -166,22 +162,27 @@ def configure(harness: Path, openclaw: str | None = None, *, node: str | None = 
     manifest = json.loads(original)
     if manifest.get("name") != "openclaw" or manifest.get("entrypoint") != "agent.py":
         raise ValueError("expected the OpenClaw agent.py manifest")
-    candidate = helper.identity(harness)
-    declared = source_identity(candidate["version"])
-    if candidate != declared:
-        raise ValueError("OpenClaw candidate source identity differs from the supported template")
-    expected = declared if version is None else source_identity(version)
-    if warn:
-        warn_unverified(expected)
+    legacy_identity = harness / "runtime-identity.json"
+    binding = manifest.get(helper.RECORD)
+    if (os.path.lexists(legacy_identity)
+            or (isinstance(binding, dict) and binding.get("schema") == 1)):
+        raise ValueError("legacy OpenClaw Harness copy; bind the installed CLI to a fresh OpenClaw template")
+    expected = source_identity(version) if version is not None else None
     selected_env = _environment() if env is None else env
     extra = _additional_paths(selected_env) if runtime_paths is None else runtime_paths
     selected = helper.installation(selected_env,
                                    openclaw=openclaw, node=node, extra=extra,
                                    forbidden=(ROOT, main_checkout(ROOT), harness))
     package = json.loads((Path(selected["package_root"]) / "package.json").read_text(encoding="utf-8"))
-    if package.get("name") != "openclaw" or package.get("version") != expected["version"]:
+    if not isinstance(package, dict) or package.get("name") != "openclaw":
+        raise ValueError("Expected the selected npm package to be named openclaw")
+    if expected is None:
+        expected = source_identity(package.get("version"))
+    if package.get("version") != expected["version"]:
         raise ValueError(f"OpenClaw version mismatch: expected {expected['version']}, found {package.get('version')}. "
                          "Select the intended version with --version.")
+    if warn:
+        warn_unverified(expected)
     # Unverified launchers run only in the network-isolated sandbox. In particular,
     # a package's first --version invocation can execute pending lifecycle scripts.
     unverified = expected.get("verified") is False
@@ -191,14 +192,12 @@ def configure(harness: Path, openclaw: str | None = None, *, node: str | None = 
     if not unverified and _probe(selected, native=True) != probe:
         raise ValueError("OpenClaw host and native sandbox versions differ")
     helper.check_files(selected)
-    if path.read_bytes() != original or helper.identity(harness) != candidate:
-        raise ValueError("OpenClaw candidate manifest or source identity changed during preparation")
+    if path.read_bytes() != original:
+        raise ValueError("OpenClaw candidate manifest changed during preparation")
     for binding in selected["runtime_paths"]:
         helper.validate_binding(Path(binding), forbidden=(ROOT, main_checkout(ROOT), harness))
-    record = {"schema": 1, "source_identity": expected, "version": expected["version"],
+    record = {"schema": helper.SCHEMA, "source_identity": expected, "version": expected["version"],
               "node_version": node_version, "version_output": version_output, **selected}
-    if candidate != expected:
-        record["template_identity"] = candidate
     manifest["runtime_paths"] = selected["runtime_paths"]
     manifest[helper.RECORD] = record
     temporary = None
@@ -220,7 +219,7 @@ def main(argv=None) -> int:
     parser.add_argument("harness", type=Path)
     parser.add_argument("--openclaw", help="installed OpenClaw launcher; otherwise use HG_AGENT_OPENCLAW or PATH")
     parser.add_argument("--node", help="Node executable; otherwise use HG_OPENCLAW_NODE or PATH")
-    parser.add_argument("--version", help="exact CLI version to bind; defaults to the copy's declared version")
+    parser.add_argument("--version", help="require this exact CLI version; otherwise use the selected package's version")
     parser.add_argument("--runtime", type=Path, action="append",
                         help="additional dependency, bound read-only (repeatable); overrides HG_OPENCLAW_RUNTIME_PATHS")
     args = parser.parse_args(argv)
