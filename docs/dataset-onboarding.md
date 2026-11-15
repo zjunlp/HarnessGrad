@@ -36,6 +36,8 @@ or a different study set is a different H0, and the tool measures one rather tha
 `--h0-from` copies the donor's point **and its `round0_traces`**, so every method's first input
 traces are the same traces too -- which matters for methods that read the traces rather than the
 score.
+Namespaced task IDs retain their directory prefixes when these traces are read into the
+method's evidence channel, including ordered trial traces; the same reader restores resume evidence.
 
 **This page is the procedure.** Document reusable adapter contracts in the adapter's own public documentation; preserve historical evaluation evidence separately and link only to material actually distributed with the project.
 If the dataset is new to you, read `docs/dataset-first-day.md` first: it is the

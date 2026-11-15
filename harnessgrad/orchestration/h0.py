@@ -10,6 +10,7 @@ from collections.abc import Callable
 import json
 from pathlib import Path
 import shutil
+import stat
 import sys
 
 from eval.run.metrics import select_task_set
@@ -159,6 +160,12 @@ def materialize_donor_traces(donor: H0Donor, recipient: Path, base: dict):
     traces = donor.directory / "round0_traces"
     if traces.is_dir() and not (recipient / "round0_traces").exists():
         shutil.copytree(traces, recipient / "round0_traces")
+        # A fixed donor may be read-only. Its private recipient copy is written
+        # again by normal round persistence; leave the donor itself untouched.
+        copied = recipient / "round0_traces"
+        for path in [copied, *copied.rglob("*")]:
+            if not path.is_symlink():
+                path.chmod(stat.S_IMODE(path.stat().st_mode) | stat.S_IWUSR)
     base["traces"], base["trial_traces"] = read_trace_bodies(traces)
 
 
