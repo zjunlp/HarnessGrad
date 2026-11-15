@@ -45,6 +45,7 @@ from harnessgrad.environments import _report_invalid
 from harnessgrad.identity import _identity, _improver_identity, _improver_runtime
 from harnessgrad.methods import _call_method
 from harnessgrad.methods import _touched_paths
+from harnessgrad.orchestration.historical_evidence import reused_measurement
 from harnessgrad.records import _cost_of
 from harnessgrad.records import _curve_point
 from harnessgrad.records import _keep_method_logs
@@ -352,6 +353,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     # candidate anyway.
     api_version = PLATFORM_API_VERSION
     run_dir = Path(args.runs_root) / run_id
+    if start_steps:
+        # Resume's initial base describes H0; the next method invocation needs the
+        # latest recorded source's evidence, not H0 traces under a later label.
+        base = reused_measurement(run_dir, curve[-1], curve)
     # Where the method's inputs go: outside the platform **and outside the work root**.
     #
     # Two moves, for two different reasons, and both were forced by trying to sandbox
@@ -373,8 +378,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     # decided to keep -- so the request now carries *both* and the method chooses. One copy
     # per run, made before any step, because it must not move as the run goes on.
     pristine = method_root / "base_harness"
-    (copy_rejected_harness if curve and curve[-1].get("unmeasured") else copy_harness)(
-        work, pristine, ignore=shutil.ignore_patterns(".git"))
+    original = run_dir / "state_after_round0"
+    pristine_source = original if start_steps and original.is_dir() else work
+    (copy_rejected_harness if pristine_source == work and curve and curve[-1].get("unmeasured")
+     else copy_harness)(pristine_source, pristine, ignore=shutil.ignore_patterns(".git"))
 
     #: Rounds whose step did not finish -- the edit sequence never applied. Recorded
     #: rather than only printed: "3 rounds but 2 steps" is a fact a reader comparing two
@@ -830,11 +837,11 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 f"round {r}: the candidate is byte-identical to round {reused_from} "
                 f"({sha[:12]}); reusing that measurement instead of spending "
                 f"{len(tasks)} task runs", level="info")
-            res = {"per_task": dict(prior_point.get("per_task") or {}),
+            res = {**reused_measurement(run_dir, prior_point, curve),
+                   "per_task": dict(prior_point.get("per_task") or {}),
                    **dataset_runtime_identity_mod.fields(reuse_identity),
                    **candidate_runtime.fields(actor_binding),
                    **verification_context_mod.fields(reuse_context),
-                   "invalid": [], "harness_failed": [],
                    "trials": (prior_point.get("sampling") or {}).get("trials", args.trials),
                    "reused_from": reused_from,
                    "harness_runtime": (prior_point.get("env") or {}).get("harness_runtime", []),
@@ -950,6 +957,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if (res or {}).get("reused_from") is not None:
             point["reused_from"] = res["reused_from"]
             point["reused_reason"] = "candidate content identical to an already-measured state"
+            point["reused_evidence"] = res["reused_evidence"]
         if (res or {}).get("reused_from") is not None:
             # **A reused point inherits how the measurement was taken.** The round did not
             # run, so the facts that say *how* it was measured cannot be re-derived: the
