@@ -40,6 +40,7 @@ from harnessgrad.records import _save_traces
 from harnessgrad.records import _save_verdicts
 from harnessgrad.records import _scored
 from harnessgrad.records import _write_curve
+from harnessgrad.records import _write_run_meta
 
 def _baseline_block(path: str, point: dict) -> dict:
     """What the frozen reference is, and why it may not describe this point.
@@ -560,7 +561,9 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        **candidate_runtime.fields(actor_binding),
                        run_seed=os.environ["HARNESSGRAD_SEED"],
                        recordings_root=run_dir / "recordings", round_no=0,
-                       **({'persist_trial_report': False} if execution_plan else {}))
+                       **({'persist_trial_report': False} if execution_plan else {}),
+                       **({'task_budget_context': args.task_budget_context}
+                          if getattr(args, 'task_budget_context', None) is not None else {}))
     if prior:
         res = _merge_prior(res, prior, dataset_runtime_identity=current_runtime_identity)
     res.update(candidate_runtime.fields(actor_binding))
@@ -601,6 +604,19 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
     _require_untampered(res)
     _report_invalid(res, args.dataset)
     _report_harness_failed(res, args.dataset)
+    if res.get('task_budget_stop'):
+        _save_verdicts(run_dir, 0, res, planned_ids)
+        _save_traces(run_dir, 0, res.get('traces') or {}, None, split,
+                     trial_traces=res.get('trial_traces'))
+        _write_run_meta(run_dir, task_budget_stop=res['task_budget_stop'],
+                        task_budget_usage=res.get('task_budget_usage'))
+        (run_dir / 'task-budget-stop.json').write_text(json.dumps({
+            'task_budget_stop': res['task_budget_stop'],
+            'task_budget_usage': res.get('task_budget_usage'),
+            'score': None, 'complete_measurement': False}, indent=2) + '\n')
+        console.note('task budget stopped evaluation; partial evidence preserved without a curve point',
+                     level='error')
+        return 2
     if not complete_measurement:
         console.note("refusing staged curve: lifecycle publication gate or measurement incomplete; "
                      "invalid/unmeasured outcomes are preserved in the receipt",

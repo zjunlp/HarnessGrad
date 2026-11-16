@@ -60,9 +60,12 @@ def test_per_call_allowlist_coverage_and_aggregate_compatibility(tmp_path, monke
     assert ledger['canonical_usage_aggregate'] == editor.parse_usage_lines(transcript)
     assert ledger['usage'] == {'input': None, 'output': None, 'cache_read': None, 'calls': None}
     assert ledger['status'] == 'partially_reported'
+    # An incomplete canonical observation is unknown; independently retained
+    # numeric lower bounds remain useful without claiming a complete bill.
+    assert ledger['canonical_usage_aggregate'] is None
     for field in ('input', 'output', 'cache_read'):
-        assert ledger['canonical_usage_aggregate'][field] == sum(r[field] for r in records if r[field] is not None)
-    assert ledger['canonical_usage_aggregate']['calls'] == sum(r['status'] == 'parsed' for r in records)
+        assert ledger['reported_usage_lower_bounds'][field] == sum(r[field] for r in records if r[field] is not None)
+    assert ledger['reported_usage_lower_bounds']['calls'] == sum(r['status'] == 'parsed' for r in records)
 
 
 def test_staged_parent_and_evidence_identities_are_distinct(tmp_path):

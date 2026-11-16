@@ -24,7 +24,8 @@ import methods.editor as editor                                          # noqa:
 
 
 @pytest.fixture(autouse=True)
-def _clean():
+def _clean(monkeypatch, tmp_path):
+    monkeypatch.setattr(editor, "_method_workspace", lambda: tmp_path)
     editor.reset_spent()
     editor._LAST_IMPROVER.clear()
     yield
@@ -134,7 +135,10 @@ def test_no_usage_line_is_unknown_not_zero():
 def test_a_malformed_usage_line_is_ignored_rather_than_crashing_the_round():
     transcript = DASH + '{"input_tokens": oops}\n' + DASH + '{"input_tokens": 10, "output_tokens": 1}'
     got = editor.parse_usage_lines(transcript)
-    assert got == {"input": 10, "output": 1, "cache_read": 0, "calls": 1}
+    assert got is None
+    observed = editor._cli_usage_observation(transcript)
+    assert observed['lower_bounds']['input'] == 10
+    assert observed['canonical_complete'] is False
 
 
 def test_a_reported_cli_round_records_tokens_and_cache_read(monkeypatch, tmp_path):
@@ -158,7 +162,7 @@ def test_a_reported_cli_round_records_tokens_and_cache_read(monkeypatch, tmp_pat
     sys.path.insert(0, str(ROOT / "methods"))
     import cli_improver
     monkeypatch.setattr(cli_improver, "propose", fake_propose)
-    reply = editor._ask_cli("do something", base, parent, {"name": "dsh"})
+    reply = editor._ask_cli("do something", base, parent, {"name": "dsh"}, evidence_channel=False)
     assert reply.get("no_change")
     assert editor.spend_source() == "cli_reported"
     assert editor.spent_tokens() == 5200          # input 已不含 cache read
@@ -245,7 +249,7 @@ def test_a_mixed_run_adds_both_channels_without_double_counting(monkeypatch, tmp
     sys.path.insert(0, str(ROOT / "methods"))
     import cli_improver
     monkeypatch.setattr(cli_improver, "propose", fake_propose)
-    editor._ask_cli("do something", base, parent, {"name": "dsh"})
+    editor._ask_cli("do something", base, parent, {"name": "dsh"}, evidence_channel=False)
 
     assert editor.spent_tokens() == 500 + 220       # 端点的 (400+100) + CLI 的 (200+20)
     assert editor.cache_read_tokens() == 600 + 900  # 两边都算进来
@@ -345,9 +349,9 @@ def test_mixed_calls_preserve_any_unreported_usage(monkeypatch, tmp_path, endpoi
     editor.reset_spent()
     if endpoint_first:
         editor._record_usage(None, "synthetic")
-        editor._ask_cli("fixture", base, parent, {"name": "dsh"})
+        editor._ask_cli("fixture", base, parent, {"name": "dsh"}, evidence_channel=False)
     else:
-        editor._ask_cli("fixture", base, parent, {"name": "dsh"})
+        editor._ask_cli("fixture", base, parent, {"name": "dsh"}, evidence_channel=False)
         editor._record_usage(SimpleNamespace(prompt_tokens=10, completion_tokens=2), "synthetic")
     expected = ("mixed_unreported" if endpoint_first and not cli_reports else
                 "endpoint_unreported" if endpoint_first else "cli_unreported")

@@ -210,6 +210,10 @@ class _Handler(socketserver.BaseRequestHandler):
         target = server.target                      # type: ignore[attr-defined]
         stats = server.stats                        # type: ignore[attr-defined]
         stats.connection()
+        if getattr(server, 'budget_context', None) is not None:
+            from eval.service.request_budget import serve_budgeted
+            serve_budgeted(self.request, target, server.budget_context, server.budget_stop, stats=stats, settlement=server.settlement)
+            return
         try:
             upstream = socket.create_connection(target, timeout=UPSTREAM_CONNECT_TIMEOUT_S)
             # 见 `UPSTREAM_CONNECT_TIMEOUT_S`:那个超时是给握手的,留在 socket 上会把
@@ -253,7 +257,11 @@ class ModelGateway:
     """A forwarder from one host address:port to the agent's real model endpoint."""
 
     def __init__(self, *, bind_host: str, target: tuple[str, int], path: str = "",
-                 port: int = 0):
+                 port: int = 0, budget_context=None):
+        self.budget_context = budget_context
+        self.budget_stops = []
+        from eval.service.request_budget import Settlement
+        self.settlement = Settlement()
         self.bind_host = bind_host
         self.target = target
         self.path = path
@@ -268,6 +276,10 @@ class ModelGateway:
         self._lifecycle_lock = threading.Lock()
         #: Counted for the record, not for the data path: nothing in `_pump` consults it.
         self.stats = GatewayStats()
+
+    def budget_stop(self, reason, request_id):
+        with self._lifecycle_lock:
+            self.budget_stops.append({'reason': reason, 'request_id': request_id})
 
     def _serve(self, server, started):
         # A failed/interrupted Thread.start can leave a late bootstrap. It must
@@ -290,6 +302,9 @@ class ModelGateway:
                 except OSError as exc:
                     raise GatewayUnavailable(
                         f"could not bind a model gateway on {self.bind_host}: {exc}") from exc
+                server.budget_context = self.budget_context
+                server.budget_stop = self.budget_stop
+                server.settlement = self.settlement
                 self._server = server
                 self.port = server.server_address[1]
                 started = threading.Event()
@@ -316,11 +331,17 @@ class ModelGateway:
         """
         return f"http://{self.bind_host}:{self.port}{self.path}"
 
+    def wait_settled(self):
+        return self.settlement.wait()
+
     def account(self) -> dict:
         """What this gateway saw, as plain data. Readable after `stop()` on purpose: the
         runner assembles the task's result while the gateway is still up, but a reader
         holding the record only ever sees this dict."""
-        return self.stats.as_dict()
+        if self.budget_context is not None:
+            self.wait_settled()
+        return {**self.stats.as_dict(), **({"budget_stops": list(self.budget_stops)}
+                if self.budget_context is not None else {})}
 
     def _stop_owned(self, server, thread, started):
         with self._lifecycle_lock:
@@ -350,10 +371,14 @@ class ModelGateway:
 
     def stop(self) -> None:
         """Close only this owned listener; repeated/unstarted stops are harmless."""
+        if self.budget_context is not None:
+            self.settlement.cancel()
         with self._lifecycle_lock:
             server, thread, started = self._server, self._thread, self._serve_started
         if server is not None:
             self._stop_owned(server, thread, started)
+        if self.budget_context is not None:
+            self.wait_settled()
 
 
 def is_host_local(url: str) -> bool:

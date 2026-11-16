@@ -547,11 +547,12 @@ def test_the_improver_transcript_lands_where_the_platform_keeps_logs(tmp_path, m
     editor._ask_cli("prompt", base, base, {"name": "dsh", "argv_style": "dsh"})
 
     logs = sorted(p.name for p in method_ws.glob("*.log"))
-    assert len(logs) == 4, logs
+    assert len(logs) == 7, logs
+    assert sum(name.endswith("-full.log") for name in logs) == 1
     assert sum("usage-ledger" in name for name in logs) == 1
     assert sum("transcript-metadata" in name for name in logs) == 1
     transcript = next(p for p in method_ws.glob("*.log")
-                      if not any(tag in p.name for tag in ("model-pin", "usage-ledger", "transcript-metadata")))
+                      if not any(tag in p.name for tag in ("model-pin", "usage-ledger", "transcript-metadata", "-receipt", "-tail")))
     assert "read the round-0 traces" in transcript.read_text()
     pin = next(p for p in method_ws.glob("*.log") if "model-pin" in p.name)
     assert "deepseek-flash" in pin.read_text()
@@ -578,7 +579,8 @@ def test_what_the_improver_left_behind_survives_the_round(tmp_path, monkeypatch)
     _keep_method_logs(method_ws, run_dir, 1)
 
     kept = sorted(p.name for p in (run_dir / "method_logs" / "round-1").iterdir())
-    assert len(kept) == 4, kept
+    assert len(kept) == 7, kept
+    assert sum(name.endswith("-full.log") for name in kept) == 1
     assert sum("usage-ledger" in name for name in kept) == 1
     assert sum("transcript-metadata" in name for name in kept) == 1
     text = "\n".join((run_dir / "method_logs" / "round-1" / n).read_text() for n in kept)

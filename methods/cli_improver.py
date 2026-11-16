@@ -41,6 +41,7 @@ where the tool can read it, the prompt, the timeout, and the report. That is thi
 from __future__ import annotations
 
 import os
+import re
 import signal
 import shlex
 import shutil
@@ -53,6 +54,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _siblings
 from source_tree import copy_harness
 from bun_workspace import stage_candidate
+from improver_archive import ArchiveFailure, TranscriptArchive, run_archived
+from improver_credentials import seeded_credentials
 editor = _siblings.load("editor")
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -282,6 +285,62 @@ def _cli_argv(req: dict, candidate: Path, task: str) -> list[str]:
         f"the resolved improver {(req.get('improver') or {}).get('name')!r} declares "
         f"argv_style {style!r} and this method has no argument builder for it. A CLI's argv "
         f"is not guessable -- add a branch here rather than passing flags it may ignore.")
+
+
+_AUTH_ARG_FIELDS = frozenset({'apikey', 'token', 'accesstoken', 'authtoken',
+    'bearertoken', 'apitoken', 'refreshtoken', 'sessiontoken', 'password',
+    'clientsecret', 'secretkey', 'secret', 'authorization', 'auth'})
+_CONFIG_ARG_FLAGS = frozenset({'-c', '--config', '--set'})
+
+
+def _argv_credentials(arguments):
+    """Extract explicit auth values only; never inspect the positional task/prompt.
+
+    Callers pass only the command/options preceding the final task argument.
+    Names must match an exact auth flag or a dotted config field; token limits,
+    api-key-env names, arbitrary prose, and files are not credential values.
+    This supplements known environment credentials, not a general secret detector.
+    """
+    found = set()
+    def auth_key(key):
+        key = key.strip().removeprefix('--')
+        if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)*', key):
+            return False
+        return key.rsplit('.', 1)[-1].replace('-', '').replace('_', '').lower() in _AUTH_ARG_FIELDS
+    def remember(value):
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        if value:
+            found.add(value)
+            if value.lower().startswith(('bearer ', 'basic ')):
+                found.add(value.split(' ', 1)[1].strip())
+    def assignment(argument):
+        key, equals, value = argument.partition('=')
+        if equals and auth_key(key):
+            remember(value)
+        elif equals and key in _CONFIG_ARG_FLAGS:
+            nested_key, nested_equals, nested_value = value.partition('=')
+            if nested_equals and auth_key(nested_key):
+                remember(nested_value)
+    def header(value):
+        key, separator, body = value.partition(':')
+        if separator and key.strip().lower() in ('authorization', 'x-api-key', 'api-key'):
+            remember(body)
+    for index, argument in enumerate(arguments):
+        if not isinstance(argument, str):
+            continue
+        assignment(argument)
+        key, equals, value = argument.partition('=')
+        if key in ('-H', '--header'):
+            if equals:
+                header(value)
+            elif index + 1 < len(arguments):
+                header(arguments[index + 1])
+        if argument.startswith('--') and '=' not in argument and auth_key(argument):
+            if index + 1 < len(arguments) and not arguments[index + 1].startswith('--'):
+                remember(arguments[index + 1])
+    return sorted(found, key=len, reverse=True)
 
 
 def _seed_codex_home(workspace: Path, env: dict) -> Path:
@@ -583,9 +642,30 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     else:
         _seed_codex_home(workspace, env)
 
+    # An optional launcher control receipt is separate from model prose.
+    terminal_path = workspace / 'terminal-stop.json'
+    env['HG_IMPROVER_TERMINAL_STATUS_PATH'] = str(terminal_path)
+    artifact_root = workspace / 'evidence-artifacts'
+    artifact_root.mkdir(mode=0o700, exist_ok=False)
+    env['HG_IMPROVER_ARTIFACT_ROOT'] = str(artifact_root)
+    env['HG_IMPROVER_ARTIFACT_MANIFEST'] = str(artifact_root / 'artifact-manifest.json')
     transcript = ""
+    archive_records = None
+    credential_names = {str((req.get("improver") or {}).get("api_key_env") or ""),
+                        "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "HG_AGENT_API_KEY",
+                        "HG_IMPROVER_API_KEY", "HG_METHOD_API_KEY",
+                        str((req.get("agent") or {}).get("api_key_env") or "")}
+    credentials = [os.environ[name] for name in credential_names if name in os.environ]
+    # Every supported argv builder places the task last. Do not scan that prose.
+    credentials += _argv_credentials(argv[:-1])
+    credentials += seeded_credentials(workspace, style, dsh_runtime)
     try:
-        if req.get("exclusive_candidate"):
+        if req.get("archive_directory"):
+            proc, archive_records = run_archived(
+                argv, timeout=min(timeout, 600) if req.get("exclusive_candidate") else timeout,
+                cwd=candidate, env=env, directory=req["archive_directory"],
+                credentials=credentials)
+        elif req.get("exclusive_candidate"):
             # The single-rewrite entry owns a fresh tree and a real process budget.
             # The outer PID namespace also kills descendants that change sessions.
             proc = _run_bounded(argv, timeout=min(timeout, 600), cwd=candidate, env=env)
@@ -599,30 +679,87 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
             return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else (value or "")
         transcript = decoded(exc.stdout) + decoded(exc.stderr)
         code = -1
-    (workspace / "improver.log").write_text(transcript[-200_000:], encoding="utf-8")
+    try:
+        if archive_records is None:
+            # Legacy callers still use subprocess.run (including its test doubles), but
+            # retain complete observed output before producing the historical tail alias.
+            archive = TranscriptArchive(workspace, credentials,
+                coverage="cli_stdout_then_stderr",
+                raw_representation="subprocess_decoded_text_utf8_reencoding")
+            archive.feed(transcript.encode('utf-8'))
+            archive_records = archive.finish(complete=code != -1,
+                outcome='timeout' if code == -1 else ('success' if code == 0 else 'nonzero_exit'))
+            transcript = Path(archive_records['full']['path']).read_text(encoding='utf-8')
+            try:
+                fd = os.open(workspace / 'improver.log',
+                             os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+                with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+                    os.fchmod(stream.fileno(), 0o600)
+                    stream.write(transcript[-200_000:])
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            except OSError as exc:
+                raise ArchiveFailure('Cannot persist legacy CLI tail', archive_records) from exc
 
-    changed = _changed_files(candidate, parent)
-    protected = [f for f in changed if Path(f).name == "harness.json"]
-    summary = _summary_of(transcript)
-    reported = {
-        "improver": (req.get("improver") or {}).get("name")
-                    or os.environ.get("HG_IMPROVER") or "cli (resolved)",
-        "improver_path": (req.get("improver") or {}).get("path") or "",
-        "exit_code": code,
-        "seconds": round(time.time() - started, 1),
-        "files_changed": changed,
-        "note": summary,
-        # What the boundary withheld, so a reader can tell two improvers apart by what they
-        # *could* reach and not only by what they did. Generic entries retain
-        # credentials/configuration; only ambient loader names are withheld there.
-        "env_withheld": withheld,
-        **({"dsh_identity": {field: str((req.get("improver") or {})[field])
-                            for field in ("model", "provider", "profile")}}
-           if style == "dsh" else {}),
-    }
-    return {"candidate": candidate, "changed": changed, "files": changed,
-            "protected": protected, "exit_code": code, "seconds": reported["seconds"],
-            "note": summary, "reported": reported, "transcript": transcript}
+        # Explicit producer declarations only; never copy a CLI home/config tree.
+        artifact_io = _siblings.load('improver_artifacts')
+        artifact_records = artifact_io.persist_artifact_manifest(
+            artifact_root / 'artifact-manifest.json', allowed_root=artifact_root,
+            destination=Path(req.get('archive_directory') or workspace), credentials=credentials)
+        terminal = None
+        if terminal_path.exists() or terminal_path.is_symlink():
+            status_module = _siblings.load('stop_status')
+            try:
+                descriptor = os.open(terminal_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                with os.fdopen(descriptor, 'rb') as stream:
+                    import stat
+                    if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                        raise ValueError('terminal receipt must be a regular file')
+                    raw_status = stream.read(8193)
+                if len(raw_status) > 8192:
+                    raise ValueError('terminal receipt too large')
+                terminal = status_module.terminal_stop(json.loads(raw_status))
+                if terminal is None:
+                    raise ValueError('terminal receipt has no terminal status')
+            except (OSError, ValueError, TypeError):
+                terminal = status_module.terminal_stop({'terminal_stop': {}})
+        changed = _changed_files(candidate, parent)
+        protected = [f for f in changed if Path(f).name == "harness.json"]
+        summary = _summary_of(transcript)
+        reported = {
+            "improver": (req.get("improver") or {}).get("name")
+                        or os.environ.get("HG_IMPROVER") or "cli (resolved)",
+            "improver_path": (req.get("improver") or {}).get("path") or "",
+            "exit_code": code,
+            "seconds": round(time.time() - started, 1),
+            "files_changed": changed,
+            "note": summary,
+            # What the boundary withheld, so a reader can tell two improvers apart by what they
+            # *could* reach and not only by what they did. Generic entries retain
+            # credentials/configuration; only ambient loader names are withheld there.
+            "env_withheld": withheld,
+            **({"transcript_archive": archive_records} if archive_records else {}),
+            **({"dsh_identity": {field: str((req.get("improver") or {})[field])
+                                for field in ("model", "provider", "profile")}}
+               if style == "dsh" else {}),
+        }
+        return {"candidate": candidate, "changed": changed, "files": changed,
+                "protected": protected, "exit_code": code, "seconds": reported["seconds"],
+                "note": summary, "reported": reported, "transcript": transcript,
+                "transcript_archive": archive_records, "artifact_archive": artifact_records,
+                **({'terminal_stop': terminal} if terminal else {})}
+    except Exception as original:
+        exc = original if isinstance(original, ArchiveFailure) else ArchiveFailure(
+            'Cannot process completed CLI evidence', archive_records)
+        safe_transcript = transcript
+        for credential in sorted(credentials, key=len, reverse=True):
+            safe_transcript = safe_transcript.replace(credential, '[REDACTED]')
+        exc.observed_transcript = safe_transcript
+        exc.capture_complete = bool((archive_records or {}).get('complete', code != -1))
+        exc.transcript_archive = archive_records
+        if exc is original:
+            raise
+        raise exc from original
 
 
 def _run_bounded(argv, *, timeout, cwd, env):

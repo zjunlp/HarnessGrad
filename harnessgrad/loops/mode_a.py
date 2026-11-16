@@ -28,6 +28,8 @@ from eval.ckpt.git_state import reset_hard
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import PLATFORM_API_VERSION
+from harnessgrad.method_attempts import MethodAttempts
+from methods.stop_status import TerminalStop, terminal_stop
 from harnessgrad import code_metrics
 from harnessgrad import components
 from harnessgrad import config as platform_config
@@ -387,6 +389,15 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     #: rather than only printed: "3 rounds but 2 steps" is a fact a reader comparing two
     #: curves needs, and the console's scrollback is not a record.
     failed_steps: list[dict] = []
+    terminal_state: dict = {}
+    task_budget_state: dict = {}
+    latest_invocation: dict = {}
+    attempt_ledger = MethodAttempts(run_dir, run_id,
+        round_limit=os.environ.get('HG_META_ROUND_TOKEN_LIMIT'),
+        run_limit=os.environ.get('HG_META_RUN_TOKEN_LIMIT'))
+    inherited_usage_unknown = bool(getattr(args, 'resume', False)
+        and any(v is not None for v in attempt_ledger.limits.values())
+        and not attempt_ledger.path.exists())
 
     #: How many times **one step** may be attempted before the run gives up on it.
     #:
@@ -427,6 +438,33 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         caller reads that as "no submission this attempt" and retries, bounded by
         `STEP_ATTEMPTS`. Kept out of the loop body so the loop can be about the *budget*.
         """
+        task_context = getattr(args, 'task_budget_context', None)
+        if task_context is not None:
+            try:
+                refused = task_context.admission_stop()
+            except (OSError, ValueError, RuntimeError):
+                refused = {'reason': 'budget_state_unavailable'}
+            if refused:
+                task_budget_state.update(scope='task', split=task_context.split,
+                    stage='before_method_dispatch', **refused)
+                failed_steps.append({'round': r, 'why': 'task budget stopped before method dispatch',
+                                     'task_budget_stop': dict(task_budget_state)})
+                return None, None, 0.0
+        if inherited_usage_unknown:
+            terminal_state.update(schema='harnessgrad.terminal-stop.v1',
+                code='budget_usage_unknown', retryable=False, scope='meta_run')
+            failed_steps.append({'round': r, 'why': 'budget_usage_unknown',
+                                 'terminal_stop': dict(terminal_state)})
+            return None, None, 0.0
+        try:
+            invocation_id = attempt_ledger.begin(r)
+        except TerminalStop as exc:
+            terminal_state.update(exc.terminal_stop)
+            failed_steps.append({'round': r, 'why': terminal_state['code'],
+                                 'terminal_stop': dict(terminal_state)})
+            return None, None, 0.0
+        latest_invocation['id'] = invocation_id
+        invocation_allowance = attempt_ledger.allowance(invocation_id)
         prior = curve[-1]
         # The whole curve so far, not just the incumbent: a method whose contribution
         # is its selection rule needs the series, and the cheap way to give it is the
@@ -468,6 +506,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 "pristine_harness": str(pristine),
                 "workspace": str(method_ws),
                 "round_index": r,
+                **({'method_invocation_id': invocation_id,
+                    'meta_invocation_token_limit': invocation_allowance}
+                   if invocation_allowance is not None else {}),
                 "incumbent_score": prior["score"],
                 # How many states this run will still measure. A method that plans its own
                 # budget -- RRSI's `b_t`, DGM's child counts -- needs the size of the pot,
@@ -488,12 +529,29 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 scratch=method_root, cwd=method_ws, readonly=(base_dir,),
                 runtime=_improver_runtime(improver), improver=improver,
                 rejected_candidate=bool(prior.get("unmeasured")))
+        # Reconcile before copying artifacts: a copy-out failure must not erase
+        # a completed (possibly paid) invocation or make its cost look like zero.
+        attempt_ledger.finish(invocation_id, reply)
+        declared_terminal = terminal_stop(reply)
+        if declared_terminal:
+            terminal_state.update(declared_terminal)
         gen_s = time.time() - t_gen
         cumulative["wall_clock_s"] += gen_s
         cumulative["generation_tokens"] += int(reply.get("generation_tokens") or 0)
         # Before anything is decided about this round: the method's own log is evidence
         # either way, and the directory holding it is deleted when the round ends.
-        _keep_method_logs(method_ws, run_dir, r)
+        try:
+            _keep_method_logs(method_ws, run_dir, r)
+        except OSError:
+            terminal_state.update(schema='harnessgrad.terminal-stop.v1',
+                code='artifact_persistence_failed', retryable=False, scope='meta_session')
+            attempt_ledger.stop(invocation_id, dict(terminal_state))
+        if terminal_state:
+            failed_steps.append({'round': r, 'why': terminal_state['code'],
+                                 'terminal_stop': dict(terminal_state),
+                                 'method_invocation_id': invocation_id})
+            console.note(f"round {r}: terminal method stop: {terminal_state['code']}", level='error')
+            return None, None, gen_s
 
         if "_error" in reply:
             # The stderr tail goes in the *note*, not only in the `detail` event beside
@@ -522,6 +580,19 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             failed_steps.append({"round": r,
                                  "why": f"unreadable trajectory: {exc}"[:400]})
             return None, None, 0.0
+        # A terminal control on any batch member stops the submission before
+        # scheduling, even when it carries no ordinary error or no-change prose.
+        statuses = [terminal_stop(traj)]
+        if isinstance(traj, dict) and isinstance(traj.get('steps'), list):
+            statuses.extend(terminal_stop(step) for step in traj['steps'])
+        declared_terminal = next((status for status in statuses if status), None)
+        if declared_terminal:
+            terminal_state.update(declared_terminal)
+            attempt_ledger.stop(invocation_id, declared_terminal)
+            failed_steps.append({'round': r, 'why': declared_terminal['code'],
+                                 'terminal_stop': dict(declared_terminal),
+                                 'method_invocation_id': invocation_id})
+            return None, None, gen_s
         return reply, traj, gen_s
 
     #: What the method said about its own search, recorded from the first trajectory that
@@ -577,6 +648,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 os.environ.pop("HG_CALL_LOG_DIR", None)
                 _keep_endpoint_records(call_log_dir, run_dir, r)
             if reply is None:
+                if terminal_state or task_budget_state:
+                    break
                 continue
             # **The declared rule is nested, and this loop looked at the top level.** The
             # producer is `methods/editor.py:report`, which writes
@@ -663,6 +736,11 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                          level="error")
             console.round_line(r, "step failed", level="error", note=str(step_error)[:120])
             failed_steps.append({"round": r, "why": str(step_error)[:400]})
+            declared_terminal = terminal_stop(step)
+            if declared_terminal:
+                terminal_state.update(declared_terminal)
+                failed_steps[-1]['terminal_stop'] = dict(terminal_state)
+                break
             continue
 
         # The channel belongs in the method's input tree and nowhere else. `base_dir` is
@@ -856,7 +934,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                             **candidate_runtime.fields(actor_binding),
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
-                            round_no=r)
+                            round_no=r,
+                            **({'task_budget_context': args.task_budget_context}
+                               if getattr(args, 'task_budget_context', None) is not None else {}))
                    if has_manifest else None)
         _require_untampered(res)
         _report_invalid(res, args.dataset)
@@ -1177,6 +1257,30 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 changed_files, (point["candidate_code"] or {}).get("unreachable_modules") or [])
             if unloadable:
                 point["no_loadable_change"] = unloadable
+        if (res or {}).get('task_budget_stop'):
+            task_budget_state.update(res['task_budget_stop'])
+            # The method session may already have incurred cost. Make this stop
+            # durable before writing further evidence, so a failed copy-out and
+            # later resume cannot buy the same session again.
+            attempt_ledger.stop(latest_invocation['id'], {
+                'schema': 'harnessgrad.terminal-stop.v1',
+                'code': 'task_budget_stopped', 'scope': 'task_run', 'retryable': False})
+            # Preserve the attempted candidate and its real partial evidence, but
+            # do not publish a partial cohort mean as a completed round.
+            partial = dict(point)
+            partial['observed_partial_score'] = partial.get('score')
+            partial['score'] = None
+            partial['measured_by_platform'] = False
+            partial['task_budget_stop'] = dict(task_budget_state)
+            partial['task_budget_usage'] = res.get('task_budget_usage')
+            (run_dir / f'round{r}-task-budget-stop.json').write_text(
+                json.dumps(partial, indent=2) + '\n')
+            _save_verdicts(run_dir, r, res, task_ids)
+            _save_traces(run_dir, r, res.get('traces') or {}, train_ids, split,
+                         trial_traces=res.get('trial_traces'))
+            failed_steps.append({'round': r, 'why': 'task budget stopped evaluation',
+                                 'task_budget_stop': dict(task_budget_state)})
+            break
         curve.append(point)
         _write_curve(run_dir / "curve.jsonl", curve)
         # The step finished both phases, so it counts -- and the next step starts with a
@@ -1239,6 +1343,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
            if "selection_pool_size" in declared_shape else {}),
         improver=improver or None,
         failed_steps=failed_steps,
+        method_terminal_stop=dict(terminal_state) or None,
+        **({'method_attempt_ledger': 'method_attempts.json'} if attempt_ledger.path.exists() else {}),
+        task_budget_stop=dict(task_budget_state) or None,
         method_stopped=bool(submission_stop and not pending),
         rounds_measured=len([p for p in curve if p.get("measured_by_platform")]),
         # A submission larger than the remaining budget is truncated, and that is a fact a

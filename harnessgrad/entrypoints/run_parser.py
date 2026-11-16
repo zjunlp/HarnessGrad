@@ -97,6 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="mode B only: argv for the method's own runner, e.g. "
                          "'python /path/to/rrsi_wrap.py'. Defaults to "
                          "harness.json's improve_entrypoint.")
+    ap.add_argument("--treatment-manifest", type=Path, default=None,
+                    help="opt into versioned exact wrapper/dependency/configuration commitments; "
+                         "required unchanged on future resume, independently of platform waivers")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--budget-profile", default=None,
                     help="JSON trusted-dispatch profile; required for approved Task25 runs")
@@ -161,6 +164,9 @@ def build_parser() -> argparse.ArgumentParser:
                          "trace set, which is the one thing a comparison cannot absorb. The "
                          "reused point records `shared_from` naming the run it came from. "
                          "Refused unless both runs share the base harness sha")
+    ap.add_argument("--h0-subset-view", action="store_true",
+                    help="derive a verified proper subset of an original --h0-from donor; "
+                         "requires --sampling all and explicit current --tasks")
     ap.add_argument("--baseline", default=None,
                     help="a frozen reference point to measure this run against, as a JSON "
                          "file holding one curve point (the object a `curve.jsonl` line "
@@ -269,4 +275,7 @@ def parse_run_args(
     for field, default in scenario_defaults.items():
         if not hasattr(args, field):
             setattr(args, field, default)
+    if args.h0_subset_view and (not args.h0_from or args.resume or args.sampling != "all"
+                                or not args.tasks or args.side != "train"):
+        ap.error("--h0-subset-view requires --h0-from, --sampling all, explicit --tasks, --side train, and no --resume")
     return ap, args, explicit

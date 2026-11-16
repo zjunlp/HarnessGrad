@@ -8,7 +8,8 @@ from eval.run import tool_relay
 
 
 class TaskSession:
-    def __init__(self, workspace, receipt=None):
+    def __init__(self, workspace, receipt=None, *, task_budget_context=None):
+        self.task_budget_context = task_budget_context
         self.workspace = workspace
         self.receipt = receipt if receipt is not None else {}
         self.services = None
@@ -37,11 +38,14 @@ class TaskSession:
         self.ensure_network(run_id=run_id, task_id=task_id)
         target, path = modelgate.split(base)
         self.model = modelgate.ModelGateway(bind_host=services.gateway_ip(self.network_name),
-                                           target=target, path=path).start()
+                                           target=target, path=path,
+                                           **({'budget_context': self.task_budget_context}
+                                              if self.task_budget_context is not None else {})).start()
         return self.model.base_url
 
     def start_native_model(self, base, *, factory, observe_http):
-        self.model = factory(base, **({'observe_http': True} if observe_http else {})).start()
+        self.model = factory(base, **({'observe_http': True} if observe_http else {}),
+            **({'budget_context': self.task_budget_context} if self.task_budget_context is not None else {})).start()
 
     def prepare_stepwise(self, session, *, factory, contract, public_fields, timeout_s):
         directory = self.workspace.allocate_stepwise()

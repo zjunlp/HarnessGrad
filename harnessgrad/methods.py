@@ -234,6 +234,13 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
     it would be the wrong trade.
     """
     env = _method_env(work, improver)
+    # Only the platform admission receipt supplies this internal, optional bound.
+    env.pop('HG_META_INVOCATION_TOKEN_LIMIT', None)
+    allowance = request.get('meta_invocation_token_limit')
+    if allowance is not None:
+        if type(allowance) is not int or allowance < 0:
+            raise ValueError('invalid trusted method invocation allowance')
+        env['HG_META_INVOCATION_TOKEN_LIMIT'] = str(allowance)
     where = cwd or scratch or work
     try:
         # A method copies source without installations. Supply the prepared,
@@ -273,8 +280,19 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
         return {"_error": f"refusing to run the method: sandbox unavailable: {exc}"}
 
     if proc.returncode != 0:
+        # A producer may report a terminal budget status and still exit nonzero.
+        # Parse the control envelope, never infer termination from error prose.
+        from methods.stop_status import terminal_stop
+        try:
+            payload = json.loads(proc.stdout)
+        except (ValueError, TypeError):
+            payload = {}
+        status = terminal_stop(payload)
         return {"_error": f"exit {proc.returncode}",
-                "_stderr": proc.stderr[-1500:]}
+                "_stderr": proc.stderr[-1500:],
+                **({'terminal_stop': status} if status else {}),
+                **({'method_usage': payload['method_usage']}
+                   if isinstance(payload, dict) and isinstance(payload.get('method_usage'), dict) else {})}
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
