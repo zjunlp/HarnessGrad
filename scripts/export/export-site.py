@@ -282,6 +282,42 @@ def checkpoint_points(method: str, pool: str) -> dict[int, dict]:
     # on any evaluated pool at all.
     for round_no, point in exam_points(method, pool).items():
         found.setdefault(round_no, point)      # a checkpoint measurement wins if one exists
+    for round_no, point in reviewed_checkpoint_points(method, pool).items():
+        found.setdefault(round_no, point)      # complete formal receipts retain priority
+    return found
+
+
+def reviewed_checkpoint_points(method: str, pool: str) -> dict[int, dict]:
+    """Read explicitly reviewed aggregates; provenance remains in input data."""
+    found = {}
+    source_run = f"rsi10-{run_stamp(method)}-{method}-train"
+    study = {p["round"]: p for p in rows(RUNS / source_run / "curve.jsonl")}
+    for path in sorted((D / "reviewed-results").glob("*.json")):
+        record = json.loads(path.read_text())
+        if record.get("dataset") != "alfworld" or record.get("pool") != pool:
+            continue
+        # A reviewed result belongs to one source run, never another batch's r1.
+        if record.get("source_run_id") != source_run.replace("-train", f"-ckpt-r{record['source_round']}-{pool}"):
+            continue
+        number = record["source_round"]
+        assert record["schema"] == "harnessgrad.reviewed-historical-aggregate.v1"
+        assert record["acceptance_basis"]["kind"] == "user_attested_prior_review"
+        assert record["measurement_status"] == "measured_aggregate_recovered_with_user_reviewed_integrity_exception"
+        assert study[number]["identity"]["harness_sha"] == record["source_harness_sha"]
+        scores = record["per_task"]
+        count = record["n_tasks"]
+        meta_path = RUNS / record["source_run_id"] / "run_meta.json"
+        meta = json.loads(meta_path.read_text())
+        assert meta["evaluated_from"] == {"run_id": source_run, "round": number}
+        assert set(scores) == set(meta["split"]["eval"])
+        assert len(scores) == count == POOLS[pool]
+        assert all(type(v) in (int, float) and v in (0, 1) for v in scores.values())
+        assert sum(scores.values()) == record["n_passed"]
+        assert abs(sum(scores.values()) / count - record["score"]) < 1e-12
+        found[number] = {"score": scalar(record["score"]), "n_tasks": count,
+                         "tokens": None, "split": None, "n_invalid": 0,
+                         "harness_failed": 0, "valid": True,
+                         "source": "reviewed_aggregate"}
     return found
 
 

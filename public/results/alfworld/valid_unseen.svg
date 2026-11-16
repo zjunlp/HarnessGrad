@@ -97,9 +97,9 @@
 <text x="614" y="114" font-size="11" fill="#111827">dgm</text>
 </g>
 <g data-method-line="dream_rsi">
-<path d="M56.0,307.6" fill="none" stroke="#17becf" stroke-width="2"/>
-<path d="M158.8,55.9 L210.2,34.6 L261.6,34.6 L313.0,34.6 L364.4,31.1 L415.8,31.1 L467.2,34.6 L518.6,34.6 L570.0,34.6" fill="none" stroke="#17becf" stroke-width="2"/>
+<path d="M56.0,307.6 L107.4,289.9 L158.8,55.9 L210.2,34.6 L261.6,34.6 L313.0,34.6 L364.4,31.1 L415.8,31.1 L467.2,34.6 L518.6,34.6 L570.0,34.6" fill="none" stroke="#17becf" stroke-width="2"/>
 <circle cx="56.0" cy="307.6" r="2.8" fill="#17becf"/>
+<circle cx="107.4" cy="289.9" r="2.8" fill="#17becf"/>
 <circle cx="158.8" cy="55.9" r="2.8" fill="#17becf"/>
 <circle cx="210.2" cy="34.6" r="2.8" fill="#17becf"/>
 <circle cx="261.6" cy="34.6" r="2.8" fill="#17becf"/>
@@ -126,5 +126,4 @@
 <text x="614" y="150" font-size="11" fill="#111827">hyperagents</text>
 </g>
 <text x="313" y="374" font-size="11" fill="#374151" text-anchor="middle">checkpoint round</text>
-<text x="56" y="358" font-size="10" fill="#6b7280">a break means that round was not measured</text>
 </svg>

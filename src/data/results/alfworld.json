@@ -2844,11 +2844,14 @@
        "steps": 1,
        "train": 0.53,
        "train_n": 100,
-       "eval": {},
+       "eval": {
+        "valid_unseen": 0.440299
+       },
        "valid": true,
        "n_invalid": 0,
        "train_invalid": 0,
-       "train_harness_failed": 0
+       "train_harness_failed": 0,
+       "eval_n": 134
       },
       {
        "round": 2,
@@ -3959,8 +3962,8 @@
  "excluded": [],
  "coverage": {
   "valid_unseen": {
-   "measured": 59,
-   "valid": 59,
+   "measured": 60,
+   "valid": 60,
    "planned": null
   },
   "valid_seen": {
