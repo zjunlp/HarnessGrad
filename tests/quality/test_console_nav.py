@@ -28,11 +28,11 @@ PAGES = ("index.html", "trace.html", "submit.html", "author.html",
 # 第二个入口。助手页也去掉了 —— 工作区右侧已经能直接和助手对话。
 HARNESS = [("实验", "/#/runs"), ("证据导出", "/evidence.html"), ("轨迹", "/#/trace"), ("版本", "/#/version"),
            ("编辑", "/harness.html"), ("启动", "/launch.html"), ("评测", "/submit.html")]
-BUILD = [("场景", "/author.html#/scenarios"), ("起草", "/author.html#/draft"),
+BUILD = [("经验构建", "/author.html#/draft"),
          ("导入", "/author.html#/import"), ("去优化 Harness", "/")]
 HARNESS_EN = [("Runs", "/#/runs"), ("Evidence export", "/evidence.html"), ("Trace", "/#/trace"), ("Version", "/#/version"),
               ("Edit", "/harness.html"), ("Launch", "/launch.html"), ("Evaluate", "/submit.html")]
-BUILD_EN = [("Scenarios", "/author.html#/scenarios"), ("Draft", "/author.html#/draft"),
+BUILD_EN = [("Experience Building", "/author.html#/draft"),
             ("Import", "/author.html#/import"), ("Go to Optimize Harness", "/")]
 
 
