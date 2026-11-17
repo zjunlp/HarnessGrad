@@ -8,6 +8,7 @@ No target execution, benchmark import, answer key, or held-out score is used her
 from __future__ import annotations
 
 import copy
+from functools import lru_cache
 import importlib.util
 import json
 import math
@@ -33,6 +34,16 @@ def _load(path, name):
 
 
 P = _load(Path(__file__).with_name("policies.py"), "_hg_upstream_policies")
+
+
+@lru_cache(maxsize=5)
+def _proposal_stage(name):
+    """Load only the extracted mechanism used by the selected policy port."""
+    if name not in {"skillopt_fast", "skillopt_patch", "ace_proposal", "evo_harness_proposal", "gepa_proposal"}:
+        raise ValueError("unknown proposal stage")
+    return _load(Path(__file__).with_name(name + ".py"), "_hg_" + name)
+
+
 DEFAULTS = {
     "opro": {
         "num_candidates": 8,
@@ -437,11 +448,8 @@ def prompt_proposals(name, base, req, cfg, ms, rng, call):
         sample = rng.sample(
             failures, min(len(failures), cfg["reflection_minibatch_size"])
         )
-        prompt = (
-            '[GEPA: reflect-and-propose] Improve this instruction from the selected parent and its nonperfect task evidence. Return JSON {"instruction":"complete instruction"}.\n'
-            + _text(parent.tree, path)
-            + "\n"
-            + _evidence(base, cfg, sample, parent.round)
+        prompt = _proposal_stage("gepa_proposal").format_prompt(
+            _text(parent.tree, path), _evidence(base, cfg, sample, parent.round)
         )
         state = {
             "admitted_rounds": [m.round for m in admitted],
@@ -506,9 +514,12 @@ def prompt_proposals(name, base, req, cfg, ms, rng, call):
         else:
             parent = parents[slot]
         reply = schema(prompt, base)
-        text = reply.get("instruction")
-        if not isinstance(text, str) or not text.strip():
-            raise ValueError("optimizer requires a nonempty instruction")
+        if name == "gepa":
+            text = _proposal_stage("gepa_proposal").instruction_from_reply(reply)
+        else:
+            text = reply.get("instruction")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("optimizer requires a nonempty instruction")
         if text in seen:
             continue
         seen.add(text)
@@ -538,42 +549,22 @@ def ace(base, req, cfg, ms, call):
     path = instruction_path(base, cfg)
     parent = ms[-1]
     text = _text(parent.tree, path)
-    marker = "\n\n## ACE PLAYBOOK\n"
-    prefix, _, playbook = text.partition(marker)
     native = _load(
         Path(__file__).parent / "vendor/ace/_playbook.py", "_hg_native_ace_playbook"
     )
-    reply = schema(
-        "[ACE: reflect] Reflect on visible task failures/successes; return JSON with error_identification, root_cause_analysis, correct_approach, key_insight, bullet_tags [{id,tag:helpful|harmful|neutral}]. No ground truths are available.\n"
-        + playbook
-        + "\n"
-        + _evidence(base, cfg),
-        base,
+    candidate_text, tags = _proposal_stage("ace_proposal").propose_playbook(
+        text, evidence=lambda: _evidence(base, cfg),
+        ask=lambda prompt: schema(prompt, base), native=native,
+        call_index=call["index"], curator_frequency=cfg["curator_frequency"],
+        edit_budget=cfg["edit_budget"], playbook_token_budget=cfg["playbook_token_budget"],
     )
-    reflection = native.Reflection.parse(json.dumps(reply))
-    playbook = native.tag(playbook, reflection.tags)
-    if call["index"] % cfg["curator_frequency"] == 0:
-        adds = schema(
-            '[ACE: curate] Return JSON {"operations":[{"type":"ADD","section":"general","content":"reusable guidance"}]}. ADD only, no rewrite/deletion. Max additions '
-            + str(cfg["edit_budget"])
-            + ".\nCurrent playbook:\n"
-            + playbook
-            + "\nReflection:\n"
-            + reflection.content,
-            base,
-        )
-        playbook = native.Patch.parse(json.dumps(adds)).apply(
-            playbook, cfg["edit_budget"]
-        )
-    if (len(playbook) + 3) // 4 > cfg["playbook_token_budget"]:
-        raise ValueError("playbook token budget exceeded")
     dest = editor.candidate_path(req)
-    files = _replace(parent.tree, dest, {path: prefix + marker + playbook})
+    files = _replace(parent.tree, dest, {path: candidate_text})
     info = {
         "parent_round": parent.round,
         "hypothesis": "ACE ADD-only playbook curation",
         "mode": cfg["mode"],
-        "tags": list(reflection.tags),
+        "tags": tags,
         "instruction_path": path,
         "retry_evaluations": "unavailable; no self-evaluation",
     }
@@ -707,63 +698,8 @@ def skill_files(parent):
 
 
 def apply_skill_patch(files, edits, budget):
-    """SkillOpt exact edits with a protected slow-update region."""
-    if not isinstance(edits, list) or len(edits) > budget:
-        raise ValueError("skill patch exceeds edit budget")
-    updated = dict(files)
-    for edit in edits:
-        path = edit.get("path")
-        _safe(Path("/virtual"), path)
-        if not path.startswith("skills/") or not path.endswith(".md"):
-            raise ValueError("edit must target the skill component")
-        op = edit.get("op")
-        old = updated.get(path, "")
-        content = edit.get("content", "")
-        target = edit.get("target", "")
-        if op not in ("append", "insert_after", "replace", "delete"):
-            raise ValueError("unsupported skill edit operation")
-        if op != "delete" and (not isinstance(content, str) or not content.strip()):
-            raise ValueError("skill edit requires content")
-        left = "<!-- SLOW_UPDATE_START -->"
-        right = "<!-- SLOW_UPDATE_END -->"
-        if old.count(left) != old.count(right) or old.count(left) > 1:
-            raise ValueError("unbalanced slow guidance")
-        protected = (
-            old[old.index(left) : old.index(right) + len(right)]
-            if left in old
-            else None
-        )
-        if op == "append":
-            new = old.rstrip() + "\n\n" + content.rstrip() + "\n"
-        else:
-            if not isinstance(target, str) or not target or old.count(target) != 1:
-                raise ValueError("edit target must occur exactly once")
-            at = old.index(target)
-            if (
-                protected
-                and at < old.index(right) + len(right)
-                and at + len(target) > old.index(left)
-            ):
-                raise ValueError("fast edits cannot target protected slow guidance")
-            replacement = (
-                target + "\n" + content
-                if op == "insert_after"
-                else content if op == "replace" else ""
-            )
-            new = old.replace(target, replacement, 1)
-        newprotected = (
-            new[new.index(left) : new.index(right) + len(right)]
-            if left in new and right in new
-            else None
-        )
-        if (
-            protected != newprotected
-            or new.count(left) != old.count(left)
-            or new.count(right) != old.count(right)
-        ):
-            raise ValueError("fast edits cannot change SLOW_UPDATE")
-        updated[path] = new
-    return updated
+    """Apply the existing SkillOpt patch contract via the reusable implementation."""
+    return _proposal_stage("skillopt_patch").apply_skill_patch(files, edits, budget, safe_path=_safe)
 
 
 def skillopt(base, req, cfg, ms, call):
@@ -849,88 +785,22 @@ def skillopt(base, req, cfg, ms, call):
             )
         info.update(phase="slow" if cfg["use_slow_update"] else "meta", meta_skill=meta)
     else:
-        grouped = {"failure": [], "success": []}
         tasks = list(parent.per_task)
         width = cfg["reflection_minibatch_size"]
-        for offset in range(0, len(tasks), width):
-            batch = tasks[offset : offset + width]
-            for source in ("failure", "success"):
-                ids = {
-                    t
-                    for t in batch
-                    if (parent.per_task[t] > 0) == (source == "success")
-                }
-                if not ids:
-                    continue
-                reply = schema(
-                    f'[SkillOpt: {source}] Reflect on this source of execution feedback. Return JSON {{"edits":[{{"path":"skills/main.md","op":"append","content":"procedure","source_type":"{source}"}}]}}. At most '
-                    + str(cfg["edit_budget"])
-                    + " edits; do not edit protected SLOW_UPDATE sections.\nCurrent files: "
-                    + json.dumps(current)
-                    + "\nOptimizer memory: "
-                    + optimizer_memory
-                    + "\nEvidence: "
-                    + _evidence(base, cfg, ids, parent.round),
-                    base,
+        def batches():
+            for offset in range(0, len(tasks), width):
+                batch = tasks[offset : offset + width]
+                yield (
+                    {t for t in batch if not (parent.per_task[t] > 0)},
+                    {t for t in batch if parent.per_task[t] > 0},
                 )
-                proposed = reply.get("edits")
-                if not isinstance(proposed, list) or len(proposed) > cfg["edit_budget"]:
-                    raise ValueError("reflection patch exceeds its edit budget")
-                for edit in proposed:
-                    if not isinstance(edit, dict):
-                        raise ValueError("reflection requires edit objects")
-                    edit["source_type"] = source
-                grouped[source].append(proposed)
-        for source, groups in grouped.items():
-            merge_width = cfg["merge_batch_size"]
-            while len(groups) > 1:
-                next_groups = []
-                for offset in range(0, len(groups), merge_width):
-                    chunk = groups[offset : offset + merge_width]
-                    if len(chunk) == 1:
-                        next_groups.append(chunk[0])
-                        continue
-                    reply = schema(
-                        '[SkillOpt: merge] Merge overlapping proposals in one source group; preserve paths/source types. Return JSON {"edits":[]}.\nSource: '
-                        + source
-                        + "\n"
-                        + json.dumps(chunk),
-                        base,
-                    )
-                    if not isinstance(reply.get("edits"), list):
-                        raise ValueError("merge requires edits list")
-                    next_groups.append(reply["edits"])
-                groups = next_groups
-            if groups:
-                patches.append(groups[0])
-        edits = [edit for group in patches for edit in group]
-        if len(patches) > 1:
-            merged = schema(
-                '[SkillOpt: merge] Merge overlapping source patches, failure fixes take priority. Return JSON {"edits":[]}.\n'
-                + json.dumps(patches),
-                base,
-            )
-            edits = merged.get("edits")
-            if not isinstance(edits, list):
-                raise ValueError("cross-source merge requires edits list")
-        if len(edits) > cfg["edit_budget"]:
-            ranked = schema(
-                '[SkillOpt: rank] Return JSON {"selected_indices":[]}, unique zero-based edits, at most '
-                + str(cfg["edit_budget"])
-                + ".\n"
-                + json.dumps(edits),
-                base,
-            )
-            indices = ranked.get("selected_indices")
-            if (
-                not isinstance(indices, list)
-                or len(indices) > cfg["edit_budget"]
-                or len(indices) != len(set(indices))
-                or any(type(i) is not int or not 0 <= i < len(edits) for i in indices)
-            ):
-                raise ValueError("invalid selected_indices")
-            edits = [edits[i] for i in indices]
-        updated = apply_skill_patch(current, edits, cfg["edit_budget"])
+        updated, edits = _proposal_stage("skillopt_fast").propose_fast(
+            current, batches(), edit_budget=cfg["edit_budget"],
+            merge_batch_size=cfg["merge_batch_size"], optimizer_memory=optimizer_memory,
+            ask=lambda prompt: schema(prompt, base),
+            evidence=lambda ids: _evidence(base, cfg, ids, parent.round),
+            apply_patch=apply_skill_patch,
+        )
         info.update(phase="fast", patches=edits, meta_skill=optimizer_memory)
     dest = editor.candidate_path(req)
     files = _replace(
@@ -946,129 +816,13 @@ def skillopt(base, req, cfg, ms, call):
 
 def evo_harness(base, req, cfg, ms, call):
     parent = ms[-1]
-    memories = []
-    for task, value in parent.per_task.items():
-        if value >= 1:
-            continue
-        reply = schema(
-            '[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {"lesson":"","trigger":"","evidence":"","scope_hint":""}, or {"skip":true}. Do not inspect the skill library; never memorize the answer.\n'
-            + _evidence(base, cfg, {task}, parent.round),
-            base,
-        )
-        if reply.get("skip"):
-            continue
-        if any(
-            not isinstance(reply.get(k), str) or not reply[k].strip()
-            for k in ("lesson", "trigger", "evidence", "scope_hint")
-        ):
-            raise ValueError("memory requires lesson, trigger, evidence and scope_hint")
-        memories.append({"task_id": task, **reply})
-    current = skill_files(Path(parent.tree))
-    updated = dict(current)
-    sources = {m["task_id"] for m in memories}
-    for level in ("topic", "general"):
-        if not memories or (
-            level == "general" and len(sources) < cfg["general_min_tasks"]
-        ):
-            continue
-        reply = schema(
-            "[EvoHarness: compile "
-            + level
-            + '] Return JSON {"skills":[{"path":"skills/name/SKILL.md","name":"name","description":"trigger","source_task_ids":[],"content":"reusable procedure"}]}. Only '
-            + level
-            + " skills, cite task_ids from THESE memories. Preserve unrelated/native skills. General rules require "
-            + str(cfg["general_min_tasks"])
-            + " distinct tasks.\nLibrary: "
-            + json.dumps(updated)
-            + "\nMemories: "
-            + json.dumps(memories),
-            base,
-        )
-        proposals = reply.get("skills")
-        if not isinstance(proposals, list):
-            raise ValueError("skill compiler requires skills list")
-        if len(proposals) > cfg[f"max_{level}_skills"]:
-            raise ValueError("skill count exceeds level budget")
-        for item in proposals:
-            path = item.get("path")
-            _safe(Path(parent.tree), path)
-            ids = item.get("source_task_ids")
-            body = item.get("content")
-            name = item.get("name")
-            description = item.get("description")
-            if not path.startswith("skills/") or not path.endswith("/SKILL.md"):
-                raise ValueError("managed skills must be native skills/<name>/SKILL.md")
-            if (
-                not isinstance(ids, list)
-                or not ids
-                or any(not isinstance(i, str) for i in ids)
-                or len(ids) != len(set(ids))
-                or not set(ids) <= sources
-            ):
-                raise ValueError(
-                    "skill requires distinct current-batch source task IDs"
-                )
-            if level == "general" and len(ids) < cfg["general_min_tasks"]:
-                raise ValueError("general skill lacks cross-task evidence")
-            if (
-                not isinstance(body, str)
-                or not body.strip()
-                or len(body) > cfg["max_skill_chars"]
-            ):
-                raise ValueError("skill body empty or exceeds budget")
-            if (
-                not isinstance(name, str)
-                or not name.strip()
-                or not isinstance(description, str)
-                or not description.strip()
-            ):
-                raise ValueError("native name/description missing")
-            if path.removesuffix("/SKILL.md") + ".md" in current:
-                raise ValueError("managed skill shadows native flat skill")
-            if path in current:
-                try:
-                    old = json.loads(current[path].split("---", 2)[1])
-                except (ValueError, IndexError):
-                    raise ValueError(
-                        "refusing to rewrite unmanaged/non-JSON-frontmatter native skill"
-                    )
-                prov = old.get("upstream", {})
-                if prov.get("algorithm") != "evo_harness" or prov.get("level") != level:
-                    raise ValueError("curator may only edit its managed level")
-            meta = {
-                "name": name,
-                "description": description,
-                "upstream": {
-                    "algorithm": "evo_harness",
-                    "level": level,
-                    "source_task_ids": ids,
-                },
-            }
-            updated[path] = (
-                "---\n"
-                + json.dumps(meta, ensure_ascii=False, indent=2)
-                + "\n---\n"
-                + body.strip()
-                + "\n"
-            )
-    for level in ("topic", "general"):
-        count = 0
-        for path, text in updated.items():
-            if not path.endswith("/SKILL.md"):
-                continue
-            try:
-                meta = json.loads(text.split("---", 2)[1])
-            except (ValueError, IndexError):
-                continue
-            if (
-                meta.get("upstream", {}).get("algorithm") == "evo_harness"
-                and meta["upstream"].get("level") == level
-            ):
-                count += 1
-        if count > cfg[f"max_{level}_skills"]:
-            raise ValueError("total managed skill count exceeds level budget")
-    if sum(len(v) for v in updated.values()) > cfg["max_library_chars"]:
-        raise ValueError("skill library exceeds character budget")
+    failed = (task for task, value in parent.per_task.items() if not value >= 1)
+    current, updated, memories = _proposal_stage("evo_harness_proposal").propose_skills(
+        failed, cfg=cfg, ask=lambda prompt: schema(prompt, base),
+        evidence=lambda task: _evidence(base, cfg, {task}, parent.round),
+        skills=lambda: skill_files(Path(parent.tree)),
+        safe_path=lambda path: _safe(Path(parent.tree), path),
+    )
     dest = editor.candidate_path(req)
     files = _replace(
         parent.tree, dest, {p: v for p, v in updated.items() if current.get(p) != v}

@@ -1,0 +1,120 @@
+{
+  "ace": {
+    "prompts": [
+      "[ACE: reflect] Reflect on visible task failures/successes; return JSON with error_identification, root_cause_analysis, correct_approach, key_insight, bullet_tags [{id,tag:helpful|harmful|neutral}]. No ground truths are available.\n\n[{\"task_id\": \"t1\", \"score\": 1.0, \"verdict\": {\"detail\": \"public feedback\"}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[ACE: curate] Return JSON {\"operations\":[{\"type\":\"ADD\",\"section\":\"general\",\"content\":\"reusable guidance\"}]}. ADD only, no rewrite/deletion. Max additions 4.\nCurrent playbook:\n\nReflection:\nVerify tests"
+    ],
+    "report": {
+      "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+      "extra": {
+        "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+        "upstream_policy_port": true
+      },
+      "method": "ace",
+      "note": "ace: 1 candidate states; scoring remains platform-owned",
+      "steps": [
+        {
+          "changed": true,
+          "edit_kind": "harness_source",
+          "files": [
+            "prompt.md"
+          ],
+          "files_contents": {
+            "prompt.md": "Baseline instruction\n\n\n## ACE PLAYBOOK\n[g-00001] helpful=0 harmful=0 :: Run tests.\n",
+            "skills/main.md": "Existing reusable guidance\n"
+          },
+          "hypothesis": "ACE ADD-only playbook curation",
+          "label": "ACE ADD-only playbook curation",
+          "method_reported": {
+            "policy_port": {
+              "config": {
+                "curator_frequency": 1,
+                "edit_budget": 4,
+                "max_evidence_chars": 24000,
+                "max_reflection_rounds": 1,
+                "mode": "offline",
+                "playbook_token_budget": 80000,
+                "seed": 42
+              },
+              "hypothesis": "ACE ADD-only playbook curation",
+              "instruction_path": "prompt.md",
+              "invocation": 1,
+              "measurement": "platform only; next call receives feedback",
+              "method": "ace",
+              "mode": "offline",
+              "parent_round": 0,
+              "retry_evaluations": "unavailable; no self-evaluation",
+              "state_scope": "adaptation-visible study channel",
+              "tags": [],
+              "variant": "upstream-policy-port"
+            }
+          }
+        }
+      ],
+      "stop": false
+    }
+  },
+  "skillopt": {
+    "prompts": [
+      "[SkillOpt: success] Reflect on this source of execution feedback. Return JSON {\"edits\":[{\"path\":\"skills/main.md\",\"op\":\"append\",\"content\":\"procedure\",\"source_type\":\"success\"}]}. At most 4 edits; do not edit protected SLOW_UPDATE sections.\nCurrent files: {\"skills/main.md\": \"Existing reusable guidance\\n\"}\nOptimizer memory: \nEvidence: [{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t1\", \"score\": 1.0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[SkillOpt: failure] Reflect on this source of execution feedback. Return JSON {\"edits\":[{\"path\":\"skills/main.md\",\"op\":\"append\",\"content\":\"procedure\",\"source_type\":\"failure\"}]}. At most 4 edits; do not edit protected SLOW_UPDATE sections.\nCurrent files: {\"skills/main.md\": \"Existing reusable guidance\\n\"}\nOptimizer memory: \nEvidence: [{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[SkillOpt: merge] Merge overlapping source patches, failure fixes take priority. Return JSON {\"edits\":[]}.\n[[{\"path\": \"skills/main.md\", \"op\": \"append\", \"content\": \"Run checks.\", \"source_type\": \"failure\"}], [{\"path\": \"skills/main.md\", \"op\": \"append\", \"content\": \"Run checks.\", \"source_type\": \"success\"}]]"
+    ],
+    "report": {
+      "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+      "extra": {
+        "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+        "upstream_policy_port": true
+      },
+      "method": "skillopt",
+      "note": "skillopt: 1 candidate states; scoring remains platform-owned",
+      "steps": [
+        {
+          "changed": true,
+          "edit_kind": "harness_source",
+          "files": [
+            "skills/main.md"
+          ],
+          "files_contents": {
+            "prompt.md": "Baseline instruction\n",
+            "skills/main.md": "Existing reusable guidance\n\nRun checks.\n"
+          },
+          "hypothesis": "SkillOpt fast skill update, selection delayed to next platform measurement",
+          "label": "SkillOpt fast skill update, selection delayed to next platform measurement",
+          "method_reported": {
+            "policy_port": {
+              "config": {
+                "edit_budget": 4,
+                "epoch_batches": 1,
+                "max_evidence_chars": 24000,
+                "merge_batch_size": 2,
+                "reflection_minibatch_size": 1,
+                "seed": 42,
+                "slow_update_samples": 20,
+                "use_meta_skill": true,
+                "use_slow_update": true
+              },
+              "hypothesis": "SkillOpt fast skill update, selection delayed to next platform measurement",
+              "invocation": 1,
+              "measurement": "platform only; next call receives feedback",
+              "meta_skill": "",
+              "method": "skillopt",
+              "parent_round": 0,
+              "patches": [
+                {
+                  "content": "Run checks.",
+                  "op": "append",
+                  "path": "skills/main.md"
+                }
+              ],
+              "phase": "fast",
+              "state_scope": "adaptation-visible study channel",
+              "variant": "upstream-policy-port"
+            }
+          }
+        }
+      ],
+      "stop": false
+    }
+  }
+}
