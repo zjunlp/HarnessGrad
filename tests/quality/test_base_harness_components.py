@@ -1,6 +1,6 @@
 """Every launchable base harness declares which of its files implements which component.
 
-**Why this file exists.** `harnessgrad.components` has been shipped and wired into the curve
+**Why this file exists.** `harnessgrad.core.components` has been shipped and wired into the curve
 point since `editable_surface_components` was added, but no base harness declared the map, so
 in the 1008 recorded curve points **zero** carried a component attribution. A capability with
 zero data is indistinguishable from a missing one: a reader could not tell "no round ever
@@ -33,7 +33,7 @@ someone who disagrees:
   declarations deliberately pick the **dominant** concern instead: a mapping that says
   `loop/agent.py` is context + tools + control + memory + cost is true and useless, because it
   cannot distinguish a prompt edit from a step-limit edit -- which is the whole question the
-  attribution is asked. The mixture is noted in `harnessgrad/components.py` and below.
+  attribution is asked. The mixture is noted in `harnessgrad/core/components.py` and below.
 * *`harness.json` -> `control` in all seven.* The manifest names the entrypoint and the launch
   parameters (`env_kinds`, `runtime_paths`, `install`), so its dominant answer to "what did this
   edit change" is what starts and how it starts. It is a genuinely mixed file: `env_kinds` and
@@ -82,7 +82,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import components  # noqa: E402
+from harnessgrad.core import components  # noqa: E402
 
 BASE = ROOT / "base_harness"
 LAUNCHABLE = tuple(
