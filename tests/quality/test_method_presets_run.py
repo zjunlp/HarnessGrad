@@ -43,7 +43,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import experiments                                    # noqa: E402
+from harnessgrad.experiment import config as experiments               # noqa: E402
 
 EXPERIMENTS = ROOT / "experiments"
 PRESETS = sorted(EXPERIMENTS.glob("method-*.json")) + [EXPERIMENTS / "quickstart.json"]

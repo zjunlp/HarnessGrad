@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 
 from harnessgrad.loops.eval_side import _baseline_block
+from harnessgrad.provenance.verification_context import create as verification_context
 
 
 def _point(*, jobs: int = 40, tasks: tuple[str, ...] = ("t1", "t2", "t3")) -> dict:
@@ -27,6 +28,7 @@ def _point(*, jobs: int = 40, tasks: tuple[str, ...] = ("t1", "t2", "t3")) -> di
                      "agent_backend": "vllm", "harness_name": "loop",
                      "framework_version": "1.0"},
         "per_task": {task: 0.0 for task in tasks},
+        "verification_context": verification_context({task: "a" * 64 for task in tasks}),
     }
 
 
@@ -39,6 +41,7 @@ def _reference(tmp_path: Path, *, jobs: int = 13,
                      "agent_backend": "vllm", "harness_name": "loop",
                      "framework_version": "1.0"},
         "per_task": {task: 0.0 for task in tasks},
+        "verification_context": verification_context({task: "a" * 64 for task in tasks}),
     }))
     return path
 
@@ -55,6 +58,13 @@ def test_the_contention_mismatch_is_recorded_rather_than_silent(tmp_path: Path) 
 def test_a_matching_reference_has_no_problems(tmp_path: Path) -> None:
     block = _baseline_block(str(_reference(tmp_path)), _point(jobs=13))
     assert block["problems"] == []
+
+
+def test_missing_verification_context_is_not_treated_as_matching(tmp_path: Path) -> None:
+    point = _point(jobs=13)
+    del point['verification_context']
+    block = _baseline_block(str(_reference(tmp_path)), point)
+    assert 'verification context missing' in block['problems']
 
 
 def test_a_task_set_that_moved_is_named(tmp_path: Path) -> None:

@@ -121,3 +121,35 @@ def test_driver_runtime_commitment_excludes_configured_credential_values(monkeyp
         assert first['platform_configuration']['agent']['api_key'] == {'present': True}
     finally:
         config.reset()
+
+
+def test_early_treatment_capture_reads_resume_before_binding_improver(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from harnessgrad.orchestration import treatment_workflow
+
+    events = []
+    saved = {'fixture': 'saved'}
+    captured = {'fixture': 'captured'}
+    environment = {'HG_IMPROVER_NAME': 'old', 'HG_IMPROVER_MODEL': 'old-model', 'UNRELATED': 'kept'}
+    args = SimpleNamespace(resume=True, mode='A', run_id=None, harness='h', dataset='demo',
+                           sampling='all', runs_root=str(tmp_path), improver='none',
+                           improver_model='fixture-model', improver_effort=None,
+                           treatment_manifest='synthetic-manifest')
+    def read_metadata(path):
+        events.append(('read', path))
+        return {'treatment_identity': saved, 'treatment_manifest_declared': True}
+    def capture(manifest, *, environment):
+        events.append(('capture', manifest, dict(environment)))
+        return captured
+    def require_same(before, after, *, declared, early):
+        events.append(('compare', before, after, declared, early))
+    monkeypatch.setattr(treatment_workflow.treatment_identity, 'capture', capture)
+    monkeypatch.setattr(treatment_workflow.treatment_identity, 'require_same', require_same)
+    assert treatment_workflow.capture_start(args, environment=environment, read_metadata=read_metadata) == (
+        captured, saved, True)
+    assert events == [
+        ('read', tmp_path / 'h-demo-all-munified'),
+        ('capture', 'synthetic-manifest', {'HG_IMPROVER_MODEL': 'fixture-model', 'UNRELATED': 'kept'}),
+        ('compare', saved, captured, True, True),
+    ]
+    assert environment == {'HG_IMPROVER_NAME': 'old', 'HG_IMPROVER_MODEL': 'old-model', 'UNRELATED': 'kept'}

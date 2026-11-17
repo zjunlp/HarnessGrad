@@ -10,8 +10,9 @@ import tempfile
 from types import SimpleNamespace
 
 import pytest
-from harnessgrad import config, python_exec_runtime as runtime
-from harnessgrad import python_harness_runtime as native
+from harnessgrad import config
+from harnessgrad.execution.python_runtime import python_exec_runtime as runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime as native
 
 ROOT = Path(__file__).resolve().parents[2]
 

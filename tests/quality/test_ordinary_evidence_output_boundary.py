@@ -4,7 +4,7 @@ import json
 import pytest
 
 from eval.run import runner, trial_evidence
-from harnessgrad.channel import _stage_for_method
+from harnessgrad.experiment.channel import _stage_for_method
 from test_declared_trials_continue import PROTOCOL
 from test_shared_dataset_runtime import harness
 

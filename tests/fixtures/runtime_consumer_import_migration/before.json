@@ -1,0 +1,61 @@
+{
+  "chess_components": {
+    "data_source": {
+      "details": {
+        "dataset": "chessbench_puzzles",
+        "declared_artifact_sha256": "099d54e681a07b9e82b4462aaf5436a6e833edc6f56b92ea7c2d2413f7efbe48",
+        "origin": "https://storage.googleapis.com/searchless_chess/data/puzzles.csv",
+        "revision": "90ae0e6b121673fc3079aaeffa047580bb600c0a"
+      },
+      "kind": "data_source",
+      "sha256": "e892619260c25fa2a45b734332e46fc61de5dfe4fce6bd8690052b2cd291a166",
+      "version": 1
+    },
+    "loader": {
+      "details": {
+        "components": {
+          "adapter": "affd201859532bc28b2a2a8656cc651b2ae81cc72eddbe0ac214e978edc43387",
+          "provider": "b883fb268b695e9bc08ee0dba51d2ec7b7dbe191e1234104ac76e79f65ff8d1e",
+          "provider_worker": "2bf4dfdaba5cb3cc76392a1d8e22e5466823fc517cb39cb0590fe9e87ab84756",
+          "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+          "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+        },
+        "protocol": null
+      },
+      "kind": "loader",
+      "sha256": "0c72599bb7d50179999c15c6476806aba9d76e1f8826bb9eaec62dffcf9de662",
+      "version": 1
+    },
+    "scorer": {
+      "details": {
+        "components": {
+          "adapter": "affd201859532bc28b2a2a8656cc651b2ae81cc72eddbe0ac214e978edc43387",
+          "native_runtime": "1dd47b9a27c0598c89c55c08579e7f85655b821166bc8a8150645e9379479599",
+          "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+          "qa_verifier": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f",
+          "stepwise": "7f9a34ca2c0bde43e8164fd4d498151cfda9e90692e5989570a7bbefdc10fffd",
+          "stepwise_worker": "28b582c4824e87cf72d3eaf6f35f3659d4cae0b28326a6d28ed9c1ba6b51ccce"
+        },
+        "protocol": "ChessBench strict legal puzzle replay v1"
+      },
+      "kind": "scorer",
+      "sha256": "cefb9cd6495441d30761db5d16060736fcfd9d4b33210250ed305e50933244ba",
+      "version": 1
+    }
+  },
+  "chess_scoring": {
+    "profile": {
+      "metric": "ChessBench strict legal puzzle replay v1",
+      "scorer_sha256": "cefb9cd6495441d30761db5d16060736fcfd9d4b33210250ed305e50933244ba",
+      "upstream_diagnostic": "ChessBench upstream puzzle replay (unchecked push)"
+    },
+    "sha256": "840bffe1b4409d95c566c2f96c92a1e61b3b3d558ba3d1c984fed811121d8049",
+    "version": 1
+  },
+  "normalized_ast": {
+    "data/datasets/costbench/report.py": "bf751e1b1bca6638fccbb5c203da621aa91c68839241fcdfae43d237e7cc9ddd",
+    "data/datasets/jobbench/prepare.py": "8a29002c2685b7d21166042237e322e0bafc9777ee74b8861537b8ed9cb5f31a",
+    "data/datasets/jobbench/render_worker.py": "f96f18474e74a6b709ec997641a8a66d39626ad716b36102a2bb21891c60d6a9",
+    "eval/run/chess_stepwise.py": "d28c3fad011a5834b6a80743f3d8a1d1a66c818bf8ea36596e71ab5c07bc2c78"
+  }
+}

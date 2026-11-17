@@ -4,7 +4,8 @@ import json
 import pytest
 
 from eval.run import runner
-from harnessgrad import records, verification_context
+from harnessgrad.experiment import records
+from harnessgrad.provenance import verification_context
 from harnessgrad.loops import eval_side
 from test_repeated_trial_resume import session
 

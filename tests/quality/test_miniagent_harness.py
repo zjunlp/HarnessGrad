@@ -19,7 +19,7 @@ import pytest
 from eval.containers import sandbox
 from eval.service.native_model_route import NativeModelRoute
 from harnessgrad import config
-from harnessgrad import python_harness_runtime as runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / 'base_harness' / 'miniagent'
@@ -141,7 +141,7 @@ def test_mock_uses_native_model_tool_observation_round_trip(tmp_path, model, inv
     assert len([row for row in rows if 'reply' in row]) == 2
     assert [row['usage'] for row in rows if 'usage' in row][-1] == {
         'calls': 2, 'tokens_complete': True, 'input_tokens': 0, 'output_tokens': 0}
-    from tools.check_trace_contract import check
+    from tools.validation.check_trace_contract import check
     assert not check((work / 'trace.jsonl').read_text())
     assert any(row.get('submitted') and row['answer_source'] == 'artifact' for row in rows)
 

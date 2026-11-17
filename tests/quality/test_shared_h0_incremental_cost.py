@@ -21,7 +21,7 @@ def control(root, phase):
     from eval.run import runner
     from harnessgrad.loops import mode_a
     from harnessgrad import config
-    from harnessgrad.budget_integration import bind_budget
+    from harnessgrad.execution.budget_integration import bind_budget
     import driver
     source = root / 'authored-harness'
     if not source.exists():
@@ -150,7 +150,7 @@ def test_unknown_donor_cost_is_not_changed_to_zero(runs):
 
 
 def test_export_remains_conservative_for_positive_shared_reference(runs):
-    from harnessgrad.evidence_export import _budget
+    from harnessgrad.evidence_reports.evidence_export import _budget
     recipient = records(runs, 'recipient_h0')
     projected = _budget({'points': {point['round']: point for point in recipient['curve']}, 'meta': recipient['meta']})
     assert projected['totals']['harness_tokens']['recorded_sum'] is None
@@ -158,7 +158,7 @@ def test_export_remains_conservative_for_positive_shared_reference(runs):
 
 
 def test_legacy_shared_cost_has_no_invented_current_zero():
-    from tools.run_summary import cost_totals
+    from tools.analysis.run_summary import cost_totals
     point = {'round': 0, 'shared_from': {'run_id': 'legacy'},
              'cost': {'harness_model_calls': 0, 'harness_tokens': 0}, 'cumulative': {'generation_tokens': 0}}
     notes = []

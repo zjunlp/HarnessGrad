@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data.scaffolds import custom_split, registry
-from harnessgrad import splits
-from harnessgrad.experiments import to_argv
+from harnessgrad.experiment import splits
+from harnessgrad.experiment.config import to_argv
 
 
 @pytest.fixture
@@ -225,7 +225,7 @@ def test_real_sandbox_train_eval_reuse_manifest_and_hide_eval_from_method(tmp_pa
     assert set(exam['per_task']) == set(value['split']['eval'])
     assert exam['score_kind'] == 'exam'
     assert exam['evaluated_from']['harness_sha'] == points[-1]['identity']['harness_sha']
-    from tools.run_summary import summarise, render_markdown
+    from tools.analysis.run_summary import summarise, render_markdown
     assert 'Custom held-out partition' in render_markdown(summarise(tmp_path / 'runs/custom-exam'))
     # The same checkpoint cannot later call the original (overlapping) demo exam
     # a held-out report after custom study has consumed arbitrary demo tasks.

@@ -257,7 +257,7 @@ def test_real_probe_timeout_refuses_admission_and_closes_snapshots(captured_runt
 
 def test_different_build_kernel_executes_sealed_authored_scorer(captured_runtime, tmp_path):
     from data.scaffolds.scorer_input import bind
-    from harnessgrad.records import _save_verdicts
+    from harnessgrad.experiment.records import _save_verdicts
 
     binding, manifest = captured_runtime
     database = tmp_path / "source.sqlite"

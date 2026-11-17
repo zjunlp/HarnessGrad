@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad.budget_dispatch import BudgetExceeded, ProviderExecutionUnknown
-from harnessgrad.budget_integration import (
+from harnessgrad.execution.budget_dispatch import BudgetExceeded, ProviderExecutionUnknown
+from harnessgrad.execution.budget_integration import (
     BudgetConfigurationError,
     ProviderBoundary,
     bind_budget,

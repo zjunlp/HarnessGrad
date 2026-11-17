@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data.scaffolds import registry  # noqa: E402
-import tools.split_inventory as inventory  # noqa: E402
+import tools.dataset_maintenance.split_inventory as inventory  # noqa: E402
 
 DOC_PATH = ROOT / "docs" / "dataset-splits.md"
 
@@ -387,3 +387,81 @@ def test_the_split_inventory_matches_every_adapter():
     proc = subprocess.run([sys.executable, "tools/split_inventory.py", "--check"],
                           cwd=ROOT, capture_output=True, text=True, timeout=600)
     assert proc.returncode == 0, proc.stderr or proc.stdout
+
+
+def test_static_lazy_source_requires_an_unambiguous_literal_branch(tmp_path, monkeypatch):
+    """Unavailable adapters can declare a fixed split without executing their source."""
+    adapters = tmp_path / 'data/datasets'
+    adapters.mkdir(parents=True)
+    source = adapters / 'synthetic.py'
+    monkeypatch.setattr(inventory, 'ROOT', tmp_path)
+    source.write_text('''\nOFFICIAL_EVAL = None\ndef __getattr__(name):\n    if name == "OTHER":\n        raise RuntimeError("must not execute")\n    if name == "SPLIT_SOURCE":\n        return "none"\n    raise AttributeError(name)\n''')
+    module = inventory._source_adapter('synthetic', error=RuntimeError('unavailable'))
+    assert module.SPLIT_SOURCE == 'none'
+    assert inventory._state(module, module.SPLIT_SOURCE) == 'none'
+    source.write_text('''\ndef __getattr__(name):\n    if name.startswith("SPLIT"):\n        return "different"\n    if name == "SPLIT_SOURCE":\n        return "none"\n    raise AttributeError(name)\n''')
+    module = inventory._source_adapter('synthetic', error=RuntimeError('unavailable'))
+    assert not hasattr(module, 'SPLIT_SOURCE')
+    assert inventory._state(module, inventory._MISSING) == 'undeclared'
+
+
+@pytest.mark.parametrize('source', [
+    'def __getattr__(name):\n    if name == "SPLIT_SOURCE":\n        return compute()\n',
+    '@wrap\ndef __getattr__(name):\n    if name == "SPLIT_SOURCE":\n        return "none"\n',
+    'def __getattr__(name):\n    if name == "SPLIT_SOURCE":\n        return "none"\n__getattr__ = replacement\n',
+])
+def test_ambiguous_lazy_source_stays_unknown(source):
+    import ast
+    assert inventory._literal_lazy_attribute(ast.parse(source), 'SPLIT_SOURCE') is inventory._MISSING
+
+
+@pytest.mark.parametrize('declaration', [
+    'SPLIT_SOURCE = compute()',
+    'SPLIT_SOURCE: str = compute()',
+    'if condition:\n    SPLIT_SOURCE = compute()',
+    'from elsewhere import SPLIT_SOURCE',
+])
+def test_static_lazy_source_does_not_override_explicit_dynamic_binding(tmp_path, monkeypatch, declaration):
+    adapters = tmp_path / 'data/datasets'
+    adapters.mkdir(parents=True)
+    (adapters / 'synthetic.py').write_text(declaration + '''\n
+def __getattr__(name):
+    if name == 'SPLIT_SOURCE':
+        return 'none'
+    raise AttributeError(name)
+''')
+    monkeypatch.setattr(inventory, 'ROOT', tmp_path)
+    module = inventory._source_adapter('synthetic', error=RuntimeError('unavailable'))
+    assert not hasattr(module, 'SPLIT_SOURCE')
+    assert inventory._state(module, inventory._MISSING) == 'undeclared'
+
+
+@pytest.mark.parametrize('override', [
+    'SPLIT_SOURCE = compute()',
+    'SPLIT_SOURCE: str = compute()',
+    'if condition:\n    SPLIT_SOURCE = compute()',
+    'from elsewhere import SPLIT_SOURCE',
+])
+def test_static_literal_source_is_unknown_when_rebound(tmp_path, monkeypatch, override):
+    adapters = tmp_path / 'data/datasets'
+    adapters.mkdir(parents=True)
+    (adapters / 'synthetic.py').write_text("SPLIT_SOURCE = 'none'\n" + override + '\n')
+    monkeypatch.setattr(inventory, 'ROOT', tmp_path)
+    module = inventory._source_adapter('synthetic', error=RuntimeError('unavailable'))
+    assert not hasattr(module, 'SPLIT_SOURCE')
+    assert inventory._state(module, inventory._MISSING) == 'undeclared'
+
+
+@pytest.mark.parametrize('declaration', [
+    'from elsewhere import __getattr__',
+    '__getattr__ = choose_getter()',
+    'if condition:\n    def __getattr__(name):\n        return compute(name)',
+])
+def test_unknown_lazy_loader_does_not_imply_no_split(tmp_path, monkeypatch, declaration):
+    adapters = tmp_path / 'data/datasets'
+    adapters.mkdir(parents=True)
+    (adapters / 'synthetic.py').write_text(declaration + '\n')
+    monkeypatch.setattr(inventory, 'ROOT', tmp_path)
+    module = inventory._source_adapter('synthetic', error=RuntimeError('unavailable'))
+    assert not hasattr(module, 'SPLIT_SOURCE')
+    assert inventory._state(module, inventory._MISSING) == 'undeclared'

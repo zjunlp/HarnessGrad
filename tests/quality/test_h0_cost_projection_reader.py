@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from tools.run_summary import _shared_h0_current_cost, cost_totals, duration_seconds
+from tools.analysis.run_summary import _shared_h0_current_cost, cost_totals, duration_seconds
 
 
 def point():

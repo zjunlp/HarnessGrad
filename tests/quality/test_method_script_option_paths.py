@@ -5,7 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import methods, readiness
+from harnessgrad.orchestration import readiness
+from harnessgrad.execution import method_runner as methods
 
 ROOT = Path(__file__).resolve().parents[2]
 WRAPPER = ROOT / 'methods/lightrsi/run.py'

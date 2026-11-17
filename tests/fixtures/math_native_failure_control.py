@@ -13,7 +13,7 @@ def main(repo, store, output):
     from data.scaffolds.native_qa import CATALOG, Dataset
     from data.scaffolds.native_qa.prepare import prepare
     from eval.verification.verifier import _verify
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     runtime = dataset_runtime.resolve_execution('math')
     rows = []
     for name in ('math', 'math500'):

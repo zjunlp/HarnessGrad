@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from harnessgrad import slots
+from harnessgrad.execution import slots
 
 
 def _fake_host(monkeypatch, *, load1: float, free_fraction: float, cpus: int = 100):

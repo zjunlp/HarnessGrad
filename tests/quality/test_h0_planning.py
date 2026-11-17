@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import config, verification_context
+from harnessgrad import config
+from harnessgrad.provenance import verification_context
 from harnessgrad.orchestration import h0
 
 

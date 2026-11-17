@@ -17,8 +17,9 @@ import pytest
 
 from eval.containers import sandbox
 from eval.run import runner
-from harnessgrad import candidate_runtime, config
-from harnessgrad import python_harness_runtime as runtime
+from harnessgrad.execution import candidate_runtime
+from harnessgrad import config
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
 from test_native_model_route import upstream
 
 
@@ -74,7 +75,7 @@ def artifact_storage():
     try:
         yield root
     finally:
-        from harnessgrad.python_artifacts import remove_instance
+        from harnessgrad.execution.python_runtime.python_artifacts import remove_instance
         remove_instance(root)
 
 
@@ -152,7 +153,7 @@ import platform_only_actor_probe
 root,repo,binding=sys.argv[1:]
 sys.path.insert(0,root)
 from eval.run import runner
-from harnessgrad import candidate_runtime
+from harnessgrad.execution import candidate_runtime
 def no_per_task_build(*args,**kwargs):
     raise AssertionError('per-task build')
 candidate_runtime.prepare=no_per_task_build
@@ -288,7 +289,7 @@ def test_runtime_under_private_tmp_restores_only_its_exact_readonly_paths(actor,
         assert row['untracked_paths']=={str(marker):False}
         assert result['verdict']['passed']
     finally:
-        from harnessgrad.python_artifacts import remove_instance
+        from harnessgrad.execution.python_runtime.python_artifacts import remove_instance
         remove_instance(storage)
 
 
@@ -305,7 +306,7 @@ Path('verifier/reward.txt').write_text('1' if not facts['actor_importable'] and 
         'inputs':[{'path':'check.py','content':check}],
         'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
         'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
-    result=runner.run_one(actor.repo,{'task_id':'scorer-boundary'},verifier=verifier,
+    result=runner.run_one(actor.repo,{'task_id':'scorer-boundary','goal':'Produce the authored control answer.'},verifier=verifier,
         env={'kind':'files','network':'none'},harness_runtime_identity=actor.binding)
     assert result['verdict'].get('score')==1,result
     facts=result['verdict']['evidence']
@@ -408,7 +409,7 @@ def test_cache_requires_its_binding_and_changed_source_gets_a_fresh_measurement(
     calls=Mock(wraps=original);monkeypatch.setattr(runner,'run_one',calls)
     cache={}
     def evaluate(binding):
-        return runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,
+        return runner._evaluate(actor.repo,[{'task_id':'control','goal':'Produce the authored control answer.'}],{'control':'ok'},cache=cache,
             harness_sha='same-source',envs={'control':{'kind':'files','network':'none'}},
             harness_runtime_identity=binding)
     assert not evaluate(actor.binding)['invalid']
@@ -429,13 +430,14 @@ def test_cache_requires_its_binding_and_changed_source_gets_a_fresh_measurement(
 def test_corrupt_runtime_cannot_bypass_admission_through_cache(actor, monkeypatch):
     cache={}
     kwargs={'envs':{'control':{'kind':'files','network':'none'}},'harness_runtime_identity':actor.binding}
-    runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,**kwargs)
+    task={'task_id':'control','goal':'Produce the authored control answer.'}
+    runner._evaluate(actor.repo,[task],{'control':'ok'},cache=cache,**kwargs)
     cfg=Path(actor.binding['artifact']['path'])/'pyvenv.cfg'
     original,mode=cfg.read_bytes(),stat.S_IMODE(cfg.stat().st_mode)
     try:
         cfg.chmod(mode|stat.S_IWUSR);cfg.write_bytes(original+b'\n# changed artifact\n');cfg.chmod(mode)
         monkeypatch.setattr(runner,'run_one',Mock(side_effect=AssertionError('corrupt runtime launched')))
-        result=runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,**kwargs)
+        result=runner._evaluate(actor.repo,[task],{'control':'ok'},cache=cache,**kwargs)
         assert result['invalid'] and not result['per_task'] and not result['cached_tasks']
     finally:
         cfg.chmod(mode|stat.S_IWUSR);cfg.write_bytes(original);cfg.chmod(mode)

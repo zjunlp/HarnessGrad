@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from harnessgrad import evidence
-from harnessgrad.evidence_export import build_export
-from harnessgrad.receipt_verification import ReceiptStore, canonical
+from harnessgrad.evidence_reports import evidence
+from harnessgrad.evidence_reports.evidence_export import build_export
+from harnessgrad.evidence_reports.receipt_verification import ReceiptStore, canonical
 from test_evidence_export import author, save_run
 
 

@@ -73,13 +73,8 @@ def test_noop_expected_declaration(path, declaration, gold, expected, tmp_path, 
         monkeypatch.setattr(control, "run_check", lambda *args: (measured[0], "{}"))
         run = control.run_local
     else:
-        # Patch `run_one` on the module object instead of installing a fake module in
-        # `sys.modules`. `control.run_platform` does `from <module> import run_one`
-        # inside the call, so an attribute patch is seen either way -- and it keeps
-        # working when the canonical location moves (`eval.runner` is a documented
-        # compatibility alias for `eval.run.runner`), where an entry under the old
-        # name would simply be ignored and the real platform would be invoked.
-        import eval.runner as runner_mod
+        # The control imports run_one inside the call, so patch its canonical owner.
+        import eval.run.runner as runner_mod
         monkeypatch.setattr(
             runner_mod, "run_one",
             lambda **kwargs: {"verdict": {"score": measured[0]}})

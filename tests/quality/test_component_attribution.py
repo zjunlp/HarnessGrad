@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import component_attribution as ca
+from tools.analysis import component_attribution as ca
 
 _ABSENT = object()
 

@@ -10,10 +10,17 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_opro_batch_feedback_and_final_deployment_use_platform_scores(tmp_path):
+@pytest.mark.parametrize('method,config,expected_scores,expected_calls', [
+    ('opro', {'instruction_path': 'prompt.md', 'num_candidates': 2}, [0.0, 1.0, 0.0, 1.0], 2),
+    ('gepa', {'instruction_path': 'prompt.md', 'reflection_minibatch_size': 1}, [0.0, 1.0, 1.0, 1.0], 1),
+])
+def test_method_feedback_and_final_deployment_use_platform_scores(
+        tmp_path, method, config, expected_scores, expected_calls):
     calls = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -92,9 +99,7 @@ answer=Path(__file__).with_name('prompt.md').read_text()
         HG_METHOD_BASE_URL=f"http://127.0.0.1:{server.server_port}/v1",
         HG_METHOD_API_KEY="fixture-local-key",
         HG_METHOD_MODEL="method-fixture",
-        HG_POLICY_CONFIG=json.dumps(
-            {"instruction_path": "prompt.md", "num_candidates": 2}
-        ),
+        HG_POLICY_CONFIG=json.dumps(config),
         HG_SLOT_GUARD_TIMEOUT="10",
         HG_SLOT_MIN_FREE_GB="1",
     )
@@ -122,7 +127,7 @@ answer=Path(__file__).with_name('prompt.md').read_text()
                 "--improver",
                 "none",
                 "--run-id",
-                "native-opro-fixture",
+                "native-method-fixture",
                 "--runs-root",
                 str(tmp_path / "runs"),
                 "--work-root",
@@ -132,7 +137,7 @@ answer=Path(__file__).with_name('prompt.md').read_text()
                 "--gpu-budget-dir",
                 str(tmp_path / "budget"),
                 "--method-entrypoint",
-                f'{sys.executable} {ROOT / "methods/opro/run.py"}',
+                f'{sys.executable} {ROOT / "methods" / method / "run.py"}',
             ],
             cwd=ROOT,
             env=env,
@@ -142,14 +147,14 @@ answer=Path(__file__).with_name('prompt.md').read_text()
             timeout=120,
         )
         assert proc.returncode == 0, proc.stdout + "\n" + proc.stderr
-        run = tmp_path / "runs/native-opro-fixture"
+        run = tmp_path / "runs/native-method-fixture"
         points = [
             json.loads(line) for line in (run / "curve.jsonl").read_text().splitlines()
         ]
-        assert [p["score"] for p in points] == [0.0, 1.0, 0.0, 1.0], (
+        assert [p["score"] for p in points] == expected_scores, (
             proc.stdout + "\n" + proc.stderr + "\n" + json.dumps(points)
         )
-        assert len(calls) == 2
+        assert len(calls) == expected_calls
         assert (
             points[-1]["identity"]["harness_sha"]
             == points[1]["identity"]["harness_sha"]

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from eval.run import repeated_trials, runner
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 from harnessgrad.loops import eval_side
 
 

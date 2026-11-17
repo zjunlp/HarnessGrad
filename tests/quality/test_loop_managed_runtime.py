@@ -21,7 +21,9 @@ from loop_runtime_fixtures import prepared_loop_runtime
 from eval.containers import container
 from eval.run import runner
 from eval.service import container_observation
-from harnessgrad import candidate_runtime, config, python_exec_runtime as runtime
+from harnessgrad.execution import candidate_runtime
+from harnessgrad import config
+from harnessgrad.execution.python_runtime import python_exec_runtime as runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT/'base_harness/loop'
@@ -224,7 +226,7 @@ from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 for name in ('pip','openai','httpx','pyarrow'):
  assert importlib.util.find_spec(name) is None,name
-from harnessgrad import candidate_runtime as r
+from harnessgrad.execution import candidate_runtime as r
 value=r.prepare(Path(sys.argv[2]))
 assert value['cache_hit'] and not value['installed']
 assert r.admit(Path(sys.argv[2]),value['identity'])==value['identity']

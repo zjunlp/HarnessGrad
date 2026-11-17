@@ -187,3 +187,30 @@ def test_disabled_scenario_resume_never_reads_run_fields():
     import driver
     # Legacy callers may ask the disabled gate without constructing run options.
     driver._check_scenario_resume(SimpleNamespace(resume=False), {'name': 'ignored'})
+
+
+def test_driver_preflight_uses_current_harness_and_pool_callbacks(tmp_path, monkeypatch, capsys):
+    import driver
+
+    selected = tmp_path / 'selected-harness'
+    observed = []
+    monkeypatch.setattr(driver, 'load_env', lambda path: observed.append(('env', path)))
+    monkeypatch.setattr(driver, '_harness_by_name', lambda name: selected if name == 'fixture' else None)
+    monkeypatch.setattr(driver, '_scenario_pool_env', lambda dataset, pool: {'HG_PREFLIGHT_FIXTURE': pool})
+    monkeypatch.delenv('HG_PREFLIGHT_FIXTURE', raising=False)
+    monkeypatch.setattr(driver.platform_config, 'load', lambda: object())
+    monkeypatch.setattr(driver.platform_config, 'dump', lambda *_args, **_kwargs: {'config': 'fixture'})
+    monkeypatch.setattr(driver.run_namespace, 'fingerprint', lambda *_args: 'fingerprint')
+    monkeypatch.setattr(driver.readiness, 'plan_checks', lambda args: (
+        observed.append(('check', args.harness_dir, args.harness_problem)) or
+        [SimpleNamespace(name='fixture', required=True, ok=True)]))
+    monkeypatch.setattr(driver.readiness, 'render', lambda _checks: 'fixture checks')
+    args = SimpleNamespace(_namespace_args=['fixture'], sampling='all', rounds=None,
+                           harness_path=None, side='train', from_run=None, harness='fixture',
+                           pool='study', dataset='demo', check_only=True, prepare_only=False)
+    assert driver._readiness(args) == 0
+    assert args.rounds == 3 and args._namespace_config == 'fingerprint'
+    assert ('check', str(selected), '') in observed
+    assert __import__('os').environ['HG_PREFLIGHT_FIXTURE'] == 'study'
+    assert 'ready: every required check passed' in capsys.readouterr().out
+    assert not selected.exists()

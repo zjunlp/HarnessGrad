@@ -4,8 +4,9 @@ import importlib.util
 import json
 from pathlib import Path
 
-from harnessgrad import evidence_export, evidence_stats, verification_context
-from harnessgrad.receipt_verification import canonical, digest, measurement_problems
+from harnessgrad.evidence_reports import evidence_export, evidence_stats
+from harnessgrad.provenance import verification_context
+from harnessgrad.evidence_reports.receipt_verification import canonical, digest, measurement_problems
 
 spec = importlib.util.spec_from_file_location('context_export_fixtures',
                                              Path(__file__).with_name('test_evidence_export.py'))

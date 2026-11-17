@@ -21,8 +21,8 @@ import pytest
 from eval.ckpt.source_tree import copy_harness, has_bun_runtime, has_python_runtime, runtime_spec
 from eval.ckpt.git_state import init_repo, stage_workspace
 from eval.containers import bun_runtime
-from harnessgrad import python_harness_runtime as runtime
-from harnessgrad.python_artifacts import locked
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
+from harnessgrad.execution.python_runtime.python_artifacts import locked
 from tools.validate_harness import check, source_identity
 
 ROOT = Path(__file__).resolve().parents[2]

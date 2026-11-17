@@ -208,3 +208,110 @@ def test_the_cache_can_be_switched_off(tmp_path, monkeypatch):
     before = integrity.cache_stats()["miss"]
     integrity.snapshot(tmp_path)
     assert integrity.cache_stats()["miss"] > before, "HG_INTEGRITY_NO_CACHE 没有绕开缓存"
+
+
+def test_organized_implementations_are_hashed_not_just_compatibility_aliases(tmp_path):
+    """A moved implementation must remain protected by platform integrity snapshots."""
+    import hashlib
+
+    paths = (
+        'harnessgrad/core/components.py',
+        'harnessgrad/core/code_metrics.py',
+        'harnessgrad/core/readiness.py',
+        'harnessgrad/datasets/provisioning.py',
+        'harnessgrad/datasets/task_python.py',
+        'harnessgrad/core/snapshot.py',
+        'harnessgrad/core/method_transport.py',
+        'harnessgrad/improvement/contracts.py',
+        'harnessgrad/improvement/stages.py',
+        'harnessgrad/experiment/config.py',
+        'harnessgrad/experiment/policies.py',
+        'harnessgrad/experiment/completion.py',
+        'harnessgrad/orchestration/readiness.py',
+        'harnessgrad/orchestration/environments.py',
+        'harnessgrad/experiment/records.py',
+        'harnessgrad/experiment/channel.py',
+        'harnessgrad/experiment/method_attempts.py',
+        'harnessgrad/experiment/splits.py',
+        'harnessgrad/provenance/identity.py',
+        'harnessgrad/provenance/source_declarations.py',
+        'harnessgrad/provenance/scoring_identity.py',
+        'harnessgrad/provenance/verification_context.py',
+        'harnessgrad/execution/slots.py',
+        'harnessgrad/execution/candidate_runtime.py',
+        'harnessgrad/datasets/provider.py',
+        'harnessgrad/datasets/runtime.py',
+        'harnessgrad/datasets/runtime_identity.py',
+        'harnessgrad/execution/budget_dispatch.py',
+        'harnessgrad/execution/tool_call_probe.py',
+        'harnessgrad/execution/harness_validation.py',
+        'harnessgrad/execution/method_runner.py',
+        'harnessgrad/improvers/resolver.py',
+        'eval/service/web_gateway.py',
+        'data/scaffolds/native_research/conversion.py',
+        'harnessgrad/execution/python_runtime/python_harness_runtime.py',
+        'harnessgrad/execution/python_runtime/python_exec_runtime.py',
+        'harnessgrad/evidence_reports/evidence.py',
+        'harnessgrad/evidence_reports/run_summary.py',
+        'harnessgrad/evidence_reports/evidence_export.py',
+        'methods/policy_ports/skillopt_fast.py',
+        'methods/policy_ports/ace_proposal.py',
+        'methods/policy_ports/evo_harness_proposal.py',
+        'tools/registry_ops/check_dataset_blockers.py',
+        'tools/registry_ops/apply_blocker_proposal.py',
+        'tools/registry_ops/merge_blocker_registry.py',
+        'tools/diagnostics/check_first_use.py',
+        'tools/diagnostics/probe_tool_calls.py',
+        'tools/validation/check_trace_contract.py',
+        'tools/validation/validate_run.py',
+        'tools/analysis/run_summary.py',
+        'tools/analysis/component_attribution.py',
+        'tools/analysis/report_appworld.py',
+        'tools/analysis/report_livemathbench.py',
+        'tools/analysis/tau3_report.py',
+        'tools/visualization/render_trends.py',
+        'tools/harness_setup/configure_harness.py',
+        'tools/_cli_compat.py',
+        'tools/testing/run_tests.py',
+        'tools/testing/run_selected.py',
+        'tools/testing/ci_select.py',
+        'tools/testing/quality_sweep.py',
+        'harnessgrad/components.py',  # refusal guard against stale editable installs
+        'harnessgrad/dataset_provider.py',  # refusal guard against stale editable installs
+        'harnessgrad/dataset_runtime.py',  # refusal guard against stale editable installs
+        'harnessgrad/dataset_runtime_identity.py',  # refusal guard against stale editable installs
+        'harnessgrad/experiments.py',  # refusal guard against stale editable installs
+        'harnessgrad/completion.py',  # refusal guard against stale editable installs
+        'harnessgrad/splits.py',  # refusal guard against stale editable installs
+        'harnessgrad/identity.py',  # refusal guard against stale editable installs
+        'harnessgrad/scoring_identity.py',  # refusal guard against stale editable installs
+        'harnessgrad/verification_context.py',  # refusal guard against stale editable installs
+        'harnessgrad/slots.py',  # refusal guard against stale editable installs
+        'harnessgrad/candidate_runtime.py',  # refusal guard against stale editable installs
+        'harnessgrad/budget_dispatch.py',  # refusal guard against stale editable installs
+        'harnessgrad/python_harness_runtime.py',  # refusal guard against stale editable installs
+        'harnessgrad/python_exec_runtime.py',  # refusal guard against stale editable installs
+        'harnessgrad/evidence.py',  # refusal guard against stale editable installs
+        'harnessgrad/evidence_export.py',  # refusal guard against stale editable installs
+        'tools/configure_harness.py',
+    )
+    # Check the actual checkout, not just the synthetic directory topology.
+    real_snapshot = snapshot(PLATFORM_ROOT)
+    for relative in paths:
+        source = PLATFORM_ROOT / relative
+        assert source.is_file() and relative in real_snapshot
+        assert real_snapshot[relative] == hashlib.sha256(source.read_bytes()).hexdigest()
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+
+    baseline = snapshot(tmp_path)
+    baseline_sha = integrity.content_sha(tmp_path)
+    for relative in paths:
+        target = tmp_path / relative
+        original = target.read_bytes()
+        target.write_bytes(original + b'\n# synthetic integrity change\n')
+        assert integrity.diff(baseline, snapshot(tmp_path)) == {
+            'added': [], 'removed': [], 'modified': [relative]}
+        assert integrity.content_sha(tmp_path) != baseline_sha
+        target.write_bytes(original)

@@ -7,10 +7,14 @@ import sys
 import pytest
 
 from eval.ckpt.source_tree import runtime_spec
-from harnessgrad import candidate_runtime, python_exec_runtime as runtime
-from harnessgrad import python_harness_runtime as native
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_exec_runtime as runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime as native
 from test_python_harness_store import candidate, wheel  # noqa: F401
 from test_loop_managed_runtime import loop_store, loop_images  # noqa: F401
+from loop_runtime_fixtures import prepared_loop_runtime  # noqa: F401
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
@@ -158,7 +162,7 @@ def test_exact_image_binding_survives_new_publication_and_refuses_corrupt_origin
 
 
 def test_check_only_does_not_create_a_store_for_an_unprepared_image(declared,loop_images,tmp_path):
-    command=[sys.executable,'-B',str(Path(runtime.__file__).resolve().parents[1]/'tools/configure_harness.py'),
+    command=[sys.executable,'-B',str(ROOT/'tools/configure_harness.py'),
         '--harness',str(declared),'--image',loop_images['python'],'--runtime-root',str(tmp_path/'unused'),
         '--list','--json']
     proc=subprocess.run(command,capture_output=True,text=True,timeout=120)

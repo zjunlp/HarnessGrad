@@ -3,7 +3,7 @@ from copy import deepcopy
 import json
 
 from eval.run import runner
-from harnessgrad.records import _cost_of
+from harnessgrad.experiment.records import _cost_of
 
 
 def trace(tokens, output=0):

@@ -22,8 +22,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import channel as channel_mod                # noqa: E402
-from harnessgrad.channel import _stage_for_method              # noqa: E402
+from harnessgrad.experiment import channel as channel_mod                # noqa: E402
+from harnessgrad.experiment.channel import _stage_for_method              # noqa: E402
 from eval.ckpt.git_state import (commit_state, init_repo, materialize,  # noqa: E402
                             reset_hard)
 

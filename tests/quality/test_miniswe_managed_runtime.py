@@ -17,8 +17,10 @@ import pytest
 from eval.containers import container
 from eval.run import runner
 from eval.service import container_observation
-from harnessgrad import candidate_runtime, config, python_exec_runtime as runtime
-from harnessgrad import python_harness_runtime as native
+from harnessgrad.execution import candidate_runtime
+from harnessgrad import config
+from harnessgrad.execution.python_runtime import python_exec_runtime as runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime as native
 
 ROOT=Path(__file__).resolve().parents[2]
 HARNESS=ROOT/'base_harness/miniswe'
@@ -297,7 +299,7 @@ def test_empty_platform_can_check_prepared_miniswe_without_pip_or_sdks(managed_m
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 for name in ('pip','minisweagent','litellm','openai','pyarrow'):assert importlib.util.find_spec(name) is None,name
-from harnessgrad import candidate_runtime
+from harnessgrad.execution import candidate_runtime
 r=candidate_runtime.prepare(Path(sys.argv[2]))
 assert r['cache_hit'] and not r['installed']
 assert candidate_runtime.admit(Path(sys.argv[2]),r['identity'])==r['identity']

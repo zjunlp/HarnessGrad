@@ -1,4 +1,4 @@
-"""全局测量预算（`harnessgrad/slots.py`）：跨进程容量、崩溃安全、向后兼容。
+"""全局测量预算（`harnessgrad/execution/slots.py`）：跨进程容量、崩溃安全、向后兼容。
 
 这一层存在的理由是一条实测：九个方法各自 `--jobs 6` 时，**每轮九个一起进入 improver**，
 GPU 在整段 improver 时间里空转（模拟：9 个同时跑 3.36 h，其中 100 min 空转）。把"每次运行
@@ -21,12 +21,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import slots                                           # noqa: E402
+from harnessgrad.execution import slots                                           # noqa: E402
 
 CHILD = textwrap.dedent('''
     import os, sys, time
     sys.path.insert(0, {root!r})
-    from harnessgrad import slots
+    from harnessgrad.execution import slots
     slots.configure({capacity}, {directory!r})
 
     def mark(kind):
@@ -276,7 +276,7 @@ def test_the_pool_never_exceeds_the_budget(tmp_path):
 
 def test_a_point_records_the_budget_it_was_measured_under(tmp_path):
     """曲线点必须能说出它是在多大的全局容量下产生的。"""
-    from harnessgrad.identity import _identity
+    from harnessgrad.provenance.identity import _identity
     man = {"name": "loop", "version": "0.2.0",
            "improve_entrypoint": None, "accept_entrypoint": None}
     with_budget = _identity(man, "abc", "A", jobs=6, trials=1, gpu_budget=40)

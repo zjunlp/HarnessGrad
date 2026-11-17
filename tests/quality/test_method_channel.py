@@ -38,9 +38,9 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "methods"))
 
 import editor                                                    # noqa: E402
-from harnessgrad.channel import (_for_method,                    # noqa: E402
+from harnessgrad.experiment.channel import (_for_method,                    # noqa: E402
                                  _stage_task_context)
-from harnessgrad.records import _curve_point                     # noqa: E402
+from harnessgrad.experiment.records import _curve_point                     # noqa: E402
 
 TRACE = "\n".join([
     json.dumps({"step": 0, "reply": json.dumps(
@@ -329,7 +329,7 @@ def test_the_task_page_carries_the_harness_s_own_crash_reason(tmp_path):
     是两件事:前者说"它死了",后者说是网关断了。少了后者,改进器会把一次连接抖动
     读成"模型不会写代码",然后去改完全不相干的地方。
     """
-    from harnessgrad.channel import _stage_task_context
+    from harnessgrad.experiment.channel import _stage_task_context
     frames = "  File \"agent.py\", line 180, in _call_openai\n" * 200
     result = {
         "per_task": {"t01": 0.0},
@@ -364,7 +364,7 @@ def test_the_channel_carries_every_trial_and_an_index_beside_it(tmp_path):
     而且 `history/traces/round-<n>/` 因为 `glob("*.jsonl")` 一直带着它们,于是过去完整、
     现在残缺,更糟。
     """
-    from harnessgrad.channel import _stage_for_method
+    from harnessgrad.experiment.channel import _stage_for_method
     work = tmp_path / "work"
     work.mkdir()
     result = {
@@ -394,7 +394,7 @@ def test_every_past_round_is_staged_not_just_twelve(tmp_path):
     正是在早期决定自己要变成什么。隐藏历史没有科学理由,只有成本,而成本应该由想要长跑道
     的人承担。`HG_METHOD_HISTORY_ROUNDS` 保留了"确实需要时设一个界"的能力。
     """
-    from harnessgrad.channel import _stage_for_method
+    from harnessgrad.experiment.channel import _stage_for_method
     work = tmp_path / "work"
     work.mkdir()
     history = [{"round": i, "score": 0.1 * i, "identity": {"harness_sha": f"{i:040d}"}}
@@ -412,7 +412,7 @@ def test_every_past_round_is_staged_not_just_twelve(tmp_path):
 
 def test_the_round_summary_says_how_much_history_it_handed_over(tmp_path):
     """记录里要说明"这一轮给了方法多少历史" —— 它以前是个没写下来的 12。"""
-    from harnessgrad import channel
+    from harnessgrad.experiment import channel
     work = tmp_path / "work"
     work.mkdir()
     _stage = channel._stage_for_method
@@ -438,7 +438,7 @@ def test_the_archived_snapshot_shares_history_instead_of_duplicating_it(tmp_path
     正好把它抓出来。
     """
     import os
-    from harnessgrad.channel import _snapshot_channel
+    from harnessgrad.experiment.channel import _snapshot_channel
 
     run_dir = tmp_path / "runs" / "probe"
     run_dir.mkdir(parents=True)

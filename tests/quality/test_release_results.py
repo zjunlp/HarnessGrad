@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-from tools import results_matrix, run_summary
+from tools.analysis import results_matrix, run_summary
 
 
 def record(root, name, status):

@@ -2,7 +2,7 @@
 import copy
 import json
 
-from harnessgrad import evidence_stats as stats
+from harnessgrad.evidence_reports import evidence_stats as stats
 from test_evidence_runtime_integration import state
 
 
@@ -43,7 +43,7 @@ def test_external_change_and_missing_evidence_block_comparison(monkeypatch):
 
 
 def test_actual_export_preserves_safe_external_identity_and_self_verifies(tmp_path):
-    from harnessgrad.evidence_export import build_export, check_export
+    from harnessgrad.evidence_reports.evidence_export import build_export, check_export
     from test_evidence_export import save_run, author
     for name, number, tree in [('base', 0, 'a'), ('sub', 1, 'b')]:
         save_run(tmp_path, name, number, tree=tree)

@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import config, verification_context, records
+from harnessgrad import config
+from harnessgrad.experiment import records
+from harnessgrad.provenance import verification_context
 from harnessgrad.config.areas import RunConfig
 from harnessgrad.orchestration import run_metadata as meta
 

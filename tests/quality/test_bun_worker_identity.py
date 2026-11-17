@@ -187,7 +187,7 @@ def test_worker_runtime_receipt_survives_progress_and_resume(group, tmp_path, mo
     actor(monkeypatch)
     result = run_group(group, tmp_path)
     assert result["verdict"]["score"] == 1
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     context = verification_context.capture([{'task_id': 'pair'}], {},
         setups={'pair': group[2]}, verifiers={'pair': group[3]})
     _write_progress(tmp_path, 0, "pair", [result], None, verification_context=context)

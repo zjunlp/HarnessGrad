@@ -7,9 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import dataset_runtime_identity as dataset, evidence_stats, evidence_export, scoring_identity
-from harnessgrad.python_artifacts import canonical
-from harnessgrad.receipt_verification import ReceiptStore
+from harnessgrad.datasets import runtime_identity as dataset
+from harnessgrad.evidence_reports import evidence_stats, evidence_export
+from harnessgrad.provenance import scoring_identity
+from harnessgrad.execution.python_runtime.python_artifacts import canonical
+from harnessgrad.evidence_reports.receipt_verification import ReceiptStore
 from harnessgrad.store.schema import check_run_meta
 
 
@@ -31,7 +33,7 @@ def actor(source, artifact):
 
 
 def state():
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     run = {'run_id': 'one', 'meta': {'dataset': 'synthetic', 'platform': {'content_sha': 'p'},
         'config': {'agent': {}, 'environment': {}, 'judge': {}, 'sandbox': {}}}}
     point = {'run_id': 'one', 'round': 0, 'identity': {'agent_model': 'm', 'agent_backend': 'b',

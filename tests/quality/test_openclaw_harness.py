@@ -69,7 +69,7 @@ def test_native_cli_mock_writes_answer_and_trace(tmp_path, prepared_harness):
     assert rows[-2]["usage"]["calls"] >= 2
     assert rows[-1]["submitted"] is True
     assert rows[-1]["answer_source"] == "artifact"
-    check = subprocess.run([sys.executable, str(ROOT / "tools/check_trace_contract.py"),
+    check = subprocess.run([sys.executable, str(ROOT / "tools/validation/check_trace_contract.py"),
                             str(tmp_path / "trace.jsonl")], capture_output=True, text=True)
     assert check.returncode == 0, check.stdout + check.stderr
     assert "OK" in check.stdout

@@ -26,7 +26,7 @@ from data.scaffolds.native_research import wide_runtime
 from harnessgrad.config.areas import ConfigMissing
 
 def require_managed_runtime():
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     try:
         return dataset_runtime.resolve_execution('widesearch')
     except dataset_runtime.DatasetRuntimeUnavailable as exc:
@@ -39,7 +39,7 @@ def needs_native(function):
     """Run native controls in the selected artifact, regardless of host packages."""
     @functools.wraps(function)
     def managed(*args, **kwargs):
-        from harnessgrad import dataset_runtime
+        from harnessgrad.datasets import runtime as dataset_runtime
         runtime = require_managed_runtime()
         arguments = inspect.signature(function).bind(*args, **kwargs).arguments
         values = {key: str(value) if isinstance(value, Path) else value

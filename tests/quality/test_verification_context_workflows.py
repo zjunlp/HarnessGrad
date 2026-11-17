@@ -2,8 +2,8 @@
 import pytest
 
 import driver
-from harnessgrad import verification_context as context
-from harnessgrad.channel import _for_method
+from harnessgrad.provenance import verification_context as context
+from harnessgrad.experiment.channel import _for_method
 from harnessgrad.loops.mode_a import _identical_prior, _matching_verification_context
 
 
@@ -71,7 +71,7 @@ def test_h0_rejects_missing_or_changed_context(tmp_path):
 
 def test_method_round_and_history_omit_context(tmp_path):
     import json
-    from harnessgrad.channel import _stage_for_method
+    from harnessgrad.experiment.channel import _stage_for_method
     work = tmp_path / 'work'; work.mkdir()
     private = ctx(t1='a')
     point = {'round': 1, 'score_kind': 'training', 'verification_context': private}

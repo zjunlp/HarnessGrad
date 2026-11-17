@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import verification_context as vc
+from harnessgrad.provenance import verification_context as vc
 
 CONTEXT = vc.capture([{'task_id':'a'}, {'task_id':'b'}], {})
 

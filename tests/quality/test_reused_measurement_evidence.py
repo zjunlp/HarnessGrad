@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 from harnessgrad.orchestration.historical_evidence import reused_measurement
 
 
@@ -59,6 +59,19 @@ def test_reused_alias_restores_original_receipts_not_empty_alias_files(tmp_path)
     restored = reused_measurement(tmp_path, alias, [point, alias])
     assert restored['reused_evidence']['source_round'] == 0
     assert restored['verdicts']['family/one']['native_runtime']['verified'] is True
+
+
+def test_reused_lineage_rejects_changed_components(tmp_path):
+    from harnessgrad.provenance import measurement_components as identities
+    point = _records(tmp_path)
+    point['measurement_components'] = {
+        'data_source': identities.data_source('synthetic', origin='source', revision='v1'),
+        'loader': identities.implementation('loader', {'provider': 'a' * 64}),
+        'scorer': identities.implementation('scorer', {'verify': 'b' * 64})}
+    alias = copy.deepcopy({**point, 'round': 2, 'reused_from': 0})
+    alias['measurement_components']['loader'] = identities.implementation('loader', {'provider': 'c' * 64})
+    with pytest.raises(ValueError, match='loader identity changed'):
+        reused_measurement(tmp_path, alias, [point, alias])
 
 
 @pytest.mark.parametrize('corruption', ['cycle', 'missing', 'source', 'score', 'context'])

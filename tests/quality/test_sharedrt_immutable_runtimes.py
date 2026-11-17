@@ -373,7 +373,7 @@ def test_scienceworld_verifier_keeps_its_native_runtime_declaration():
 
 def test_agentdojo_projects_private_code_and_source_only_for_verification(tmp_path, monkeypatch):
     from data.datasets import agentdojo
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     code, source = tmp_path / 'code', tmp_path / 'source'
     code.mkdir()
     source.mkdir()

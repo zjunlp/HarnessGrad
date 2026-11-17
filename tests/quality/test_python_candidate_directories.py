@@ -7,8 +7,9 @@ import pytest
 from eval.ckpt.git_state import commit_state, init_repo, stage_workspace
 from eval.ckpt.source_tree import copy_harness
 from eval.run import runner
-from harnessgrad import candidate_runtime, snapshot
-from harnessgrad import python_harness_runtime as runtime
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.core import snapshot
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
 from tools import prepare_h0
 from tools.validate_harness import check
 from test_python_candidate_fingerprint import source, require_preparation

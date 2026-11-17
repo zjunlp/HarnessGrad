@@ -55,7 +55,7 @@ def fail(message):
 def main():
     root = Path(sys.argv[1])
     sys.path.insert(0, str(root))
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     request = json.load(sys.stdin)
     admit_binding(request['runtime'], 'service', python=sys.executable)
     pytest = types.ModuleType('pytest')

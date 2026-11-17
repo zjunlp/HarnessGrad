@@ -33,7 +33,7 @@ def authored_legacy_harness(monkeypatch):
         return original(args)
     monkeypatch.setattr(prepare_h0,'harness_source',source)
     # Never load a real dataset in unit tests. The context is a synthetic task plan.
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     monkeypatch.setattr(prepare_h0, '_verification_preflight',
                         lambda dataset, side, ids, split, sampling, environment:
                         verification_context.create({tid: 'a' * 64 for tid in (ids or ['t1', 't2'])}))
@@ -107,6 +107,33 @@ def test_a_complete_baseline_is_accepted(tmp_path):
     run = _write_run(tmp_path, "h0-appworld-1", per_task={"t1": 0.0, "t2": 1.0}, config=config)
     summary = prepare_h0.verify(run, None, 2, configuration=config)
     assert summary == {"score": 0.5, "n_tasks": 2, "h0_sha": config["harness_sha"]}
+
+
+def test_h0_component_copies_must_all_match_requested_configuration(tmp_path):
+    from harnessgrad.provenance import measurement_components as identities
+
+    config = prepare_h0.configuration(_args(tmp_path, ['t1', 't2']))
+    bundle = {'data_source': identities.data_source('appworld', origin='authored', revision='v1'),
+              'loader': identities.implementation('loader', {'provider': 'a' * 64}),
+              'scorer': identities.implementation('scorer', {'verify': 'b' * 64})}
+    config['measurement_components'] = bundle
+    run = _write_run(tmp_path, 'h0-appworld-components', per_task={'t1': 0., 't2': 1.}, config=config)
+    for name in ('h0.json', 'run_meta.json', 'curve.jsonl'):
+        path = run / name
+        value = json.loads(path.read_text())
+        value['measurement_components'] = bundle
+        if name == 'h0.json':
+            value['base']['measurement_components'] = bundle
+        path.write_text(json.dumps(value))
+    assert prepare_h0.verify(run, None, 2, configuration=config)['n_tasks'] == 2
+    assert prepare_h0.find_existing(config, tmp_path) is not None
+    path = run / 'h0.json'
+    payload = json.loads(path.read_text())
+    del payload['base']['measurement_components']
+    path.write_text(json.dumps(payload))
+    with pytest.raises(SystemExit, match='measurement_components missing'):
+        prepare_h0.verify(run, None, 2, configuration=config)
+    assert prepare_h0.find_existing(config, tmp_path) is None
 
 
 def test_matching_task_count_with_different_ids_is_refused(tmp_path):
@@ -193,7 +220,8 @@ def test_study_ids_are_forwarded_for_every_adapter(tmp_path, monkeypatch, datase
     # This configuration/CLI control must not load any named adapter's corpus.
     # Supply a typed preflight result from a genuinely admitted authored artifact;
     # do not let the fake driver process swallow a managed preflight subprocess.
-    from harnessgrad import dataset_runtime, dataset_runtime_identity
+    from harnessgrad.datasets import runtime as dataset_runtime
+    from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
     _, _, store, _ = execution
     artifact = dataset_runtime.prepare_execution('control', root=store)
     binding = dataset_runtime.bind(artifact, 'verifier')

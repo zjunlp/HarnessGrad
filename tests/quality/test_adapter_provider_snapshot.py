@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from data.scaffolds import provider_worker as worker, registry
-from harnessgrad import dataset_provider as client, dataset_runtime as runtime
+from harnessgrad.datasets import provider as client
+from harnessgrad.datasets import runtime
 from test_dataset_execution_runtime import execution
 from test_dataset_runtime import environment
 

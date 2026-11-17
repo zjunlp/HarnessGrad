@@ -13,8 +13,8 @@ import tempfile
 import pytest
 
 from harnessgrad import config
-from harnessgrad.identity import _improver_identity
-from harnessgrad.methods import _method_env, _method_sandbox_plan
+from harnessgrad.provenance.identity import _improver_identity
+from harnessgrad.execution.method_runner import _method_env, _method_sandbox_plan
 from methods import cli_improver
 from tools import improver
 

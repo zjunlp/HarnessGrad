@@ -15,7 +15,7 @@ import pytest
 
 from data.scaffolds import aggregation
 from data.scaffolds.qa import base
-from eval.metrics import mean
+from eval.run.metrics import mean
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = ROOT / "tests/fixtures/aggregation_s9_before.json"
@@ -312,7 +312,7 @@ def test_scienceworld_report_cli_exports_both_means_without_environment(
 
 @pytest.mark.parametrize("dataset", ["musique", "personamem_v2"])
 def test_recorded_reward_uses_the_policy_and_keeps_unmeasured_tasks_out(monkeypatch, tmp_path, dataset):
-    from harnessgrad.records import _curve_point
+    from harnessgrad.experiment.records import _curve_point
 
     arguments = dict(run_id="synthetic", round_index=0, identity={},
                      sampling={"dataset": dataset}, scores=[1.0], task_ids=["measured"],

@@ -27,8 +27,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from eval.observe.tracing import _write_progress, task_file                    # noqa: E402
-from harnessgrad import channel                                        # noqa: E402
-from harnessgrad.records import _save_traces, _save_verdicts           # noqa: E402
+from harnessgrad.experiment import channel                                        # noqa: E402
+from harnessgrad.experiment.records import _save_traces, _save_verdicts           # noqa: E402
 
 NESTED = "gsm8k/train/0"
 

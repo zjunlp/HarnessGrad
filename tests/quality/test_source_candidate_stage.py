@@ -272,7 +272,7 @@ def test_real_empty_managed_runtime_is_prepared_only_after_source_commit(tmp_pat
     source = harness(tmp_path / "managed-source", managed=True)
     work, run = tmp_path / "workspace", tmp_path / "run"
     run.mkdir()  # The caller already claimed its namespace before staging.
-    from harnessgrad.python_artifacts import remove_instance
+    from harnessgrad.execution.python_runtime.python_artifacts import remove_instance
     request.addfinalizer(lambda: remove_instance(tmp_path / "runtime-store"))
     events = []
     def commit(path, message):

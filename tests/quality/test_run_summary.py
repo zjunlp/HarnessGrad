@@ -1,4 +1,4 @@
-"""`tools/run_summary.py`: one page per run, and no fabricated zeros.
+"""`tools/analysis/run_summary.py`: one page per run, and no fabricated zeros.
 
 The fixtures are hand-written run directories, not copies of the archive: the point is to
 pin the shape of the page (which numbers appear, which absences are named) against inputs
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-TOOL = ROOT / "tools" / "run_summary.py"
+TOOL = ROOT / "tools" / "analysis" / "run_summary.py"
 
 
 # --------------------------------------------------------------------------- fixtures
@@ -141,7 +141,7 @@ def write_run(root: Path, run_id: str, curve, *, meta: dict | None = None,
 
 
 def test_partial_eval_summary_exposes_planned_and_scored_coverage(tmp_path):
-    from tools import run_summary
+    from tools.analysis import run_summary
     entry = point("partial", 0, .5, {"a": .5}, side="eval", n_invalid=1)
     entry["sampling"]["task_ids"] = ["a", "b", "c"]
     summary = run_summary.summarise(write_run(tmp_path, "partial", [entry]))
@@ -154,7 +154,7 @@ def test_partial_eval_summary_exposes_planned_and_scored_coverage(tmp_path):
 
 
 def test_rejected_numeric_zero_keeps_summary_coverage_without_false_decline(tmp_path):
-    from tools import run_summary
+    from tools.analysis import run_summary
     rejected = point("rejected", 1, 0.0, {}, n_scored=0)
     rejected.update(measured_by_platform=False,
                     unmeasured={"reason": "candidate rejected", "problems": ["missing agent.py"]})
@@ -173,7 +173,7 @@ def test_rejected_numeric_zero_keeps_summary_coverage_without_false_decline(tmp_
 @pytest.mark.parametrize("marker", [{"measured_by_platform": False}, {"n_scored": 0},
     {"unmeasured_reason": "candidate rejected"}])
 def test_summary_skips_explicitly_unmeasured_points_between_measurements(tmp_path, marker):
-    from tools import run_summary
+    from tools.analysis import run_summary
     rejected = point("gap", 1, 0.0)
     rejected.update(marker)
     summary = run_summary.summarise(write_run(tmp_path, "gap", [
@@ -185,7 +185,7 @@ def test_summary_skips_explicitly_unmeasured_points_between_measurements(tmp_pat
 
 
 def test_summary_measured_zero_and_legacy_numeric_score_remain_results(tmp_path):
-    from tools import run_summary
+    from tools.analysis import run_summary
     legacy = point("zero", 0, .8)
     measured = point("zero", 1, 0.0, {"a": 0.0})
     measured["measured_by_platform"] = True

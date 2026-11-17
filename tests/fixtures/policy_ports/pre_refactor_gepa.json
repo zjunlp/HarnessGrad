@@ -1,0 +1,67 @@
+{
+  "prompts": [
+    "[GEPA: reflect-and-propose] Improve this instruction from the selected parent and its nonperfect task evidence. Return JSON {\"instruction\":\"complete instruction\"}.\nBaseline instruction\n\n[{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]"
+  ],
+  "report": {
+    "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+    "extra": {
+      "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+      "upstream_policy_port": true
+    },
+    "method": "gepa",
+    "note": "gepa: 1 candidate states; scoring remains platform-owned",
+    "steps": [
+      {
+        "changed": true,
+        "edit_kind": "harness_source",
+        "files": [
+          "prompt.md"
+        ],
+        "files_contents": {
+          "prompt.md": "Revised synthetic instruction\n",
+          "skills/main.md": "Existing reusable guidance\n"
+        },
+        "hypothesis": "gepa instruction proposal",
+        "label": "gepa instruction proposal",
+        "method_reported": {
+          "policy_port": {
+            "admitted_rounds": [
+              0
+            ],
+            "config": {
+              "acceptance_criterion": "strict_improvement",
+              "candidate_selection_strategy": "pareto",
+              "max_evidence_chars": 24000,
+              "reflection_minibatch_size": 1,
+              "seed": 42,
+              "skip_perfect_score": true,
+              "use_merge": false
+            },
+            "fitness_scope": "study (dev not exposed)",
+            "frontier": {
+              "t1": [
+                0
+              ],
+              "t2": [
+                0
+              ]
+            },
+            "generation": 1,
+            "hypothesis": "gepa instruction proposal",
+            "instruction_path": "prompt.md",
+            "invocation": 1,
+            "measurement": "platform only; next call receives feedback",
+            "method": "gepa",
+            "parent_round": 0,
+            "reflection_task_ids": [
+              "t2"
+            ],
+            "state_scope": "adaptation-visible study channel",
+            "variant": "upstream-policy-port"
+          }
+        }
+      }
+    ],
+    "stop": false
+  }
+}

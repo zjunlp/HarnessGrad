@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad.method_attempts import MethodAttempts
-from harnessgrad.methods import _call_entrypoint
+from harnessgrad.experiment.method_attempts import MethodAttempts
+from harnessgrad.execution.method_runner import _call_entrypoint
 from methods import editor
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -81,11 +81,12 @@ def test_admission_receipt_immutable_minimum_remaining(tmp_path):
 
 
 @pytest.fixture
-def phase_editor(monkeypatch):
+def phase_editor(monkeypatch, tmp_path):
     original = dict(editor._SPENT)
     editor.reset_spent()
     monkeypatch.setattr(editor, '_PAST_META_USAGE', {'reported_total':0,'complete':True})
     monkeypatch.setattr(editor, '_TERMINAL_STOP', {})
+    monkeypatch.setattr(editor, '_method_workspace', lambda: tmp_path)
     monkeypatch.setattr(editor, '_INVOCATION_TOKEN_LIMIT', '6')
     yield editor
     editor._SPENT.clear(); editor._SPENT.update(original)

@@ -72,11 +72,11 @@ def test_later_web_fault_closes_actual_owned_service_process_and_only_owned_netw
     try:
         if error_type is KeyboardInterrupt:
             with pytest.raises(KeyboardInterrupt) as raised:
-                runner.run_one(repo, {'task_id': 'authored'}, env={'kind': 'files',
+                runner.run_one(repo, {'task_id': 'authored', 'goal': 'Authored test task'}, env={'kind': 'files',
                     'services': [{'name': 'authored'}], 'web': {'fetch': True}})
             assert raised.value is failure
         else:
-            result = runner.run_one(repo, {'task_id': 'authored'}, env={'kind': 'files',
+            result = runner.run_one(repo, {'task_id': 'authored', 'goal': 'Authored test task'}, env={'kind': 'files',
                 'services': [{'name': 'authored'}], 'web': {'fetch': True}})
             assert result['invalid']['stage'] == 'start' and result['invalid']['service'] == 'web'
         assert process.poll() is not None
@@ -160,7 +160,7 @@ def test_fault_after_actual_web_gateway_acquisition_closes_listener_before_owned
     monkeypatch.setenv('HG_AGENT_BACKEND', 'openai')
     monkeypatch.setenv('HG_AGENT_BASE_URL', 'http://127.0.0.1:9/v1')
     with pytest.raises(KeyboardInterrupt) as raised:
-        runner.run_one(repo, {'task_id': 'authored'}, recordings_root=tmp_path / 'recordings',
+        runner.run_one(repo, {'task_id': 'authored', 'goal': 'Authored test task'}, recordings_root=tmp_path / 'recordings',
                        env={'kind': 'exec', 'image': 'authored', 'web': {'fetch': True}})
     assert raised.value is failure and len(gateways) == 1
     assert not gateways[0]._thread.is_alive() and gateways[0].server.socket.fileno() == -1

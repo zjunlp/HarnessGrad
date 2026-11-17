@@ -173,7 +173,7 @@ def test_a_reported_cli_round_records_tokens_and_cache_read(monkeypatch, tmp_pat
 
 def test_the_cost_record_carries_the_cache_read_count():
     """端到端最后一公里：`claimed_cost` 里的 cache_read 必须进到曲线的 `cost` 块。"""
-    from harnessgrad.records import _cost_of
+    from harnessgrad.experiment.records import _cost_of
     claimed = {"generation_tokens": 11118, "method_input_tokens": 10159,
                "method_output_tokens": 959, "method_model_calls": 7,
                "method_model": "deepseek-flash", "method_spend_source": "cli_reported",

@@ -166,7 +166,7 @@ def test_a_startup_failure_is_not_silently_a_low_score(tmp_path):
 def test_the_validator_runs_as_a_command_on_a_real_run(tmp_path):
     """命令行必须能用 —— 不能只在 import 时有意义。"""
     d = _write_run(tmp_path, points=[_minimal_point()], meta=_meta())
-    proc = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_run.py"), str(d)],
+    proc = subprocess.run([sys.executable, str(ROOT / "tools" / "validation" / "validate_run.py"), str(d)],
                           capture_output=True, text=True, timeout=120, cwd=ROOT)
     assert proc.returncode == 0, (proc.stdout, proc.stderr)
     assert "certified" in proc.stdout
@@ -174,7 +174,7 @@ def test_the_validator_runs_as_a_command_on_a_real_run(tmp_path):
     # 一个不可用的 run 必须返回非零,否则它在 CI 里没有意义
     bad = _write_run(tmp_path, points=[_minimal_point(measured_by_platform=False)],
                      meta=_meta(), name="bad")
-    proc = subprocess.run([sys.executable, str(ROOT / "tools" / "validate_run.py"), str(bad)],
+    proc = subprocess.run([sys.executable, str(ROOT / "tools" / "validation" / "validate_run.py"), str(bad)],
                           capture_output=True, text=True, timeout=120, cwd=ROOT)
     assert proc.returncode == 1, (proc.stdout, proc.stderr)
 

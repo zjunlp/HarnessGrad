@@ -27,7 +27,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad.experiments import from_cli  # noqa: E402
+from harnessgrad.experiment.config import from_cli  # noqa: E402
 
 EXPERIMENTS = ROOT / "experiments"
 METHODS = ROOT / "methods"
@@ -152,7 +152,7 @@ def authored_gsm8k_provider(tmp_path, monkeypatch):
     Descriptor, installed-package, artifact and child-interpreter checks stay real.
     """
     import stat
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
 
     root = tmp_path / "authored-gsm8k"
     (root / "main").mkdir(parents=True)

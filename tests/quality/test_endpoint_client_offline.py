@@ -283,7 +283,7 @@ def test_retry_after_and_explicit_no_retry(endpoint, monkeypatch):
 
 
 def test_platform_method_entrypoint_mounts_transport_and_makes_one_synthetic_call(endpoint, tmp_path, monkeypatch):
-    from harnessgrad import methods
+    from harnessgrad.execution import method_runner as methods
     from eval.containers import sandbox
     url, requests, plan = endpoint
     setup_editor(monkeypatch, url)
@@ -295,6 +295,8 @@ def test_platform_method_entrypoint_mounts_transport_and_makes_one_synthetic_cal
     (base / 'harness.json').write_text('{"name":"synthetic","version":"1","entrypoint":"agent.py"}')
     (base / 'agent.py').write_text('# synthetic source\n')
     (base / '_harnessgrad').mkdir()
+    (base / '_harnessgrad/round.json').write_text(json.dumps(
+        {'round': 0, 'score_kind': 'train', 'score': 0.0}))
     harness_root = tmp_path / "harness-work"
     harness_root.mkdir()
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness_root))
@@ -386,3 +388,87 @@ def test_retried_failure_before_success_marks_partial_usage_unknown(endpoint, mo
     assert len(requests) == 2 and editor.spent()['calls'] == 1
     assert editor.spent_tokens() is None and editor.spend_source() == 'endpoint_unreported'
     assert editor._SPENT['unknown_transport_attempts'] == 1
+
+
+def test_skillopt_fast_stage_runs_in_existing_method_sandbox(endpoint, tmp_path, monkeypatch):
+    """upstream strategy.py:129 and :165: real sandbox sees the extracted proposal stage."""
+    from harnessgrad.execution import method_runner as methods
+    from native_helpers import fixture as policy_fixture
+
+    url, requests, plan = endpoint
+    setup_editor(monkeypatch, url)
+    scratch = tmp_path / 'scratch'
+    scratch.mkdir()
+    base, request = policy_fixture(scratch)
+    work = scratch / 'method-work'
+    harness_root = tmp_path / 'harness-work'
+    harness_root.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness_root))
+    monkeypatch.setenv('HG_POLICY_CONFIG', '{"instruction_path":"prompt.md"}')
+    edit = {'path': 'skills/main.md', 'op': 'append', 'content': 'Check the result.'}
+    plan.extend([(200, response(json.dumps({'edits': [edit]})), {}) for _ in range(3)])
+    argv = [sys.executable, str(ROOT / 'methods/skillopt/run.py')]
+    result = methods._call_entrypoint(work, argv, request, timeout_s=30, sandboxed=True,
+                                      scratch=scratch, cwd=work, readonly=(base,))
+    assert '_error' not in result, result
+    trajectory = json.loads(Path(request['trajectory_out']).read_text())
+    assert len(requests) == 3
+    assert trajectory['steps']
+    candidate = Path(trajectory['steps'][0]['harness_dir'])
+    assert 'Check the result.' in (candidate / 'skills/main.md').read_text()
+
+
+def test_ace_proposal_stage_runs_in_existing_method_sandbox(endpoint, tmp_path, monkeypatch):
+    """ACE strategy.py:92-154: the real sandbox can load the shared proposal stage."""
+    from harnessgrad.execution import method_runner as methods
+    from native_helpers import fixture as policy_fixture
+
+    url, requests, plan = endpoint
+    setup_editor(monkeypatch, url)
+    scratch = tmp_path / 'scratch'
+    scratch.mkdir()
+    base, request = policy_fixture(scratch)
+    work = scratch / 'method-work'
+    harness_root = tmp_path / 'harness-work'
+    harness_root.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness_root))
+    monkeypatch.setenv('HG_POLICY_CONFIG', '{"instruction_path":"prompt.md"}')
+    reflection = {'key_insight': 'Run checks', 'bullet_tags': []}
+    curation = {'operations': [{'type': 'ADD', 'section': 'general', 'content': 'Run tests.'}]}
+    plan.extend([(200, response(json.dumps(reply)), {}) for reply in (reflection, curation)])
+    argv = [sys.executable, str(ROOT / 'methods/ace/run.py')]
+    result = methods._call_entrypoint(work, argv, request, timeout_s=30, sandboxed=True,
+                                      scratch=scratch, cwd=work, readonly=(base,))
+    assert '_error' not in result, result
+    trajectory = json.loads(Path(request['trajectory_out']).read_text())
+    assert len(requests) == 2 and trajectory['steps']
+    candidate = Path(trajectory['steps'][0]['harness_dir'])
+    assert 'Run tests.' in (candidate / 'prompt.md').read_text()
+
+
+def test_evo_harness_proposal_runs_in_existing_method_sandbox(endpoint, tmp_path, monkeypatch):
+    """EvoHarness __init__.py:135-211: isolated method loads the extracted stage."""
+    from harnessgrad.execution import method_runner as methods
+    from native_helpers import fixture as policy_fixture
+
+    url, requests, plan = endpoint
+    setup_editor(monkeypatch, url)
+    scratch = tmp_path / 'scratch'
+    scratch.mkdir()
+    base, request = policy_fixture(scratch)
+    work = scratch / 'method-work'
+    harness_root = tmp_path / 'harness-work'
+    harness_root.mkdir()
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness_root))
+    reflection = {'lesson': 'check status', 'trigger': 'shell', 'evidence': 'failure', 'scope_hint': 'shell'}
+    skills = {'skills': [{'path': 'skills/shell/SKILL.md', 'name': 'shell', 'description': 'Shell checks',
+                          'source_task_ids': ['t2'], 'content': 'Check exit status.'}]}
+    plan.extend([(200, response(json.dumps(reply)), {}) for reply in (reflection, skills)])
+    argv = [sys.executable, str(ROOT / 'methods/evo_harness/run.py')]
+    result = methods._call_entrypoint(work, argv, request, timeout_s=30, sandboxed=True,
+                                      scratch=scratch, cwd=work, readonly=(base,))
+    assert '_error' not in result, result
+    trajectory = json.loads(Path(request['trajectory_out']).read_text())
+    assert len(requests) == 2 and trajectory['steps']
+    candidate = Path(trajectory['steps'][0]['harness_dir'])
+    assert 'Check exit status.' in (candidate / 'skills/shell/SKILL.md').read_text()

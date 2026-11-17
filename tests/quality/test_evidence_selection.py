@@ -1,8 +1,8 @@
 """Cross-reference checks for selection and baseline citations."""
 import pytest
 
-from harnessgrad import evidence
-from harnessgrad.evidence_export import build_export
+from harnessgrad.evidence_reports import evidence
+from harnessgrad.evidence_reports.evidence_export import build_export
 from tests.quality.test_evidence_export import author, source
 from tests.quality.test_evidence_manifest import pack
 

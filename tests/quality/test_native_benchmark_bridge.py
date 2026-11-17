@@ -137,7 +137,7 @@ def test_observed_optional_deadline_covers_setup_and_command_transport(monkeypat
 
 
 def test_dataset_lint_distinguishes_fixed_native_and_external_commands(tmp_path):
-    from tools.dataset_lint import Result, lint_verify, load_schema
+    from tools.dataset_maintenance.dataset_lint import Result, lint_verify, load_schema
     actor, case, spec = request(tmp_path)
     result = Result('native-fixture')
     lint_verify({'task-1': spec}, {'task-1'}, load_schema(), result)

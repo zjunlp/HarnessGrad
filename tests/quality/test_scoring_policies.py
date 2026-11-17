@@ -22,7 +22,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import policies  # noqa: E402
+from harnessgrad.experiment import policies  # noqa: E402
 
 
 # ------------------------------------------------------------- 几何平均 ---
@@ -379,3 +379,10 @@ def test_a_frozen_reference_is_honoured_and_recorded(tmp_path):
     # Both statistics still name their baseline, and the paired test still ran.
     assert second[1]["improvement"]["baseline"].startswith("round-")
     assert second[1]["improvement"]["direction"] in ("better", "worse", "unchanged")
+
+
+def test_old_policy_import_refuses_with_canonical_path():
+    import importlib
+    with pytest.raises(ImportError, match='harnessgrad.experiment.policies'):
+        importlib.import_module('harnessgrad.policies')
+    assert policies.__name__ == 'harnessgrad.experiment.policies'

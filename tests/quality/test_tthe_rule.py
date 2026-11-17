@@ -31,6 +31,7 @@ def cli(tmp_path, monkeypatch, case):
 
     workspace = tmp_path / "cli"
     workspace.mkdir()
+    monkeypatch.setattr(editor, "_method_workspace", lambda: tmp_path)
     monkeypatch.setattr(editor.tempfile, "mkdtemp", lambda **kwargs: str(workspace))
     monkeypatch.setattr(editor, "_keep_improver_transcript", lambda *args: [])
 

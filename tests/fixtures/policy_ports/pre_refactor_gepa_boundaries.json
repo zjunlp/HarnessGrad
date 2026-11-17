@@ -1,0 +1,148 @@
+{
+  "duplicate": {
+    "prompts": [
+      "[GEPA: reflect-and-propose] Improve this instruction from the selected parent and its nonperfect task evidence. Return JSON {\"instruction\":\"complete instruction\"}.\nBaseline instruction\n\n[{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]"
+    ],
+    "report": {
+      "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+      "extra": {
+        "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+        "upstream_policy_port": true
+      },
+      "method": "gepa",
+      "note": "gepa: 1 candidate states; scoring remains platform-owned",
+      "steps": [
+        {
+          "changed": false,
+          "edit_kind": "none",
+          "files": [],
+          "files_contents": {
+            "prompt.md": "Baseline instruction\n",
+            "skills/main.md": "Existing reusable guidance\n"
+          },
+          "hypothesis": "no admissible proposal",
+          "label": "no admissible proposal",
+          "method_reported": {
+            "policy_port": {
+              "admitted_rounds": [
+                0
+              ],
+              "config": {
+                "acceptance_criterion": "strict_improvement",
+                "candidate_selection_strategy": "pareto",
+                "max_evidence_chars": 24000,
+                "reflection_minibatch_size": 1,
+                "seed": 42,
+                "skip_perfect_score": true,
+                "use_merge": false
+              },
+              "fitness_scope": "study (dev not exposed)",
+              "frontier": {
+                "t1": [
+                  0
+                ],
+                "t2": [
+                  0
+                ]
+              },
+              "hypothesis": "no admissible proposal",
+              "invocation": 1,
+              "measurement": "platform only; next call receives feedback",
+              "method": "gepa",
+              "reflection_task_ids": [
+                "t2"
+              ],
+              "state_scope": "adaptation-visible study channel",
+              "variant": "upstream-policy-port"
+            }
+          }
+        }
+      ],
+      "stop": false
+    }
+  },
+  "empty": {
+    "prompts": [
+      "[GEPA: reflect-and-propose] Improve this instruction from the selected parent and its nonperfect task evidence. Return JSON {\"instruction\":\"complete instruction\"}.\nBaseline instruction\n\n[{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]"
+    ],
+    "report": {
+      "error_type": "ValueError",
+      "failure": "optimizer requires a nonempty instruction",
+      "state": {
+        "measurement": "no method-side task evaluation",
+        "variant": "upstream-policy-port"
+      }
+    }
+  },
+  "perfect": {
+    "prompts": [],
+    "report": {
+      "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+      "extra": {
+        "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+        "upstream_policy_port": true
+      },
+      "method": "gepa",
+      "note": "gepa: 1 candidate states; scoring remains platform-owned",
+      "steps": [
+        {
+          "changed": false,
+          "edit_kind": "none",
+          "files": [],
+          "files_contents": {
+            "prompt.md": "Baseline instruction\n",
+            "skills/main.md": "Existing reusable guidance\n"
+          },
+          "hypothesis": "no admissible proposal",
+          "label": "no admissible proposal",
+          "method_reported": {
+            "policy_port": {
+              "admitted_rounds": [
+                0
+              ],
+              "config": {
+                "acceptance_criterion": "strict_improvement",
+                "candidate_selection_strategy": "pareto",
+                "max_evidence_chars": 24000,
+                "reflection_minibatch_size": 1,
+                "seed": 42,
+                "skip_perfect_score": true,
+                "use_merge": false
+              },
+              "fitness_scope": "study (dev not exposed)",
+              "frontier": {
+                "t1": [
+                  0
+                ],
+                "t2": [
+                  0
+                ]
+              },
+              "hypothesis": "no admissible proposal",
+              "invocation": 1,
+              "measurement": "platform only; next call receives feedback",
+              "method": "gepa",
+              "reflection_task_ids": [],
+              "state_scope": "adaptation-visible study channel",
+              "variant": "upstream-policy-port"
+            }
+          }
+        }
+      ],
+      "stop": false
+    }
+  },
+  "wrong_type": {
+    "prompts": [
+      "[GEPA: reflect-and-propose] Improve this instruction from the selected parent and its nonperfect task evidence. Return JSON {\"instruction\":\"complete instruction\"}.\nBaseline instruction\n\n[{\"round\": 0, \"per_task\": {\"t1\": 1.0, \"t2\": 0.0}}, {\"task_id\": \"t2\", \"score\": 0.0, \"verdict\": {\"detail\": \"public feedback\"}}]"
+    ],
+    "report": {
+      "error_type": "ValueError",
+      "failure": "optimizer requires a nonempty instruction",
+      "state": {
+        "measurement": "no method-side task evaluation",
+        "variant": "upstream-policy-port"
+      }
+    }
+  }
+}

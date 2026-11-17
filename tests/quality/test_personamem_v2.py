@@ -369,7 +369,7 @@ def test_controls_real_relay_and_verifier(prepared, tmp_path, monkeypatch, mode,
 ])
 def test_malformed_requests_preserve_relay_scoring(prepared, tmp_path, monkeypatch, mode, score, batch):
     from eval.run.runner import evaluate, run_one
-    from harnessgrad.records import _save_verdicts
+    from harnessgrad.experiment.records import _save_verdicts
 
     tid, payload, _ = prepared
     harness = tmp_path / "harness"
@@ -504,7 +504,7 @@ def unequal_episode_results(monkeypatch):
 
 
 def test_reporting_uses_eligible_question_rows_per_native_split(unequal_episode_results):
-    from eval.metrics import mean
+    from eval.run.metrics import mean
 
     ids, records = unequal_episode_results
     report = dataset.aggregate(records, ids)
@@ -538,7 +538,7 @@ def test_reporting_keeps_selected_denominator_when_episode_is_incomplete(unequal
 
 
 def saved_episode(tmp_path, tid, verdicts):
-    from harnessgrad.records import _save_verdicts
+    from harnessgrad.experiment.records import _save_verdicts
 
     scores = [v.get("score") for v in verdicts]
     result = {"verdicts": {tid: verdicts[-1]},

@@ -5,8 +5,8 @@ Measured 2026-10-15: one model-issued shell command emitted a non-UTF-8 byte, th
 and the episode ended as a zero for a task nobody finished. Every runnable harness that runs a shell
 command or an agent CLI had the same call, so the same crash was reachable from eight places.
 
-This pins the property directly instead of trusting a grep: every text-mode subprocess in
-the live harnesses, platform and non-scored helpers must say how to decode.
+This audits the property using Python syntax: text-mode subprocesses must use a
+reviewed decoding policy, with strict identity checks listed individually.
 
 Scope, and why it stops here:
 
@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-#: 22 under `tools/` because `tools/quality_sweep.py` landed on `main` after this guard was written;
+#: 22 under `tools/` because `tools/testing/quality_sweep.py` landed on `main` after this guard was written;
 #: parent integration counted it and gave it `errors="replace"` rather than exempting it.
 #: 10 under `eval/` because w-banhung moved the two native launch sites (`sandbox.run` and the
 #: `--no-sandbox` path in `runner.py`) into the shared `eval/containers/process.py` launcher. Those
@@ -57,7 +57,9 @@ ROOT = Path(__file__).resolve().parents[2]
 # The retired model-service API no longer spawns a host process.
 # Portable harness preparation added three tool subprocess probes; each is
 # checked, and OpenClaw version/admission output is explicitly strict UTF-8.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 38}
+# Reviewed against original main, the LightRSI fix and the refactor tree; see
+# docs/validation/decoding-inventory.md for the complete comparison.
+EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 14, "tools": 41}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
@@ -80,6 +82,34 @@ EXCEPTIONS = {
     "data/datasets/spreadsheetbench2/verify/open_spreadsheet.py:251": (
         "pinned upstream scorer bytes; the reader thread fails the task, never a score"),
 
+    # Source-bound scoring wrappers stay byte-for-byte unchanged. Their strict
+    # decode failures refuse measurement or native identity rather than producing
+    # a potentially altered score or runtime inventory.
+    "data/datasets/reasoning_gym/check.py:19": (
+        "source-bound scorer wrapper; invalid child output exits nonzero and the verifier marks it unmeasured"),
+    "data/scaffolds/spreadsheet_runtime/native.py:159": (
+        "source-bound UNO scorer helper; malformed worker output aborts before modified workbooks are published"),
+    "data/scaffolds/spreadsheet_runtime/native.py:214": (
+        "source-bound native inventory; malformed UNO module-path JSON must not identify a different runtime"),
+    "data/scaffolds/spreadsheet_runtime/native.py:231": (
+        "source-bound native inventory; malformed font paths must not silently alter the captured file set"),
+    "data/scaffolds/spreadsheet_runtime/native.py:245": (
+        "source-bound native inventory; malformed dependency paths must not silently omit a library"),
+    "data/scaffolds/spreadsheet_runtime/native.py:253": (
+        "source-bound native inventory; malformed LibreOffice version output cannot name a trusted runtime"),
+
+    # These source-bound data preparation and control paths retain their
+    # previous strict behavior. Invalid output cannot publish an artifact,
+    # report readiness, or complete the control and reach scoring.
+    "data/datasets/agentdojo.py:219": (
+        "read-only source probe rejects malformed JSON output and reports the dataset unavailable"),
+    "data/datasets/tau3_bench.py:220": (
+        "read-only bundle probe rejects malformed output and reports the dataset unavailable"),
+    "data/datasets/costbench/prepare_controller.py:131": (
+        "preparation worker decoding fails before validation and artifact publication"),
+    "data/datasets/alfworld/control.py:123": (
+        "manual control rejects malformed done output before it can proceed to scoring"),
+
     "eval/containers/harness_runtime.py:173": (
         "the host interpreter version probe: stdout is the platform-authored ASCII X.Y expression, "
         "not task/tool output. Keep a malformed version out of the overlay cache; _cached_version "
@@ -88,8 +118,32 @@ EXCEPTIONS = {
 }
 
 
-def _subprocess_text_calls(path: Path):
-    """(lineno, has_errors) for every subprocess call in `path` that asks for text."""
+# Strict decoding is appropriate only for reviewed identity/configuration outputs:
+# replacement could turn corrupt metadata into a different accepted identity.
+STRICT_IDENTITY_SITES = {
+    'data/datasets/gaia/prepare.py:117': 'GAIA preparation worker returns source-bound JSON metadata.',
+    'data/datasets/jobbench/prepare.py:83': 'JobBench renderer returns source-bound runtime and manifest JSON.',
+    'data/datasets/scienceworld/control.py:90': 'ScienceWorld control reads trusted reference actions as JSON.',
+    'data/datasets/reasoning_gym/prepare.py:126': 'Reasoning Gym generation returns pool digest and count as JSON.',
+    'data/datasets/reasoning_gym/prepare.py:271': 'Reasoning Gym download worker returns a bounded JSON error.',
+    'data/scaffolds/native_harbor_runtime/prepare_python.py:43': 'Harbor probe returns runtime admission and module identity JSON.',
+    'data/scaffolds/native_qa/prepare.py:66': 'Native QA preparation fails closed on malformed worker output.',
+    'data/scaffolds/native_research/preparation.py:21': 'Native research preparation fails closed on malformed worker output.',
+    'tools/_tau_prepare.py:240': 'Tau worker returns a source-bound runtime identity JSON envelope.',
+    'harnessgrad/datasets/runtime_identity.py:266': 'H0 worker returns a validated runtime identity JSON envelope.',
+    'tools/prepare_h0.py:149': 'Candidate runtime admission returns a validated identity JSON envelope.',
+    'tools/prepare_h0.py:182': 'Verification preflight returns a validated context JSON envelope.',
+    'tools/prepare_ds1000_runtime.py:161': 'Interpreter target probe returns a structured platform identity.',
+    'tools/install_harness.py:115': 'Node and npm version strings must match exact pinned versions.',
+    'tools/harness_setup/configure_opencode_harness.py:59': 'OpenCode version output must match the selected installation.',
+    'tools/harness_setup/configure_openclaw_harness.py:128': 'OpenClaw and Node version output must match the selected installation.',
+    'tools/harness_setup/configure_openclaw_harness.py:147': 'OpenClaw runtime projection must fail on malformed subprocess output.',
+    'tools/launch_appworld_harness_baselines.py:118': 'Git commit output must be an exact ASCII source identity.',
+}
+
+
+def _subprocess_text_modes(path: Path):
+    """Return the line and explicit decoding mode for each text-mode call."""
     source = path.read_text(encoding="utf-8")
     trees = [(ast.parse(source, filename=str(path)), 0)]
     relative = path.relative_to(ROOT).as_posix()
@@ -112,15 +166,47 @@ def _subprocess_text_calls(path: Path):
         name = getattr(func, "attr", None) or getattr(func, "id", None)
         if name not in ("run", "Popen", "check_output", "check_call", "call"):
             continue
-        keywords = {kw.arg for kw in node.keywords if kw.arg}
         wants_text = any(
             (kw.arg == "text" and getattr(kw.value, "value", None) is True)
             or kw.arg in ("universal_newlines", "encoding")
             for kw in node.keywords
         )
         if wants_text:
-            found.append((node.lineno + offset, "errors" in keywords))
+            error = next((kw.value for kw in node.keywords if kw.arg == 'errors'), None)
+            mode = (None if error is None else error.value if isinstance(error, ast.Constant)
+                    and isinstance(error.value, str) else '<dynamic>')
+            found.append((node.lineno + offset, mode))
     return found
+
+
+def _subprocess_text_calls(path: Path):
+    return [(line, mode is not None) for line, mode in _subprocess_text_modes(path)]
+
+
+def _decoding_problem(site, mode):
+    if mode is None:
+        return None if site in EXCEPTIONS else site
+    if mode in ('replace', 'surrogateescape'):
+        return None
+    if mode == 'strict' and site in STRICT_IDENTITY_SITES:
+        return None
+    return f'{site} (unreviewed errors={mode!r})'
+
+
+def _decoding_guard_findings(checked, offenders):
+    """Report coverage drift and unsafe sites together, without relaxing either check."""
+    findings = []
+    if checked != EXPECTED_CALLS:
+        findings.append(
+            f"text-mode subprocess inventory changed: {checked}; expected {EXPECTED_CALLS}. "
+            "Review new/removed calls and the matcher before updating these counts.")
+    if offenders:
+        findings.append(
+            "these live subprocess calls lack a reviewed decoding policy, so invalid bytes "
+            "can abort capture, lose output or silently change it:\n  "
+            + "\n  ".join(offenders)
+            + "\nUse an appropriate decoding policy or record a specific reviewed exception.")
+    return findings
 
 
 def test_every_live_text_subprocess_says_how_to_decode():
@@ -140,20 +226,22 @@ def test_every_live_text_subprocess_says_how_to_decode():
             if root == "data" and "candidates" in path.parts:
                 continue
             relative = path.relative_to(ROOT).as_posix()
-            for lineno, has_errors in _subprocess_text_calls(path):
+            for lineno, mode in _subprocess_text_modes(path):
                 checked[root] += 1
                 site = f"{relative}:{lineno}"
-                if not has_errors and site not in EXCEPTIONS:
-                    offenders.append(site)
-    assert checked == EXPECTED_CALLS, (
-        f"text-mode subprocess inventory changed: {checked}; expected {EXPECTED_CALLS}. "
-        "Review new/removed calls and the matcher before updating these counts (66 total).")
-    assert not offenders, (
-        "these live subprocess calls request text without `errors=`, so one non-UTF-8 byte "
-        "can abort capture or lose output in a reader thread:\n  "
-        + "\n  ".join(offenders)
-        + "\nAdd `errors=\"replace\"` (lossy on the offending byte, but the trace stays valid UTF-8) or "
-          "record the site in EXCEPTIONS with the reason it must stay strict.")
+                problem = _decoding_problem(site, mode)
+                if problem:
+                    offenders.append(problem)
+    findings = _decoding_guard_findings(checked, offenders)
+    assert not findings, "\n\n".join(findings)
+
+
+def test_reviewed_strict_identity_sites_are_still_exact():
+    for site, reason in STRICT_IDENTITY_SITES.items():
+        relative, lineno = site.rsplit(':', 1)
+        matches = dict(_subprocess_text_modes(ROOT / relative))
+        assert matches.get(int(lineno)) == 'strict', f'{site}: reviewed strict call moved or changed'
+        assert len(reason.strip()) >= 30
 
 
 def test_the_strict_exceptions_are_still_real_sites():
@@ -171,7 +259,7 @@ def test_the_strict_exceptions_are_still_real_sites():
 
 
 def test_ci_git_output_preserves_undecodable_path_bytes():
-    from tools import ci_select
+    from tools.testing import ci_select
 
     text = ci_select.run([sys.executable, "-c", "import os; os.write(1, b'file-\\\\xff.py\\\\n')"])
     assert text.encode(sys.getfilesystemencoding(), 'surrogateescape') == b'file-\\xff.py\\n'

@@ -13,7 +13,7 @@ import pytest
 
 from data.scaffolds import public_native
 from eval.verification import native_runtime, verifier
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 
