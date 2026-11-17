@@ -7,7 +7,8 @@ from pathlib import Path
 import tempfile
 
 from eval.containers.process import run
-from harnessgrad import dataset_runtime, dataset_runtime_identity as runtime_identity_mod
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as runtime_identity_mod
 
 STEPWISE = "chessbench_puzzles.stepwise.v1"
 OFFLINE = "offline strict sequence; not interactive official accuracy"

@@ -31,14 +31,14 @@ from pathlib import Path
 
 import data.scaffolds.registry as datasets
 from scenarios import load as load_scenario
-from tools.improver import forbidden_reason
-from tools.improver import load_config as load_improvers
-from tools.improver import resolve as resolve_improver
-from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
+from harnessgrad.improvers.resolver import forbidden_reason
+from harnessgrad.improvers.resolver import load_config as load_improvers
+from harnessgrad.improvers.resolver import resolve as resolve_improver
+from harnessgrad.execution.harness_validation import check as check_harness, source_identity, filesystem_identity
 # Imported, never copied: the page a finished run leaves behind and the one
-# `python3 tools/run_summary.py runs/<id>` writes must be the *same* page, including its
+# `python3 tools/analysis/run_summary.py runs/<id>` writes must be the *same* page, including its
 # rule that an unknown is a named absence and never a fabricated zero.
-import tools.run_summary as run_summary
+from harnessgrad.evidence_reports import run_summary
 from eval.ckpt.git_state import (STATE_DIRNAME, commit_state, content_sha, manifest,
                                 stage_workspace)
 from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, has_python_runtime
@@ -53,7 +53,7 @@ import eval.containers.container as container
 import eval.service.modelgate as modelgate
 import eval.containers.sandbox as sandbox
 import eval.service.services as services_mod
-import tools.web_gateway as web_gateway_mod
+import eval.service.web_gateway as web_gateway_mod
 
 
 # ------------------------------------------------------------------- layers ---
@@ -68,7 +68,7 @@ import tools.web_gateway as web_gateway_mod
 # visible in the import line rather than flattened through the entrypoint.
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
-from harnessgrad import h0_identity
+from harnessgrad.provenance import h0_identity
 from harnessgrad.entrypoints.experiment_config import (
     config_help as _config_help, expand_experiment_argv as _expand_experiment_argv,
 )
@@ -77,14 +77,14 @@ from harnessgrad.orchestration.selected_dataset import (
     SelectionOptions, SelectedRunRefused, build_selected_run_plan,
     check_scenario_runtime as _check_scenario_runtime,
 )
-from harnessgrad import run_namespace
-from harnessgrad import readiness
-from harnessgrad import slots
-from harnessgrad import scoring_identity
-from harnessgrad import dataset_runtime_identity
-from harnessgrad import verification_context
+from harnessgrad.execution import run_namespace
+from harnessgrad.orchestration import readiness
+from harnessgrad.execution import slots
+from harnessgrad.provenance import measurement_components, scoring_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from eval.containers import external_runtime
-from harnessgrad import candidate_runtime
+from harnessgrad.execution import candidate_runtime
 from harnessgrad.orchestration import resume as resume_planning
 from harnessgrad.orchestration import h0 as h0_planning
 from harnessgrad.orchestration import boundary_readiness, improver_readiness
@@ -111,21 +111,21 @@ from harnessgrad.orchestration.candidate_stage import (
     refuse_managed_source as _refuse_managed_source,
 )
 from harnessgrad.orchestration import treatment_identity
-from harnessgrad.budget_integration import (
+from harnessgrad.execution.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
     bind_budget,
     load_profile,
 )
-from harnessgrad.environments import (
+from harnessgrad.orchestration.environments import (
     _check_env_kinds, _env_record, _narrow_to_run, _report_harness_failed,
     _report_invalid, _required_env_kinds, _resolve_envs, _warn_missing_overlay)
-from harnessgrad.identity import _identity
+from harnessgrad.provenance.identity import _identity
 from harnessgrad.loops.eval_side import (_eval_from_record, _eval_resume_seed, _eval_source,
                                         _progress_results, _run_eval_side)
 from harnessgrad.loops.mode_a import _run_mode_a, _snapshot_round
-from harnessgrad.methods import PlatformTampered, _check_method_entrypoint
-from harnessgrad.records import (
+from harnessgrad.execution.method_runner import PlatformTampered, _check_method_entrypoint
+from harnessgrad.experiment.records import (
     _cost_of, _curve_point, _require_untampered, _save_round_state, _save_traces,
     _save_verdicts, _scored, _write_curve, _write_run_meta, test_rate_fields)
 
@@ -187,7 +187,7 @@ def _git_sha() -> str | None:
 def _resume_request(args):
     return resume_planning.ResumeRequest(args.rounds, resume_planning.ResumeIdentities(
         getattr(args, "scoring_identity", None), getattr(args, "dataset_runtime_identity", None),
-        getattr(args, "verification_context", None)), getattr(args, "resume_across_platforms", None),
+        getattr(args, "verification_context", None), getattr(args, "measurement_components", None)), getattr(args, "resume_across_platforms", None),
         getattr(args, "_resume_initial_source", None), getattr(args, "_resume_candidate_source", None))
 
 
@@ -286,121 +286,13 @@ def _harness_by_name(name: str) -> Path | None:
 
 
 def _readiness(args) -> int:
-    """`--check-only` / `--prepare-only`: the door, without walking through it.
+    """Delegate checks and preparation with the driver's current callback bindings."""
+    from harnessgrad.orchestration.preflight import ReadinessPorts, run_readiness
 
-    **Why these exist.** Every prerequisite a run has -- a dataset whose bytes are absent,
-    a `bwrap` that cannot build a namespace, a harness manifest naming an entrypoint that
-    is not on disk -- used to be discovered *inside* the run, after round 0 had already
-    spent model calls. A new user's first question is "will this run?", and the only
-    answer the platform had was to spend the budget. These two flags answer it from the
-    same parsed argv, before the staged-policy gate and before a harness is resolved,
-    because `--check-only` has to work on a machine where the rest of the run cannot --
-    that is the whole point of asking.
-
-    `--check-only` creates nothing: it prints the table and returns 0 (every required
-    check ok) or 2. `--prepare-only` creates the two artifacts of a run that cost
-    nothing -- the run directory and its redacted `run_meta.json` -- and launches
-    nothing. Given together, the checks gate the preparation.
-    """
-    # `.env` is folded in first, exactly as `--show-config` and a real run do: the
-    # endpoint probe and the prepared `config` block must describe the deployment this
-    # machine would actually use, not the bare process environment.
-    load_env(Path(__file__).parent / ".env")
-    args._namespace_config = run_namespace.fingerprint(
-        args._namespace_args, platform_config.dump(platform_config.load()))
-    staged = args.sampling in ("diagnostic", "pilot_10pct")
-    if getattr(args, "rounds", None) is None:
-        args.rounds = 0 if staged else 3
-
-    # **Which harness the check inspects.** An explicit `--harness-path` wins; an eval run
-    # measures a state out of its `--from-run` record; otherwise it is the named directory
-    # the driver would stage. Resolved here rather than inside `readiness` so the table
-    # describes the harness a real run would stage, and a missing one is a row rather than
-    # the driver refusing before the table is printed (`_eval_source` raises SystemExit
-    # for a `--from-run` that is not there).
-    harness_dir: Path | None = Path(args.harness_path) if args.harness_path else None
-    harness_problem = ""
-    if harness_dir is None and args.side == "eval" and args.from_run:
-        try:
-            harness_dir = _eval_source(args, Path(args.runs_root))[0]
-        except SystemExit as exc:
-            # Kept for the `harness` row: "no run X under Y" is the fix the user needs, and
-            # collapsing it into a generic "no harness" would hide exactly the missing id.
-            harness_problem = str(exc)
-            harness_dir = None
-    if harness_dir is None and args.side != "eval":
-        harness_dir = _harness_by_name(args.harness)
-    args.harness_dir = str(harness_dir) if harness_dir is not None else None
-    args.harness_problem = harness_problem
-
-    # A pool is an adapter *input* selector (`HG_APPWORLD_POOL`), not a driver concept: a
-    # real run sets it before the adapter is imported. The probe has to do the same or it
-    # reports "not provisioned" for data that is right there -- but a bad pool is the
-    # run's refusal to make, so it is reported and not re-implemented here.
-    if getattr(args, "pool", None) is not None:
-        try:
-            pool_env = _scenario_pool_env(args.dataset, args.pool)
-            for key, value in pool_env.items():
-                if os.environ.get(key) and os.environ[key] != value:
-                    raise ValueError(f"pool conflicts with existing {key}")
-                os.environ[key] = value
-        except (OSError, ValueError) as exc:
-            print(f"warning: the dataset probe cannot apply --pool {args.pool!r}: {exc}",
-                  file=sys.stderr)
-
-    if args.check_only:
-        checks = readiness.plan_checks(args)
-        print(readiness.render(checks))
-        failed = [check.name for check in checks if check.required and not check.ok]
-        if failed:
-            print("refusing to run: required checks failed: " + ", ".join(failed),
-                  file=sys.stderr)
-            return 2
-        print("ready: every required check passed")
-        warnings = [check.name for check in checks if not check.required and not check.ok]
-        if warnings:
-            # A failed optional check is not a refusal, but it is not silence either: the
-            # disk row and the opt-in endpoint probe are exactly the warnings a reader
-            # wants beside the word "ready".
-            print("warning: optional check(s) failed: " + ", ".join(warnings))
-        if not args.prepare_only:
-            return 0
-
-    # The run directory `--prepare-only` creates is the one a real run would use, from the
-    # same argv -- including the resolved mode and the staged-run id suffix -- so the
-    # prepared record is a promise about *that* invocation, not about a generic one.
-    mode = "unified" if args.mode in ("A", "B") else args.mode
-    run_id = args.run_id or (
-        f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
-        + (f"-{secrets.token_hex(8)}" if staged else ""))
-    run_dir = Path(args.runs_root) / run_id
-    prepared_split = None
-    if args.split not in (None, 'declared'):
-        from data.scaffolds.custom_split import resolve as resolve_split
-        try:
-            tasks, _, declared = datasets.load_split(args.dataset)
-            division, source, protocol = resolve_split(args.dataset, tasks, declared, args.split, side=args.side)
-            prepared_split = run_metadata.SplitRecord(division, source, datasets.split_sha(division), protocol)
-        except (OSError, ValueError, ImportError) as exc:
-            print(f'refusing --prepare-only: split: {exc}', file=sys.stderr)
-            return 2
-    try:
-        run_dir = run_namespace.reserve(args, run_id, prepare=True)
-    except run_namespace.NamespaceRefused as exc:
-        print(f"refusing --prepare-only: {exc}", file=sys.stderr)
-        return 2
-    # `platform_config.dump()` is the same redaction a real run's first write uses: every
-    # secret field is `{"present": bool}` and never a value, because `run_meta.json` is
-    # written to disk and read by people.
-    prepared_config = platform_config.run_config(
-        args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)
-    prepared_fields = run_metadata.prepared_run_fields(
-        prepared_config, platform_config.dump(run=prepared_config), FRAMEWORK_VERSION, prepared_split)
-    _write_run_meta(run_dir, fresh=True, **prepared_fields)
-    run_namespace.finish_preparation(run_dir, args._namespace_config)
-    print(run_dir)
-    return 0
-
+    return run_readiness(args, ReadinessPorts(
+        platform_root=Path(__file__).parent, framework_version=FRAMEWORK_VERSION,
+        load_env=load_env, eval_source=_eval_source, harness_by_name=_harness_by_name,
+        scenario_pool_env=_scenario_pool_env, write_run_meta=_write_run_meta))
 
 def _summary_options(args):
     return run_completion.SummaryOptions(getattr(args, "no_summary", False), getattr(args, "summary_dir", None),
@@ -417,20 +309,10 @@ def _main(attempt: dict) -> int:
 
 
 def _treatment_runtime(args):
-    """Hash inputs to the treatment, excluding continuation/output-only controls."""
-    operational = {'rounds', 'resume', 'resume_across_platforms', 'run_id', 'runs_root',
-                   'work_root', 'show_config', 'check_only', 'prepare_only', 'check_net',
-                   'treatment_manifest', 'no_summary', 'summary', 'show_summary'}
-    arguments = {key: str(value) if isinstance(value, Path) else value
-                 for key, value in args._namespace_args.items() if key not in operational}
-    arguments.pop('method_entrypoint', None)
-    arguments['method_argv'] = shlex.split(args.method_entrypoint or '')
-    profile = load_profile(args.budget_profile) if args.budget_profile else None
-    return {'platform_configuration': platform_config.dump(),
-            'arguments': arguments, 'budget_profile_sha256': profile.digest if profile is not None else None,
-            'method_limits': {key: os.environ.get(key) for key in
-                              ('HG_META_ROUND_TOKEN_LIMIT', 'HG_META_RUN_TOKEN_LIMIT')}}
-
+    """Project treatment inputs, excluding continuation and output controls."""
+    from harnessgrad.orchestration.treatment_workflow import runtime_projection
+    return runtime_projection(args, environment=os.environ, dump_config=platform_config.dump,
+                              load_profile=load_profile)
 
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     sources.enter_context(datasets.provider_session())
@@ -497,54 +379,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     if args.check_only or args.prepare_only:
         return _readiness(args)
 
-    if args.harness_path is not None:
-        if args.from_run is not None or args.from_round is not None:
-            print('cannot combine --harness-path with --from-run or --from-round', file=sys.stderr)
-            return 2
-        if args.side == 'eval':
-            if args.resume:
-                print('direct --harness-path eval does not support --resume; use a fresh run ID', file=sys.stderr)
-                return 2
-            if args.rounds not in (None, 0):
-                print('direct --harness-path eval requires --rounds 0', file=sys.stderr)
-                return 2
-            if args.sampling != 'all':
-                print('direct --harness-path eval requires --sampling all', file=sys.stderr)
-                return 2
-            args.rounds = 0
-
-    staged = args.sampling in ("diagnostic", "pilot_10pct")
-    if args.rounds is None:
-        args.rounds = 0 if staged else 3
-    if args.authorize_unobserved_diagnostic is not None and (
-            args.sampling != "diagnostic" or args.side != "train"
-            or not args.authorize_unobserved_diagnostic.strip()
-            or args.method_entrypoint):
-        print("refusing unobserved diagnostic: explicit operator reason, diagnostic sampling, "
-              "train side and no method entrypoint are required", file=sys.stderr)
+    from harnessgrad.orchestration.execution_policy import validate_execution_policy
+    validated_policy = validate_execution_policy(args)
+    if validated_policy is None:
         return 2
-    policy_evidence = None
-    if staged:
-        try:
-            diagnostic_policy.staged_task_set([], args.sampling, trials=args.trials,
-                                               jobs=args.jobs, rounds=args.rounds)
-            if not args.policy_evidence:
-                raise ValueError("staged runs require --policy-evidence with passing dataset gates")
-            policy_evidence = json.loads(Path(args.policy_evidence).read_text())
-            if not isinstance(policy_evidence, dict):
-                raise ValueError("policy evidence must be an object")
-            context = policy_evidence.get("context")
-            diagnostic_policy.validate_context(context)
-            if (context["dataset"] != args.dataset or context["side"] != args.side
-                    or (context["gates"]["status"] != "passed" and not (
-                        args.authorize_unobserved_diagnostic
-                        and context["gates"]["status"] == "unknown"))):
-                raise ValueError("passing dataset gates must bind this dataset and side")
-        except (OSError, ValueError) as exc:
-            print(f"refusing staged policy: {exc}", file=sys.stderr)
-            return 2
-        # A diagnostic/pilot measures one state; it cannot invoke an improver.
-        args.improver = "none"
+    staged, policy_evidence = validated_policy
 
     runs_root = Path(args.runs_root)
     source_lease = sources.enter_context(SourceLease())
@@ -569,26 +408,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     # External wrapper/dependency bytes are checked before local resolver commands
     # or optional provider probes; no platform waiver can replace this contract.
-    treatment_start = treatment_record = treatment_saved = None
-    treatment_declared = False
+    treatment_record = None
     try:
-        if args.resume:
-            treatment_mode = 'unified' if args.mode in ('A', 'B') else args.mode
-            treatment_run_id = args.run_id or f"{args.harness}-{args.dataset}-{args.sampling}-m{treatment_mode}"
-            treatment_meta = resume_planning.read_metadata(Path(args.runs_root) / treatment_run_id)
-            treatment_saved = treatment_meta.get(treatment_identity.KEY)
-            treatment_declared = bool(treatment_meta.get('treatment_manifest_declared'))
-        treatment_environment = dict(os.environ)
-        for key, value in improver_readiness.ImproverRequest(
-                args.improver, args.improver_model, args.improver_effort).environment_patch().items():
-            if value is None:
-                treatment_environment.pop(key, None)
-            else:
-                treatment_environment[key] = value
-        treatment_start = treatment_identity.capture(args.treatment_manifest, environment=treatment_environment)
-        if args.resume:
-            treatment_identity.require_same(treatment_saved, treatment_start,
-                                             declared=treatment_declared, early=True)
+        from harnessgrad.orchestration.treatment_workflow import capture_start
+        treatment_start, treatment_saved, treatment_declared = capture_start(
+            args, environment=os.environ, read_metadata=resume_planning.read_metadata)
     except (OSError, TypeError, ValueError) as exc:
         print(f'refusing treatment: {exc}', file=sys.stderr)
         return 2
@@ -653,6 +477,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     oracle_source, oracle_coverage = selected.partition.oracle_source, selected.partition.oracle_coverage
     setups, verifiers, envs = selected.setups, selected.verifiers, selected.envs
     args.scoring_identity = selected.scoring_identity
+    args.measurement_components = selected.measurement_components
     args.dataset_runtime_identity = selected.dataset_runtime_identity
     args.verification_context = selected.verification_context
     args.harness_runtime_identity = None
@@ -689,7 +514,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         try:
             admission = resume_planning.admit_resume_bindings(resume_planning.AdmissionRequest(
                 args.side, side_ids, resume_planning.ResumeIdentities(
-                    args.scoring_identity, args.dataset_runtime_identity, args.verification_context),
+                    args.scoring_identity, args.dataset_runtime_identity, args.verification_context, args.measurement_components),
                 setups, envs, args.sandbox), run_dir, harness_src, metadata=saved_meta, hold=sources.enter_context)
             saved_meta = admission.metadata
             if admission.restored is not None:
@@ -740,6 +565,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         _write_run_meta(run_dir, run_id=run_id, dataset=args.dataset,
                         sampling_policy="diagnostic", enforcement=enforcement,
                         **scoring_identity.fields(args.scoring_identity),
+                        **measurement_components.fields(args.measurement_components),
                         **dataset_runtime_identity.fields(args.dataset_runtime_identity))
         def finalize_incomplete(detail):
             if not (run_dir / "diagnostic_receipt.json").exists():
@@ -1063,7 +889,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     # Preserve the original keyword observation order before the pure projection.
     metadata_identities = run_metadata.identity_fields(run_metadata.IdentityRecords(
-        args.scoring_identity, args.dataset_runtime_identity, args.verification_context, args.harness_runtime_identity))
+        args.scoring_identity, args.dataset_runtime_identity, args.verification_context, args.harness_runtime_identity,
+        args.measurement_components))
     metadata_diagnostic = run_metadata.diagnostic_fields(
         run_metadata.DiagnosticRecord(eligible_ids, side_ids, policy_evidence) if staged else None)
     metadata_workspace = run_metadata.WorkspaceRecord(
@@ -1171,7 +998,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     h0_options = h0_planning.H0Options(args.dataset, args.sampling, args.side, args.trials,
                                        args.jobs, args.gpu_budget, args.sandbox)
     h0_identities = h0_planning.H0Identities(args.scoring_identity, args.dataset_runtime_identity,
-        args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity)
+        args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity,
+        args.measurement_components)
     h0_attribution = h0_planning.RunAttribution(run_id, mode, improver)
     if resume_state is None:
         h0_sha = h0_planning.commit_h0_source(work, commit_state)

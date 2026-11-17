@@ -28,39 +28,39 @@ from eval.ckpt.git_state import reset_hard
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from harnessgrad import PLATFORM_API_VERSION
-from harnessgrad.method_attempts import MethodAttempts
+from harnessgrad.experiment.method_attempts import MethodAttempts
 from methods.stop_status import TerminalStop, terminal_stop
-from harnessgrad import code_metrics
-from harnessgrad import components
+from harnessgrad.core import code_metrics
+from harnessgrad.core import components
 from harnessgrad import config as platform_config
-from harnessgrad import policies
-from harnessgrad import scoring_identity
-from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
-from harnessgrad import verification_context as verification_context_mod
+from harnessgrad.experiment import policies
+from harnessgrad.provenance import measurement_components, scoring_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity_mod
+from harnessgrad.provenance import verification_context as verification_context_mod
 from eval.containers import external_runtime
-from harnessgrad import candidate_runtime
-from harnessgrad import snapshot
-from harnessgrad.channel import _stage_for_method
-from harnessgrad.environments import _env_record
-from harnessgrad.environments import _report_harness_failed
-from harnessgrad.environments import _report_invalid
-from harnessgrad.identity import _identity, _improver_identity, _improver_runtime
-from harnessgrad.methods import _call_method
-from harnessgrad.methods import _touched_paths
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.core import snapshot
+from harnessgrad.experiment.channel import _stage_for_method
+from harnessgrad.orchestration.environments import _env_record
+from harnessgrad.orchestration.environments import _report_harness_failed
+from harnessgrad.orchestration.environments import _report_invalid
+from harnessgrad.provenance.identity import _identity, _improver_identity, _improver_runtime
+from harnessgrad.execution.method_runner import _call_method
+from harnessgrad.execution.method_runner import _touched_paths
 from harnessgrad.orchestration.historical_evidence import reused_measurement
-from harnessgrad.records import _cost_of
-from harnessgrad.records import _curve_point
-from harnessgrad.records import _keep_method_logs
-from harnessgrad.records import _require_untampered
-from harnessgrad.records import _save_round_diff
-from harnessgrad.records import _save_round_state
-from harnessgrad.records import _save_traces
-from harnessgrad.records import _save_verdicts
-from harnessgrad.records import _scored
-from harnessgrad.records import level_fields as _level_fields
-from harnessgrad.records import test_rate_fields as _test_rate_fields
-from harnessgrad.records import _write_curve
-from harnessgrad.records import _write_run_meta
+from harnessgrad.experiment.records import _cost_of
+from harnessgrad.experiment.records import _curve_point
+from harnessgrad.experiment.records import _keep_method_logs
+from harnessgrad.experiment.records import _require_untampered
+from harnessgrad.experiment.records import _save_round_diff
+from harnessgrad.experiment.records import _save_round_state
+from harnessgrad.experiment.records import _save_traces
+from harnessgrad.experiment.records import _save_verdicts
+from harnessgrad.experiment.records import _scored
+from harnessgrad.experiment.records import level_fields as _level_fields
+from harnessgrad.experiment.records import test_rate_fields as _test_rate_fields
+from harnessgrad.experiment.records import _write_curve
+from harnessgrad.experiment.records import _write_run_meta
 import eval.run.candidate as candidate
 
 
@@ -118,7 +118,8 @@ def _matching_verification_context(point, current):
 def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | None = None,
                      dataset_runtime_identity: dict | None = None,
                      harness_runtime_identity: dict | None = None,
-                     verification_context: dict | None = None) -> dict | None:
+                     verification_context: dict | None = None,
+                     components: dict | None = None) -> dict | None:
     """The earlier point that already measured **this exact harness**, or None.
 
     `identity.harness_sha` is a *content address* -- `ckpt.git_state.commit_state`
@@ -145,6 +146,8 @@ def _identical_prior(curve: list[dict], sha: str, trials: int, *, repo: Path | N
             continue
         if dataset_runtime_identity_mod.problems(
                 point.get('dataset_runtime_identity'), dataset_runtime_identity):
+            continue
+        if measurement_components.bundle_problems(point.get('measurement_components'), components):
             continue
         if candidate_runtime.problems(point.get("harness_runtime_identity"), actor_identity):
             continue
@@ -891,6 +894,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             declared_point = None
         if declared_point is not None and not _matching_verification_context(declared_point, reuse_context):
             declared_point = None
+        if declared_point is not None and measurement_components.bundle_problems(
+                declared_point.get('measurement_components'), getattr(args, 'measurement_components', None)):
+            declared_point = None
         if declared_point is not None and candidate_runtime.problems(
                 declared_point.get("harness_runtime_identity"), actor_binding):
             declared_point = None
@@ -904,6 +910,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             prior_point = (_identical_prior(curve, sha, args.trials, repo=work,
                                            dataset_runtime_identity=reuse_identity,
                                            harness_runtime_identity=actor_binding,
+                                           components=getattr(args, 'measurement_components', None),
                                            verification_context=reuse_context)
                            if (has_manifest and not runtime_reuse_error
                                and getattr(args, "reuse_identical", False))
@@ -930,6 +937,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                             trials=args.trials, progress_dir=run_dir,
                             sandbox=args.sandbox, setups=setups, verifiers=verifiers,
                             **dataset_runtime_identity_mod.fields(getattr(args, 'dataset_runtime_identity', None)),
+                            **measurement_components.fields(getattr(args, 'measurement_components', None)),
                             verification_context=getattr(args, 'verification_context', None),
                             **candidate_runtime.fields(actor_binding),
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
@@ -985,6 +993,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                                gpu_budget=getattr(args, "gpu_budget", None)),
             sampling=sampling,
             scoring_identity=getattr(args, "scoring_identity", None),
+            measurement_components=getattr(args, "measurement_components", None),
             dataset_runtime_identity=(getattr(args, 'dataset_runtime_identity', None)
                 if getattr(args, 'dataset_runtime_identity', None) is not None
                 else (res or {}).get('dataset_runtime_identity')),
@@ -1136,7 +1145,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 "declaration_error": str(exc)}
         # ------------------------------------------------------------------
         # Anthropic's two evaluator-side policies, **recorded rather than enforced**
-        # (`harnessgrad/policies.py` states why): a geometric mean whose lowest term binds,
+        # (`harnessgrad/experiment/policies.py` states why): a geometric mean whose lowest term binds,
         # and the capability-floor check that disqualifies a candidate "whatever its score"
         # when its interval on any task lies entirely below the baseline's. This platform has
         # no acceptance rule -- the method owns that -- so the numbers go on the point and a
@@ -1186,6 +1195,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             point["score_geomean"] = round(policies.geomean(list(studied.values())), 6)
             scoring_problems = scoring_identity.problems(
                 baseline_point.get("scoring_identity"), point.get("scoring_identity"))
+            scoring_problems += measurement_components.bundle_problems(
+                baseline_point.get("measurement_components"), point.get("measurement_components"))
             runtime_problems = dataset_runtime_identity_mod.problems(
                 baseline_point.get('dataset_runtime_identity'), point.get('dataset_runtime_identity'))
             context_problems = []
@@ -1204,6 +1215,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 if problem not in point['baseline']['problems']:
                     point['baseline']['problems'].append(problem)
             if (baseline_point.get("scoring_identity") is not None or point.get("scoring_identity") is not None
+                    or baseline_point.get("measurement_components") is not None or point.get("measurement_components") is not None
                     or baseline_point.get('dataset_runtime_identity') is not None
                     or point.get('dataset_runtime_identity') is not None or context_problems):
                 point["baseline"]["comparable"] = not bool(point["baseline"]["problems"])
@@ -1237,7 +1249,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # from the tree the platform is about to measure, including when the candidate was
         # rejected (`src` is set before validation), because "what did the method actually
         # do" is the question a rejected candidate raises. A diagnostic, never a score:
-        # `harnessgrad/code_metrics.py` states the three ways static analysis is wrong.
+        # `harnessgrad/core/code_metrics.py` states the three ways static analysis is wrong.
         if src:
             point["candidate_code"] = code_metrics.measure(Path(src))
             # **A candidate the entrypoint cannot load.** Measured (`v9-dgm`, 2026-10-05):

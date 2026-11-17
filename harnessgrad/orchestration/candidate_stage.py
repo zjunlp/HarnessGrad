@@ -19,10 +19,10 @@ from eval.ckpt.git_state import content_sha, manifest
 from eval.ckpt.source_tree import copy_rejected_harness, has_python_runtime
 from eval.containers import external_runtime
 from eval.observe.console import CONSOLE as console
-from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
-from harnessgrad import candidate_runtime
+from harnessgrad.execution.harness_validation import check as check_harness, source_identity, filesystem_identity
+from harnessgrad.execution import candidate_runtime
 from harnessgrad.loops.mode_a import _snapshot_round
-from harnessgrad.records import _save_round_state, _write_run_meta
+from harnessgrad.experiment.records import _save_round_state, _write_run_meta
 from . import source_lease
 
 

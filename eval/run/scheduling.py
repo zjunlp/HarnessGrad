@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import concurrent.futures as futures
 
-from harnessgrad import slots
+from harnessgrad.execution import slots
 from eval.run.outcomes import _harness_failure
 
 

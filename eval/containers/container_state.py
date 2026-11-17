@@ -24,8 +24,9 @@ import eval.containers.harness_runtime as harness_runtime
 import eval.service.modelgate as modelgate_mod
 import eval.observe.progress as progress_mod
 import eval.service.services as services_mod
-import tools.web_gateway as web_gateway_mod
-from harnessgrad import candidate_runtime, python_exec_runtime
+import eval.service.web_gateway as web_gateway_mod
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_exec_runtime
 from eval.service.services import label
 from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT

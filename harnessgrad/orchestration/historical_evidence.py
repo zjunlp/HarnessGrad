@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from harnessgrad import candidate_runtime, dataset_runtime_identity, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, verification_context
 
 
 def read_trace_bodies(directory: Path) -> tuple[dict, dict]:
@@ -60,6 +62,7 @@ def base_from_point(point: dict) -> dict:
     """
     identity = point.get("identity") or {}
     base = {
+        **measurement_components.fields(point.get("measurement_components")),
         **dataset_runtime_identity.fields(point.get("dataset_runtime_identity")),
         **verification_context.fields(point.get("verification_context")),
         **candidate_runtime.fields(point.get("harness_runtime_identity")),
@@ -97,6 +100,7 @@ def reused_measurement(run_dir: Path, point: dict, history: list[dict]) -> dict:
         if ((earlier.get("identity") or {}).get("harness_sha") !=
                 (origin.get("identity") or {}).get("harness_sha")):
             raise ValueError("reused measurement source tree changed")
+        measurement_components.require_same(earlier.get('measurement_components'), origin.get('measurement_components'))
         ids = list(origin.get("per_task") or {})
         if any((earlier.get("per_task") or {}).get(tid) != origin["per_task"][tid] for tid in ids):
             raise ValueError("reused measurement scores changed")

@@ -9,7 +9,7 @@ from pathlib import Path
 import eval.containers.container as container
 import eval.containers.sandbox as sandbox
 from eval.run.integrity import PLATFORM_ROOT
-from harnessgrad.environments import _required_env_kinds
+from harnessgrad.orchestration.environments import _required_env_kinds
 
 
 def check_container_boundaries(envs: dict, *, reporter) -> bool:

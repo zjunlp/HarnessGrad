@@ -18,7 +18,9 @@ import data.scaffolds.registry as datasets
 from eval.ckpt.git_state import STATE_DIRNAME
 from eval.containers import external_runtime
 from eval.observe.console import CONSOLE as console
-from harnessgrad import candidate_runtime, dataset_runtime_identity, scoring_identity
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, scoring_identity
 from .candidate_stage import WorkspaceOps
 from .historical_evidence import reused_measurement, read_progress_results, require_verification_context
 
@@ -36,6 +38,7 @@ class ResumeIdentities:
     scoring: dict | None
     dataset: dict | None
     verification: dict | None
+    measurement: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +90,7 @@ def read_metadata(run_dir):
 
 def _admit_initial_points(run_dir, metadata, current):
     scoring_identity.require_same(metadata.get("scoring_identity"), current.scoring)
+    measurement_components.require_same(metadata.get("measurement_components"), current.measurement)
     require_verification_context(metadata.get("verification_context"), current.verification)
     dataset_runtime_identity.require_same(metadata.get("dataset_runtime_identity"), current.dataset)
     points = []
@@ -96,6 +100,7 @@ def _admit_initial_points(run_dir, metadata, current):
             if line.strip():
                 point = json.loads(line)
                 points.append(point)
+                measurement_components.require_same(point.get("measurement_components"), current.measurement)
                 require_verification_context(point.get("verification_context"), current.verification,
                     list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
                 dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), current.dataset)
@@ -120,6 +125,7 @@ def _admit_eval_progress(run_dir, request, source, restored):
     expected = dataset_runtime_identity.project_many(request.identities.dataset, prior)
     current = None if restored is None else restored["current"]
     for tid, record in prior.items():
+        measurement_components.require_same(record.get("measurement_components"), request.identities.measurement)
         require_verification_context(record.get("verification_context"), request.identities.verification, [tid])
         if (request.identities.dataset is not None or record.get("dataset_runtime_identity") is not None) and tid not in request.selected_ids:
             raise ValueError("dataset_runtime_identity progress names an unselected task")
@@ -183,12 +189,14 @@ def admit_train_evidence(request, evidence, run_dir, work):
         dataset_runtime_identity.admit(current.dataset)
         dataset_runtime_identity.require_same(evidence.metadata.get("dataset_runtime_identity"), current.dataset)
         scoring_identity.require_same(evidence.metadata.get("scoring_identity"), current.scoring)
+        measurement_components.require_same(evidence.metadata.get("measurement_components"), current.measurement)
         require_verification_context(evidence.metadata.get("verification_context"), current.verification)
         for point in evidence.points:
             require_verification_context(point.get("verification_context"), current.verification,
                 list((point.get("sampling") or {}).get("task_ids") or (point.get("per_task") or {})))
             dataset_runtime_identity.require_same(point.get("dataset_runtime_identity"), current.dataset)
             scoring_identity.require_same(point.get("scoring_identity"), current.scoring)
+            measurement_components.require_same(point.get("measurement_components"), current.measurement)
             candidate_runtime.checkpoint_binding(run_dir, point)
             external_runtime.admit_checkpoint(run_dir, point, fallback=work)
     except (OSError, TypeError, ValueError) as exc:

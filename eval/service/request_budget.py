@@ -15,7 +15,7 @@ import threading
 import time
 from urllib.parse import urlsplit
 
-from harnessgrad.budget_dispatch import BudgetExceeded, StaleRequest
+from harnessgrad.execution.budget_dispatch import BudgetExceeded, StaleRequest
 
 
 class AdmissionRefused(ValueError):

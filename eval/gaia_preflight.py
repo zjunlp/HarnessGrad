@@ -1,14 +1,7 @@
-"""Compatibility alias for :mod:`eval.policy.gaia_preflight`.
-
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
+"""Retained command entrypoint; Python imports use the canonical module."""
 if __name__ == "__main__":
     import runpy as _runpy
 
     _runpy.run_module("eval.policy.gaia_preflight", run_name="__main__")
 else:
-    import sys as _sys
-    from eval.policy import gaia_preflight as _implementation
-
-    _sys.modules[__name__] = _implementation
+    raise ImportError("eval.gaia_preflight was removed; import eval.policy.gaia_preflight instead")

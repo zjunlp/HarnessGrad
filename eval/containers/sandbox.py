@@ -79,7 +79,7 @@ from harnessgrad.config import current as current_config
 #: The mount plan's version. Bump it whenever what the subject can see changes.
 #: A curve made under plan 1 and one made under plan 2 are measurements of a
 #: harness in two different worlds, so `run_meta.json` records this number and
-#: `tools/plot_curve.py` refuses to put them on the same axis without saying so.
+#: `tools/analysis/plot_curve.py` refuses to put them on the same axis without saying so.
 PLAN_VERSION = 14  # 14 hides base Python global third-party sites;
                    # 13 restores required traversal structure after platform/temporary hides;
                    # 12 preserves empty traversal directories needed by relative runtime links;

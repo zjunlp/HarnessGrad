@@ -573,7 +573,8 @@ def _write_progress(progress_dir, round_no: int, tid: str,
                     trial_evidence: list[dict] | None = None,
                     dataset_runtime_identity: dict | None = None,
                     harness_runtime_identity: dict | None = None,
-                    verification_context: dict | None = None) -> None:
+                    verification_context: dict | None = None,
+                    measurement_components: dict | None = None) -> None:
     """Write one task's result the moment it exists, not at the end of the round.
 
     **Measured, twice, and the second time cost two hours.** A round's results were
@@ -600,11 +601,13 @@ def _write_progress(progress_dir, round_no: int, tid: str,
     """
     if progress_dir is None:
         return
-    from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
-    from harnessgrad import candidate_runtime
-    from harnessgrad import verification_context as verification_context_mod
+    from harnessgrad.datasets import runtime_identity as dataset_runtime_identity_mod
+    from harnessgrad.execution import candidate_runtime
+    from harnessgrad.provenance import verification_context as verification_context_mod
+    from harnessgrad.provenance import measurement_components as measurement_components_mod
     runtime_fields = {**dataset_runtime_identity_mod.fields(dataset_runtime_identity),
                       **candidate_runtime.fields(harness_runtime_identity),
+                      **measurement_components_mod.fields(measurement_components),
                       **verification_context_mod.fields(verification_context)}
     try:
         dest = Path(progress_dir) / "progress" / f"round-{round_no}"

@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.containers.container_state`.
+"""Retired import; use the execution-layer implementation."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.containers import container_state as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError("eval.container_state was removed; import eval.containers.container_state instead")

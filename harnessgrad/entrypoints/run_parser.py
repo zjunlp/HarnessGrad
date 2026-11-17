@@ -68,7 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--gpu-budget", type=int, default=None, metavar="N",
                     help="machine-wide ceiling on concurrently *measured* tasks across every "
                          "run sharing this host, enforced with file locks "
-                         "(harnessgrad/slots.py). `--jobs` stays this run's own ceiling; the "
+                         "(harnessgrad/execution/slots.py). `--jobs` stays this run's own ceiling; the "
                          "budget is what keeps N runs from each measuring `--jobs` at once. "
                          "Unset keeps the old behaviour: `--jobs` alone")
     ap.add_argument("--gpu-budget-dir", default=None, metavar="DIR",
@@ -211,7 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--no-summary", action="store_true",
                     help="do not write end-summary.md / end-summary.json when the run "
                          "finishes. A finished run writes that one page beside its curve "
-                         "by default (tools/run_summary.py); this switches it off. The "
+                         "by default (tools/analysis/run_summary.py); this switches it off. The "
                          "page is derived from curve.jsonl, so it can always be "
                          "regenerated, and a failure to write it never changes the exit "
                          "code")

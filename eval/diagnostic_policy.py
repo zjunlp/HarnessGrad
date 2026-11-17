@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.policy.diagnostic_policy`.
+"""Removed import guard: use :mod:`eval.policy.diagnostic_policy`."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.policy import diagnostic_policy as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError('eval.diagnostic_policy was removed; import eval.policy.diagnostic_policy instead')

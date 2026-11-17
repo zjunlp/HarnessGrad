@@ -168,7 +168,8 @@ def admit_checkpoint(run_dir, point, *, fallback=None, env=None):
     """Re-admit retained source for each reused train checkpoint, including H0."""
     if point.get('unmeasured'):
         return {}
-    from harnessgrad import candidate_runtime, snapshot
+    from harnessgrad.execution import candidate_runtime
+    from harnessgrad.core import snapshot
     run_dir = Path(run_dir)
     number = point.get('round')
     if type(number) is int and number >= 0 and (

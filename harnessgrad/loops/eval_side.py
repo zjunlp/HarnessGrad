@@ -20,27 +20,27 @@ from eval.ckpt.git_state import commit_state
 from eval.observe.console import CONSOLE as console
 from eval.run.runner import evaluate
 from eval.observe.tracing import harness_usage_totals, environment_usage_totals
-from harnessgrad import policies
-from harnessgrad import scoring_identity
-from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
-from harnessgrad import verification_context as verification_context_mod
+from harnessgrad.experiment import policies
+from harnessgrad.provenance import measurement_components, scoring_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity_mod
+from harnessgrad.provenance import verification_context as verification_context_mod
 from eval.containers import external_runtime
-from harnessgrad import candidate_runtime
+from harnessgrad.execution import candidate_runtime
 from harnessgrad.orchestration.historical_evidence import read_progress_results as _progress_results
-from harnessgrad.environments import _env_record
-from harnessgrad.environments import _report_harness_failed
-from harnessgrad.environments import _report_invalid
-from harnessgrad.identity import _identity
-from harnessgrad.records import _cost_of
-from harnessgrad.records import _curve_point
-from harnessgrad.records import level_fields as _level_fields
-from harnessgrad.records import test_rate_fields as _test_rate_fields
-from harnessgrad.records import _require_untampered
-from harnessgrad.records import _save_traces
-from harnessgrad.records import _save_verdicts
-from harnessgrad.records import _scored
-from harnessgrad.records import _write_curve
-from harnessgrad.records import _write_run_meta
+from harnessgrad.orchestration.environments import _env_record
+from harnessgrad.orchestration.environments import _report_harness_failed
+from harnessgrad.orchestration.environments import _report_invalid
+from harnessgrad.provenance.identity import _identity
+from harnessgrad.experiment.records import _cost_of
+from harnessgrad.experiment.records import _curve_point
+from harnessgrad.experiment.records import level_fields as _level_fields
+from harnessgrad.experiment.records import test_rate_fields as _test_rate_fields
+from harnessgrad.experiment.records import _require_untampered
+from harnessgrad.experiment.records import _save_traces
+from harnessgrad.experiment.records import _save_verdicts
+from harnessgrad.experiment.records import _scored
+from harnessgrad.experiment.records import _write_curve
+from harnessgrad.experiment.records import _write_run_meta
 
 def _baseline_block(path: str, point: dict) -> dict:
     """What the frozen reference is, and why it may not describe this point.
@@ -50,7 +50,8 @@ def _baseline_block(path: str, point: dict) -> dict:
     would throw away a real score because a side file moved.
     """
     block: dict = {"kind": "frozen", "path": path}
-    if point.get("scoring_identity") is not None or point.get('dataset_runtime_identity') is not None:
+    if (point.get("scoring_identity") is not None or point.get('dataset_runtime_identity') is not None
+            or point.get('measurement_components') is not None):
         block["comparable"] = False
     try:
         reference = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -86,6 +87,7 @@ def _baseline_block(path: str, point: dict) -> dict:
         if problem not in block['problems']:
             block['problems'].append(problem)
     if (reference.get("scoring_identity") is not None or point.get("scoring_identity") is not None
+            or reference.get('measurement_components') is not None or point.get('measurement_components') is not None
             or reference.get('dataset_runtime_identity') is not None
             or point.get('dataset_runtime_identity') is not None or problems):
         block["comparable"] = not bool(block["problems"])
@@ -251,6 +253,8 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
     except (OSError, json.JSONDecodeError) as exc:
         return f"{run_dir.name}/run_meta.json is unreadable: {exc}"
     errors = scoring_identity.problems(meta.get("scoring_identity"), getattr(args, "scoring_identity", None))
+    errors += measurement_components.bundle_problems(
+        meta.get("measurement_components"), getattr(args, "measurement_components", None))
     errors += dataset_runtime_identity_mod.problems(
         meta.get('dataset_runtime_identity'), getattr(args, 'dataset_runtime_identity', None))
     errors += candidate_runtime.problems(
@@ -286,7 +290,8 @@ def _resume_mismatch(run_dir: Path, args, pool: str, sha: str) -> str | None:
 def _resume_runtime_mismatch(work: Path, prior: dict[str, dict], *,
                              dataset_runtime_identity: dict | None = None,
                              harness_runtime_identity: dict | None = None,
-                             verification_context: dict | None = None) -> str | None:
+                             verification_context: dict | None = None,
+                             components: dict | None = None) -> str | None:
     """Resume may not bypass external actor admission or mix old trials."""
     try:
         dataset_runtime_identity_mod.admit(dataset_runtime_identity)
@@ -294,6 +299,9 @@ def _resume_runtime_mismatch(work: Path, prior: dict[str, dict], *,
         task_runtimes = dataset_runtime_identity_mod.project_many(dataset_runtime_identity, prior)
         for task_id, record in prior.items():
             expected = task_runtimes[task_id]
+            errors = measurement_components.bundle_problems(record.get('measurement_components'), components)
+            if errors:
+                return f"{task_id}: " + '; '.join(errors)
             recorded = record.get("verification_context")
             if recorded is None or verification_context is None:
                 return f"{task_id}: verification context missing"
@@ -539,6 +547,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
             why = why or _resume_runtime_mismatch(
                 work, prior, dataset_runtime_identity=current_runtime_identity,
                 verification_context=current_verification_context,
+                components=getattr(args, 'measurement_components', None),
                 harness_runtime_identity=actor_binding)
             if why:
                 console.note(f"refusing --resume: {why}", level="error")
@@ -557,6 +566,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                        trials=args.trials, jobs=args.jobs,
                        setups=setups, verifiers=verifiers, envs=envs, run_id=run_id,
                        **dataset_runtime_identity_mod.fields(current_runtime_identity),
+                       **measurement_components.fields(getattr(args, 'measurement_components', None)),
                        verification_context=current_verification_context,
                        **candidate_runtime.fields(actor_binding),
                        run_seed=os.environ["HARNESSGRAD_SEED"],
@@ -644,6 +654,7 @@ def _run_eval_side(*, work: Path, man: dict, run_id: str, run_dir: Path, tasks: 
                   "selection_basis_round": 0, "selected_within": "eval"},
         scores=[res["per_task"][t] for t in scored], task_ids=scored,
         scoring_identity=getattr(args, "scoring_identity", None),
+        measurement_components=getattr(args, "measurement_components", None),
         dataset_runtime_identity=current_runtime_identity,
         harness_runtime_identity=actor_binding,
         verification_context=current_verification_context,
