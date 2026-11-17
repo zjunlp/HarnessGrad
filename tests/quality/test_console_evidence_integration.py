@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad.evidence_export import check_export
+from harnessgrad.evidence_reports.evidence_export import check_export
 from test_evidence_export import PRIVATE_TASK, SECRET, author, save_run
 
 playwright = pytest.importorskip('playwright.sync_api')

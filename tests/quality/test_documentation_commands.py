@@ -215,7 +215,7 @@ def test_documented_split_flags_exist():
     so (b) cannot see them. They are the newest documented surface -- the one most likely to
     be re-spelled in a merge -- and `docs/custom-dataset-splits.md` is a page of commands.
     """
-    accepted = _argparse_flags(ROOT / "harnessgrad" / "splits.py") | {"--help"}
+    accepted = _argparse_flags(ROOT / "harnessgrad" / "experiment" / "splits.py") | {"--help"}
     problems: list[tuple[Path, int, str]] = []
     for path, commands in _documents():
         for number, command in commands:

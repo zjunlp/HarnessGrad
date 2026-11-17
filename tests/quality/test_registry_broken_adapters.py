@@ -65,7 +65,7 @@ def test_checkout_has_all_reviewed_adapter_declarations():
 
 
 def test_missing_runtime_is_reported_at_load_without_shortening_catalog(monkeypatch, tmp_path):
-    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
 
     # Select only new empty task-owned storage, never a developer's prepared runtime.
     monkeypatch.setenv("HG_REVIEWED_ENVIRONMENT_ONLY", "1")

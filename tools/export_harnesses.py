@@ -50,7 +50,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASE_HARNESS = ROOT / "base_harness" / "loop"
 
-#: Loading `harnessgrad/snapshot.py` by path would otherwise leave a `__pycache__` in the
+#: Loading `harnessgrad/core/snapshot.py` by path would otherwise leave a `__pycache__` in the
 #: platform tree, which this tool only reads -- and a stray file there is not cosmetic:
 #: `harness_sha` is a content address of a tree, and not moving it is part of the job.
 sys.dont_write_bytecode = True
@@ -72,7 +72,7 @@ FAIL_PATCH = "patch-failed"
 
 #: Not harness source: bytecode is a cache of a tree, `.git`/`.state` are the stores the
 #: tree was copied out of. The same four patterns the console ignores, and the same ones
-#: `harnessgrad/snapshot.py` leaves out of a snapshot.
+#: `harnessgrad/core/snapshot.py` leaves out of a snapshot.
 _IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", ".state")
 
 
@@ -178,7 +178,7 @@ def _verify(tree: Path, sha: str | None) -> str | None:
 
 
 def _snapshot_api():
-    """`harnessgrad/snapshot.py`, loaded by path so the tool needs no `PYTHONPATH`.
+    """`harnessgrad/core/snapshot.py`, loaded by path so the tool needs no `PYTHONPATH`.
 
     The console loads it the same way and for the same reason (`_snapshot_api`): the
     tool runs as a script, so `import harnessgrad` is not on `sys.path` unless the
@@ -186,7 +186,10 @@ def _snapshot_api():
     """
     import importlib.util
 
-    source = ROOT / "harnessgrad" / "snapshot.py"
+    base = ROOT / "harnessgrad"
+    source = base / "core" / "snapshot.py"
+    if not source.exists() and not source.is_symlink():
+        source = base / "snapshot.py"  # Older checkout layouts.
     if not source.is_file():
         return None
     spec = importlib.util.spec_from_file_location("hg_export_snapshot", source)
@@ -210,7 +213,7 @@ def _check_out_snapshot(snapshot_file: Path, target: Path) -> tuple[str | None, 
     """
     api = _snapshot_api()
     if api is None:
-        return "this checkout has no harnessgrad/snapshot.py", None
+        return "this checkout has no usable harness snapshot implementation", None
     try:
         stored = api.load(snapshot_file)
         api.check_out(snapshot_file, target)

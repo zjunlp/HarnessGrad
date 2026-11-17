@@ -17,12 +17,12 @@ from urllib.request import urlopen
 
 from eval.containers import sandbox
 from harnessgrad.paths import main_checkout
-from harnessgrad.python_artifacts import atomic_json, digest, locked
+from harnessgrad.execution.python_runtime.python_artifacts import atomic_json, digest, locked
 from tools import loop_releases as loop
-from tools import configure_codex_harness as codex
-from tools import configure_dsh_harness as dsh
-from tools import configure_opencode_harness as opencode
-from tools import configure_openclaw_harness as openclaw
+from tools.harness_setup import configure_codex_harness as codex
+from tools.harness_setup import configure_dsh_harness as dsh
+from tools.harness_setup import configure_opencode_harness as opencode
+from tools.harness_setup import configure_openclaw_harness as openclaw
 
 ROOT = Path(__file__).resolve().parents[1]
 NODE_VERSION = "24.22.2"
@@ -113,7 +113,7 @@ def _check_toolchain(node_root: Path) -> None:
         env = {"PATH": os.defpath, "HOME": home, "NODE_DISABLE_COMPILE_CACHE": "1"}
         for argv, version in ((npm[:1], f"v{NODE_VERSION}"), (npm, NPM_VERSION)):
             actual = subprocess.check_output([*argv, "--version"], cwd=home, env=env,
-                                             text=True, timeout=20).strip()
+                                             text=True, errors="strict", timeout=20).strip()
             if actual != version:
                 raise ValueError(f"{Path(argv[-1]).name} version mismatch: expected {version}, found {actual}")
 

@@ -159,7 +159,7 @@ def _candidate_spec(form, paths):
     target = root / name
     if target.is_symlink() or target.resolve(strict=True) != target or not target.is_dir():
         raise ValueError('candidate is not an ordinary directory')
-    from tools.validate_harness import check, source_identity, filesystem_identity
+    from harnessgrad.execution.harness_validation import check, source_identity, filesystem_identity
     problems = check(target)
     if problems:
         raise ValueError('candidate manifest or source is invalid')
@@ -319,7 +319,7 @@ def _storage_and_budget(paths, budget_capacity):
     # Requested jobs is per-run parallelism; capacity is a shared deployment fact.
     if str(paths.console_parent) not in sys.path:
         sys.path.insert(0, str(paths.console_parent))
-    from harnessgrad.slots import inspect_capacity, SlotBudgetError
+    from harnessgrad.execution.slots import inspect_capacity, SlotBudgetError
     try:
         inspect_capacity(paths.budget_dir, capacity)
     except SlotBudgetError as exc:

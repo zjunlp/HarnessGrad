@@ -512,7 +512,7 @@ def guard_launch(form: dict, *, preview_key_pending: bool = False, preview_meta_
 
 
 def sandbox_supported():
-    from harnessgrad.readiness import sandbox_check
+    from harnessgrad.orchestration.readiness import sandbox_check
     return sandbox_check(required=True)
 
 
@@ -739,7 +739,7 @@ def _snapshot(root: pathlib.Path) -> dict[str, str]:
 
 def _resolve_assistant_registry(kind, model):
     # The canonical declaration reader performs no CLI/model probes or builds.
-    from tools import improver
+    from harnessgrad.improvers import resolver as improver
     return improver.declared_editor_binding(kind, model_override=model, environment=os.environ)
 
 

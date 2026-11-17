@@ -117,7 +117,7 @@ def environment(private=None):
 
 
 def worker(request, loader=load):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     binding = request['binding']
     expected_sources = verify_sources(request['source_identity'])
     name = request['dataset']
@@ -146,7 +146,7 @@ def worker(request, loader=load):
 
 
 def run(name, operation, options, *, runtime_override=None, program=None):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     options = {key: str(Path(value).absolute()) if key in {'source', 'target', 'archive'} and value is not None
                else value for key, value in options.items()}
     runtime = dataset_runtime.resolve_execution(name)
@@ -217,7 +217,7 @@ def run(name, operation, options, *, runtime_override=None, program=None):
 
 
 def launch(request, *, program=None):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     binding = request['binding']
     request['_phase'] = 'pre-worker-source-admission'
     verify_sources(request['source_identity'])
@@ -238,7 +238,7 @@ def launch(request, *, program=None):
     request['_phase'] = 'worker-execution'
     with tempfile.TemporaryDirectory(prefix='hg-tau-worker-private-') as private:
         proc = subprocess.run(argv, input=json.dumps(request), capture_output=True, text=True,
-                              env=environment(private), cwd=private, check=False)
+                              errors='strict', env=environment(private), cwd=private, check=False)
     if attempt:
         # Raw diagnostics stay in this mode-0700 owned attempt, never the receipt/error.
         attempt.with_name('worker-stdout.txt').write_text(proc.stdout)

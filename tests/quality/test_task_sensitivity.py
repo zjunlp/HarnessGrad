@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import tools.task_sensitivity as ts  # noqa: E402
+import tools.studies.task_sensitivity as ts  # noqa: E402
 
 
 # ------------------------------------------------------------------ 相关 ---

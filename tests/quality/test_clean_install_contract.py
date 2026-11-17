@@ -176,7 +176,7 @@ import harnessgrad
 from data.scaffolds import registry
 from data.scaffolds.aggregation import aggregation_policy
 from data.datasets import costbench, costbench_dynamic
-from harnessgrad.dataset_runtime import execution_descriptor
+from harnessgrad.datasets.runtime import execution_descriptor
 assert not site.ENABLE_USER_SITE
 assert registry.published()
 assert len(registry.load_tasks('demo')[0]) == 8
@@ -185,6 +185,19 @@ assert registry.provider('costbench') is None
 assert execution_descriptor('costbench')['python'] == '3.12'
 assert costbench._execution() is costbench_dynamic._execution()
 assert callable(costbench._execution().binding)
+from harnessgrad.provenance import measurement_components, scoring_identity
+agentdojo = measurement_components.resolve('agentdojo')
+measurement_components.require_scoring_alignment(scoring_identity.resolve('agentdojo'), agentdojo)
+assert agentdojo['data_source']['details']['dataset'] == 'agentdojo'
+alfworld = measurement_components.resolve('alfworld')
+measurement_components.require_scoring_alignment(scoring_identity.resolve('alfworld'), alfworld)
+assert alfworld['data_source']['details']['dataset'] == 'alfworld'
+jericho = measurement_components.resolve('jericho')
+measurement_components.require_scoring_alignment(scoring_identity.resolve('jericho'), jericho)
+assert jericho['data_source']['details']['dataset'] == 'jericho'
+scienceworld = measurement_components.resolve('scienceworld')
+measurement_components.require_scoring_alignment(scoring_identity.resolve('scienceworld'), scienceworld)
+assert scienceworld['data_source']['details']['dataset'] == 'scienceworld'
 root = Path(harnessgrad.__file__).resolve().parent.parent
 """ + "\n".join(f"assert (root / {name!r}).is_file()" for name in RESOURCES)
     run([str(runtime / "bin/python"), "-c", code], root, env)
@@ -196,7 +209,7 @@ def test_installed_miniagent_declares_its_own_complete_lock(installed):
 import importlib.util,json
 from pathlib import Path
 import harnessgrad
-from harnessgrad.python_harness_runtime import descriptor
+from harnessgrad.execution.python_runtime.python_harness_runtime import descriptor
 source = Path(harnessgrad.__file__).resolve().parent.parent / 'base_harness/miniagent'
 manifest = json.loads((source / 'harness.json').read_text())
 assert manifest['install'] == 'requirements.lock'
@@ -289,7 +302,7 @@ import importlib, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
 from data.scaffolds.qa import base
 name = sys.argv[1]
-from harnessgrad.dataset_runtime import descriptor
+from harnessgrad.datasets.runtime import descriptor
 assert descriptor(name)['pins'] == {'pyarrow': '23.0.0'}
 assert importlib.util.find_spec('pyarrow') is None
 row = {'question':'Synthetic: two plus three?', 'answer': '#### 5'}

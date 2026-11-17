@@ -6,7 +6,7 @@ import shutil
 def check_out(snapshot_file, target, *, api) -> str | None:
     """把快照签出成候选目录；成功返回 None，失败返回一句能放进错误详情的理由。"""
     if api is None:
-        return "控制台找不到 harnessgrad/snapshot.py"
+        return "控制台找不到可用的 Harness 快照实现"
     try:
         api.check_out(snapshot_file, target)
     except (api.SnapshotError, OSError) as exc:

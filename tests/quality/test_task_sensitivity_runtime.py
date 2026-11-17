@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools import task_sensitivity as ts
+from tools.studies import task_sensitivity as ts
 from test_declared_trials_continue import PROTOCOL
 from test_shared_dataset_runtime import harness
 

@@ -47,6 +47,13 @@ def test_installed_presets_and_reviewed_assets_without_checkout(tmp_path):
                 'data/scaffolds/native_harbor_runtime/PROVENANCE.json',
                 'data/scaffolds/native_qa/PROVENANCE.json',
                 'data/scaffolds/native_qa/LICENSE.upstream',
+                'tools/studies/__init__.py',
+                'tools/studies/task_difficulty.py',
+                'tools/studies/task_sensitivity.py',
+                'data/scaffolds/native_qa_provenance.py',
+                'data/scaffolds/spreadsheet_provenance.py',
+                'data/datasets/spreadsheetbench/measurement_profile.py',
+                'data/datasets/spreadsheetbench2/measurement_profile.py',
                 'data/scaffolds/command_oracle_harness/harness.json',
                 'data/datasets/livecodebench/cli/lcb',
                 'data/datasets/livecodebench/execution-runtime.json',
@@ -65,12 +72,19 @@ def test_installed_presets_and_reviewed_assets_without_checkout(tmp_path):
                 'data/datasets/locomo/execution-runtime.json',
                 'data/datasets/locomo/requirements.lock',
                 'data/datasets/locomo/scoring_profile.py',
+                'data/datasets/locomo/measurement_profile.py',
                 'data/datasets/locomo/specs/source.json',
                 'data/datasets/locomo/LICENSE.harbor',
+                'data/datasets/strongreject/measurement_profile.py',
+                'data/datasets/strongreject/scoring_profile.py',
+                'data/datasets/reasoning_gym/measurement_profile.py',
+                'data/datasets/reasoning_gym/scoring_profile.py',
                 'data/datasets/math/execution-runtime.json',
                 'data/datasets/math/requirements.lock',
                 'data/datasets/math/scoring_profile.py',
+                'data/datasets/math/measurement_profile.py',
                 'data/datasets/math500/scoring_profile.py',
+                'data/datasets/math500/measurement_profile.py',
                 'methods/endpoint_client.py',
                 'methods/ENDPOINT_TRANSPORT.md',
                 'data/datasets/memoryagentbench/requirements-prepare.txt',
@@ -98,9 +112,16 @@ def test_installed_presets_and_reviewed_assets_without_checkout(tmp_path):
     missing = run([str(python), '-I', '-B', '-m', 'tools.prepare_appworld'], expected=1)
     assert 'AppWorld preparation failed:' in missing.stderr and 'Traceback' not in missing.stderr
     run([str(python), '-I', '-B', '-c',
-         'from harnessgrad.scoring_identity import resolve; assert resolve("chessbench_puzzles")["sha256"]'])
+         'from tools.studies import task_difficulty, task_sensitivity; assert callable(task_difficulty.main) and callable(task_sensitivity.main)'])
     run([str(python), '-I', '-B', '-c',
-         'from harnessgrad.scoring_identity import resolve; assert all(resolve(name)["sha256"] for name in ("math", "math500", "locomo"))'])
+         "import importlib; exec(\"for group,names in (('observe',('console','progress','trace','tracing','phases')),('policy',('diagnostic_policy','runtime_policy','appworld_reporting','gaia_snapshot_attestation')),('admission',('pilot_admission','artifact_admission','runner_admission','scorer_admission','scorer_backend','lifecycle_receipt')),('service',('services','modelgate','unix_model_relay','stepwise_transport')),('run',('candidate','metrics','integrity','task_contract'))):\\n for n in names:\\n  try: importlib.import_module('eval.'+n)\\n  except ImportError as e: assert 'eval.'+group+'.'+n in str(e)\\n  else: raise AssertionError(n)\\n  assert importlib.import_module('eval.'+group+'.'+n)\")"])
+    run([str(python), '-I', '-B', '-c',
+         'from harnessgrad.provenance.scoring_identity import resolve; assert resolve("chessbench_puzzles")["sha256"]'])
+    run([str(python), '-I', '-B', '-c',
+         'from harnessgrad.provenance.scoring_identity import resolve; assert all(resolve(name)["sha256"] for name in ("math", "math500", "locomo", "spreadsheetbench", "spreadsheetbench2", "reasoning_gym", "strongreject"))'])
+    run([str(python), '-I', '-B', '-c',
+         'from harnessgrad.provenance import scoring_identity as s, measurement_components as m; '
+         '[(m.require_scoring_alignment(s.resolve(name), m.resolve(name))) for name in ("math", "math500", "locomo", "spreadsheetbench", "spreadsheetbench2", "reasoning_gym", "strongreject")]'])
     custom = tmp_path / 'custom.json'
     custom.write_text('{"dataset":"demo","harness":"loop","sampling":"all"}')
     run([str(cli), 'run', '--config', str(custom), '--show-config'])

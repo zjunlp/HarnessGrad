@@ -1,4 +1,5 @@
-"""Transitional alias for canonical component declarations."""
-import sys
-from harnessgrad.core import components as implementation
-sys.modules[__name__] = implementation
+"""Removed import guard: use :mod:`harnessgrad.core.components`."""
+
+raise ImportError(
+    'harnessgrad.components was removed; import harnessgrad.core.components instead'
+)

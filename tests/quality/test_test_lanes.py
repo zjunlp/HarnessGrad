@@ -1,6 +1,6 @@
 """Every lane entry names a test file that exists, and no file is claimed twice.
 
-`tools/run_tests.py` filters by basename: `exclusive = [f for f in files if f.name in
+`tools/testing/run_tests.py` filters by basename: `exclusive = [f for f in files if f.name in
 EXCLUSIVE]`. A name in that tuple with no matching file is therefore not an error -- it is a
 silent no-op, and the file it was meant to protect runs in the parallel lane instead. The guard
 for this used to be `test_test_lanes.py`, deleted on 2026-10-27 with the slim; this restores the
@@ -18,7 +18,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tools import run_tests  # noqa: E402
+from tools.testing import run_tests  # noqa: E402
 
 TESTS = ROOT / "tests" / "quality"
 
@@ -27,7 +27,7 @@ def test_every_lane_entry_names_an_existing_test_file():
     missing = [name for name in (*run_tests.EXCLUSIVE, *run_tests.SLOW)
                if not (TESTS / name).is_file()]
     assert not missing, (
-        "tools/run_tests.py names files under tests/quality/ that do not exist, so the lane "
+        "tools/testing/run_tests.py names files under tests/quality/ that do not exist, so the lane "
         f"filter silently ignores them: {missing}")
 
 

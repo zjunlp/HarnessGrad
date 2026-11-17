@@ -18,7 +18,7 @@ import os
 import stat
 from pathlib import Path
 
-from harnessgrad import snapshot
+from harnessgrad.core import snapshot
 
 MAX_JSON = 32 * 1024 * 1024
 MAX_CONTENT = 24 * 1024 * 1024

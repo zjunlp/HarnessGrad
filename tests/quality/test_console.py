@@ -248,7 +248,7 @@ def test_a_reused_run_id_does_not_inherit_the_previous_runs_run_meta(tmp_path):
     实测:一个 `method_entrypoint` 写着 `rrsi` 的 run 目录里,躺着上一次 DGM 运行的
     `rounds_measured: 7` 和 `final_score: 1.0`,两次运行读起来像一次。
     """
-    from harnessgrad.records import _write_run_meta
+    from harnessgrad.experiment.records import _write_run_meta
 
     meta = tmp_path / "run_meta.json"
     _write_run_meta(meta.parent, run_id="first", method_entrypoint="dgm",

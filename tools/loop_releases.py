@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 
 from harnessgrad.paths import main_checkout
-from harnessgrad.python_artifacts import atomic_json, digest, locked
+from harnessgrad.execution.python_runtime.python_artifacts import atomic_json, digest, locked
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASES = ('0.2.0', '0.3.0')

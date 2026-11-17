@@ -30,9 +30,9 @@ PLATFORM_ROOT = Path(__file__).resolve().parents[1]
 if str(PLATFORM_ROOT) not in sys.path:
     sys.path.insert(0, str(PLATFORM_ROOT))
 
-from tools import validate_harness as validator
+from harnessgrad.execution import harness_validation as validator
 from scenarios import load as load_scenario
-from harnessgrad.slots import inspect_capacity, SlotBudgetError
+from harnessgrad.execution.slots import inspect_capacity, SlotBudgetError
 MAX_PAYLOAD = 20 * 1024 * 1024
 MAX_ENTRIES = 2000
 MAX_EXPANDED = 200 * 1024 * 1024

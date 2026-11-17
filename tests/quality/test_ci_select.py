@@ -18,7 +18,7 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tools import ci_select  # noqa: E402
+from tools.testing import ci_select  # noqa: E402
 
 
 def test_the_guard_set_exists_and_is_always_selected() -> None:
@@ -59,7 +59,38 @@ def test_a_harness_or_method_change_pulls_in_its_own_tests() -> None:
     harness, _ = ci_select.select(["base_harness/loop/agent.py"])
     assert any(name.startswith("test_harness_") for name in harness), harness
     method, _ = ci_select.select(["methods/dgm/run.py"])
-    assert any(name.startswith(("test_dgm_", "test_method_")) for name in method), method
+    assert any(name.startswith("test_dgm_") for name in method), method
+    for name in ('ace', 'skillopt'):
+        picked, _ = ci_select.select([f'methods/{name}/run.py'])
+        assert f'test_{name}_rule.py' in picked
+        assert 'test_policy_port_pre_refactor_compat.py' in picked
+
+
+def test_prompt_policy_changes_select_platform_integration():
+    for name in ('gepa', 'opro'):
+        selected, _ = ci_select.select([f'methods/{name}/run.py'])
+        assert 'test_native_method_integration.py' in selected
+
+
+def test_shared_method_implementation_uses_full_suite():
+    for path in ('methods/policy_ports/runtime.py', 'methods/policy_ports/skillopt_fast.py',
+                 'methods/policy_ports/vendor/ace/_playbook.py', 'methods/endpoint_client.py',
+                 'methods/editor.py', 'methods/protocol.py', 'methods/_siblings.py'):
+        selected, reasons = ci_select.select([path])
+        assert selected == [] and 'core path' in reasons[0]
+
+
+def test_unmapped_method_and_test_helper_do_not_get_narrow_selections():
+    for path in ('methods/echo_base/run.py', 'tests/quality/native_helpers.py'):
+        selected, _ = ci_select.select([path])
+        assert selected == []
+
+
+def test_policy_reference_fixture_selects_its_consumer():
+    selected, _ = ci_select.select(['tests/fixtures/policy_ports/pre_refactor_ace_skillopt.json'])
+    assert 'test_policy_port_pre_refactor_compat.py' in selected
+    assert 'test_evo_harness_pre_refactor_compat.py' in selected
+    assert 'test_gepa_pre_refactor_compat.py' in selected
 
 
 def test_a_tool_change_pulls_in_its_own_test() -> None:
@@ -76,8 +107,25 @@ def test_a_tool_change_selects_its_test_with_or_without_a_suffix() -> None:
     assert "test_contributors.py" in picked, picked
 
 
+def test_visualization_tools_select_compatibility_checks() -> None:
+    for path in ("tools/visualization/render_trends.py", "tools/render_demo_figure.py"):
+        picked, _ = ci_select.select([path])
+        assert "test_visualization_entrypoints.py" in picked
+
+
 def test_a_core_path_falls_back_to_the_full_suite() -> None:
-    for path in ("driver.py", "eval/run/runner.py", "harnessgrad/readiness.py"):
+    for path in ("driver.py", "eval/run/runner.py", "harnessgrad/readiness.py",
+                 "tools/registry_ops/check_dataset_blockers.py", "tools/registry_ops/apply_blocker_proposal.py",
+                 "tools/registry_ops/merge_blocker_registry.py", "tools/registry_ops/__init__.py",
+                 "tools/check_dataset_blockers.py", "tools/apply_blocker_proposal.py", "tools/merge_blocker_registry.py",
+                 "tools/analysis/run_summary.py", "tools/run_summary.py",
+                 "tools/analysis/results_matrix.py", "tools/plot_curve.py", "tools/evidence_export.py", "tools/_cli_compat.py",
+                 "tools/testing/run_tests.py", "tools/testing/run_selected.py", "tools/testing/ci_select.py",
+                 "tools/testing/quality_sweep.py", "tools/run_tests.py", "tools/run_selected.py", "tools/ci_select.py",
+                 "tools/quality_sweep.py", "tools/component_attribution.py", "tools/report_appworld.py", "tools/report_livemathbench.py", "tools/tau3_report.py",
+                 "tools/harness_setup/configure_harness.py", "tools/configure_harness.py",
+                 "tools/harness_setup/configure_codex_harness.py", "tools/configure_codex_harness.py",
+                 "tools/harness_setup/configure_bun_harness.py", "tools/configure_bun_harness.py"):
         picked, reasons = ci_select.select([path])
         assert picked == [], (path, picked)
         assert any("core path" in reason for reason in reasons), (path, reasons)
@@ -128,7 +176,7 @@ def test_the_runner_reads_a_plan_and_can_run_nothing(tmp_path) -> None:
 
     plan = tmp_path / "plan.json"
     plan.write_text(json.dumps({"base": "abc", "suite": [], "full": False}))
-    proc = subprocess.run([sys.executable, "tools/run_selected.py", "--plan", str(plan)],
+    proc = subprocess.run([sys.executable, "tools/testing/run_selected.py", "--plan", str(plan)],
                           cwd=ROOT, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     assert "nothing in the suite can reach this change" in proc.stdout
@@ -141,13 +189,13 @@ def test_the_plan_says_full_only_when_the_selection_does(tmp_path) -> None:
     import subprocess
 
     plan = tmp_path / "plan.json"
-    proc = subprocess.run([sys.executable, "tools/ci_select.py", "--paths", "docs/x.md",
+    proc = subprocess.run([sys.executable, "tools/testing/ci_select.py", "--paths", "docs/x.md",
                            "--plan", str(plan), "--without-guards"],
                           cwd=ROOT, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(plan.read_text())["full"] is False
 
-    proc = subprocess.run([sys.executable, "tools/ci_select.py", "--paths",
+    proc = subprocess.run([sys.executable, "tools/testing/ci_select.py", "--paths",
                            "eval/run/runner.py", "--plan", str(plan), "--without-guards"],
                           cwd=ROOT, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
@@ -161,7 +209,7 @@ def test_the_runner_builds_one_file_flag_per_selected_test(tmp_path) -> None:
 
     plan = tmp_path / "plan.json"
     plan.write_text(json.dumps({"base": "abc", "suite": ["test_ci_select.py"], "full": False}))
-    proc = subprocess.run([sys.executable, "tools/run_selected.py", "--plan", str(plan),
+    proc = subprocess.run([sys.executable, "tools/testing/run_selected.py", "--plan", str(plan),
                            "--dry-run"], cwd=ROOT, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     assert "--file tests/quality/test_ci_select.py" in proc.stdout, proc.stdout
@@ -228,7 +276,7 @@ def test_a_full_plan_says_deferred_rather_than_listing_no_files(tmp_path, capsys
 ])
 def test_runner_subprocess_argv(tmp_path, monkeypatch, capsys, state, suite, flags, expected):
     """Intercept the actual subprocess boundary, not the dry-run display string."""
-    from tools import run_selected
+    from tools.testing import run_selected
 
     plan = tmp_path / "plan.json"
     plan.write_text(json.dumps({"state": state, "full": state != "selected", "suite": suite}))
@@ -267,7 +315,7 @@ def test_runner_subprocess_argv(tmp_path, monkeypatch, capsys, state, suite, fla
 ])
 def test_real_child_observes_exact_argv(tmp_path, monkeypatch, state, suite, flags, expected):
     """A harmless child records argv; this never invokes the real test runner."""
-    from tools import run_selected
+    from tools.testing import run_selected
 
     receipt = tmp_path / "argv.json"
     stub = tmp_path / "runner_stub.py"
@@ -302,7 +350,7 @@ def test_real_child_observes_exact_argv(tmp_path, monkeypatch, state, suite, fla
 ])
 @pytest.mark.parametrize("flags", [[], ["--full"]])
 def test_malformed_plans_fail_closed(tmp_path, monkeypatch, payload, flags):
-    from tools import run_selected
+    from tools.testing import run_selected
 
     plan = tmp_path / "bad.json"
     plan.write_text(payload)
@@ -347,7 +395,7 @@ def test_generated_plan_reaches_every_file_in_real_lane_runner(
     In particular this fails if --fast strips controls/classes, or the aggregation
     fixture is misrouted to bfclguard. No dataset, model or server is launched.
     """
-    from tools import run_selected, run_tests
+    from tools.testing import run_selected, run_tests
 
     plan = tmp_path / "plan.json"
     monkeypatch.setattr(sys, "argv", ["ci_select.py", "--paths", changed,
@@ -385,7 +433,7 @@ def test_generated_plan_reaches_every_file_in_real_lane_runner(
     "tests/fixtures/aggregation_s9_before.json.extra",
 ])
 def test_unknown_fixture_plan_defers_without_launching(tmp_path, monkeypatch, fixture):
-    from tools import run_selected
+    from tools.testing import run_selected
 
     picked, reasons = ci_select.select([fixture])
     assert picked == []
@@ -415,7 +463,7 @@ def test_unknown_fixture_plan_defers_without_launching(tmp_path, monkeypatch, fi
     (["tests/quality/test_missing.py"], []),
 ])
 def test_qualified_runner_filters_are_exact(tmp_path, monkeypatch, patterns, expected):
-    from tools import run_tests
+    from tools.testing import run_tests
 
     for name in ("tests/quality/test_target.py", "tests/unit/test_target_extra.py",
                  "tests/nested/tests/quality/test_target.py"):
@@ -437,3 +485,180 @@ def test_legacy_full_plan_is_deferred(tmp_path):
     plan = tmp_path / "plan.json"
     plan.write_text('{"full": true, "suite": []}')
     assert ci_select.load_plan(str(plan))["state"] == "deferred"
+
+
+def test_chessbench_provider_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/chessbench_provider_identity/before.json'])
+    assert 'test_chessbench_provider_isolation.py' in selected
+
+
+def test_dataset_runtime_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/dataset_runtime_identity/before.json'])
+    assert 'test_dataset_runtime_identity.py' in selected
+
+
+def test_math_scoring_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/math_scoring_identity/before.json'])
+    assert 'test_math_managed_execution.py' in selected
+
+
+def test_locomo_scoring_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/locomo_scoring_identity/before.json'])
+    assert 'test_locomo_provenance.py' in selected
+
+
+def test_spreadsheet_scoring_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/spreadsheet_scoring_identity/before.json'])
+    assert 'test_spreadsheet_provenance.py' in selected
+
+
+def test_dataset_runtime_import_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/dataset_runtime_import_migration/before.json'])
+    assert 'test_dataset_runtime_import_migration.py' in selected
+
+
+def test_reasoning_gym_scoring_identity_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/reasoning_gym_scoring_identity/before.json'])
+    assert 'test_reasoning_gym_provenance.py' in selected
+
+
+@pytest.mark.parametrize('dataset', ['spreadsheetbench', 'spreadsheetbench2'])
+@pytest.mark.parametrize('asset', ['measurement_profile.py', 'scoring_profile.py'])
+def test_spreadsheet_profiles_select_shared_provenance_and_installed_wheel(dataset, asset):
+    selected, _ = ci_select.select([f'data/datasets/{dataset}/{asset}'])
+    assert 'test_spreadsheet_provenance.py' in selected
+    assert 'test_wheel_recipe_assets.py' in selected
+
+
+def test_study_tools_select_named_consumers_and_unknowns_defer():
+    difficulty, _ = ci_select.select(['tools/studies/task_difficulty.py'])
+    assert {'test_studies_entrypoints.py', 'test_task_difficulty.py', 'test_wheel_recipe_assets.py'} <= set(difficulty)
+    sensitivity, _ = ci_select.select(['tools/studies/task_sensitivity.py'])
+    assert {'test_studies_entrypoints.py', 'test_task_sensitivity.py', 'test_task_sensitivity_runtime.py',
+            'test_tau3_bench_task_sensitivity.py', 'test_wheel_recipe_assets.py'} <= set(sensitivity)
+    init, _ = ci_select.select(['tools/studies/__init__.py'])
+    assert set(difficulty) | set(sensitivity) <= set(init)
+    selected, reasons = ci_select.select(['tools/studies/unknown.py'])
+    assert not selected and 'no audited study consumers' in reasons[0]
+
+
+def test_dataset_measurement_profile_selects_installed_wheel():
+    for dataset in ('locomo', 'math', 'math500', 'reasoning_gym'):
+        selected, _ = ci_select.select([f'data/datasets/{dataset}/measurement_profile.py'])
+        assert 'test_wheel_recipe_assets.py' in selected
+
+
+def test_snapshot_migration_fixture_selects_snapshot_contract():
+    selected, _ = ci_select.select(['tests/fixtures/snapshot_migration/before.json'])
+    assert 'test_run_snapshots.py' in selected
+
+
+def test_strongreject_scoring_fixture_selects_migration_control():
+    selected, _ = ci_select.select(['tests/fixtures/strongreject_scoring_identity/before.json'])
+    assert 'test_strongreject_provenance.py' in selected
+
+
+def test_validation_tools_select_audited_consumers_and_unknowns_defer():
+    trace, _ = ci_select.select(['tools/validation/check_trace_contract.py'])
+    assert {'test_validation_entrypoints.py', 'test_trace_contract.py', 'test_miniagent_harness.py',
+            'test_new_harness_platform.py', 'test_miniswe_exec_platform.py',
+            'test_openclaw_harness.py', 'test_wheel_adapter_resources.py'} <= set(trace)
+    runs, _ = ci_select.select(['tools/validation/validate_run.py'])
+    assert {'test_validation_entrypoints.py', 'test_run_schema.py', 'test_wheel_adapter_resources.py'} <= set(runs)
+    init, _ = ci_select.select(['tools/validation/__init__.py'])
+    assert set(trace) | set(runs) <= set(init)
+    selected, reasons = ci_select.select(['tools/validation/unknown.py'])
+    assert not selected and 'no audited validation consumers' in reasons[0]
+
+
+def test_diagnostics_select_audited_consumers_and_unknowns_defer():
+    first, _ = ci_select.select(['tools/diagnostics/check_first_use.py'])
+    assert {'test_check_first_use.py', 'test_diagnostics_entrypoints.py', 'test_wheel_adapter_resources.py'} <= set(first)
+    probe, _ = ci_select.select(['tools/diagnostics/probe_tool_calls.py'])
+    assert {'test_improver.py', 'test_improver_probe_credentials.py', 'test_driver_readiness_closures.py',
+            'test_diagnostics_entrypoints.py', 'test_wheel_adapter_resources.py'} <= set(probe)
+    init, _ = ci_select.select(['tools/diagnostics/__init__.py'])
+    assert set(first) | set(probe) <= set(init)
+    selected, reasons = ci_select.select(['tools/diagnostics/unknown.py'])
+    assert not selected and 'no audited diagnostic consumers' in reasons[0]
+
+
+@pytest.mark.parametrize('path', ['tools/unmapped_helper.py', 'tools/unmapped/config.json',
+                                  'tools/visualization/new_renderer.py'])
+def test_unknown_tools_defer_instead_of_selecting_only_guards(path, tmp_path, monkeypatch):
+    selected, reasons = ci_select.select([path])
+    assert selected == []
+    assert 'running everything' in reasons[0]
+    plan = tmp_path / 'plan.json'
+    monkeypatch.setattr(sys, 'argv', ['ci_select.py', '--paths', path, '--without-guards', '--plan', str(plan)])
+    assert ci_select.main() == 0
+    value = ci_select.load_plan(str(plan))
+    assert value['state'] == 'deferred' and value['full'] is True and value['suite'] == []
+
+
+def test_visualization_initializer_selects_renderer_and_wheel_checks():
+    selected, _ = ci_select.select(['tools/visualization/__init__.py'])
+    assert {'test_visualization_entrypoints.py', 'test_wheel_adapter_resources.py'} <= set(selected)
+
+
+def test_native_web_relay_migration_fixture_selects_its_identity_control():
+    selected, _ = ci_select.select(['tests/fixtures/native_web_relay_migration/before.json'])
+    assert 'test_web_gateway_ownership.py' in selected
+
+
+def test_platform_dataset_runtime_fixture_selects_identity_control():
+    selected, _ = ci_select.select(['tests/fixtures/platform_dataset_runtime_import/before.json'])
+    assert 'test_platform_dataset_runtime_import.py' in selected
+
+
+def test_native_research_runtime_fixture_selects_identity_control():
+    selected, _ = ci_select.select(['tests/fixtures/native_research_runtime_import/before.json'])
+    assert 'test_native_research_runtime_import.py' in selected
+
+
+def test_command_control_source_fixture_selects_gaia_compatibility_control():
+    selected, _ = ci_select.select(['tests/fixtures/command_control_runtime_import/before.json'])
+    assert 'test_gaia_snapshot_attestation.py' in selected
+
+
+def test_gaia_preparation_source_fixture_selects_preparation_and_compatibility_controls():
+    selected, _ = ci_select.select(['tests/fixtures/gaia_preparation_runtime_import/before.json'])
+    assert {'test_gaia_preparation_runtime.py', 'test_gaia_snapshot_attestation.py'} <= set(selected)
+
+
+def test_costbench_runtime_source_fixture_selects_identity_control():
+    selected, _ = ci_select.select(['tests/fixtures/costbench_runtime_import/before.json'])
+    assert 'test_costbench_runtime_import.py' in selected
+
+
+def test_runtime_consumer_fixtures_and_dataset_sources_select_snapshot_controls():
+    picked, _ = ci_select.select(['tests/fixtures/runtime_consumer_import_migration/reasoning_before.json'])
+    assert 'test_runtime_consumer_import_migration.py' in picked
+    for name in ('agentdojo', 'alfworld', 'appworld', 'jericho', 'scienceworld',
+                 'ds1000', 'livecodebench', 'tau2_bench', 'tau3_bench',
+                 'reasoning_gym', 'jobbench', 'costbench'):
+        picked, _ = ci_select.select([f'data/datasets/{name}.py'])
+        assert not picked or 'test_runtime_consumer_import_migration.py' in picked
+    picked, _ = ci_select.select(['tests/fixtures/chessbench_native_sources/qa_base.py'])
+    assert {'test_chess_native_preparation.py', 'test_chessbench_stepwise_runner.py'} <= set(picked)
+
+
+def test_opted_in_service_datasets_select_shared_h0_provenance_flow():
+    for dataset in ('agentdojo', 'alfworld', 'jericho', 'scienceworld'):
+        selected, _ = ci_select.select([f'data/datasets/{dataset}.py'])
+        assert not selected or {'test_source_profile_h0_flow.py', 'test_evidence_measurement_components.py',
+                                'test_wheel_adapter_resources.py', 'test_clean_install_contract.py'} <= set(selected)
+
+
+def test_shared_dataset_maintenance_selects_full_suite():
+    for path in ('tools/dataset_maintenance/split_inventory.py',
+                 'tools/dataset_maintenance/datasets.py',
+                 'tools/dataset_maintenance/prepare_dataset.py',
+                 'tools/dataset_maintenance/new_dataset.py',
+                 'tools/dataset_maintenance/dataset_classes.py',
+                 'tools/dataset_maintenance/dataset_lint.py',
+                 'tools/dataset_maintenance/datasets_doc.py',
+                 'tools/dataset_lint.py', 'tools/datasets_doc.py',
+                 'tools/datasets.py', 'tools/prepare_dataset.py', 'tools/new_dataset.py', 'tools/split_inventory.py'):
+        selected, reasons = ci_select.select([path])
+        assert selected == [] and 'core path' in reasons[0]

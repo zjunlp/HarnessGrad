@@ -27,7 +27,7 @@ def write(path, value):
 
 def build(request):
     """Called only inside the exact admitted artifact interpreter."""
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     admit_binding(request['binding'], 'service', python=sys.executable)
     controller = runpy.run_path(str(ASSETS / 'prepare_controller.py'))
     if controller['source_hash']() != request['source_sha256']:
@@ -112,7 +112,7 @@ def declarations(root, bundle, mode, service, verifier):
 
 
 def run_arm(root, bundle, mode, arm, service, verifier):
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     from eval.run import tool_relay
     from eval.service.tool_transport import call
     from eval.verification.verifier import _verify
@@ -172,7 +172,7 @@ def run_arm(root, bundle, mode, arm, service, verifier):
 
 
 def run(runtime_root, bundle, output):
-    from harnessgrad.dataset_runtime import resolve_execution, bind, admit_binding
+    from harnessgrad.datasets.runtime import resolve_execution, bind, admit_binding
     controller = runpy.run_path(str(ASSETS / 'prepare_controller.py'))
     fingerprint = controller['source_hash']()
     runtime = resolve_execution('costbench', root=runtime_root)

@@ -19,98 +19,180 @@ SOURCE_DIRS = ("data", "eval", "harnessgrad", "tools", "console")
 # Small extracted units have explicit dependencies, including stdlib capabilities.
 # Keep these separate from permissions: extraction must not grant a reverse edge.
 EXTRACTED_UNIT_IMPORTS = {
+    "harnessgrad/improvement/contracts.py": {"__future__", "dataclasses", "difflib", "typing"},
+    "harnessgrad/improvement/stages.py": {"__future__", "dataclasses", "json", "typing", "harnessgrad.improvement.contracts", "methods.policy_ports.ace_proposal", "methods.policy_ports.skillopt_fast", "methods.policy_ports.skillopt_patch", "methods.policy_ports.evo_harness_proposal", "methods.policy_ports.gepa_proposal", "methods.policy_ports.vendor.ace"},
+    "harnessgrad/orchestration/treatment_workflow.py": {"__future__", "pathlib", "shlex", "harnessgrad.orchestration.improver_readiness", "harnessgrad.orchestration.treatment_identity"},
+    "harnessgrad/orchestration/execution_policy.py": {"__future__", "json", "pathlib", "sys", "eval.policy.diagnostic_policy"},
+    "harnessgrad/orchestration/preflight.py": {"__future__", "dataclasses", "os", "pathlib", "secrets", "sys", "typing", "data.scaffolds.registry", "data.scaffolds.custom_split", "harnessgrad.config", "harnessgrad.execution.run_namespace", "harnessgrad.orchestration.readiness", "harnessgrad.orchestration.run_metadata"},
+    "harnessgrad/customization/patch.py": {"__future__", "contextlib", "os", "pathlib", "re", "typing", "harnessgrad.improvement.contracts", "harnessgrad.customization.review"},
+    "harnessgrad/customization/review.py": {"__future__", "dataclasses", "hashlib", "json", "re", "typing", "harnessgrad.customization.inputs", "harnessgrad.improvement.contracts", "harnessgrad.core.harness"},
+    "harnessgrad/customization/inputs.py": {"__future__", "contextlib", "json", "os", "pathlib", "stat", "typing", "harnessgrad.improvement.contracts"},
+    "harnessgrad/customization/model.py": {"__future__", "json", "typing", "harnessgrad.improvement.contracts", "methods.endpoint_client"},
+    "harnessgrad/entrypoints/customization.py": {"harnessgrad.core.harness", "__future__", "argparse", "dataclasses", "json", "os", "pathlib", "sys", "harnessgrad.customization.model", "harnessgrad.customization.inputs", "harnessgrad.improvement.contracts", "harnessgrad.customization.proposals", "harnessgrad.customization.review", "harnessgrad.customization.patch"},
+    "harnessgrad/execution/python_runtime/python_artifacts.py": {"__future__", "contextlib", "fcntl", "hashlib", "json", "os", "pathlib", "shutil", "stat", "tempfile", "time"},
+    "harnessgrad/execution/python_runtime/python_harness_runtime.py": {"__future__", "hashlib", "json", "math", "os", "pathlib", "platform", "re", "shutil", "signal", "stat", "subprocess", "sys", "tempfile", "time", "eval.ckpt.source_tree", "harnessgrad.paths", "harnessgrad.execution.bubblewrap", "harnessgrad.execution.python_runtime.python_artifacts"},
+    "harnessgrad/execution/python_runtime/python_exec_runtime.py": {"__future__", "contextlib", "hashlib", "json", "os", "pathlib", "re", "shutil", "stat", "subprocess", "tempfile", "time", "eval.containers.container", "harnessgrad.execution.python_runtime.python_harness_runtime", "harnessgrad.execution.python_runtime.python_artifacts"},
+    "harnessgrad/execution/budget_dispatch.py": {"__future__", "collections.abc", "contextlib", "copy", "dataclasses", "errno", "fcntl", "hashlib", "inspect", "json", "math", "os", "pathlib", "secrets", "tempfile", "threading", "time", "typing"},
+    "harnessgrad/execution/budget_integration.py": {"__future__", "collections.abc", "dataclasses", "json", "os", "pathlib", "typing", "harnessgrad.execution.budget_dispatch"},
+    "harnessgrad/datasets/provider.py": {"__future__", "copy", "json", "math", "os", "pathlib", "subprocess", "tempfile", "data.scaffolds.registry", "eval.containers.process", "harnessgrad.datasets.runtime", "harnessgrad.env_file", "harnessgrad.paths"},
+    "harnessgrad/datasets/runtime_identity.py": {"__future__", "contextlib", "hashlib", "json", "pathlib", "re", "subprocess", "sys", "harnessgrad.datasets.runtime", "harnessgrad.datasets.task_python", "harnessgrad.provenance.native_judge_identity", "harnessgrad.execution.candidate_runtime", "data.scaffolds.registry", "data.scaffolds.custom_split", "eval.run.metrics"},
+    "harnessgrad/datasets/runtime.py": {"__future__", "contextlib", "contextvars", "copy", "hashlib", "json", "os", "pathlib", "platform", "re", "shutil", "signal", "stat", "subprocess", "sys", "tempfile", "harnessgrad.paths", "harnessgrad.execution.python_runtime.python_artifacts"},
+    "harnessgrad/execution/candidate_runtime.py": {"__future__", "contextlib", "json", "os", "pathlib", "tempfile", "harnessgrad.core.snapshot", "eval.ckpt.source_tree", "harnessgrad.execution.python_runtime.python_harness_runtime", "harnessgrad.execution.python_runtime.python_exec_runtime"},
+    "harnessgrad/improvers/resolver.py": {"__future__", "argparse", "hashlib", "json", "os", "re", "shutil", "subprocess", "sys", "pathlib", "tempfile", "harnessgrad.config", "eval.containers.sandbox"},
+    "harnessgrad/execution/harness_validation.py": {"__future__", "argparse", "contextlib", "hashlib", "json", "shutil", "stat", "subprocess", "sys", "tempfile", "pathlib", "os", "eval.ckpt.source_tree", "eval.containers.sandbox", "harnessgrad.execution.candidate_runtime", "harnessgrad.execution.python_runtime.python_harness_runtime", "harnessgrad.execution.python_runtime.python_exec_runtime", "harnessgrad.execution.python_runtime"},
+    "harnessgrad/execution/tool_call_probe.py": {"__future__", "json", "urllib.error", "urllib.request"},
+    "harnessgrad/execution/bubblewrap.py": {"__future__", "os", "pathlib", "shutil"},
+    "harnessgrad/execution/slots.py": {"__future__", "contextlib", "errno", "fcntl", "os", "pathlib", "random", "re", "sys", "time"},
+    "harnessgrad/execution/run_namespace.py": {"hashlib", "json", "os", "pathlib", "re"},
+    "harnessgrad/evidence_reports/run_summary.py": {"__future__", "argparse", "hashlib", "json", "sys", "pathlib"},
+    "harnessgrad/evidence_reports/evidence.py": {"__future__", "json", "math", "pathlib", "typing"},
+    "harnessgrad/evidence_reports/receipt_verification.py": {"__future__", "hashlib", "json", "os", "pathlib", "re", "stat", "harnessgrad.evidence_reports.evidence", "harnessgrad.store.schema"},
+    "harnessgrad/evidence_reports/evidence_stats.py": {"__future__", "hashlib", "json", "math", "statistics", "harnessgrad.evidence_reports.evidence", "harnessgrad.evidence_reports.receipt_verification", "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.verification_context", "harnessgrad.provenance.measurement_components", "harnessgrad.execution.candidate_runtime"},
+    "harnessgrad/evidence_reports/evidence_export.py": {"__future__", "copy", "datetime", "json", "os", "pathlib", "re", "statistics", "tempfile", "harnessgrad.evidence_reports.evidence", "harnessgrad.evidence_reports.evidence_stats", "harnessgrad.evidence_reports.receipt_verification"},
+    "harnessgrad/customization/proposals.py": {"__future__", "dataclasses", "typing", "harnessgrad.improvement.contracts", "harnessgrad.improvement.stages"},
+    "harnessgrad/experiment/policies.py": {"__future__", "math", "harnessgrad.provenance.scoring_identity", "harnessgrad.provenance.measurement_components", "harnessgrad.datasets.runtime_identity"},
+    "harnessgrad/experiment/config.py": {"__future__", "copy", "json", "os", "pathlib", "re", "shlex", "sys", "typing", "yaml"},
+    "harnessgrad/experiment/completion.py": {"__future__"},
+    "harnessgrad/experiment/splits.py": {"__future__", "argparse", "json", "pathlib", "sys", "data.scaffolds.registry", "data.scaffolds.custom_split"},
+    "harnessgrad/core/snapshot.py": {"__future__", "base64", "hashlib", "json", "os", "tempfile", "pathlib"},
+    "harnessgrad/core/readiness.py": {"__future__", "dataclasses"},
+    "harnessgrad/datasets/task_python.py": {"__future__", "os", "pathlib", "harnessgrad.datasets.runtime"},
+    "harnessgrad/datasets/provisioning.py": {"__future__", "harnessgrad.core.readiness"},
+    "harnessgrad/core/code_metrics.py": {"__future__", "ast", "json", "pathlib"},
+    "harnessgrad/core/components.py": {"__future__", "json", "pathlib"},
+    "harnessgrad/core/harness.py": {"__future__", "dataclasses", "json", "pathlib", "harnessgrad.core.components"},
+    "harnessgrad/core/methods.py": {"__future__", "dataclasses", "json", "pathlib", "typing"},
+    "harnessgrad/core/method_transport.py": {"__future__", "json", "typing"},
+    "harnessgrad/entrypoints/method_catalogue.py": {"__future__", "argparse", "json", "pathlib", "re", "sys", "harnessgrad", "harnessgrad.core.methods"},
+    "eval/service/web_gateway.py": {"__future__", "argparse", "asyncio", "crawl4ai", "http.client", "http.server", "ipaddress", "json", "os", "socket", "ssl", "sys", "threading", "time", "urllib.error", "urllib.parse", "urllib.request", "pathlib"},
     "eval/run/outcomes.py": {"__future__", "eval.observe.tracing"},
     "console/record_reader.py": {"__future__", "json", "math", "pathlib", "re", "time"},
+    "harnessgrad/execution/method_runner.py": {
+        "__future__", "pathlib", "json", "os", "shutil", "subprocess", "sys",
+        "eval.run.integrity", "harnessgrad", "harnessgrad.core.method_transport",
+        "eval.containers.sandbox", "eval.containers.bun_runtime", "methods.stop_status"},
+    "harnessgrad/experiment/channel.py": {
+        "__future__", "pathlib", "hashlib", "json", "os", "shutil", "subprocess",
+        "eval.ckpt.git_state", "eval.observe.tracing", "harnessgrad", "harnessgrad.config",
+        "harnessgrad.datasets.runtime", "harnessgrad.datasets.runtime_identity",
+        "harnessgrad.provenance.native_judge_identity"},
+    "harnessgrad/experiment/method_attempts.py": {
+        "contextlib", "fcntl", "json", "os", "pathlib", "tempfile", "uuid", "methods.stop_status"},
+    "harnessgrad/experiment/records.py": {
+        "__future__", "json", "os", "pathlib", "shutil", "stat", "subprocess", "time",
+        "eval.ckpt.source_tree", "eval.observe.console", "eval.observe.tracing",
+        "eval.run.metrics", "eval.verification.isolation", "harnessgrad.provenance.scoring_identity",
+        "harnessgrad.provenance.measurement_components", "harnessgrad.provenance.verification_context",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.execution.candidate_runtime",
+        "harnessgrad.orchestration.environments", "harnessgrad.execution.method_runner", "eval.run.integrity"},
     "harnessgrad/entrypoints/experiment_config.py": {
-        "__future__", "pathlib", "harnessgrad.config", "harnessgrad.experiments"},
+        "__future__", "pathlib", "harnessgrad.config", "harnessgrad.experiment.config"},
     "harnessgrad/entrypoints/run_parser.py": {
         "__future__", "argparse", "collections.abc", "pathlib",
         "harnessgrad.entrypoints.experiment_config"},
+    "harnessgrad/orchestration/environments.py": {
+        "__future__", "pathlib", "os", "eval.observe.console", "data.scaffolds.registry",
+        "eval.containers.container", "eval.containers.harness_runtime", "eval.containers.sandbox",
+        "harnessgrad.config", "eval.service.web_gateway"},
+    "harnessgrad/orchestration/readiness.py": {
+        "__future__", "json", "importlib.util", "os", "re", "shlex", "shutil", "subprocess",
+        "sys", "time", "urllib.request", "dataclasses", "pathlib", "data.scaffolds.registry",
+        "harnessgrad", "harnessgrad.config", "harnessgrad.core.readiness", "harnessgrad.execution.method_runner",
+        "data.scaffolds.custom_split", "eval.run.metrics", "eval.service.judge", "harnessgrad.improvers.resolver",
+        "types", "harnessgrad.execution.python_runtime", "harnessgrad.execution.python_runtime.python_harness_runtime",
+        "harnessgrad.execution.python_runtime.python_exec_runtime",
+        "eval.containers.sandbox"},
     "harnessgrad/orchestration/selected_dataset.py": {
         "__future__", "dataclasses", "pathlib", "sys", "typing",
         "data.scaffolds.custom_split", "eval.ckpt.git_state", "eval.policy.diagnostic_policy",
-        "eval.run.metrics", "harnessgrad.config", "harnessgrad.environments",
-        "harnessgrad.readiness", "harnessgrad.scoring_identity",
-        "harnessgrad.dataset_runtime_identity", "harnessgrad.verification_context"},
+        "eval.run.metrics", "harnessgrad.config", "harnessgrad.orchestration.environments",
+        "harnessgrad.orchestration.readiness", "harnessgrad.provenance.scoring_identity",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.verification_context",
+        "harnessgrad.provenance.measurement_components"},
     "harnessgrad/orchestration/source_lease.py": {
         "__future__", "collections.abc", "contextlib", "dataclasses", "os", "pathlib",
         "secrets", "shutil", "sys", "tempfile", "eval.ckpt.git_state",
-        "eval.ckpt.source_tree", "harnessgrad.loops.eval_side", "tools.validate_harness"},
+        "eval.ckpt.source_tree", "harnessgrad.loops.eval_side", "harnessgrad.execution.harness_validation"},
     "harnessgrad/orchestration/candidate_stage.py": {
         "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil",
         "sys", "tempfile", "time", "eval.ckpt.git_state", "eval.ckpt.source_tree",
-        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.candidate_runtime",
+        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.execution.candidate_runtime",
         "harnessgrad.loops.mode_a", "harnessgrad.orchestration.source_lease",
-        "harnessgrad.records", "tools.validate_harness"},
+        "harnessgrad.experiment.records", "harnessgrad.execution.harness_validation"},
     "harnessgrad/orchestration/historical_evidence.py": {
-        "__future__", "json", "pathlib", "harnessgrad.candidate_runtime",
-        "harnessgrad.dataset_runtime_identity", "harnessgrad.verification_context"},
+        "__future__", "json", "pathlib", "harnessgrad.execution.candidate_runtime",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.verification_context",
+        "harnessgrad.provenance.measurement_components"},
     "harnessgrad/orchestration/resume.py": {
         "__future__", "collections.abc", "dataclasses", "datetime", "json", "pathlib",
         "shutil", "subprocess", "tempfile", "data.scaffolds.registry", "eval.ckpt.git_state",
-        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.candidate_runtime",
-        "harnessgrad.dataset_runtime_identity", "harnessgrad.orchestration.candidate_stage",
-        "harnessgrad.orchestration.historical_evidence", "harnessgrad.scoring_identity"},
+        "eval.containers.external_runtime", "eval.observe.console", "harnessgrad.execution.candidate_runtime",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.orchestration.candidate_stage",
+        "harnessgrad.orchestration.historical_evidence", "harnessgrad.provenance.scoring_identity",
+        "harnessgrad.provenance.measurement_components"},
     "harnessgrad/orchestration/h0.py": {
         # stat preserves donor modes while granting owner-write on private copies.
         "__future__", "collections.abc", "dataclasses", "json", "pathlib", "shutil", "stat", "sys",
         "eval.run.metrics", "eval.containers.external_runtime", "harnessgrad.config",
-        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
-        "harnessgrad.scoring_identity", "harnessgrad.verification_context", "harnessgrad.h0_identity",
-        "harnessgrad.environments", "harnessgrad.identity", "harnessgrad.records",
+        "harnessgrad.execution.candidate_runtime", "harnessgrad.datasets.runtime_identity",
+        "harnessgrad.provenance.scoring_identity", "harnessgrad.provenance.verification_context", "harnessgrad.provenance.h0_identity",
+        "harnessgrad.provenance.measurement_components",
+        "harnessgrad.orchestration.environments", "harnessgrad.provenance.identity", "harnessgrad.experiment.records",
         "harnessgrad.orchestration.historical_evidence"},
     "harnessgrad/orchestration/h0_subset.py": {
         "__future__", "copy", "hashlib", "json", "eval.run.aggregation",
-        "harnessgrad.dataset_runtime_identity", "harnessgrad.scoring_identity",
-        "harnessgrad.verification_context", "harnessgrad.records",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.scoring_identity",
+        "harnessgrad.provenance.verification_context", "harnessgrad.provenance.measurement_components", "harnessgrad.experiment.records",
         "harnessgrad.orchestration.historical_evidence", "harnessgrad.orchestration.h0"},
     "harnessgrad/orchestration/treatment_identity.py": {
         "__future__", "hashlib", "json", "os", "pathlib", "re", "stat"},
     "harnessgrad/orchestration/run_metadata.py": {
         "__future__", "collections.abc", "dataclasses", "eval.policy.diagnostic_policy",
-        "harnessgrad.candidate_runtime", "harnessgrad.config.areas", "harnessgrad.dataset_runtime_identity",
-        "harnessgrad.scoring_identity", "harnessgrad.verification_context"},
+        "harnessgrad.execution.candidate_runtime", "harnessgrad.config.areas", "harnessgrad.datasets.runtime_identity",
+        "harnessgrad.provenance.scoring_identity", "harnessgrad.provenance.verification_context",
+        "harnessgrad.provenance.measurement_components"},
     "harnessgrad/orchestration/run_completion.py": {
-        "__future__", "dataclasses", "json", "pathlib", "sys", "typing", "tools.run_summary",
-        "harnessgrad.completion", "harnessgrad.records"},
-    "harnessgrad/native_judge_identity.py": {
+        "__future__", "dataclasses", "json", "pathlib", "sys", "typing", "harnessgrad.evidence_reports.run_summary",
+        "harnessgrad.experiment.completion", "harnessgrad.experiment.records"},
+    "harnessgrad/provenance/source_declarations.py": {"__future__", "ast"},
+    "harnessgrad/provenance/native_judge_identity.py": {
         "__future__", "hashlib", "ipaddress", "os", "urllib.parse"},
     "harnessgrad/orchestration/boundary_readiness.py": {
         "__future__", "dataclasses", "pathlib", "eval.containers.container",
-        "eval.containers.sandbox", "eval.run.integrity", "harnessgrad.environments"},
+        "eval.containers.sandbox", "eval.run.integrity", "harnessgrad.orchestration.environments"},
     "harnessgrad/orchestration/improver_readiness.py": {
         "__future__", "dataclasses", "os", "pathlib", "sys", "eval.run.integrity",
-        "harnessgrad.config", "tools.probe_tool_calls"},
+        "harnessgrad.config", "harnessgrad.execution.tool_call_probe"},
     "harnessgrad/orchestration/run_configuration.py": {"__future__", "harnessgrad.config"},
     "harnessgrad/orchestration/scenario_config.py": {
         "__future__", "dataclasses", "json", "pathlib", "eval.run.metrics"},
     "eval/run/evaluation_plan.py": {
         "__future__", "dataclasses", "eval.containers.external_runtime",
-        "eval.run.chess_stepwise", "eval.run.outcomes", "harnessgrad.candidate_runtime",
-        "harnessgrad.dataset_runtime_identity", "harnessgrad.task_python",
-        "harnessgrad.verification_context"},
+        "eval.run.chess_stepwise", "eval.run.outcomes", "harnessgrad.execution.candidate_runtime",
+        "harnessgrad.datasets.runtime_identity", "harnessgrad.datasets.task_python",
+        "harnessgrad.provenance.verification_context"},
     "eval/run/measurement_cache.py": {
         "__future__", "dataclasses", "hashlib", "json", "eval.containers.external_runtime",
         "eval.run.chess_stepwise", "eval.verification.isolation", "eval.verification.pristine",
-        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
-        "harnessgrad.verification_context"},
+        "harnessgrad.execution.candidate_runtime", "harnessgrad.datasets.runtime_identity",
+        "harnessgrad.provenance.verification_context", "harnessgrad.provenance.measurement_components"},
     "eval/run/trial_worker.py": {
         "__future__", "dataclasses", "os", "pathlib", "sys", "typing",
         "eval.containers.external_runtime", "eval.observe.progress",
         "eval.observe.task_verdicts", "eval.observe.tracing", "eval.run.chess_stepwise",
         "eval.run.outcomes", "eval.run.repeated_trials", "eval.run.trial_evidence",
         "eval.service.modelgate", "eval.verification.isolation", "eval.verification.pristine",
-        "harnessgrad.candidate_runtime", "harnessgrad.dataset_runtime_identity",
-        "harnessgrad.task_python", "harnessgrad.verification_context"},
+        "harnessgrad.execution.candidate_runtime", "harnessgrad.datasets.runtime_identity",
+        "harnessgrad.datasets.task_python", "harnessgrad.provenance.verification_context"},
     "eval/run/scheduling.py": {
-        "__future__", "concurrent.futures", "eval.run.outcomes", "harnessgrad.slots"},
+        "__future__", "concurrent.futures", "eval.run.outcomes", "harnessgrad.execution.slots"},
     "eval/run/aggregation.py": {
         "__future__", "dataclasses", "eval.run.outcomes", "eval.run.repeated_trials",
         "eval.run.trial_evidence", "eval.verification.isolation", "eval.verification.verifier"},
     "eval/run/evaluation_usage.py": {"__future__", "dataclasses", "eval.observe.tracing"},
     "eval/run/actor_environment.py": {
         "__future__", "os", "pathlib", "shutil", "sys",
-        "harnessgrad.python_exec_runtime", "harnessgrad.task_python"},
+        "harnessgrad.execution.python_runtime.python_exec_runtime", "harnessgrad.datasets.task_python"},
     "eval/run/actor_spec.py": {"__future__", "dataclasses"},
     "eval/run/actor_execution.py": {"__future__", "eval.run.actor_spec"},
     "eval/run/task_workspace.py": {"__future__", "json", "pathlib", "shutil", "tempfile"},
@@ -138,8 +220,8 @@ EXTRACTED_UNIT_IMPORTS = {
     "console/launch.py": {
         "__future__", "dataclasses", "json", "math", "os", "pathlib", "platform", "re", "shlex", "subprocess",
         "sys", "time", "typing", "urllib.parse", "uuid", "harnessgrad.config",
-        "harnessgrad.slots", "console.record_reader", "console.settings",
-        "console.custom_methods", "custom_methods", "tools.validate_harness", "record_reader", "settings"},
+        "harnessgrad.execution.slots", "console.record_reader", "console.settings",
+        "console.custom_methods", "custom_methods", "harnessgrad.execution.harness_validation", "record_reader", "settings"},
     "console/candidates.py": {
         "__future__", "dataclasses", "hashlib", "importlib.util", "io", "json", "os",
         "pathlib", "re", "secrets", "shlex", "shutil", "stat", "sys", "tarfile", "time",
@@ -237,6 +319,8 @@ EXCEPTIONS = {
         "The bound native judge gateway publishes only the prepared loopback endpoint through the canonical owned forwarder.",
     ("data-eval", "data/scaffolds/native_research/workbench_relay.py", "eval.service.tool_transport"):
         "Selected native workplace state uses the existing private relay; no actor scoring operation.",
+    ("data-eval", "data/scaffolds/native_research/web_relay.py", "eval.service.web_gateway"):
+        "Trusted native-research web relay uses the canonical host-side gateway.",
     ("data-eval", "data/scaffolds/native_research/web_relay.py", "eval.service.tool_transport"):
         "Files/network=none actors access selected host web providers over the existing UNIX capability.",
     ("data-eval", "data/datasets/costbench_dynamic/control.py", "eval.run.runner"):
@@ -488,6 +572,97 @@ class ImportDirectionTests(unittest.TestCase):
         self.assertFalse(stale, "Import the canonical eval implementation:\n" + "\n".join(
             f"{edge.file}:{edge.line}: {edge.statement}" for edge in stale))
 
+    def test_production_imports_use_canonical_shared_paths(self):
+        aliases = {
+            'harnessgrad.components', 'harnessgrad.task_python', 'harnessgrad.provisioning', 'harnessgrad.snapshot', 'harnessgrad.code_metrics', 'harnessgrad.dataset_provider', 'harnessgrad.dataset_runtime', 'harnessgrad.dataset_runtime_identity', 'harnessgrad.identity',
+            'harnessgrad.h0_identity', 'harnessgrad.scoring_identity',
+            'harnessgrad.verification_context', 'harnessgrad.native_judge_identity',
+            'harnessgrad.budget_dispatch', 'harnessgrad.budget_integration',
+            'harnessgrad.bubblewrap', 'harnessgrad.slots', 'harnessgrad.run_namespace',
+            'harnessgrad.candidate_runtime', 'harnessgrad.python_artifacts',
+            'harnessgrad.python_harness_runtime', 'harnessgrad.python_exec_runtime',
+            'harnessgrad.customization.contracts',
+            'harnessgrad.evidence', 'harnessgrad.evidence_stats',
+            'harnessgrad.evidence_export', 'harnessgrad.receipt_verification',
+            'tools.datasets', 'tools.prepare_dataset', 'tools.dataset_classes', 'tools.dataset_lint',
+            'tools.datasets_doc', 'tools.new_dataset', 'tools.split_inventory',
+            'tools.run_summary', 'tools.results_matrix', 'tools.plot_curve', 'tools.evidence_export',
+            'tools.component_attribution', 'tools.report_appworld', 'tools.report_livemathbench', 'tools.tau3_report',
+            'tools.configure_harness', 'tools.configure_codex_harness', 'tools.configure_dsh_harness',
+            'tools.configure_opencode_harness', 'tools.configure_openclaw_harness',
+            'tools.configure_bun_harness', 'tools.configure_responses_overlay',
+            'tools.run_tests', 'tools.run_selected', 'tools.ci_select', 'tools.quality_sweep',
+            'harnessgrad.policies', 'harnessgrad.experiments', 'harnessgrad.completion', 'harnessgrad.splits',
+            'harnessgrad.records', 'harnessgrad.method_attempts', 'harnessgrad.channel', 'harnessgrad.methods',
+            'harnessgrad.readiness', 'harnessgrad.environments',
+        }
+        stale = [edge for edge in _source_imports(ROOT)
+                 if edge.target in aliases and edge.source not in aliases]
+        self.assertFalse(stale, 'Import the canonical shared implementation:\n' + '\n'.join(
+            f'{edge.file}:{edge.line}: {edge.statement}' for edge in stale))
+
+    def test_selected_platform_modules_use_canonical_dataset_runtime(self):
+        owners = {'eval/verification/public_native_runtime.py', 'eval/verification/verifier.py',
+                  'eval/run/tool_relay.py', 'data/scaffolds/registry.py',
+                  'data/scaffolds/provider_worker.py', 'data/scaffolds/native_qa/__init__.py',
+                  'data/scaffolds/native_qa/prepare.py', 'data/scaffolds/runtime_extensions.py',
+                  'data/scaffolds/spreadsheet_runtime/actor.py',
+                  'data/scaffolds/native_harbor_runtime/python_runtime.py',
+                  'data/scaffolds/native_harbor_runtime/prepare_python.py',
+                  'data/scaffolds/native_research/adapter.py',
+                  'data/scaffolds/native_research/component_runtime.py',
+                  'data/scaffolds/native_research/special_runtime.py',
+                  'data/scaffolds/command_control.py', 'data/datasets/gaia/prepare.py',
+                  'data/datasets/gaia/prepare_worker.py', 'data/datasets/reasoning_gym/prepare.py',
+                  'data/datasets/costbench/execution.py',
+                  'data/datasets/costbench/prepare_controller.py', 'data/datasets/costbench/report.py',
+                  'data/datasets/jobbench/prepare.py', 'data/datasets/jobbench/render_worker.py',
+                  'eval/run/chess_stepwise.py', 'data/datasets/tau2_bench/prepare.py',
+                  'data/datasets/tau3_bench/prepare.py', 'data/datasets/scienceworld/control.py',
+                  'data/datasets/reasoning_gym.py', 'data/datasets/agentdojo.py',
+                  'data/datasets/alfworld.py', 'data/datasets/appworld.py',
+                  'data/datasets/jericho.py', 'data/datasets/scienceworld.py',
+                  'data/datasets/ds1000.py', 'data/datasets/livecodebench.py',
+                  'data/datasets/tau2_bench.py', 'data/datasets/tau3_bench.py'}
+        stale = [edge for edge in _source_imports(ROOT)
+                 if edge.file in owners and edge.target == 'harnessgrad.dataset_runtime']
+        self.assertFalse(stale, 'Use harnessgrad.datasets.runtime in migrated platform modules')
+        # The scanner must also recognize an old function-local import.
+        probe = _imports('data/scaffolds/registry.py',
+                         'def load():\n    from harnessgrad.dataset_runtime import descriptor',
+                         {'harnessgrad.dataset_runtime'})
+        self.assertEqual([edge.target for edge in probe], ['harnessgrad.dataset_runtime'])
+
+    def test_platform_imports_use_canonical_provenance_paths(self):
+        aliases = {'harnessgrad.' + name for name in (
+            'identity', 'h0_identity', 'scoring_identity', 'verification_context',
+            'native_judge_identity')}
+        # Dataset scaffolds can be mounted independently into runtime environments.
+        stale = [edge for edge in _source_imports(ROOT)
+                 if edge.target in aliases and edge.source not in aliases
+                 and not edge.source.startswith(('data.', 'tools.'))]
+        self.assertFalse(stale, 'Import canonical provenance:\n' + '\n'.join(
+            f'{edge.file}:{edge.line}: {edge.statement}' for edge in stale))
+
+    def test_platform_imports_use_canonical_execution_paths(self):
+        aliases = {'harnessgrad.' + name for name in (
+            'bubblewrap', 'slots', 'run_namespace', 'budget_dispatch', 'budget_integration', 'candidate_runtime')}
+        stale = [edge for edge in _source_imports(ROOT)
+                 if edge.target in aliases and edge.source not in aliases
+                 and not edge.source.startswith(('data.', 'tools.'))]
+        self.assertFalse(stale, 'Import canonical execution utilities:\n' + '\n'.join(
+            f'{edge.file}:{edge.line}: {edge.statement}' for edge in stale))
+
+    def test_platform_imports_use_canonical_python_runtime_paths(self):
+        aliases = {'harnessgrad.' + name for name in (
+            'python_artifacts', 'python_exec_runtime', 'python_harness_runtime')}
+        # Data, tools and checkpoint helpers can have independent runtime mounts.
+        stale = [edge for edge in _source_imports(ROOT)
+                 if edge.target in aliases and edge.source not in aliases
+                 and not edge.source.startswith(('data.', 'tools.', 'eval.ckpt.'))]
+        self.assertFalse(stale, 'Import canonical Python runtime:\n' + '\n'.join(
+            f'{edge.file}:{edge.line}: {edge.statement}' for edge in stale))
+
     def test_scaffolds_and_adapter_asset_directories_are_distinct(self):
         # KIND is the publication declaration, so a scaffold must never declare it.
         for path in (ROOT / "data/scaffolds").rglob("*.py"):
@@ -635,7 +810,18 @@ class ImportDirectionTests(unittest.TestCase):
             if file in {"console/run_query.py", "console/launch.py",
                         "console/candidate_trial.py", "console/workbench.py",
                         "console/author_bundles.py",
-                        "harnessgrad/orchestration/resume.py"}:
+                        "harnessgrad/orchestration/resume.py",
+                        "harnessgrad/orchestration/readiness.py",  # version and sandbox readiness checks
+                        "harnessgrad/experiment/records.py",  # Git metadata and round diffs
+                        "harnessgrad/experiment/channel.py",  # catches materialization failures
+                        "harnessgrad/execution/method_runner.py",  # owns method subprocess execution
+                        "harnessgrad/datasets/provider.py",
+                        "harnessgrad/datasets/runtime_identity.py",  # selected H0 preflight subprocess
+                        "harnessgrad/datasets/runtime.py",  # owns isolated runtime preparation
+                        "harnessgrad/improvers/resolver.py",  # owns CLI version and optional smoke subprocesses
+                        "harnessgrad/execution/harness_validation.py",  # owns explicit smoke subprocess
+                        "harnessgrad/execution/python_runtime/python_harness_runtime.py",
+                        "harnessgrad/execution/python_runtime/python_exec_runtime.py"}:
                 self.assertEqual(errors, [])
             else:
                 self.assertTrue(any("extracted-unit-dependency" in e for e in errors))

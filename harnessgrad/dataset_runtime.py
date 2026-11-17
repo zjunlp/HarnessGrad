@@ -1,4 +1,3 @@
-"""Transitional alias for canonical dataset runtime."""
-import sys
-from harnessgrad.datasets import runtime as implementation
-sys.modules[__name__] = implementation
+"""Removed import guard: use :mod:`harnessgrad.datasets.runtime`."""
+
+raise ImportError('harnessgrad.dataset_runtime was removed; import harnessgrad.datasets.runtime instead')

@@ -211,7 +211,7 @@ def improver_options() -> dict:
             return _IMPROVER_CACHE
     try:
         import importlib
-        mod = importlib.import_module("tools.improver")
+        mod = importlib.import_module("harnessgrad.improvers.resolver")
         config = mod.load_config()
         entries = config.get("improvers") or {}
         out = {}

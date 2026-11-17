@@ -11,7 +11,7 @@ It is textual on purpose. PyYAML is not a dependency of this repository -- the p
 standard library only -- so a test that imports it would fail on exactly the machine this
 workflow is for. The properties below are the ones a regex can settle honestly: presence,
 pinning, permissions, timeouts, trigger coverage, and the rule that the suite is selected by
-`tools/run_tests.py` rather than by a second list of files that would drift from the first.
+`tools/testing/run_tests.py` rather than by a second list of files that would drift from the first.
 """
 from __future__ import annotations
 
@@ -65,16 +65,16 @@ def test_every_script_it_runs_exists() -> None:
 
 
 def test_the_suite_job_goes_through_the_lane_runner() -> None:
-    """The selection belongs to `tools/run_tests.py`, not to the workflow.
+    """The selection belongs to `tools/testing/run_tests.py`, not to the workflow.
 
     A workflow that lists test files for the suite is a second copy of the suite: the copy
     that is not updated when a file is renamed, and whose removals nobody reviews. The lane
     runner already owns selection, the per-file temporary root and the run-alone recheck.
     """
     text = _text()
-    assert "tools/run_tests.py" in text, (
-        "the suite must run through tools/run_tests.py")
-    assert 'tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs' in text, (
+    assert "tools/testing/run_tests.py" in text, (
+        "the suite must run through tools/testing/run_tests.py")
+    assert 'tools/testing/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs' in text, (
         "the suite job must execute the validated plan with explicit concurrency")
     assert "--fast" not in text, "CI must not silently prune explicitly planned slow tests"
 
@@ -175,9 +175,9 @@ def test_a_manual_dispatch_runs_the_full_suite() -> None:
     suite = text.split("- name: Suite", 1)[1].split(
         "- name: Full suite deferred", 1)[0]
     assert re.search(r"schedule\|workflow_dispatch\)\s*"
-                     r'python3 tools/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full '
+                     r'python3 tools/testing/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full '
                      r'--output-json "\$RUNNER_TEMP/quality-evidence/suite.json" ;;', suite)
-    assert re.search(r'\*\)\s*python3 tools/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 '
+    assert re.search(r'\*\)\s*python3 tools/testing/run_selected.py --plan "\$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 '
                      r'--output-json "\$RUNNER_TEMP/quality-evidence/suite.json" ;;', suite)
     assert "--full-if-empty" not in suite, "empty push selections must never expand to full"
 
