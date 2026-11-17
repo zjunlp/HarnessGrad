@@ -13,7 +13,7 @@ Explicit preparation only:
 python tools/prepare_dataset.py --dataset harvey_lab --runtime execution
 ```
 
-Alternatively call `harnessgrad.dataset_runtime.prepare_execution('harvey_lab')`.
+Alternatively, in Python, use `from harnessgrad.datasets.runtime import prepare_execution` followed by `prepare_execution('harvey_lab')`.
 Set `HG_DATASET_RUNTIME_ROOT` to an external owned artifact store when needed.
 Checks and scoring never install packages. `HG_JUDGE_HARVEY_PYTHON` no longer
 selects an interpreter; the managed execution artifact is mandatory.

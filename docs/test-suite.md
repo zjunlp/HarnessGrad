@@ -4,12 +4,18 @@ The quality suite covers platform contracts, dataset adapters and optional nativ
 controls. Run the affected tests during development. A selected passing subset
 does not establish whole-suite acceptance.
 
+A plain `pytest` invocation discovers tests in `tests/` and `console/uat/`. Authored dataset exercises contain intentionally failing test files and are not part of default discovery. Explicit pytest paths remain available for targeted work.
+
+## CI selection and shared method code
+
+`tools/testing/ci_select.py` maps changes to quality-test files. Changes under `methods/policy_ports/` or to top-level Python modules in `methods/` select the full-suite path because those modules are shared across method implementations and customization. For an individual method directory, selection uses the method directory name and includes its method-specific tests; if no such test family is mapped, it selects the full-suite path. Test helpers without an audited mapping also select the full-suite path. Changes to `tools/registry_ops/` and its top-level compatibility entrypoints select the full-suite path because registry declarations are shared across documentation and dataset tools. Changes to `tools/testing/` and deletions of its former top-level command paths select the full-suite path, because they control selection, execution or receipts for unrelated tests. In the standard push workflow, a full-suite selection is deferred to nightly or manual dispatch; it is not an assertion that the full suite ran on that push.
+
 ## Run the tests for one dataset
 
 ```sh
-python3 tools/run_tests.py --dataset gsm8k
-python3 tools/run_tests.py --dataset appworld --dataset gaia     # repeatable
-python3 tools/run_tests.py --dataset bfcl_v3 --list              # plan only, runs nothing
+python3 tools/testing/run_tests.py --dataset gsm8k
+python3 tools/testing/run_tests.py --dataset appworld --dataset gaia     # repeatable
+python3 tools/testing/run_tests.py --dataset bfcl_v3 --list              # plan only, runs nothing
 ```
 
 This selects the files for that dataset **plus the core platform tests**. It does
@@ -26,8 +32,8 @@ scaffold is not one dataset's business. Those changes are checked by the
 **registry-wide** files, which verify the contract across all datasets:
 
 ```sh
-python3 tools/run_tests.py --dataset gsm8k --with-registry
-python3 tools/run_tests.py --registry-only
+python3 tools/testing/run_tests.py --dataset gsm8k --with-registry
+python3 tools/testing/run_tests.py --registry-only
 ```
 
 They are the slowest thing in the suite because "all datasets" is the thing they
@@ -36,17 +42,19 @@ check. Run them for layer work, not for every adapter edit.
 ## Run everything
 
 ```sh
-python3 tools/run_tests.py                      # whole suite, parallel
-python3 tools/run_tests.py --jobs 8             # eight workers
-python3 tools/run_tests.py --fast               # skip the measured-slow files
-python3 tools/run_tests.py --file test_scorer   # files whose path contains this
-python3 tools/run_tests.py --file test_scorer --file test_verifier   # both, one pass
+python3 tools/testing/run_tests.py                      # whole suite, parallel
+python3 tools/testing/run_tests.py --jobs 8             # eight workers
+python3 tools/testing/run_tests.py --fast               # skip the measured-slow files
+python3 tools/testing/run_tests.py --file test_scorer   # files whose path contains this
+python3 tools/testing/run_tests.py --file test_scorer --file test_verifier   # both, one pass
 ```
 
 `--file` is repeatable. Repository-relative paths containing `/` match exactly;
 bare terms match path substrings. The selection includes a file matching any
 argument. Each selected file runs in its own lane; the lane split is derived
 once for the combined selection.
+
+The selection helpers live in `tools/testing/scope.py` and `tools/testing/lane.py`. Their names avoid pytest collecting their `test_files` helpers as tests. The runner imports the scope helper from the same package; direct script execution is supported outside the checkout.
 
 The runner starts one pytest process per file across two lanes:
 
@@ -69,7 +77,7 @@ option is omitted.
 
 ## Which tests belong to which dataset
 
-`tools/test_scope.py` decides, from **filenames**:
+`tools/testing/scope.py` decides, from **filenames**:
 
 * `test_appworld_reporting.py` → `appworld`, because the name says so.
 * `test_dataset_controls.py` → registry-wide, because it checks all datasets.
@@ -84,8 +92,8 @@ Files that are about one dataset without being named after it are listed explici
 in `EXTRA`; each entry is a decision, not a guess.
 
 **2026-10-27:** the *test* of the scoping helper (`test_test_scope.py`) was
-deleted with the audit-round tests it selected; the helper itself (`tools/test_scope.py`) is
-still what `tools/run_tests.py` uses to build its lanes.
+deleted with the audit-round tests it selected; the helper, now `tools/testing/scope.py`, is
+still what `tools/testing/run_tests.py` uses to build its lanes.
 
 `test_test_scope.py` guarded the rule: it failed if a dataset was added
 with no test file, if an `EXTRA` entry points at a file that no longer exists, or if
@@ -98,9 +106,9 @@ own test files, and the total went 28 → 29 with the port.)
 
 ## If you add a dataset
 
-1. Add the adapter under `data/` and classify it in `tools/dataset_classes.py`.
+1. Add the adapter under `data/` and classify it in `tools/dataset_maintenance/dataset_classes.py`.
 2. Add `tests/quality/test_<dataset>_*.py`.
-3. Run `python3 tools/run_tests.py --dataset <dataset> --with-registry`.
+3. Run `python3 tools/testing/run_tests.py --dataset <dataset> --with-registry`.
 4. Run `python3 -m pytest tests/quality` to confirm the suite
    guard accepts the new name.
 
@@ -143,8 +151,7 @@ remains tracked separately in [remaining work](linux-runtime-remaining.md).
 
 Start with the canonical unit's interface, callers and tests. Keep dependencies
 explicit, give each mutable cache/lock/resource one owner, and patch the canonical
-implementation in internal tests. Existing public CLI/function delegates and the
-identity-preserving `eval.runner` alias remain supported. Function aliases do not
+implementation in internal tests. Existing public CLI/function delegates remain supported; `eval.runner` now directs callers to `eval.run.runner`. Function aliases do not
 promise that rebinding an old private global changes the new owner's dependency.
 Never add reflected global synchronization to make an old test patch work.
 
@@ -184,3 +191,41 @@ versus invalid outcomes, unknown costs, actor/verifier privacy and cleanup on
 partial startup. Require the applicable Linux gate receipts before splitting
 those execution closures. Do not combine a large move with a scoring/schema or
 identity change.
+
+## Subprocess decoding guard: current audit
+
+The `test_harness_decoding.py` audit scans 138 text-mode subprocess call sites in the current tree, including its embedded actor example. The original main and LightRSI fix trees contain the same total; four calls moved from `tools/` to `harnessgrad/` during refactoring. Each call has a reviewed policy or a specific documented exception; the [inventory review](validation/decoding-inventory.md) records the comparison and limits. Strict decoding remains intentional for source-bound scoring and identity paths where malformed output must refuse measurement rather than change it. The test scans source syntax; it does not prove every runtime output is valid or every decoder handles failures correctly.
+
+## Existing failures checked during shared-layer refactoring
+
+On 2026-11-16, the following focused controls were run without a model or benchmark on both the original `main` checkout at `1eedb4c5be7104025c8eb89c3782323b7cbdf0b6` and the refactor checkout at `b3b87b4631ad4d5b6587157513e9fc63c47c2b56`. Both controls failed in both checkouts:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider \
+  --basetemp=/tmp/hg-baseline-control \
+  tests/quality/test_release_results.py::test_matrix_excludes_failed_h0_but_preserves_graceful_stop \
+  tests/quality/test_dataset_runtime_identity.py::test_provider_session_freezes_actual_requests_and_resets_afterward
+```
+
+- The results matrix JSON retains the graceful-stop record and its completion metadata, but this test expects `early_stop` in the Markdown table and does not find it. This is a display/contract discrepancy; the failed study was still excluded in this control.
+- At that revision, the provider-session test expected a call to `admit_provider` when requesting a cached catalog; the mock observed no call. `DatasetProvider.catalog()` returns its cached result before issuing another request. The test was subsequently corrected to distinguish cache hits from a new request: it verifies that a changed storage snapshot re-admits the same artifact and that failed admission refuses the request. This does not claim that a cache hit rechecks artifact bytes or establish admission behavior elsewhere in a complete run.
+
+These are existing baseline failures, not passing acceptance evidence for the refactor. Neither runtime behavior nor the test assertions were changed by this diagnostic. Separately, image Python runtime controls requiring the locked Loop SDK could not complete offline because `openai==2.21.0` was unavailable in the inspected local wheel cache.
+
+The setup-tool move was also checked against the original main checkout: both parameterizations of `test_responses_overlay.py::test_formal_failure_keeps_capture_after_task_cleanup` initially failed because the fixture supplied `prompt` without the `goal` or `instruction` required by the task contract. The synthetic fixture now supplies `goal`, and both cases pass without changing production execution. `test_openclaw_harness.py::test_native_cli_mock_writes_answer_and_trace` errored on both checkouts because the locally discovered OpenClaw launcher did not resolve to a recognized installed package. These controls do not establish successful OpenClaw runtime execution in this environment.
+
+## Historical migration-source check
+
+The [migration ledger](../tests/fixtures/hg_migration_site/PROVENANCE.json) lists 45 entries; seven have no current checkout carrier and are identified as history-only. The remaining entries retain their recorded carriers. The ledger itself is pinned by SHA-256 in `test_migration_provenance_integrity.py`.
+
+On 2026-11-16, the source commit `4d30de827b4b1073a65cb62643a970b917eecd2b` was fetched into the isolated refactor clone and retained there under `refs/harnessgrad/verification/migration-4d30de82`. With that object available, the historical-source test verified all eight applicable entries against their recorded lengths and SHA-256 values. Together with the platform integrity controls, **15 tests passed**. No run receipt was modified.
+
+Another clone can reproduce the historical check without checking out the commit:
+
+```sh
+git fetch --no-tags origin 4d30de827b4b1073a65cb62643a970b917eecd2b
+PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q -p no:cacheprovider \
+  --basetemp=/tmp/hg-migration-source-check tests/quality/test_migration_provenance_integrity.py
+```
+
+Use a separate temporary directory for each concurrent test invocation. The custom verification ref is local to the refactor clone; it is not automatically published with a branch. When the source commit is absent, the historical-source test skips rather than claiming verification. Matching historical bytes checks this ledger's sources only: it does not validate all experiment results or make platform identities interchangeable.

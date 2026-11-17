@@ -105,7 +105,7 @@ After preparing Loop, run the embedded control from the checkout:
 HG_INSTALL_RUN="install-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
   --improver none --run-id "$HG_INSTALL_RUN" --fail-on-incomplete
-python tools/run_summary.py "runs/$HG_INSTALL_RUN"
+python tools/analysis/run_summary.py "runs/$HG_INSTALL_RUN"
 ```
 
 This exercises task execution, a scripted reference method, scoring and record
@@ -122,7 +122,7 @@ resuming that experiment.
 For a repeatable installation check after Loop preparation, run:
 
 ```bash
-python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
+python tools/diagnostics/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
 This creates a fresh control directory, verifies duplicate-ID protection and

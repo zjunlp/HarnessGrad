@@ -16,7 +16,7 @@ HG_AGENT_BACKEND=mock python3 tools/validate_harness.py /tmp/my-harness --smoke
 HG_AGENT_BACKEND=mock harnessgrad run --dataset demo --sampling all \
   --harness-path /tmp/my-harness --rounds 0 --improver none \
   --run-id my-harness-smoke --fail-on-incomplete
-python3 tools/run_summary.py runs/my-harness-smoke
+python3 tools/analysis/run_summary.py runs/my-harness-smoke
 ```
 
 Replace the template's solver with yours. The manifest's `entrypoint` is a Python
@@ -92,7 +92,7 @@ what that costs when something does.)
 ### 1.2 Which fields the loader actually requires
 
 Checked against the code, not assumed. `tools/validate_harness.py:29` is the door
-(`REQUIRED`), and `harnessgrad/identity.py:_identity` indexes `man["name"]` and
+(`REQUIRED`), and `harnessgrad/provenance/identity.py:_identity` indexes `man["name"]` and
 `man["version"]` directly — so those two are not merely "recommended":
 
 | field | required? | default | who reads it |
@@ -106,7 +106,7 @@ Checked against the code, not assumed. `tools/validate_harness.py:29` is the doo
 | `runtime_paths` | no | `[]` | `eval/run/runner.py`: host trees bound read-only into the sandbox |
 | `role` | no | `"harness"` | the door; must be `harness` or `control` |
 | `notes` | no | — | nothing. Documentation for the next reader (`DOCUMENTATION_ONLY` in the door) |
-| `components` | no | — | `harnessgrad/components.py:declared_components` → `editable_surface_components` on a point after round 0 (§5) |
+| `components` | no | — | `harnessgrad/core/components.py:declared_components` → `editable_surface_components` on a point after round 0 (§5) |
 | `runtime` | no | — | `eval/ckpt/source_tree.py:runtime_spec` — the Bun workspace runtime, not needed by a Python or shell harness |
 | `install` | no | `null` | `tools/import_env.py`; **only** for a harness that runs in a container (`env_kinds: ["exec"]`) |
 
@@ -411,7 +411,7 @@ two lines differ, so only those two are quoted:
 ```
 
 Same `harness_sha`, same score — and the two points are **not comparable**, which is why
-`README.md` calls the flag a debugging decision and `tools/plot_curve.py` refuses to mix them.
+`README.md` calls the flag a debugging decision and `tools/analysis/plot_curve.py` refuses to mix them.
 Everything in this page after §3 was run with the sandbox on unless it says otherwise.
 
 ---
@@ -445,7 +445,7 @@ PY
 `run_summary.py` writes (and prints) the one page per run, including what the run cannot say:
 
 ```
-$ python3 tools/run_summary.py runs/byo-improve
+$ python3 tools/analysis/run_summary.py runs/byo-improve
 unchanged runs/byo-improve/end-summary.md (byte-identical to the file on disk)
 unchanged runs/byo-improve/end-summary.json (byte-identical to the file on disk)
   byo-improve                                  rounds=2   0.000 → 0.000            → runs/byo-improve/end-summary.md
@@ -459,7 +459,7 @@ bytes on disk already match rather than overwriting them silently.
 trace is kept at `runs/<run-id>/round0_traces/<task_id>.jsonl` (and per round after it):
 
 ```
-$ python3 tools/check_trace_contract.py runs/byo-improve/round0_traces/t01.jsonl
+$ python3 tools/validation/check_trace_contract.py runs/byo-improve/round0_traces/t01.jsonl
 OK    runs/byo-improve/round0_traces/t01.jsonl  [v1]
 [exit 0]
 ```
@@ -469,7 +469,7 @@ directory today, because the checker looks for files literally named `trace.json
 platform keeps them as `<task_id>.jsonl`:
 
 ```
-$ python3 tools/check_trace_contract.py runs/byo-improve
+$ python3 tools/validation/check_trace_contract.py runs/byo-improve
 no trace.jsonl under runs/byo-improve
 [exit 2]
 ```
@@ -478,7 +478,7 @@ Pass the file. Two failures are worth recognising on sight, both measured on a c
 same trace with its `usage` line deleted:
 
 ```
-$ python3 tools/check_trace_contract.py /tmp/byo-notrace.jsonl
+$ python3 tools/validation/check_trace_contract.py /tmp/byo-notrace.jsonl
 FAIL  /tmp/byo-notrace.jsonl  [v1]
       - no `usage` record: the platform cannot tell a crash from a run that finished without reporting
 [exit 1]
@@ -536,7 +536,7 @@ its own improvement mechanism is the thing being measured, so there is no allowl
 ### 5.2 The `components` map buys attribution, not permission
 
 Optional, and worth adding. It is a map from the ten components
-(`harnessgrad/components.py:COMPONENTS`) to the files that implement them, and after round 0
+(`harnessgrad/core/components.py:COMPONENTS`) to the files that implement them, and after round 0
 the point carries which paths the round moved and which component they belong to
 (`editable_surface_touched` / `editable_surface_components`). Without it every path is
 `unattributed` — a true statement, and a useless figure.
@@ -605,7 +605,7 @@ Read the two trailing fields. A round that moved nothing records `[]` on both si
 `unattributed` half is what keeps "the edit was in `control`" distinguishable from "the edit was
 somewhere the map cannot name" — a path the map does not mention lands there instead of
 disappearing, because a dropped path is a round that reads as "nothing changed"
-(`harnessgrad/components.py:attribute`). A round that moved one file names it and the component
+(`harnessgrad/core/components.py:attribute`). A round that moved one file names it and the component
 the harness declared for it. Both round-0 rows are `None`: the baseline has nothing to diff
 against.
 
@@ -646,7 +646,7 @@ message merely to obtain an answer.
 **Symptom.** Your harness works, the score is real, and the point reads `ended: crashed`,
 `model_calls: 0`, `commands: 0` — the method is told the harness did nothing. §4 printed both
 sides of it. **Fix.** Write the five records of `docs/adapter-spec.md` §4 and run
-`tools/check_trace_contract.py` on the file until it says `OK`. **Source.** §4's own measured
+`tools/validation/check_trace_contract.py` on the file until it says `OK`. **Source.** §4's own measured
 table: a `harness_identity` + `codex_event` + `usage` trace reports **0 steps, 0 commands** for
 work that a `harness_identity` + `reply`/`command` + `usage` trace reports as 2 and 2; and
 `eval/observe/tracing.py:_ended`, where an absent `usage` is `crashed` by construction.
@@ -683,7 +683,7 @@ plainly called a model, and the call was never counted or priced — the number 
 different experiment. **Fix.** Route every call through the six `HG_AGENT_*` variables, isolate
 `HOME`, and if the model did not come from `HG_AGENT_MODEL`, write a `harness_identity` record
 saying what did run. **Contract.** `docs/adapter-spec.md` §1 rules 1 and 3 describe the model boundary;
-`harnessgrad/identity.py` records the declared backend and model. A mismatch between
+`harnessgrad/provenance/identity.py` records the declared backend and model. A mismatch between
 configuration and the actual route invalidates the claimed identity.
 
 ### Not a mistake, but the sixth thing that bites: the entrypoint language
@@ -710,5 +710,5 @@ in `examples/bash-harness/run.py` is what makes it measurable today.
   `base_harness/loop`, whose `agent.py` the reference method's edit matches. The external
   harness's round recorded `[]`, which is the honest empty answer, not a demonstration that
   attribution works on a tree you wrote.
-* **`tools/plot_curve.py` and `tools/results_matrix.py`.** Not run here; `README.md` §“Run it”
+* **`tools/analysis/plot_curve.py` and `tools/analysis/results_matrix.py`.** Not run here; `README.md` §“Run it”
   shows them on runs that already exist.

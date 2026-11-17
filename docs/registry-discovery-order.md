@@ -55,13 +55,13 @@ production consumers found outside the excluded paths.
 
 Two further consumers explicitly erase registry order:
 
-* `tools/task_difficulty.py:222`: `set(registry.published())` -> membership filter
+* `tools/studies/task_difficulty.py:222`: `set(registry.published())` -> membership filter
   over state datasets -> `sorted(...)` -> printed summaries / per-dataset JSON
   writes. An explicit `--dataset` instead makes a singleton list. Registry order
   does not determine output or write order here.
-* `tools/test_scope.py:67`: `sorted(registry.published())` -> `scope_map()` sets
-  -> `select()` returns sorted test filenames -> `tools/run_tests.py:219-285`
-  selection and printed plan. Discovery order does not choose a dataset or test
+* `tools/testing/scope.py:67` (then tools/test_scope.py): `sorted(registry.published())` -> `scope_map()` sets
+  -> `select()` returns sorted test filenames -> the then tools/run_tests.py selection
+  and printed plan (now `tools/testing/run_tests.py`). Discovery order does not choose a dataset or test
   here. This audit did not execute the runner or any additional test files.
 
 The registry docstring mentions the Launch form/read API as consumers, but the
@@ -130,7 +130,7 @@ No discovered catalog tuple is passed into these record/receipt calls. This
 establishes no direct registry-order dependency in their inputs, rather than a
 claim about every implementation detail of the excluded receipt machinery.
 `tools/import_env.py:226`, `tools/configure_harness.py:86`,
-`tools/task_sensitivity.py:294`, `tools/validate_method.py:68`, and
+`tools/studies/task_sensitivity.py:294`, `tools/validate_method.py:68`, and
 `harnessgrad/environments.py` likewise use named loaders or registry constants,
 not `published()`, so they add no catalog-order chain. The legacy domain adapter
 at `legacy/adapters/harnessgrad_domain/adapter.py:107,117` calls `load` and

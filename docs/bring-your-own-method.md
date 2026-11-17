@@ -13,7 +13,7 @@ cp -R examples/method-template /tmp/my-rsi-method
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/quickstart.json \
   --method-entrypoint "python3 /tmp/my-rsi-method/run.py" \
   --run-id my-method-smoke --fail-on-incomplete
-python3 tools/run_summary.py runs/my-method-smoke
+python3 tools/analysis/run_summary.py runs/my-method-smoke
 ```
 
 The unchanged template is a zero-cost control, so it ends early with no edit.

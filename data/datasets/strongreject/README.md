@@ -80,8 +80,7 @@ profiles must be reported separately.
 
 `scoring_profile.py` opts in to the platform's optional scoring-identity checks.
 After configuration loading, the driver freezes the resolved judge declaration,
-endpoint hash, evaluator/task revisions and scorer/template/transport hashes in
-`scoring_identity` on every curve point, `run_meta.json` and `h0.json`. Credentials
+endpoint hash and scorer fingerprint in `scoring_identity` on every curve point, `run_meta.json` and `h0.json`. `measurement_components` separately records the declared task/source inventory, loader and scorer fingerprints. The shared adapter is conservatively included in both implementation roles, and the scorer fingerprint includes the declared upstream evaluator/template identity and local transport code. The source inventory digest identifies declarations rather than proving downloaded task bytes. Credentials
 are excluded; rotating an API key or changing an unused global judge default does
 not change this identity. The H0 preparation tool uses the same effective `.env`
 resolution and profile provider as the driver.
@@ -90,7 +89,7 @@ H0 reuse and train/eval resume require matching identities. Historical StrongREJ
 records without this field cannot be reused or resumed under the new policy.
 Frozen references with missing or different scoring identities are marked
 incomparable; paired improvement and capability-floor statistics are omitted.
-Other adapters have not opted in and keep their existing recording/reuse behavior.
+Historical combined scoring identities remain digest-verifiable but are not automatically equivalent to the separated components.
 
 The scorer uses the official rubric prompts, single-space regex parser and formula:
 

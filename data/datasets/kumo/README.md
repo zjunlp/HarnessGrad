@@ -99,7 +99,7 @@ python3 data/datasets/kumo/control.py --oracle
 python3 data/datasets/kumo/control.py --noop
 python3 data/datasets/kumo/control.py --oracle --platform
 python3 data/datasets/kumo/control.py --noop --platform
-python3 tools/run_tests.py --dataset kumo --with-registry --jobs 8
+python3 tools/testing/run_tests.py --dataset kumo --with-registry --jobs 8
 ```
 
 Controls use the mock backend and require scores 1/0. Tests cover vendored scorer

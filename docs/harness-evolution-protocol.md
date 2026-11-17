@@ -98,7 +98,7 @@ anything but `trials=1, jobs=1`:
 
     staged diagnostics and temporary pilots require trials=1, jobs=1
 
-and the capability-floor guard (`harnessgrad/policies.py:112`,
+and the capability-floor guard (`harnessgrad/experiment/policies.py:112`,
 `bool(candidate_std and baseline_std)`) needs a spread, so at `trials=1` it reports
 `ci_available: false`. But that guard is a **disqualification** — it only asks whether a
 candidate sits *below* the baseline. It was never the improvement detector.

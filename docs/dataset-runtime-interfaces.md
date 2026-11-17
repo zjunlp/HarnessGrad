@@ -353,7 +353,7 @@ python3 tools/scienceworld_study_sample.py --archive /path/to/goldpaths-all.zip 
 ### 5.4 按角色绑定的 Python 执行制品
 
 可信 Python 服务和评分器可显式声明 `python_runtime`，共同复用
-[`harnessgrad.dataset_runtime`](../harnessgrad/dataset_runtime.py) 的准备及内容核验机制。
+[`harnessgrad.datasets.runtime`](../harnessgrad/datasets/runtime.py) 的准备及内容核验机制。
 当前使用者是 CostBench static/dynamic：两者的服务与评分器共享一个 Python 3.12
 execution 制品，平台 Python 无须安装它的编译依赖。τ³ 保留其已有运行时路径。
 
@@ -577,7 +577,7 @@ eval 续跑在跳过已完成任务前检查原计划、任务声明、progress�
 不会因此变成完整分组、缩小分母或获得正式 `pass^k`。未开启的任务不返回采集回执或写入此扩展归档。
 直接调用 `run_one` 只返回采集数据；逐次持久化由 evaluation 负责。
 
-`tools/task_sensitivity.py` 对开启归档的任务使用本次 run 作为 `progress_dir`，
+`tools/studies/task_sensitivity.py` 对开启归档的任务使用本次 run 作为 `progress_dir`，
 以 Harness 列表序号分配独立的记录 round，在 `harnesses/<序号>.json` 保存名称和代码 hash。
 这里的 round 用于区分各 Harness 的测量，不代表改进轮次。
 同代码、不同名称的 Harness 也有独立记录；所有记录共用一个受保护的归档根目录。
@@ -828,7 +828,7 @@ H0 查找、`--h0-from`、训练及评测 `--resume` 要求记录与当前身份
 
 ### 9.1 数据集运行时身份与复用
 
-`harnessgrad/dataset_runtime_identity.py` 将实际 provider 制品与选中任务的
+`harnessgrad/datasets/runtime_identity.py` 将实际 provider 制品与选中任务的
 service/verifier 绑定规范化为 `dataset_runtime_identity`：
 `version/provider/artifacts/tasks/sha256`。共享的执行制品只保存一次，`tasks` 保存
 任务到角色、角色到制品摘要的对应关系；摘要覆盖整个规范 JSON payload。
@@ -951,6 +951,8 @@ Loop 进一步显式声明容器 Python 小版本与 lock 的映射，支持 `fi
 [Harness Python 环境](writing_a_harness.md#21-managed-python-dependencies)。
 
 ### Dataset-owned task Python (`ENV.task_python`)
+
+The binding helpers are owned by `harnessgrad.datasets.task_python`.
 
 A sandboxed `files` environment may bind an explicitly prepared dataset execution
 artifact with `role: actor`. The declaration uses the existing exact

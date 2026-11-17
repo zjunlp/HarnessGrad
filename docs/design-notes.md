@@ -229,7 +229,7 @@ kind that would otherwise have been read as a result:
    `methods/`, `tests/`, `docs/`, `INTERFACE.md`, `.env`), never `base_harness/` —
    that is the candidate, and every run edits a copy of it.
 
-   `tools/plot_curve.py` labels each run's isolation and **refuses to silently mix
+   `tools/analysis/plot_curve.py` labels each run's isolation and **refuses to silently mix
    them**: runs made under different sandbox plans, or before the sandbox existed,
    put numbers on the same axis that were produced under different rules. It says so
    and exits non-zero.

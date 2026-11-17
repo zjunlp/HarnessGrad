@@ -99,7 +99,7 @@ replies; that is enough to prove the plumbing (request → edit → new tree →
 
 ```bash
 HG_AGENT_BACKEND=mock harnessgrad run --config experiments/method-<name>.json --set rounds=1 --improver none
-python3 tools/run_summary.py runs/<run-id>
+python3 tools/analysis/run_summary.py runs/<run-id>
 ```
 
 **2.6 Board row.** `python3 tools/contribute.py method --name my-method --preset experiments/method-my-method.json --contributor <handle>`.

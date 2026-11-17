@@ -6,8 +6,7 @@ resolution, not a historical upstream lock. Resolution used public index
 https://pypi.tuna.tsinghua.edu.cn/simple because default PyPI TLS failed.
 No inference, training, or development extras are needed for the grading helper.
 
-Explicitly call `harnessgrad.dataset_runtime.prepare_execution('swe_bench')` or
-`python tools/prepare_dataset.py --dataset swe_bench --runtime execution`. Optional
+Use `python tools/prepare_dataset.py --dataset swe_bench --runtime execution`, or in Python use `from harnessgrad.datasets.runtime import prepare_execution` followed by `prepare_execution('swe_bench')`. Optional
 `HG_DATASET_RUNTIME_ROOT` selects an external owned store. Read-only checks and
 scoring never install. `HG_SWE_PYTHON` no longer selects an interpreter.
 

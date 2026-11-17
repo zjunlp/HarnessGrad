@@ -161,7 +161,7 @@ WorkBench固定source inventory：`tests/fixtures/upstream_workbench/source.json
 - **控制臂**：13 个入口没有任何 oracle/noop 控制（`test_dataset_controls.py` 里声明为
   `exempt`），另外 7 个的控制只有在字节被 provision 之后才会跑 —— 在本机全部 skip。
   按 `docs/dataset-onboarding.md` 的五道门，这 20 个入口目前只有第 3 道（评分器
-  pinned）与第 4 道（`KIND`）成立；第 5 道（`tools/task_difficulty.py`）从未跑过。
+  pinned）与第 4 道（`KIND`）成立；第 5 道（`tools/studies/task_difficulty.py`）从未跑过。
 - **真实字节**：0 个入口在任何机器上跑过发布数据。所以"19 个新基准 + 1 个变体"是
   **移植声明**，不是覆盖率，也不构成 production 授权。
 - **复现**：`tools/datasets.py --write` 当时没有跑（`DOWNLOADS.md` 少了 20 个入口 / 258 行），

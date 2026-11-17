@@ -92,9 +92,9 @@ still refuses duplicate questions, and keeping an arbitrary answer is not offere
 harnessgrad run --config experiments/rsi-bbeh.json --improver none --check-only --check-net
 harnessgrad run --config experiments/rsi-bbeh.json --improver none
 harnessgrad run --config experiments/rsi-bbeh-eval.json --improver none
-python3 tools/run_summary.py runs/bbeh-dgm-study
-python3 tools/run_summary.py runs/bbeh-dgm-heldout
-python3 tools/results_matrix.py --runs runs --dataset bbeh --side eval \
+python3 tools/analysis/run_summary.py runs/bbeh-dgm-study
+python3 tools/analysis/run_summary.py runs/bbeh-dgm-heldout
+python3 tools/analysis/results_matrix.py --runs runs --dataset bbeh --side eval \
   --md results/bbeh-heldout.md --json results/bbeh-heldout.json
 ```
 
@@ -155,7 +155,7 @@ harnessgrad split create --dataset deepsearchqa --source official-eval \
 harnessgrad run --config experiments/rsi-deepsearchqa.json --improver none --check-only --check-net
 harnessgrad run --config experiments/rsi-deepsearchqa.json --improver none
 harnessgrad run --config experiments/rsi-deepsearchqa-eval.json --improver none
-python3 tools/run_summary.py runs/deepsearchqa-dgm-heldout
+python3 tools/analysis/run_summary.py runs/deepsearchqa-dgm-heldout
 ```
 
 The native autorater prompt/counts/F1 are retained. This HG route uses a declared
@@ -202,7 +202,7 @@ PY
 harnessgrad run --config experiments/rsi-terminal-bench2.json --improver none --check-only --check-net
 harnessgrad run --config experiments/rsi-terminal-bench2.json --improver none
 harnessgrad run --config experiments/rsi-terminal-bench2-eval.json --improver none
-python3 tools/run_summary.py runs/terminal-bench2-dgm-heldout
+python3 tools/analysis/run_summary.py runs/terminal-bench2-dgm-heldout
 ```
 
 Do not export `HG_TB_TASKS` after creating the split: changing the loaded pool
@@ -259,7 +259,7 @@ any selected task images or scorer dependencies.
 harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver none --check-only --check-net
 harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver none
 harnessgrad run --config experiments/rsi-swe-bench-pro-v2-eval.json --improver none
-python3 tools/run_summary.py runs/swe-bench-pro-v2-dgm-heldout
+python3 tools/analysis/run_summary.py runs/swe-bench-pro-v2-dgm-heldout
 ```
 
 The normal-finish path captures the patch using the pinned upstream tooling and
@@ -283,7 +283,7 @@ The output directories retain curve points, per-task evidence, harness states,
 cost counters and model/split identities. Export each dataset separately:
 
 ```bash
-python3 tools/results_matrix.py --runs runs --side eval \
+python3 tools/analysis/results_matrix.py --runs runs --side eval \
   --md results/heldout.md --json results/heldout.json
 ```
 

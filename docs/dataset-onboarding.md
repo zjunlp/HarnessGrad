@@ -74,7 +74,7 @@ unreachable check from a weak harness, and these are what separate them.
 | 2 | **do-nothing control scores 0** | `python3 data/datasets/<name>/control.py --noop` |
 | 3 | **the official scorer is copied verbatim into a test, with a differential test** | `tests/quality/test_<name>_official_scorer.py` |
 | 4 | **`KIND = "dataset"`** | `python3 tools/dataset_lint.py` |
-| 5 | **it runs** | `python3 tools/task_difficulty.py --dataset <name>` returns 0 |
+| 5 | **it runs** | `python3 tools/studies/task_difficulty.py --dataset <name>` returns 0 |
 
 Gates 1 and 2 must pass **twice**: by hand, and through the platform
 (`… --oracle --platform`, which drives `SETUP → harness → VERIFY` via
@@ -122,10 +122,10 @@ onboarded without a way to show its grade is reachable.
 | the generator | `tools/new_dataset.py --kind qa\|command\|files` — see §3 |
 | the check that runs over *every* published dataset | `tests/quality/test_dataset_lint.py` |
 | the check that every dataset declares a control and a metric test, and runs the controls | `tests/quality/test_dataset_controls.py` |
-| the classification: derived axes plus the one judged axis, as a `(demand, surface)` pair | `tools/dataset_classes.py`. For a new adapter, also add its dataset row to `registry/dataset-blockers.json` and run `python3 tools/check_dataset_blockers.py` to check catalogue consistency |
+| the classification: derived axes plus the one judged axis, as a `(demand, surface)` pair | `tools/dataset_maintenance/dataset_classes.py`. For a new adapter, also add its dataset row to `registry/dataset-blockers.json` and run `python3 tools/check_dataset_blockers.py` to check catalogue consistency |
 | dataset-specific dependencies, limitations, and validation instructions | the adapter's public documentation, for example the [AIME README](../data/datasets/aime/README.md) |
-| declared coverage gaps (demands the vocabulary names with no adapter yet) | `tools/dataset_classes.py::UNCOVERED_DEMANDS`; currently empty because all six demands have adapters |
-| which Harness function a dataset makes score-relevant, and which functions no dataset covers | `tools/dataset_classes.py::EXERCISES` / `FUNCTIONS` / `UNCOVERED_FUNCTIONS` |
+| declared coverage gaps (demands the vocabulary names with no adapter yet) | `tools/dataset_maintenance/dataset_classes.py::UNCOVERED_DEMANDS`; currently empty because all six demands have adapters |
+| which Harness function a dataset makes score-relevant, and which functions no dataset covers | `tools/dataset_maintenance/dataset_classes.py::EXERCISES` / `FUNCTIONS` / `UNCOVERED_FUNCTIONS` |
 | the shared control for `command` datasets | `data/scaffolds/command_control.py` + `data/scaffolds/command_oracle_harness/` |
 | the download index (generated) | `DOWNLOADS.md` — written by `tools/datasets.py --write`; **never edit by hand** |
 | "which datasets exist" | `data/scaffolds/registry.py::published()` — a module appears iff `KIND == "dataset"` |
@@ -388,7 +388,7 @@ python3 data/datasets/<name>/control.py --oracle --platform   # expect reward 1 
 python3 data/datasets/<name>/control.py --noop   --platform   # expect reward 0 again
 python3 tools/dataset_lint.py                        # expect: ok <name>, rc 0
 python3 tools/datasets.py --write                    # DOWNLOADS.md, generated
-python3 tools/task_difficulty.py --dataset <name>    # expect rc 0
+python3 tools/studies/task_difficulty.py --dataset <name>    # expect rc 0
 python3 -m pytest tests/quality -q                   # the suite stays green
 ```
 

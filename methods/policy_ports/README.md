@@ -69,6 +69,14 @@ and is declared in each `method.json` fidelity profile.
 | SkillOpt | `skillopt/strategy.py.reference`: `_reflect`, `_consolidate`, `_slow_update`, `_select` | Success/failure role separation, merge/rank bounded exact edits, protected slow region, slow-guidance/meta-memory phase | `epoch_batches` schedules port epochs; no fresh same-task epoch comparison or separate dev gate |
 | EvoHarness | `evo_harness/strategy.py.reference`: `_reflect`, `_compile`, `_skills` | One-shot failure memories; topic then general native `SKILL.md`; current-task provenance and cross-task minimum; managed ownership/budget checks | Fixed platform task set replaces disjoint online batches; structured compiler emits JSON-valid-YAML frontmatter |
 
+`methods/policy_ports/ace_proposal.py` exposes the ACE port’s reflection and ADD-only curation stage through evidence and model callbacks; candidate selection stays with the workflow.
+
+`methods/policy_ports/skillopt_patch.py` provides the matching in-memory exact-edit and protected-guidance rules. `methods/policy_ports/skillopt_fast.py` contains the reusable fast reflection, merging and ranking stage. It consumes caller-categorized feedback through injected callbacks; it does not score candidates or perform final selection. The experiment adapter continues to supply its measured study evidence and original edit application.
+
+`methods/policy_ports/evo_harness_proposal.py` exposes memory reflection and topic/general skill compilation using caller-selected failures, evidence and callbacks. The experiment adapter still owns score interpretation, candidate writing and measurement.
+
+`methods/policy_ports/gepa_proposal.py` exposes the GEPA instruction reflection prompt and response validation. The experiment port retains its existing scored parent selection and measurement; other callers provide explicit failure feedback and make their own adoption decision.
+
 `methods/policy_ports/policies.py` contains independently testable selectors.
 `runtime.py` reconstructs state and proposes candidate artifacts. Every new
 method uses `methods/editor.py`; no port imports `eval`, the dataset registry,
@@ -129,6 +137,11 @@ platform measurement for its execution gate; its native synchronous final gate
 is not reproduced.
 
 ## Validation
+
+The shared runtime loads the extracted ACE, SkillOpt and EvoHarness proposal
+modules only when their respective port needs them. Other ports do not import
+these proposal stages at startup. Generic path validation retains the original
+port contract, and each method still owns parent selection and measurement.
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \

@@ -18,6 +18,8 @@ establish a boundary. The allowed directions below are maintenance rules;
 [observed exceptions](#observed-import-edges-and-exceptions) are called out
 explicitly rather than presented as a clean, enforced layering.
 
+Platform consumers use the canonical `harnessgrad.core.components`, `harnessgrad.evidence_reports`, `harnessgrad.provenance`, `harnessgrad.execution` coordination and Python runtime utilities, and `tools.analysis` paths; some original paths remain temporary compatibility entry points; removed imports are listed in the [migration guide](import-migration.md). Dataset scaffolds, some operator tools and checkpoint helpers retain selected aliases where execution and file-mount boundaries need separate review.
+
 The enforced dependency directions, the observed import edges and their reviewed
 exceptions are recorded separately in [import direction](import-direction.md),
 with an automated guard in `tests/quality/test_import_direction.py`.
@@ -27,21 +29,39 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 | Area | Purpose and entry points | Role | Allowed dependency direction |
 | --- | --- | --- | --- |
 | [Root entry points](../driver.py) | `driver.py` delegates argument parsing and selected-dataset planning, then composes scheduling, measurement and recording. [install.sh](../install.sh) provisions/checks prerequisites. | Consumers/composition roots. | `driver -> harnessgrad` orchestration/loops, `eval`, dataset registry, `ckpt` and operational helpers. Lower layers must not depend on the driver to implement ordinary execution. |
+| [harnessgrad/core/](../harnessgrad/core/) | Workflow-neutral harness declarations and edit attribution in [components.py](../harnessgrad/core/components.py), a read-only [harness description](../harnessgrad/core/harness.py), static code diagnostics in [code_metrics.py](../harnessgrad/core/code_metrics.py), portable source snapshots in [snapshot.py](../harnessgrad/core/snapshot.py), and scoped readiness facts in [readiness.py](../harnessgrad/core/readiness.py). The old `harnessgrad.components` import is refused with migration guidance. | Leaf/contracts. | Workflow code -> core; core does not import experiment orchestration, scorers, datasets, methods or Console. Declared components and environment kinds are not runtime capability evidence or permissions. |
+| [harnessgrad/improvement/](../harnessgrad/improvement/) | Explicit feedback and text-surface contracts and reusable in-memory SkillOpt, ACE and EvoHarness proposal stages. | Shared proposal primitives, not a workflow or evaluator. | Workflow -> improvement contracts/stages -> existing method-port mechanisms; callers own evidence and adoption. |
+| [harnessgrad/customization/](../harnessgrad/customization/) | Offline input collection and proposal review, and candidate proposal composition using shared contracts and stages. | Customization workflow, independent of experiment scheduling and scoring. | Input collection and review -> local contracts; proposal composition -> contracts and reusable method stages. The CLI imports the model transport and proposal stages only when generating a proposal. |
 | [harnessgrad/runtime/](../harnessgrad/runtime/) | Eight-stage event types, recording, schema/semantic validation and the legacy-method compatibility wrapper; start at [events.py](../harnessgrad/runtime/events.py) and [validator.py](../harnessgrad/runtime/validator.py). | Leaf/contracts, despite the word “runtime.” | Consumers -> these contracts; their modules may use sibling definitions and external libraries, never `eval`, driver, tools or method implementations. The parent initializer resolves its execution facade lazily. |
+| [harnessgrad/execution/](../harnessgrad/execution/) | Candidate-owned runtime bindings, Bubblewrap selection, shared slot coordination, run-namespace reservations, trusted budget dispatch, method execution and sandboxing, Harness validation and the explicit tool-call endpoint probe. The old top-level imports are refused with migration guidance. | Execution infrastructure; not scheduling or scoring. | Execution and orchestration -> these utilities. Isolated scorer source files `harnessgrad/paths.py` and `harnessgrad/env_file.py` remain at their original paths. |
+| [harnessgrad/execution/python_runtime/](../harnessgrad/execution/python_runtime/) | Managed Python artifact helpers and harness runtime preparation, including container placement. The old top-level imports are refused with migration guidance. | Trusted preparation and admission support. | Runtime orchestration -> these utilities; data-path and sandbox boundaries remain owned by their existing modules. |
+| [harnessgrad/datasets/](../harnessgrad/datasets/) | Trusted dataset runtime preparation, provider coordination, provisioning normalization, task-owned Python binding and runtime identity, including H0 preflight. The former top-level runtime import refuses with migration guidance. | Dataset-facing consumer, not a benchmark implementation. | Registry/tools -> provider -> declared dataset runtime and worker protocol; private results stay outside actor input. |
+| [harnessgrad/experiment/](../harnessgrad/experiment/) | Experiment recipe parsing, completion classification, split commands, record writing, method-attempt accounting, method-facing evidence projection and recorded scoring/comparability policies. Former top-level paths refuse with migration guidance. | Experiment-specific inputs and reporting; not a generic improvement policy. | Experiment entrypoints and orchestration -> these modules; dataset selection and actual execution remain with their established owners. |
+| [harnessgrad/orchestration/](../harnessgrad/orchestration/) | Experiment readiness, environment preparation, dataset selection and run coordination. | Workflow composition, above execution and shared contracts. | Driver and Console -> orchestration -> dataset, execution and provenance services. |
 | [harnessgrad/entrypoints/](../harnessgrad/entrypoints/) | Run argument declarations/syntax in [run_parser.py](../harnessgrad/entrypoints/run_parser.py); experiment expansion and configuration help in [experiment_config.py](../harnessgrad/entrypoints/experiment_config.py). | CLI configuration consumers, without execution orchestration. | Driver -> parser -> experiment configuration -> config/experiments; no imports of driver, datasets, runtime or console. |
 | [harnessgrad/config/](../harnessgrad/config/) | Typed configuration declarations in [areas.py](../harnessgrad/config/areas.py), loading/snapshots in [loader.py](../harnessgrad/config/loader.py). | Leaf/contracts. | Runtime and orchestration -> config; config -> its own declarations and standard library. No imports back into runtime consumers. |
-| [Top-level harnessgrad/*.py](../harnessgrad/) | Platform orchestration: [environments.py](../harnessgrad/environments.py), [methods.py](../harnessgrad/methods.py), [channel.py](../harnessgrad/channel.py), [records.py](../harnessgrad/records.py), identity and budget integration. | Consumers of `eval/` as an area, with contract aliases and standalone helpers mixed in. **Not a leaf package.** | Orchestration -> `eval`, config/contracts, `ckpt`, dataset registry and lower-level orchestration helpers. Do not infer permission for `eval ->` these orchestration modules. |
+| [Top-level harnessgrad/*.py](../harnessgrad/) | Platform integration helpers; the former `environments.py` import directs callers to the orchestration layer; the former `methods.py` import now directs callers to the execution layer. | Consumers of `eval/` as an area, with contract aliases and standalone helpers mixed in. **Not a leaf package.** | Orchestration -> `eval`, config/contracts, `ckpt`, dataset registry and lower-level orchestration helpers. Do not infer permission for `eval ->` these orchestration modules. |
+| [harnessgrad/orchestration/treatment_workflow.py](../harnessgrad/orchestration/treatment_workflow.py) | Early treatment commitment and runtime-configuration projection. | Run identity coordination, separate from method execution. | Driver -> treatment workflow -> treatment identity and declared improver settings; resume metadata remains caller-supplied. |
+| [harnessgrad/orchestration/execution_policy.py](../harnessgrad/orchestration/execution_policy.py) | Direct Harness execution options and staged diagnostic-policy validation. | Run admission coordination, separate from task execution and scoring. | Driver -> execution policy -> existing diagnostic policy and explicit evidence. |
+| [harnessgrad/orchestration/preflight.py](../harnessgrad/orchestration/preflight.py) | `--check-only` and `--prepare-only` workflow, with driver-owned callback bindings. | Run readiness and explicit preparation, separate from experiment execution. | Driver -> preflight -> readiness, configuration, namespace and selected metadata; no task execution. |
 | [harnessgrad/loops/](../harnessgrad/loops/) | Scheduling in [mode_a.py](../harnessgrad/loops/mode_a.py) and [eval_side.py](../harnessgrad/loops/eval_side.py); Mode B coordination also lives in `driver.py`. There is no `loops/mode_b.py`. | Consumers. | Driver -> loops -> orchestration helpers, `eval.run.runner`, candidate validation and `ckpt`. Runtime primitives must not import schedules. |
+| [harnessgrad/provenance/](../harnessgrad/provenance/) | Measurement, baseline, scorer, judge and verification-context identities. The previous top-level imports are refused; dataset runtime identity lives under `harnessgrad.datasets`. | Identity and provenance consumers. | Orchestration/evidence -> provenance; existing data and validation dependencies remain as documented. Directory grouping does not change the measurement contract. |
+| [harnessgrad/evidence_reports/](../harnessgrad/evidence_reports/) | Evidence manifest checks, receipt verification, statistics, run summaries and export. The old top-level module imports are refused with migration guidance. | Evidence consumers; not execution or scoring. | Console/tools -> evidence reports -> receipt/schema contracts and selected identity readers. Existing measurement and privacy rules are unchanged. |
 | [harnessgrad/store/](../harnessgrad/store/) | Run-record validation, reading and certification in [schema.py](../harnessgrad/store/schema.py). | Leaf/record contract and reader. | Record consumers, validators and web read API -> store; store -> standard library, not execution/scheduling code. |
 | [eval/](../eval/) | **Platform execution runtime, despite the name**: task execution, environments, model gateway, verification/scoring, admission, progress and traces. Start at [runner.py](../eval/run/runner.py). | Consumer of low-level contracts/helpers; provider to orchestration. Not a test suite. | Orchestration -> `eval`; `eval` -> runtime peers, config, `ckpt` and external execution backends. Keep method algorithms and scheduling above it. Existing imports from `tools` are listed below. |
-| [data/](../data/) | dataset adapters with private assets, platform fixtures, and a separate **scaffolds/** directory for shared platform code. Start at [registry.py](../data/scaffolds/registry.py) and [qa/](../data/scaffolds/qa/). | Mixed: scaffold/contracts, adapter consumers and runtime-consuming controls. **Not a leaf directory.** | Driver/tools -> registry -> selected `data.datasets.<name>` adapter; adapters -> shared scaffolding. Controls may call `eval`; existing adapter/reporting coupling is listed below. Runtime should consume task/verifier declarations instead of discovering datasets itself. |
+| [data/](../data/) | dataset adapters with private assets, platform fixtures, and a separate **scaffolds/** directory for shared platform code. Start at [registry.py](../data/scaffolds/registry.py) and [qa/](../data/scaffolds/qa/). | Mixed: scaffold/contracts, adapter consumers and runtime-consuming controls. **Not a leaf directory.** | Driver/tools -> registry -> selected `data.datasets.<name>` adapter; adapters -> shared scaffolding. Native research conversion is owned by its scaffold and executed in an admitted worker when required. Controls may call `eval`; existing adapter/reporting coupling is listed below. Runtime should consume task/verifier declarations instead of discovering datasets itself. |
 | [methods/](../methods/) | External improvement methods and controls, plus shared [protocol.py](../methods/protocol.py), editor/application helpers and per-method `run.py` entry points. | Consumers of method/harness exchange contracts; supplies candidates, not platform scores. | Platform invokes methods through subprocess entry points and JSON/artifacts. Methods -> their own helpers, supplied workspace/channel and declared model/tool dependencies; shared runtime compatibility contracts are available. Do not import method algorithms into the referee. |
 | [base_harness/](../base_harness/) | Runnable starting artifacts and the adapters for external harnesses: `loop` (the starting point a method improves), `codex`, `deepseek-harness`, `opencode`, `miniswe`, `miniagent`, `openclaw`, and `oracle` (control). Each has `harness.json` and `agent.py`; [launchable.json](../base_harness/launchable.json) names the subset a study may start from. The platform's **test instruments** are not here: `loop_plain` (the deterministic floor) and `cli_agent` (the generic CLI wrapper) live in [tests/fixtures/base_harness/](../tests/fixtures/base_harness/), since neither is a harness a study may start from and `driver.py:_harness_roots` is what keeps their names resolvable for the tests. See [writing a harness](writing_a_harness.md). | Consumers of task/model/file contracts; measured artifacts, not platform libraries. | Platform stages and executes manifest entry points; harnesses use their own code/dependencies and supplied task/environment contracts. No platform imports of harness implementation code. |
 | [eval/ckpt/](../eval/ckpt/) | [git_state.py](../eval/ckpt/git_state.py) stages, commits, restores and materializes harness states and manifests. | Low-level helper leaf, inside the runtime since 2026-10-27 (it was a top-level `ckpt/`). | Driver, orchestration and execution -> `eval.ckpt` -> standard library/external Git. No reverse imports into runtime or orchestration. |
-| [tools/](../tools/) | Operator CLIs/services for validation, datasets, model services, setup, reporting and inspection. [serve_ui.py](../tools/serve_ui.py) is the retained operations service; the UI is [`console/`](../console/). | Mostly consumers, with shared runtime helpers mixed in. Not a leaf area. | Tools -> platform APIs/contracts and artifacts; services may launch driver subprocesses. Runtime reuse of selected helpers already exists, so do not assume a strict one-way `tools -> eval` boundary. |
-| [harnessgrad/improvers/](../harnessgrad/improvers/) | [improvers.json](../harnessgrad/improvers/improvers.json) catalogs improver configuration; [skill.md](../harnessgrad/improvers/skill.md) is the default method-facing guidance. | Configuration/reference leaves, not Python implementations. | Resolver/channel code -> these data files; these files do not import platform code. |
+| [tools/](../tools/) | Operator CLIs/services for validation, datasets, model services, setup, reporting and inspection. Result readers and component/benchmark reports live in [tools/analysis/](../tools/analysis/), and optional figure renderers in [tools/visualization/](../tools/visualization/); their former top-level scripts were removed. Harness and runtime preparation tools live in [tools/harness_setup/](../tools/harness_setup/); test selection, execution and quality receipts live in [tools/testing/](../tools/testing/), including `scope.py` and `lane.py`. Some other old script paths remain as compatibility entrypoints; removed paths are listed in the migration guide. [serve_ui.py](../tools/serve_ui.py) is the retained operations service; the UI is [`console/`](../console/). | Mostly consumers, with shared runtime helpers mixed in. Not a leaf area. | Tools -> platform APIs/contracts and artifacts; services may launch driver subprocesses. Runtime reuse of selected helpers already exists, so do not assume a strict one-way `tools -> eval` boundary. |
+| [tools/dataset_maintenance/](../tools/dataset_maintenance/) | Dataset scaffold creation, taxonomy, declaration lint, download management, runtime preparation and generated inventory and split documentation. Their original top-level commands remain available; imports are being migrated to the canonical package. | Dataset maintenance, separate from task execution and scoring. | Explicit operators and tests -> maintenance helpers and dataset runtime; downloads and preparation require explicit commands. |
+| [tools/diagnostics/](../tools/diagnostics/) | First-use and model tool-call diagnostics. | Explicit operator checks. | First-use uses a mock control; tool-call probing contacts the configured endpoint only when invoked. |
+| [tools/validation/](../tools/validation/) | Read-only checks for recorded runs and Harness traces. | Validation tools, not scoring or execution. | Callers provide records or traces; these checks do not launch experiments. |
+| [tools/registry_ops/](../tools/registry_ops/) | Dataset blocker registry validation, reviewed proposal application and semantic merge. Existing top-level command and import paths remain available. | Maintenance tools, separate from experiment execution. | Registry maintenance -> registry files and historical evidence; validation is read-only and application is explicit. |
+| [tools/studies/](../tools/studies/) | Task-difficulty analysis and task-sensitivity study commands. | Research study tools, separate from result reporting. | Difficulty reads recorded measurements; sensitivity may invoke the experiment evaluator and must be explicitly run. |
+| [harnessgrad/improvers/](../harnessgrad/improvers/) | [resolver.py](../harnessgrad/improvers/resolver.py) resolves improver configuration; [improvers.json](../harnessgrad/improvers/improvers.json) catalogs declarations and [skill.md](../harnessgrad/improvers/skill.md) provides default guidance. | Improver configuration, discovery and explicit probes. | Workflow and CLI -> resolver -> configuration and sandbox helpers; declaration files do not execute code. |
 | `adapters/`, `web/` | Absent from this checkout. The current operator interface is [console/](../console/). | No current areas to classify. | Execution does not depend on the console frontend. |
-| [site-redirect/](../site-redirect/) | Historical redirect pages retained but no longer deployed. The website source lives on this repository's `website` branch; the platform's deployment workflow builds it and stages `docs/contributors.html`. | Leaf artifacts, no build step, no imports. | Nothing depends on them; nothing here changes a measurement. |
+| [docs/archive/site-redirect/](archive/site-redirect/) | Historical redirect pages retained but no longer deployed. The website source lives on this repository's `website` branch; the platform's deployment workflow builds it and stages `docs/contributors.html`. | Archived static artifacts, no build step, no imports. | Nothing depends on them; nothing here changes a measurement. |
 | [tests/](../tests/) | [quality/](../tests/quality/) covers platform boundaries/integrations; [runtime/](../tests/runtime/) covers event/budget APIs; [blockers/](../tests/blockers/) and [fixtures/](../tests/fixtures/) hold focused checks and test material. Web also has colocated tests. | Test consumers. | Tests -> subjects under test and fixtures. Production code should not import test helpers; one existing tooling exception is listed below. |
 | Historical reports | Operational review and experiment receipts are archived outside the public checkout. | Historical evidence, not executable libraries. | Missing historical receipts must remain explicitly unverified, not treated as current measurements. |
 | [docs/](./) and root documentation | Architecture, setup, contributor guidance, contract proposals and onboarding/audit material; [README](../README.md), [INTERFACE](../INTERFACE.md), [DOWNLOADS](../DOWNLOADS.md) and [AGENTS](../AGENTS.md) are root references. | Documentation/reference contracts and evidence. | Readers/contributors -> documentation; documentation links to source/evidence. Schemas and evidence loaded as files are explicit artifact contracts, not executable dependencies. |
@@ -51,8 +71,8 @@ with an automated guard in `tests/quality/test_import_direction.py`.
 
 Dataset adapters may opt into a statically declared provider runtime. For this route,
 `data/datasets/<name>/runtime.json` is read before importing the adapter;
-`harnessgrad/dataset_runtime.py` prepares and verifies its dependency artifact, and
-`harnessgrad/dataset_provider.py` launches the trusted
+`harnessgrad/datasets/runtime.py` prepares and verifies its dependency artifact, and
+`harnessgrad/datasets/provider.py` launches the trusted
 `data/scaffolds/provider_worker.py` under that interpreter. The registry keeps its
 existing public API and validators. The QA provider returns public tasks separately
 from private answers and resolves only selected execution declarations. This is
@@ -61,7 +81,7 @@ without a descriptor retain their existing path.
 
 Trusted Python services and scorers can separately opt into
 `data/datasets/<name>/execution-runtime.json`. The same stdlib-only
-`harnessgrad/dataset_runtime.py` prepares and verifies these artifacts without
+`harnessgrad/datasets/runtime.py` prepares and verifies these artifacts without
 importing `eval` or `tools`. CostBench static/dynamic share one execution artifact
 for their service and verifier; their loading code stays in platform Python.
 `SETUP.tool_relay.python_runtime` and `VERIFY.python_runtime` bind the exact
@@ -73,7 +93,7 @@ reuses `runtime_paths` and the existing sandbox. Actor isolation remains separat
 GSM8K's provider descriptor/API and unbound legacy execution routes keep their
 existing behavior. Preparation and check commands are documented in
 [dataset runtime interfaces](dataset-runtime-interfaces.md#dataset-execution-runtime).
-`harnessgrad/dataset_runtime_identity.py` binds the actual loading artifact and
+`harnessgrad/datasets/runtime_identity.py` binds the actual loading artifact and
 selected task/role execution artifacts into metadata, H0 and curve points.
 Cache and progress records use task projections; H0, whole-point reuse and
 resume check identity and exact artifact contents before accepting old results.
@@ -83,12 +103,12 @@ one missing or mismatched managed identity prevents reuse and paired comparison.
 This does not migrate τ³ to managed artifacts or claim system-library closure.
 
 Harness-owned Python dependencies have a separate opt-in path:
-`harnessgrad/python_harness_runtime.py` prepares dependency-only, immutable
+`harnessgrad/execution/python_runtime/python_harness_runtime.py` prepares dependency-only, immutable
 artifacts from a flat complete lock, using a wheel-only bubblewrap builder.
 It reads installed metadata as data and never executes package startup on the
-host. `harnessgrad/candidate_runtime.py` binds owned source and dependencies,
+host. `harnessgrad/execution/candidate_runtime.py` binds owned source and dependencies,
 controls per-candidate preparation, and admits cache, H0 and resume operations.
-`harnessgrad/python_exec_runtime.py` adds explicitly declared image placements:
+`harnessgrad/execution/python_runtime/python_exec_runtime.py` adds explicitly declared image placements:
 each pinned image uses its own Python executable bytes and a separate locked venv,
 or the bound native artifact when the image explicitly has no Python. The driver
 prepares after staging and committing a candidate; native and container
@@ -110,7 +130,7 @@ concern; package initializers do not import implementations:
 | [`eval/run/`](../eval/run/) | [`runner.py`](../eval/run/runner.py), [`candidate.py`](../eval/run/candidate.py), [`metrics.py`](../eval/run/metrics.py), [`integrity.py`](../eval/run/integrity.py), [`task_contract.py`](../eval/run/task_contract.py), [`outcomes.py`](../eval/run/outcomes.py) | Task execution, candidate validation, measurement, task contracts and outcome interpretation |
 | [`eval/containers/`](../eval/containers/) | [`container.py`](../eval/containers/container.py), [`container_state.py`](../eval/containers/container_state.py), [`sandbox.py`](../eval/containers/sandbox.py), [`harness_runtime.py`](../eval/containers/harness_runtime.py), [`python_service.py`](../eval/containers/python_service.py) | Container execution/state, host sandbox, harness dependency overlays and explicitly bound trusted Python services |
 | [`eval/admission/`](../eval/admission/) | [`pilot_admission.py`](../eval/admission/pilot_admission.py), [`artifact_admission.py`](../eval/admission/artifact_admission.py), [`runner_admission.py`](../eval/admission/runner_admission.py), [`scorer_admission.py`](../eval/admission/scorer_admission.py), [`scorer_bundle.py`](../eval/admission/scorer_bundle.py), [`scorer_backend.py`](../eval/admission/scorer_backend.py), [`lifecycle_receipt.py`](../eval/admission/lifecycle_receipt.py) | Pilot, artifact, runner and scorer admission evidence and lifecycle receipts |
-| [`eval/service/`](../eval/service/) | [`services.py`](../eval/service/services.py), [`modelgate.py`](../eval/service/modelgate.py), [`unix_model_relay.py`](../eval/service/unix_model_relay.py), [`separated_stdio.py`](../eval/service/separated_stdio.py), [`stepwise_transport.py`](../eval/service/stepwise_transport.py) | Service lifecycle, model gateway, relay and stepwise/stdio transports |
+| [`eval/service/`](../eval/service/) | [`services.py`](../eval/service/services.py), [`modelgate.py`](../eval/service/modelgate.py), [`unix_model_relay.py`](../eval/service/unix_model_relay.py), [`separated_stdio.py`](../eval/service/separated_stdio.py), [`stepwise_transport.py`](../eval/service/stepwise_transport.py), [`web_gateway.py`](../eval/service/web_gateway.py) | Service lifecycle, model and Web gateways, relay and stepwise/stdio transports |
 | [`eval/observe/`](../eval/observe/) | [`console.py`](../eval/observe/console.py), [`progress.py`](../eval/observe/progress.py), [`trace.py`](../eval/observe/trace.py), [`tracing.py`](../eval/observe/tracing.py), [`phases.py`](../eval/observe/phases.py) | Phase vocabulary, console/progress reporting and trace writing/reading |
 | [`eval/policy/`](../eval/policy/) | [`diagnostic_policy.py`](../eval/policy/diagnostic_policy.py), [`runtime_policy.py`](../eval/policy/runtime_policy.py), [`appworld_reporting.py`](../eval/policy/appworld_reporting.py), [`gaia_preflight.py`](../eval/policy/gaia_preflight.py), [`gaia_snapshot_attestation.py`](../eval/policy/gaia_snapshot_attestation.py) | Diagnostic/runtime policies, AppWorld reporting and GAIA metadata review |
 | [`eval/verification/`](../eval/verification/) | [`verifier.py`](../eval/verification/verifier.py) | Execute declared checks and interpret verdicts |
@@ -125,30 +145,17 @@ run contracts and verification. This move does not impose a new dependency DAG.
 
 ### Compatibility import paths
 
-All production importers use canonical implementation paths. The following old
-paths remain **thin compatibility shims**, each aliasing the same module object
-as the corresponding implementation. Private names, module state and patch
-targets therefore remain shared rather than copied with a wildcard re-export.
-`containers` and `service` deliberately avoid taking over the old module names
-`eval.container` and `eval.services`.
+All production importers use canonical implementation paths. Former top-level
+`eval` imports now refuse with migration guidance. The four retained command
+entrypoints listed below still delegate to their canonical implementations.
 
-| Old paths (all are shims) | Canonical prefix (same module basename) |
-| --- | --- |
-| `eval.runner`, `eval.candidate`, `eval.metrics`, `eval.integrity`, `eval.task_contract` | `eval.run.` |
-| `eval.container`, `eval.container_state`, `eval.sandbox`, `eval.harness_runtime` | `eval.containers.` |
-| `eval.pilot_admission`, `eval.artifact_admission`, `eval.runner_admission`, `eval.scorer_admission`, `eval.scorer_bundle`, `eval.scorer_backend`, `eval.lifecycle_receipt` | `eval.admission.` |
-| `eval.services`, `eval.modelgate`, `eval.unix_model_relay`, `eval.separated_stdio`, `eval.stepwise_transport` | `eval.service.` |
-| `eval.console`, `eval.progress`, `eval.trace`, `eval.tracing`, `eval.phases` | `eval.observe.` |
-| `eval.diagnostic_policy`, `eval.runtime_policy`, `eval.appworld_reporting`, `eval.gaia_preflight`, `eval.gaia_snapshot_attestation` | `eval.policy.` |
-| `eval.verifier` | `eval.verification.` |
-
-The existing `trace` adapter itself is unchanged in `eval.observe.trace` and
+The former `eval.runner` import now refuses with its `eval.run.runner` replacement; its path remains present for GAIA source-identity-v1 validation. The former `eval.container` import now refuses with its `eval.containers.container` replacement; its path remains present for GAIA source-identity-v1 validation. The former `eval.verifier` import now refuses with its `eval.verification.verifier` replacement; its path remains present for GAIA source-identity-v1 validation. The former `eval.container_state` and `eval.sandbox` imports now refuse with their `eval.containers` replacements; the former path remains present for GAIA source-identity-v1 validation. The former `eval.candidate`, `eval.metrics`, `eval.integrity` and `eval.task_contract` imports now refuse with their `eval.run` replacement paths. The former admission and service module imports without standalone CLIs now refuse with their `eval.admission` or `eval.service` replacement paths. The former top-level policy imports `eval.diagnostic_policy`, `eval.runtime_policy`, `eval.appworld_reporting` and `eval.gaia_snapshot_attestation` now refuse with their `eval.policy` replacement paths. The former top-level observation imports `eval.console`, `eval.progress`, `eval.trace`, `eval.tracing` and `eval.phases` now refuse with their `eval.observe` replacement paths. The existing `trace` adapter itself is unchanged in `eval.observe.trace` and
 continues to re-export the canonical reader in `eval.observe.tracing`.
-The four old module CLIs (`eval.gaia_preflight`, `eval.harness_runtime`,
+The former imports `eval.gaia_preflight`, `eval.harness_runtime`, `eval.scorer_bundle` and `eval.separated_stdio` also refuse with migration guidance. The four old module CLIs (`eval.gaia_preflight`, `eval.harness_runtime`,
 `eval.scorer_bundle`, `eval.separated_stdio`) delegate to their canonical modules
 when invoked with `python -m`. `eval/diagnostic_receipt.schema.json` keeps its
 artifact path. GAIA's source-identity-v1 required-path set keeps its historical
-paths: those shim files still exist, and full tree manifests include both shims
+paths: those files still exist, and full tree manifests include both old paths
 and implementations without changing historical-manifest validation.
 
 The separate eight-stage runtime guide describes the
@@ -178,9 +185,9 @@ function-local imports), with dynamic dataset loading and subprocess/file
 boundaries inspected separately. The following concrete edges explain why a
 single directory-level dependency DAG would be misleading:
 
-- **Execution consumers:** `harnessgrad/environments.py -> eval.containers.container` and
-  `eval.containers.harness_runtime`; `harnessgrad/records.py -> eval.run.metrics` and
-  `eval.observe.tracing`; `harnessgrad/channel.py -> eval.observe.tracing`.
+- **Execution consumers:** `harnessgrad/orchestration/environments.py -> eval.containers.container` and
+  `eval.containers.harness_runtime`; `harnessgrad/experiment/records.py -> eval.run.metrics` and
+  `eval.observe.tracing`; `harnessgrad/experiment/channel.py -> eval.observe.tracing`.
   Loops call `eval.run.runner`. These modules are above execution, not leaves.
 - **Package initialization:** [harnessgrad/__init__.py](../harnessgrad/__init__.py)
   defines version/path constants and lazily resolves the three trusted-runner exports
@@ -188,13 +195,9 @@ single directory-level dependency DAG would be misleading:
   imports `trusted_runner`; requesting a trusted-runner export still does. This
   does not make all top-level `harnessgrad` modules execution-free.
 - **Top-level exceptions:** `protocol.py`, `events.py`, `validator.py` and
-  `compat.py` re-export `harnessgrad.runtime` APIs; `budget_dispatch.py`,
-  `code_metrics.py` and `policies.py` are standalone helpers. Treating all
+  `compat.py` re-export `harnessgrad.runtime` APIs; experiment-specific scoring policies live under `harnessgrad.experiment`. Treating all
   `harnessgrad/*.py` as consumers or all as contracts would both be inaccurate.
-- **Runtime/tool back-edges:** `eval.run.candidate -> tools.validate_harness`,
-  `eval.run.runner -> tools.improver`, and `eval.run.runner`/`container_state ->
-  tools.web_gateway`. Tools also import runtime APIs. These reusable helpers
-  currently live in the CLI directory.
+- **Runtime/tool back-edges:** Other tools still import runtime APIs; review each execution and mount contract before moving those paths. The improver resolver itself now has a canonical `harnessgrad.improvers` owner.
 - **Dataset/runtime coupling:** `data/datasets/appworld.py -> eval.policy.appworld_reporting`;
   `data/scaffolds/command_control.py` and several dataset `control.py` scripts call
   `eval.run.runner`. The registry dynamically imports `data.datasets.<name>`. Thus neither
@@ -219,12 +222,13 @@ not establish every architectural direction in this map.
   Moving or classifying the directory as a unit obscures their different roles
   and the existing control/reporting dependencies on runtime.
 - **`eval/` naming and cross-concern dependencies:** seven subpackages now
-  separate the implementations, with old paths retained as compatibility shims.
+  separate the implementations; old import paths provide migration errors, and selected
+  command entrypoints remain available.
   The package name still suggests evaluation-only code although it contains the
   execution engine; the move preserves existing cross-concern dependencies.
 - **Trace compatibility names:** `eval.observe.trace` remains the existing
-  compatibility adapter for `eval.observe.tracing`; its old top-level path is
-  also a shim. New callers should use `eval.observe.tracing`.
+  compatibility adapter for `eval.observe.tracing`; its old top-level path
+  now refuses with migration guidance. New callers should use `eval.observe.tracing`.
 - **`harnessgrad` half-leaf, half-consumer naming:** contracts/configuration
   and orchestration share one package; public aliases further blur the roles.
   The parent initializer now resolves trusted-runner exports lazily; this does not
@@ -245,8 +249,8 @@ for focused checks.
 | Canonical owner | Responsibility and allowed dependency | Compatibility |
 | --- | --- | --- |
 | `harnessgrad.entrypoints.run_parser` | `build_parser` declares flags; `parse_run_args` expands configuration, validates syntax/reviewed-source duplicate and abbreviation rules, fills caller-supplied scenario defaults, and returns parser, Namespace and explicit-field set. Depends on `experiment_config` and stdlib. | Driver retains CLI/main and calls this owner; syntax parsing does not perform scenario admission, select tasks, claim a run or stage a workspace. |
-| `harnessgrad.entrypoints.experiment_config` | `expand_experiment_argv` preserves explicit CLI precedence without changing `sys.argv`; `config_help` reads declared configuration descriptions. Depends on `harnessgrad.config`, `harnessgrad.experiments` and stdlib. | Driver's `_expand_experiment_argv` and `_config_help` names alias canonical functions. |
-| `eval.run.outcomes` | Provider-error, signal, invalid-result, timeout, spread and harness-failure interpretation; `_PROVIDER_FAILURES` belongs here. Its only repository dependency is `eval.observe.tracing`. | Runner re-exports the same functions; legacy `eval.runner` remains the same module object as `eval.run.runner`. |
+| `harnessgrad.entrypoints.experiment_config` | `expand_experiment_argv` preserves explicit CLI precedence without changing `sys.argv`; `config_help` reads declared configuration descriptions. Depends on `harnessgrad.config`, `harnessgrad.experiment.config` and stdlib. | Driver's `_expand_experiment_argv` and `_config_help` names alias canonical functions. |
+| `eval.run.outcomes` | Provider-error, signal, invalid-result, timeout, spread and harness-failure interpretation; `_PROVIDER_FAILURES` belongs here. Its only repository dependency is `eval.observe.tracing`. | Runner re-exports the same functions; `eval.run.runner` is the supported import path. |
 | `console.record_reader` | JSON/curve parsing, scalar/unknown projections, run-name parsing and `run_row`. Only stdlib imports; caller supplies run path, optional parsed curve and live-process observations. | Server re-exports the same helpers; query services consume them. |
 | `harnessgrad.orchestration.selected_dataset` | Catalogue/partition, side and sampling selection, selected lazy declarations, model/environment admission and identity capture. Registry and reporter are explicit ports. | Driver retains provider/ExitStack lifetime and handles the same refusal channels. The planner neither mutates CLI/environment state nor claims/stages a run. |
 | `harnessgrad.orchestration.source_lease` | Source selection, reviewed snapshots, link and bytecode handling, and explicit-root Harness lookup. | The driver's outer `ExitStack` owns the lease; source stays available until later acquired resources close. Operator source directories are never adopted as workspaces. |
