@@ -6,7 +6,7 @@ import sys
 import pytest
 
 from eval.run import chess_stepwise as stepwise
-from harnessgrad import dataset_runtime_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 
 def identity():

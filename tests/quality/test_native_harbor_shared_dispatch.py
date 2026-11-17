@@ -12,7 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from data.scaffolds import runtime_extensions
 from eval.verification import native_benchmark
 from eval.verification.verifier import _verify
@@ -42,7 +42,7 @@ def declaration(tmp_path, binding, dataset='deepswe'):
     case = {'task_id':task_id,'dataset':dataset,'runtime':{
         'harbor_python':binding['python'],'harbor_runtime':binding},'authored_private':'case sentinel'}
     if dataset=='jobbench':
-        from harnessgrad.native_judge_identity import selection
+        from harnessgrad.provenance.native_judge_identity import selection
         case['runtime'].update(selection())
     raw = json.dumps(case,sort_keys=True,separators=(',',':'))
     digest = hashlib.sha256(raw.encode()).hexdigest()

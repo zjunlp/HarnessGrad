@@ -4,8 +4,8 @@ import pytest
 from pathlib import Path
 
 from data.datasets import jericho
-from harnessgrad import dataset_runtime
-from harnessgrad.verification_context import capture
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.provenance.verification_context import capture
 
 
 def record(tmp_path):
@@ -105,7 +105,7 @@ Path('verifier/evidence.json').write_text(json.dumps({'measured':True, 'syntheti
     monkeypatch.setattr(jericho, '_setup', setup)
     monkeypatch.setattr(jericho, '_verifier', verifier)
     if provider_loop:
-        from harnessgrad import dataset_provider
+        from harnessgrad.datasets import provider as dataset_provider
         # Inject only the authored game table, engine entrypoint and scorer. The
         # original isolated Python bootstrap and worker protocol still execute.
         bootstrap = tmp_path / 'authored_provider.py'
@@ -151,7 +151,8 @@ for args in [('look',), ('do','open door'), ('score',), ('inventory',), ('done',
     if provider_loop:
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
         import threading
-        from harnessgrad import candidate_runtime, config
+        from harnessgrad.execution import candidate_runtime
+        from harnessgrad import config
         harness = Path(__file__).resolve().parents[2] / 'base_harness/loop'
         seen = []
         class Handler(BaseHTTPRequestHandler):

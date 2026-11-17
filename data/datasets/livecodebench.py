@@ -284,7 +284,7 @@ def _setup(row: dict) -> dict:
 
 def _verifier_runtime():
     # Resolve the current store selection; the launcher re-admits the binding.
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     return resolve_execution('livecodebench')
 
 
@@ -293,7 +293,7 @@ def _verify(row: dict) -> dict:
         path = DATASET_ROOT / relative
         if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise ValueError(f"LiveCodeBench pinned scorer source changed: {relative}")
-    from harnessgrad.dataset_runtime import bind
+    from harnessgrad.datasets.runtime import bind
     binding = bind(_verifier_runtime(), 'verifier')
     spec = {
         "kind": "command",
@@ -441,7 +441,7 @@ def downloads() -> list[dict]:
 
 
 def provision_status() -> dict:
-    from harnessgrad.dataset_runtime import check_execution
+    from harnessgrad.datasets.runtime import check_execution
 
     try:
         root = Path(DATASET_ROOT)

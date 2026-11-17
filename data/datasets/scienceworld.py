@@ -409,7 +409,7 @@ def _goal(record: dict) -> str:
 
 def _setup(record: dict, *, binding=None, world_jar=None) -> dict:
     """Publish a stdlib client and bind a fixed-task managed service."""
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     binding = binding or bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
     jar = world_jar or _runtime_payload(binding)
     task = {'task_name': record['task_name'], 'variation': record['variation'], 'simplifications': ''}
@@ -430,7 +430,7 @@ def _setup(record: dict, *, binding=None, world_jar=None) -> dict:
 
 
 def _runtime_payload(binding=None):
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     spec = importlib.util.spec_from_file_location('scienceworld_runtime_payload', ASSETS/'runtime.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

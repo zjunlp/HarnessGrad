@@ -7,7 +7,7 @@ import subprocess
 import pytest
 from data.scaffolds.native_research.adapter import Adapter
 from data.scaffolds.native_research import component_runtime, preparation
-from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
 
 
 def test_case_checks_and_parses_same_bytes(tmp_path, monkeypatch):
@@ -50,7 +50,7 @@ def test_verifier_carries_exact_runtime(monkeypatch):
     ('harvey_lab', 'harvey_lab'),
 ])
 def test_preparation_uses_component_and_records_only_worker_manifest(tmp_path, monkeypatch, name, profile):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     from tools.prepare_native_research import prepare
 
     source = tmp_path / 'authored.jsonl'

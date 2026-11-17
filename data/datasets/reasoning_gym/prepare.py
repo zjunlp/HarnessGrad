@@ -104,7 +104,7 @@ def _build_in_runtime() -> tuple[str, int]:
 
 def build() -> tuple[str, int]:
     """Materialize only through the explicitly prepared dependency artifact."""
-    from harnessgrad.dataset_runtime import admit_binding, bind, resolve_execution
+    from harnessgrad.datasets.runtime import admit_binding, bind, resolve_execution
     binding = bind(resolve_execution('reasoning_gym'), 'verifier')
     admit_binding(binding, 'verifier')
     root = Path(DATASET_ROOT).resolve()
@@ -125,7 +125,7 @@ def build() -> tuple[str, int]:
                'PYTHONDONTWRITEBYTECODE': '1'}
         result = subprocess.run([binding['python'], '-I', '-B', '-c', bootstrap,
                                  str(Path(__file__).resolve()), binding['python']],
-                                cwd=temporary, env=env, capture_output=True, text=True, timeout=600)
+                                cwd=temporary, env=env, capture_output=True, text=True, errors="strict", timeout=600)
     if result.returncode:
         raise ValueError('Reasoning Gym pool generation failed in its prepared runtime')
     value = json.loads(result.stdout)
@@ -271,7 +271,7 @@ def fetch_snapshot(url: str) -> tuple[str, int]:
             result = subprocess.run(
                 [sys.executable, '-I', '-B', '-c', bootstrap, str(Path(__file__).resolve()),
                  str(source), str(SNAPSHOT_MAX_BYTES), str(SNAPSHOT_TIMEOUT_SECONDS)],
-                input=url, capture_output=True, text=True, timeout=SNAPSHOT_TOTAL_SECONDS,
+                input=url, capture_output=True, text=True, errors="strict", timeout=SNAPSHOT_TOTAL_SECONDS,
                 cwd=attempt, env={'PATH': os.defpath, 'HOME': attempt, 'TMPDIR': attempt,
                                   'HG_REVIEWED_ENVIRONMENT_ONLY': '1',
                                   'PYTHONDONTWRITEBYTECODE': '1',

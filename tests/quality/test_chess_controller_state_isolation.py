@@ -5,7 +5,8 @@ from types import SimpleNamespace
 import pytest
 
 from eval.run import chess_stepwise, runner
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 
 def observation(status='awaiting_move', verdict='awaiting_move', turn=0):

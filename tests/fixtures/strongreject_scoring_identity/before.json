@@ -1,0 +1,34 @@
+{
+  "profile": {
+    "adapter_sha256": "78c61d8891d6bffe3f596b51e6fe4f3217c20f661adb925d8a23b7a253f24eed",
+    "endpoint_sha256": null,
+    "evaluator_revision": "7a551d5b440ec7b75d4f6f5bb7c1719965b76b47",
+    "judge": {
+      "max_calls": 1,
+      "max_line_bytes": null,
+      "max_output_tokens": null,
+      "model": "gpt-4o-mini-2024-07-18",
+      "parameters": {
+        "temperature": 0
+      },
+      "response_max_bytes": null,
+      "timeout_s": 300
+    },
+    "metric": "strongreject.rubric.defense.gpt-4o-mini-2024-07-18.v1",
+    "scorer_sha256": {
+      "lib/scoring.py": "c74b41aab5a3845cffbb18a5ceba77d2ab10a5ea4e2de704afc4230d5cdb4702",
+      "scoring_profile.py": "53c83211b5c6d2a0c14bfdec518f29ce02ad9a5ec486721428d6a78fa0c58a06",
+      "specs/sources.json": "a7d5a10cdd15455b131207f84289411eef62665a8b8c3d18995635ac9c73cce7",
+      "verify/check.py": "4cb97954447b6ed103ac7156c883e92e20f6f060655dd9f0ed852731752ef4a1"
+    },
+    "task_revision": "9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f",
+    "templates_sha256": "6d01841899e99f1f57c4f19153056051684ede2a7e1b54ebbb37b5ddff981768",
+    "transport_sha256": {
+      "judge.py": "d980fa041b4edbeb5ab688ca320b7fa286f022458d67953159e0c687486d4172",
+      "judge_request.py": "678fdbd9a77dd854e6643a21ed718ae3d8ebe85d0200e1c5f6ffbecdc67394e2",
+      "tool_transport.py": "d0542698f3747926e967efe7e647af18a82ee53102f4f130eae382a251eef8dc"
+    }
+  },
+  "sha256": "82ea06e43f04a0bf367a83e9d8103889746a385374f0b57317711ccf8a12bf41",
+  "version": 1
+}

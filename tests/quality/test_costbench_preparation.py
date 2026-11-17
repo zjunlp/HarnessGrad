@@ -31,7 +31,7 @@ def test_static_protocol_is_explicit():
 
 def test_install_prepares_and_uses_managed_python_before_full_data_preparation(tmp_path, monkeypatch):
     import sys
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     mod = preparation()
     calls = []
     monkeypatch.setattr(dataset_runtime, 'prepare_execution', lambda name: (
@@ -48,7 +48,7 @@ def test_install_prepares_and_uses_managed_python_before_full_data_preparation(t
 @pytest.mark.parametrize('smoke', [False, True])
 def test_dynamic_install_preserves_root_and_smoke_with_managed_python(tmp_path, monkeypatch, smoke):
     import sys
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     path = ASSETS.parent / 'costbench_dynamic/prepare.py'
     spec = importlib.util.spec_from_file_location('dynamic_prepare_dispatch', path)
     mod = importlib.util.module_from_spec(spec)

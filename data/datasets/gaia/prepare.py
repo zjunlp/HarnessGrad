@@ -101,7 +101,7 @@ def _sha256(body: bytes) -> str:
 
 def _tables(src: pathlib.Path, hashes=None) -> tuple[list, list]:
     """Decode exactly the downloaded bytes in the admitted preparation artifact."""
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     runtime = dataset_runtime.resolve_execution("native_qa")
     binding = dataset_runtime.bind(runtime, "service")
     worker = pathlib.Path(__file__).with_name("prepare_worker.py")
@@ -115,7 +115,7 @@ def _tables(src: pathlib.Path, hashes=None) -> tuple[list, list]:
     (src / "preparation-runtime.json").write_text(json.dumps(identity, sort_keys=True))
     selected = dataset_runtime.admit_binding(binding, "service")
     proc = subprocess.run([selected["python"], "-I", "-B", str(worker)],
-        input=json.dumps({"inputs": inputs, "binding": binding}), text=True, capture_output=True,
+        input=json.dumps({"inputs": inputs, "binding": binding}), text=True, errors="strict", capture_output=True,
         env=dataset_runtime._child_environment())
     if proc.returncode:
         raise ValueError("gaia: Parquet preparation worker failed; retained attempt for inspection")
@@ -199,7 +199,7 @@ def main(argv=None) -> int:
     parser.add_argument("--python")
     args = parser.parse_args(argv)
     if args.prepare_runtime or args.check_runtime:
-        from harnessgrad import dataset_runtime
+        from harnessgrad.datasets import runtime as dataset_runtime
         if args.prepare_runtime:
             dataset_runtime.prepare_execution("native_qa", root=args.runtime_root, python=args.python)
         result = dataset_runtime.check_execution("native_qa", root=args.runtime_root)
@@ -215,7 +215,7 @@ def main(argv=None) -> int:
         header = json.loads(path.open(encoding="utf-8").readline())
         print(f"{path}\n  rows {header['rows']}\n  sha256 {digest()}")
         return 0
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     # Fail before any authenticated fetch when the preparation component is absent.
     dataset_runtime.resolve_execution("native_qa")
     root = adapter.DATASET_ROOT
@@ -257,7 +257,7 @@ def main(argv=None) -> int:
 
 def cli_main(argv=None):
     """Canonical CLI diagnostics shared by source and installed entry points."""
-    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
     from harnessgrad.paths import DataRootNotConfigured
     try:
         return main(argv)

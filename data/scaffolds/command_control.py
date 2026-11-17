@@ -132,7 +132,7 @@ def run_check(module, task: dict, workdir: Path) -> tuple[float, str]:
     verifier = module.VERIFY[task["task_id"]]
     argv = verifier["argv"]
     if "python_runtime" in verifier:
-        from harnessgrad.dataset_runtime import admit_binding
+        from harnessgrad.datasets.runtime import admit_binding
         if not isinstance(argv, list) or len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
             raise ValueError("bound verifier requires isolated, bytecode-free Python startup")
         admitted = admit_binding(verifier["python_runtime"], "verifier", python=argv[0])

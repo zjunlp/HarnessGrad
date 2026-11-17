@@ -256,7 +256,7 @@ def main(argv) -> int:
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
-    from harnessgrad.dataset_provider import DatasetProvider
+    from harnessgrad.datasets.provider import DatasetProvider
     snapshot = DatasetProvider("jericho", freeze_runtime=True).control(args.task_id)
     if args.workdir:
         workdir = Path(args.workdir)

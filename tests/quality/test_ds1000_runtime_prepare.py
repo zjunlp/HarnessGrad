@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from tools import prepare_ds1000_runtime as prepare
 
 

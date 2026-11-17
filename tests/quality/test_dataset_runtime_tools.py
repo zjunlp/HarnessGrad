@@ -13,9 +13,9 @@ import pytest
 
 from data.scaffolds import provider_worker
 from data.scaffolds.qa.base import QASpec
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from harnessgrad.paths import DataRootNotConfigured
-from tools import dataset_lint, datasets, prepare_dataset
+from tools.dataset_maintenance import dataset_lint, datasets, prepare_dataset
 
 
 @pytest.mark.parametrize('name', ['gsm8k', 'triviaqa', 'hotpotqa'])

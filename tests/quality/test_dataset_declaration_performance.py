@@ -10,7 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from data.scaffolds import declarations, registry, scorer_input
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 from test_dataset_execution_runtime import execution
 from test_dataset_runtime import environment
 
@@ -134,7 +134,7 @@ def test_provider_inventory_uses_kind_contract_without_traversing_values(monkeyp
 
 
 def test_provider_catalog_is_cached_only_in_a_frozen_loading_session(tmp_path,monkeypatch):
-    from harnessgrad import dataset_provider as client
+    from harnessgrad.datasets import provider as client
     monkeypatch.setattr(runtime,'descriptor',lambda name:{'provider':'adapter','descriptor_sha256':'authored'})
     monkeypatch.setenv('HG_DATA_AUTHORED',str(tmp_path/'first'))
     provider=client.DatasetProvider('authored',freeze_runtime=True)

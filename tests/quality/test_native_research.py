@@ -177,7 +177,7 @@ def test_pinned_vendor_bytes_and_attributed_import_projection():
 
 
 def test_gpass_is_native_hypergeometric_tail_and_requires_complete_labels():
-    from tools.report_livemathbench import aggregate
+    from tools.analysis.report_livemathbench import aggregate
     point = {'per_task': {'task': .5}, 'per_task_trials': {'task': [1, 1, 0, 0]}, 'n_invalid': 0}
     report = aggregate(point, n=4, ks=(2,))
     assert report['complete'] is True

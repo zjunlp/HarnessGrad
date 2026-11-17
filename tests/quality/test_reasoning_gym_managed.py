@@ -10,7 +10,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import dataset_runtime, dataset_runtime_identity, verification_context
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 
 ROOT = Path(__file__).resolve().parents[2]
 PREPARE = ROOT / 'data/datasets/reasoning_gym/prepare.py'
@@ -223,3 +225,23 @@ def test_missing_scoring_dependency_reports_preparation_command(tmp_path, monkey
     monkeypatch.setattr(importlib.metadata,'version',absent)
     with pytest.raises(ValueError,match='tools.prepare_dataset --dataset reasoning_gym --runtime execution'):
         module.score('answer', {'family':'basic_arithmetic','entry':{'answer':'answer'}})
+
+
+def test_invalid_qa_output_remains_unmeasured_despite_reward_file(tmp_path):
+    """A malformed child stream cannot promote a previously written reward."""
+    from eval.verification.verifier import _command_exit_failure
+
+    check = ROOT / 'data/datasets/reasoning_gym/check.py'
+    child = tmp_path / 'qa/lib/verify/check.py'
+    child.parent.mkdir(parents=True)
+    child.write_text("from pathlib import Path\nimport os\n"
+                     "Path('verifier').mkdir(exist_ok=True)\n"
+                     "Path('verifier/reward.txt').write_text('1.0')\n"
+                     "os.write(1, bytes([255]))\n")
+    result = subprocess.run([sys.executable, '-I', '-B', str(check)], cwd=tmp_path,
+                            capture_output=True, timeout=20)
+    assert result.returncode != 0
+    assert (tmp_path / 'verifier/reward.txt').read_text() == '1.0'
+    verdict = _command_exit_failure({'result_contract': {'require_exit_zero': True}},
+                                    result.returncode, '', '')
+    assert verdict['score'] is None and verdict['outcome'] == 'unmeasured'

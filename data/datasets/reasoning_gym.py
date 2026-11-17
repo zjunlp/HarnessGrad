@@ -216,7 +216,7 @@ def __getattr__(name: str):
 
 
 def _verifier(record):
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     binding = bind(resolve_execution('reasoning_gym'), 'verifier')
     spec = _SPEC.verifier(record)
     spec['argv'] = [binding['python'], '-I', '-B', 'reasoning_gym_check.py',

@@ -186,7 +186,7 @@ def test_three_trials_emit_complete_domain_report(tmp_path, monkeypatch):
     import shutil
     import sys
     from eval.run.runner import evaluate
-    from tools.tau3_report import report
+    from tools.analysis.tau3_report import report
     control = control_module()
     tid = 'tau3_bench/airline/8'
     harness = tmp_path / 'harness'

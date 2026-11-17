@@ -57,7 +57,8 @@ for attr, digest_attr in [('EXECUTOR', 'EXECUTOR_SHA256'), ('PASS_K', 'PASS_K_SH
  path.parent.mkdir(parents=True, exist_ok=True)
  path.write_text('authored synthetic source ' + attr)
  setattr(adapter, digest_attr, hashlib.sha256(path.read_bytes()).hexdigest())
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 import os
 def resolve(name):
  suffix = os.environ['HG_DATASET_RUNTIME_ROOT'][-1]

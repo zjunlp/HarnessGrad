@@ -1,0 +1,18 @@
+{
+  "profile": {
+    "metric": "locomo.harbor.question_micro_mean.v1",
+    "per_task_unit": "one conversation",
+    "platform_aggregation": "unweighted mean of conversation rewards",
+    "report_aggregation": "question-weighted mean over the selected complete set",
+    "source_sha256": {
+      "data/datasets/locomo.py": "b3d97de67821e0484b2a37b2f123ade40cbdaee72cca42fd83700e26cf55a03a",
+      "data/datasets/locomo/lib/inputs.py": "b871ed04da9a4b419f5782b3ff69526e8b7a71fcbbd676dd5fdbed7fddb5e5a4",
+      "data/datasets/locomo/lib/scoring.py": "99b8529201032d1240155b44a195cb234ceb99e6d2954f04c60c3ad4cf7fcea3",
+      "data/datasets/locomo/report.py": "1bb0a24b604351989cc8ad6f28b80de5a7534021a55177d1b02931a7e8b2cdd8",
+      "data/datasets/locomo/specs/source.json": "817eba39d3b808a97f467f01c810fffd2ab42a0f4cc30457e247d268c935ebb6",
+      "data/datasets/locomo/verify/check.py": "9ed9e0b7cb579f5634dd9b8bf1f2759cf00ad1703998de1257185b5ef874f4b1"
+    }
+  },
+  "sha256": "24fefbe2772bf434acbac8d2b840f4bd5865967f6997ed49b0651a483b17cc8e",
+  "version": 1
+}

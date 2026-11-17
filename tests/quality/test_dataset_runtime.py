@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 
 
 @pytest.fixture

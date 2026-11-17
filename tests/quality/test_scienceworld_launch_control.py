@@ -37,7 +37,7 @@ class Engine:
 
 @pytest.fixture
 def managed(monkeypatch):
-    from harnessgrad.dataset_runtime import resolve_execution, DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import resolve_execution, DatasetRuntimeUnavailable
     try:
         runtime=resolve_execution('scienceworld')
     except DatasetRuntimeUnavailable as exc:

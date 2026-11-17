@@ -16,7 +16,7 @@ def main(argv=None):
     parser.add_argument('--runtime-root', type=Path)
     parser.add_argument('--python', help='base interpreter for explicit preparation only')
     args = parser.parse_args(argv)
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     if args.python and args.action != 'prepare':
         parser.error('--python requires prepare')
     try:
@@ -42,7 +42,7 @@ def main(argv=None):
                     environment[key]=str(directory)
                 probe = subprocess.run([binding['python'],'-I','-B','-c',code,
                     str(Path(__file__).resolve().parents[3]),json.dumps({'harbor_runtime':binding,'harbor_python':binding['python']})],
-                    env=environment,cwd=temporary,capture_output=True,text=True,check=True,timeout=60)
+                    env=environment,cwd=temporary,capture_output=True,text=True,errors="strict",check=True,timeout=60)
             result['probe'] = json.loads(probe.stdout)
         dataset_runtime.admit_binding(binding,'verifier',python=binding['python'])
         result['binding'] = binding

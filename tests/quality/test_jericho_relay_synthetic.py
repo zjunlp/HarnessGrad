@@ -83,7 +83,7 @@ def test_actor_binding_is_empty_and_zero_seed_is_preserved(monkeypatch):
 
 def test_declared_runtime_source_and_native_pin_identity():
     import hashlib
-    from harnessgrad.dataset_runtime import execution_descriptor
+    from harnessgrad.datasets.runtime import execution_descriptor
     descriptor = execution_descriptor('jericho')
     assert descriptor['pins']['jericho'] == '3.3.1'
     assert all(name in descriptor['pins'] for name in ('numpy', 'spacy', 'termcolor'))
@@ -98,7 +98,7 @@ def test_declared_runtime_source_and_native_pin_identity():
 def test_prepared_engine_import_and_native_library_without_game(tmp_path):
     import os
     import subprocess
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     store = os.environ.get('HG_TEST_JERICHO_RUNTIME_ROOT')
     if not store:
         pytest.skip('set HG_TEST_JERICHO_RUNTIME_ROOT to a prepared external artifact')

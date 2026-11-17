@@ -1,24 +1,19 @@
-"""Code provenance for the ChessBench loader and its pinned native scorer."""
-import hashlib
+"""ChessBench scoring protocol and scorer implementation identity.
+
+Data source and loader provenance are recorded separately by the measurement
+profile. Historical combined scoring profiles remain valid v1 records, but do
+not compare equal to this narrower profile.
+"""
+import importlib.util
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[3]
-SOURCES = (
-    'data/datasets/chessbench_puzzles.py',
-    'data/scaffolds/qa/base.py',
-    'data/scaffolds/qa/read.py',
-    'data/scaffolds/qa/verify/check.py',
-    'data/scaffolds/provider_worker.py',
-    'harnessgrad/dataset_provider.py',
-    'eval/run/chess_stepwise.py',
-    'eval/run/chess_stepwise_worker.py',
-    'data/runtimes/chessbench_puzzles-native.json',
-)
-
-
 def profile():
-    return {'metric': 'ChessBench strict legal puzzle replay v1',
+    path = Path(__file__).with_name('measurement_profile.py')
+    spec = importlib.util.spec_from_file_location('_hg_chess_measurement_profile', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    scorer = module.profile()['scorer']
+    return {'metric': scorer['details']['protocol'],
             'upstream_diagnostic': 'ChessBench upstream puzzle replay (unchecked push)',
-            'source_sha256': {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-                              for name in SOURCES}}
+            'scorer_sha256': scorer['sha256']}

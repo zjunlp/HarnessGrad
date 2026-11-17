@@ -4,7 +4,7 @@ from eval.service import modelgate
 
 
 def open_gateway(base, bridge):
-    from harnessgrad.native_judge_identity import normalize_endpoint
+    from harnessgrad.provenance.native_judge_identity import normalize_endpoint
     base = normalize_endpoint(base)
     address = ipaddress.ip_address(bridge)
     if address.version != 4 or address.is_unspecified or address.is_multicast:

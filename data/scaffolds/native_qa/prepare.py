@@ -45,7 +45,7 @@ def read(path):
 
 
 def _convert(name, root, local):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     runtime = dataset_runtime.resolve_execution('native_qa')
     worker = Path(__file__).with_name('prepare_worker.py')
     environment = dataset_runtime._child_environment()
@@ -64,7 +64,7 @@ def _convert(name, root, local):
     (root / 'worker-identity.json').write_text(json.dumps(identity, indent=2) + '\n')
     request = {'dataset': name, 'root': str(root), 'local': list(local)}
     proc = subprocess.run([runtime['python'], '-I', str(worker)],
-        input=json.dumps(request), text=True, capture_output=True, env=environment)
+        input=json.dumps(request), text=True, errors="strict", capture_output=True, env=environment)
     if proc.returncode:
         # Worker diagnostics can contain private rows, URLs and credentials.
         raise ValueError('native source conversion worker failed; retained attempt for inspection')
@@ -200,7 +200,7 @@ def main():
                         help='BBEH only: refuse duplicates (default), or explicitly exclude every repeated question group')
     args=parser.parse_args()
     if args.prepare_runtime or args.check_runtime:
-        from harnessgrad import dataset_runtime
+        from harnessgrad.datasets import runtime as dataset_runtime
         if args.prepare_runtime:
             dataset_runtime.prepare_execution('native_qa', root=args.runtime_root, python=args.python)
         result = dataset_runtime.check_execution('native_qa', root=args.runtime_root)

@@ -90,7 +90,7 @@ def gold_record(tid):
 
 
 def _verify(tid, row):
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     binding = bind(resolve_execution('locomo'), 'verifier')
     content = canonical(gold_record(tid))
     digest = hashlib.sha256(content.encode()).hexdigest()

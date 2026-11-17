@@ -188,7 +188,7 @@ def runtime(row: NativeTask) -> dict:
     if not isinstance(entry, dict) or entry.get('source_sha256') != row.source_sha256:
         raise NativeRuntimeUnavailable(f'{row.dataset}: native runtime does not bind task/source {row.task_id}')
     if row.dataset == 'jobbench':
-        from harnessgrad.native_judge_identity import admit_selection
+        from harnessgrad.provenance.native_judge_identity import admit_selection
         try:
             admit_selection(entry)
         except ValueError as exc:

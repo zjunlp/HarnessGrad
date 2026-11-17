@@ -16,7 +16,7 @@ import sys
 
 from data.scaffolds import registry
 from data.scaffolds.registry import module_name
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from harnessgrad.paths import DataRootNotConfigured, env_name
 
 

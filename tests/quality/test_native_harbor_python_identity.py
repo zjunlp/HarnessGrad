@@ -9,7 +9,9 @@ import sys
 from types import SimpleNamespace
 
 import pytest
-from harnessgrad import dataset_runtime, dataset_runtime_identity, verification_context
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from data.scaffolds import native_harbor as native
 from data.scaffolds.native_harbor_runtime import python_runtime, harbor_entry
 
@@ -225,7 +227,7 @@ def test_real_h0_subprocess_captures_binding_and_refuses_missing_native_config(t
     entry={'source_sha256':row.source_sha256,'actor':actor,'replay_actor_image':'sha256:'+'a'*64,
            'verifier_image':'sha256:'+'b'*64,'harbor_python':binding['python'],'harbor_runtime':binding}
     if name=='jobbench':
-        from harnessgrad.native_judge_identity import selection
+        from harnessgrad.provenance.native_judge_identity import selection
         entry.update(selection({'HG_JUDGE_HARBOR_BASE_URL':'http://127.0.0.1:9/v1',
                                 'HG_JUDGE_HARBOR_MODEL':'not-contacted'}))
     if name=='swe_bench_pro':
@@ -259,3 +261,23 @@ def test_real_h0_subprocess_captures_binding_and_refuses_missing_native_config(t
     manifest.unlink()
     with pytest.raises(ValueError,match='H0 preflight failed'):
         dataset_runtime_identity.resolve_h0(name,side='eval',task_ids=[row.task_id],sampling='all',env=env)
+
+
+def test_isolated_invalid_harbor_binding_is_refused_before_package_import(tmp_path):
+    root = Path(__file__).resolve().parents[2]
+    code = '''import sys
+sys.path.insert(0, sys.argv[1])
+from data.scaffolds.native_harbor_runtime.python_runtime import admit
+try:
+    admit({'harbor_python': sys.executable}, python=sys.executable)
+except ValueError as exc:
+    assert 'path-only runtime is unbound' in str(exc)
+else:
+    raise AssertionError('unbound runtime was admitted')
+assert 'harbor' not in sys.modules
+'''
+    env = {'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'HG_REVIEWED_ENVIRONMENT_ONLY': '1'}
+    result = subprocess.run([sys.executable, '-I', '-B', '-c', code, str(root)], cwd=tmp_path,
+                            env=env, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert not list(tmp_path.iterdir())

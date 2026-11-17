@@ -1,0 +1,162 @@
+{
+  "locomo": {
+    "measurement_components": {
+      "data_source": {
+        "details": {
+          "dataset": "locomo",
+          "declared_artifact_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+          "origin": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+          "revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376"
+        },
+        "kind": "data_source",
+        "sha256": "8a107717ad41342e84dde1a67781d5cff6f77b4606d32a994fa9326881b3e79e",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "b3d97de67821e0484b2a37b2f123ade40cbdaee72cca42fd83700e26cf55a03a",
+            "inputs": "b871ed04da9a4b419f5782b3ff69526e8b7a71fcbbd676dd5fdbed7fddb5e5a4"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "82a4dd81a44a6c2669d6dbf8308c5e9d2a28aa97cb65b9d9d45a1a420dc0cd41",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "aggregation": "1bb0a24b604351989cc8ad6f28b80de5a7534021a55177d1b02931a7e8b2cdd8",
+            "check": "9ed9e0b7cb579f5634dd9b8bf1f2759cf00ad1703998de1257185b5ef874f4b1",
+            "declared_harbor_scorer": "593df86ea5cfc8e21b05ee2812050ff081a5e43d6be1ab2f05467de8daa6632b",
+            "scoring": "99b8529201032d1240155b44a195cb234ceb99e6d2954f04c60c3ad4cf7fcea3"
+          },
+          "protocol": "locomo.harbor.question_micro_mean.v1"
+        },
+        "kind": "scorer",
+        "sha256": "007bda62bc4732bda85090139ba89cf1a438a79d011af0d8b858ee6ab1341f38",
+        "version": 1
+      }
+    },
+    "normalized_adapter_ast_sha256": "a46110cc076586f998d436d5e16af948cd8843e6d862802c24ec7cdb8b2672fc",
+    "scoring_identity": {
+      "profile": {
+        "metric": "locomo.harbor.question_micro_mean.v1",
+        "per_task_unit": "one conversation",
+        "platform_aggregation": "unweighted mean of conversation rewards",
+        "report_aggregation": "question-weighted mean over the selected complete set",
+        "scorer_sha256": "007bda62bc4732bda85090139ba89cf1a438a79d011af0d8b858ee6ab1341f38"
+      },
+      "sha256": "d40101c7b70f6986dfdaf9e4722d668162f6737e3a0f01eda6829aecc737b0e0",
+      "version": 1
+    }
+  },
+  "spreadsheetbench": {
+    "measurement_components": {
+      "data_source": {
+        "details": {
+          "dataset": "spreadsheetbench",
+          "declared_artifact_sha256": "10ef893dd29cb13ab97143ea787e68cdc9574a13873ab9a54e50b31dc03fc949",
+          "origin": "https://hf-mirror.com/datasets/KAKA22/SpreadsheetBench/resolve/ab0b742b0fc95b946f212d80ac7771b5531272e4/spreadsheetbench_verified_400.tar.gz",
+          "revision": "ab0b742b0fc95b946f212d80ac7771b5531272e4"
+        },
+        "kind": "data_source",
+        "sha256": "5ad12e9800ff0819af4faf58c45dc09629279441d313c8efad95845b7bd73508",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "f4e43a550a441bfeb90439b172dad4867affe1c50c7dc7b4f37548d4198a5036"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "c8d227b3acdfe898b587a8d016435dd2f4d92aafa27675c751f91678516e513a",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "check": "03ada902e6f4f88b14ad44710381b6b9ffebb77964ea1fb87125c77c72ac43eb",
+            "input_binding": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+            "native_runtime": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d"
+          },
+          "protocol": "spreadsheetbench.verified_400.named_cells.v1"
+        },
+        "kind": "scorer",
+        "sha256": "826ba6bedd8b70ba1d70853b85ca33e3122fe903d9ec27655253f8d92c6bb234",
+        "version": 1
+      }
+    },
+    "normalized_adapter_ast_sha256": "b1f3812213cb97cacd481cd7bb34812806c838ea2d3b36c7f3422d491237743b",
+    "scoring_identity": {
+      "profile": {
+        "formula_runtime": "task-bound verified host installation; private bubblewrap conversion; not hermetic",
+        "metric": "spreadsheetbench.verified_400.named_cells.v1",
+        "per_task_unit": "one released workbook variant",
+        "platform_aggregation": "unweighted mean of measured workbook rewards",
+        "scorer_sha256": "826ba6bedd8b70ba1d70853b85ca33e3122fe903d9ec27655253f8d92c6bb234"
+      },
+      "sha256": "3dad8d7d5b618b9badaea874e4825abf11dcc091385afb0d1e23cf86573394d7",
+      "version": 1
+    }
+  },
+  "spreadsheetbench2": {
+    "measurement_components": {
+      "data_source": {
+        "details": {
+          "dataset": "spreadsheetbench2",
+          "declared_artifact_sha256": null,
+          "origin": "https://huggingface.co/datasets/KAKA22/SpreadsheetBench-v2/resolve/5a2215ed4121945ab09d8723df2995602090b042/spreadsheetbench-v2-09-10.zip",
+          "revision": "5a2215ed4121945ab09d8723df2995602090b042"
+        },
+        "kind": "data_source",
+        "sha256": "789198263a5d3ff85ea0b2d8e6c2c5f258987475b1a1a471dade70f65124020d",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "1f1becfdcff98e62f8c5b817dce5770e898791cf95d686c23b0e102dcd147f3d",
+            "prepare": "c8eed960d4cc1dd7b9fb2690850dfb183f52f035286575c6657b0f2947c84d18",
+            "safe_file": "37ebd2c728e6709294b183d2843112affaba37f9d94f9cd9bf26058262ea6825"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "432e6479c0f6f9b3c1653fe944773868de92660c8a96dd0d62b5db4a22db5873",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "check": "0078a0350a671b5045e8b4ed1dfaff9b5644766a74d011c284cf128e1c416e5c",
+            "declared_upstream": "9d999075e0212d9a5e3e7839710aefe127509d63a42d99038bce0a062af3ffa1",
+            "evaluation": "04a2a75b29805ab40efe93e202384c365d1d32b9c924c1a4aed56e41249facb0",
+            "input_binding": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+            "native_runtime": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d",
+            "open_spreadsheet": "9f50ca883067c99dbd254f2b6620dd97157c1f56ae24e0ec692d30813a82dba1"
+          },
+          "protocol": "spreadsheetbench2.official.accuracy"
+        },
+        "kind": "scorer",
+        "sha256": "f230534047d55ecdde75adad5d09023f1f953669890e6b51306017a2be1e5091",
+        "version": 1
+      }
+    },
+    "normalized_adapter_ast_sha256": "13f24d3c71e33f9ca64bfe98427f10509968315d4f18a8c65965bda0c6104ef8",
+    "scoring_identity": {
+      "profile": {
+        "formula_runtime": "task-bound verified host installation; private bubblewrap UNO; not hermetic",
+        "metric": "spreadsheetbench2.official.accuracy",
+        "per_task_unit": "one official v2 workbook",
+        "platform_aggregation": "unweighted mean of measured workbook accuracies",
+        "scorer_sha256": "f230534047d55ecdde75adad5d09023f1f953669890e6b51306017a2be1e5091"
+      },
+      "sha256": "65b60debd95bf92c4f33e3bfc87bfff7e037dc20e387fa353217489a2f50639a",
+      "version": 1
+    }
+  }
+}

@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 

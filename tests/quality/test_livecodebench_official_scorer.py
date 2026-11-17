@@ -40,7 +40,8 @@ from conftest import optional_storage_import
 from data.datasets import livecodebench as dataset
 from data.scaffolds import command_control, registry
 from eval.run import runner
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 METRICS_REFERENCE = ROOT / "data/datasets/livecodebench.py"
 CHECK = ROOT / "data" / "datasets" / "livecodebench" / "verify" / "check.py"

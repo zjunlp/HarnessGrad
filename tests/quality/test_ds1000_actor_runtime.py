@@ -9,7 +9,9 @@ import tempfile
 
 import pytest
 
-from harnessgrad import dataset_runtime, dataset_runtime_identity, task_python
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import task_python
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 from test_ds1000_execution_runtime import (  # noqa: F401 - explicit fixtures
     ROOT, authored_adapter,
 )
@@ -27,7 +29,7 @@ def cold_actor_platform():
                        check=True, capture_output=True, text=True)
         yield root / "venv/bin/python"
     finally:
-        from harnessgrad.python_harness_runtime import remove_instance
+        from harnessgrad.execution.python_runtime.python_harness_runtime import remove_instance
         remove_instance(root)
 
 
@@ -83,7 +85,9 @@ ROOT,REQUEST,WORK=Path(sys.argv[1]),Path(sys.argv[2]),Path(sys.argv[3])
 scientific=('numpy','pandas','scipy','sklearn','matplotlib','seaborn','torch')
 assert all(importlib.util.find_spec(name) is None for name in scientific)
 sys.path.insert(0,str(ROOT))
-from harnessgrad import candidate_runtime,dataset_runtime,dataset_runtime_identity
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 from eval.run import runner
 request=json.loads(REQUEST.read_text())
 private_source=request['source']

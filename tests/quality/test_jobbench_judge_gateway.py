@@ -121,7 +121,7 @@ Path(sys.argv[2]).write_text(json.dumps({'harbor_runtime':request['case']['runti
         monkeypatch.setenv('HG_JUDGE_HARBOR_API_KEY','authored-judge-key')
         monkeypatch.setenv('HG_AGENT_API_KEY','actor-key-must-not-cross')
         # Pin this task-owned server selection before invoking the native wrapper.
-        from harnessgrad.native_judge_identity import selection
+        from harnessgrad.provenance.native_judge_identity import selection
         case['runtime'].update(selection())
         raw=json.dumps(case,sort_keys=True,separators=(',',':'));sha=hashlib.sha256(raw.encode()).hexdigest()
         (root/'case.json').write_text(raw)

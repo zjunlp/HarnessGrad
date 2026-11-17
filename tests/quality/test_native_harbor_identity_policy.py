@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
-from harnessgrad import dataset_runtime_identity as identity
-from harnessgrad import verification_context
+from harnessgrad.datasets import runtime
+from harnessgrad.datasets import runtime_identity as identity
+from harnessgrad.provenance import verification_context
 
 DATASETS = ('deepswe', 'jobbench', 'swe_bench_pro')
 
@@ -29,7 +29,7 @@ def spec(dataset, *, bound=True):
              'native_benchmark':{'dataset':dataset,'case_sha256':'b'*64,
                                  'case_path':'native-case.json','record_path':'native_episode'}}
     if dataset=='jobbench':
-        from harnessgrad.native_judge_identity import selection
+        from harnessgrad.provenance.native_judge_identity import selection
         value['native_judge_identity']=selection()['judge_identity']
     if bound:
         selected = binding()

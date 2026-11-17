@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 SPEC = importlib.util.spec_from_file_location('gaia_prepare', Path(__file__).resolve().parents[2] / 'data/datasets/gaia/prepare.py')
 prep = importlib.util.module_from_spec(SPEC)
@@ -37,6 +37,9 @@ def test_conversion_admits_binding_and_drops_credentials(tmp_path, monkeypatch):
     monkeypatch.setattr(prep.subprocess, 'run', run)
     assert prep._tables(tmp_path) == ([], [])
     assert calls == [("admit", "service"), ("admit", "service")]
+    import hashlib
+    receipt = json.loads((tmp_path / 'preparation-runtime.json').read_text())
+    assert receipt['worker_sha256'] == hashlib.sha256(Path(SPEC.origin).with_name('prepare_worker.py').read_bytes()).hexdigest()
 
 
 def test_missing_runtime_precedes_fetch(tmp_path, monkeypatch):
@@ -172,3 +175,33 @@ def test_source_and_module_missing_runtime_diagnostics_match_in_empty_env(tmp_pa
         assert not data.exists()
         diagnostics.append(proc.stderr)
     assert diagnostics[0] == diagnostics[1]
+
+
+def test_isolated_worker_refuses_unbound_runtime_before_parquet_import(tmp_path):
+    import os
+    import subprocess
+    import sys
+    worker = Path(SPEC.origin).with_name('prepare_worker.py')
+    code = '''import runpy,sys
+try:
+    runpy.run_path(sys.argv[1], run_name='__main__')
+except RuntimeError as exc:
+    assert 'runtime role binding' in str(exc)
+else:
+    raise AssertionError('unbound runtime was admitted')
+assert 'pyarrow' not in sys.modules
+'''
+    env = {'PATH': os.defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'HG_REVIEWED_ENVIRONMENT_ONLY': '1'}
+    result = subprocess.run([sys.executable, '-I', '-B', '-c', code, str(worker)],
+                            input='{"binding":{},"inputs":[]}', cwd=tmp_path, env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert not list(tmp_path.iterdir())
+
+
+def test_worker_digest_changes_without_changing_data(tmp_path, monkeypatch):
+    import hashlib
+    root = Path(SPEC.origin).parents[3]
+    old = json.loads((root / 'tests/fixtures/gaia_preparation_runtime_import/before.json').read_text())
+    worker = Path(SPEC.origin).with_name('prepare_worker.py')
+    assert hashlib.sha256(worker.read_bytes()).hexdigest() != old['data/datasets/gaia/prepare_worker.py']['sha256']

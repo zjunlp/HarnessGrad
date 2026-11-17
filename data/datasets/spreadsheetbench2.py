@@ -83,7 +83,7 @@ def _setup(record):
 
 
 def _verify(record):
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     from data.scaffolds.spreadsheet_runtime.metadata import selected_native
     binding = bind(resolve_execution('spreadsheetbench2'), 'verifier')
     native = selected_native()
@@ -135,7 +135,7 @@ def _verify(record):
 
 
 def provision_status():
-    from harnessgrad.dataset_runtime import check_execution
+    from harnessgrad.datasets.runtime import check_execution
     from data.scaffolds.spreadsheet_runtime.native import require_runtime
     execution = check_execution('spreadsheetbench2')
     try:

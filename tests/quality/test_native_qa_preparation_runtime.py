@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from data.scaffolds.native_qa import prepare as prep
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 def source(tmp_path):
@@ -173,3 +173,19 @@ def test_legacy_rows_remain_readable_and_existing_rows_are_preserved(tmp_path):
     entry['path'] = 'rows/00-test.jsonl'
     (root / 'source-manifest.json').write_text(json.dumps(manifest))
     assert Dataset('math500', root).records() == original_records
+
+
+def test_authored_jsonl_conversion_worker_runs_in_isolated_python(tmp_path):
+    import subprocess
+    worker = Path(__file__).resolve().parents[2] / 'data/scaffolds/native_qa/prepare_worker.py'
+    source_file = tmp_path / 'authored.jsonl'
+    source_file.write_text('{"id":"authored","value":"example"}\n')
+    output = tmp_path / 'output'
+    output.mkdir()
+    request = {'root': str(output), 'local': ['test=' + str(source_file)], 'dataset': 'math500'}
+    env = {'PATH': __import__('os').defpath, 'PYTHONDONTWRITEBYTECODE': '1', 'HG_REVIEWED_ENVIRONMENT_ONLY': '1'}
+    result = subprocess.run([sys.executable, '-I', '-B', str(worker)], input=json.dumps(request),
+                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert json.loads((output / 'conversion.json').read_text()) == [{'split': 'test', 'path': 'converted/00.jsonl'}]
+    assert json.loads((output / 'converted/00.jsonl').read_text()) == {'id': 'authored', 'value': 'example'}

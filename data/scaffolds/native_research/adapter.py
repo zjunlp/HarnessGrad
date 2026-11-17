@@ -11,7 +11,7 @@ from pathlib import Path
 
 from harnessgrad.config.areas import ConfigMissing
 from data.scaffolds.declarations import once
-from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
 from harnessgrad.paths import DatasetPath, dataset_root
 from .profiles import COMMIT, PROFILES, SOURCES
 

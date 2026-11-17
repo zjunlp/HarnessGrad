@@ -27,8 +27,8 @@ from eval.run import runner
 from eval.run import chess_stepwise
 from eval.service.unix_stepwise_relay import StepwiseRelay
 from eval.verification import native_runtime
-from harnessgrad.records import _curve_point, _save_verdicts
-from tools import plot_curve
+from harnessgrad.experiment.records import _curve_point, _save_verdicts
+from tools.analysis import plot_curve
 
 
 TASK_ID = "chessbench_puzzles/test/0"
@@ -133,6 +133,8 @@ def local_chess_runtime(tmp_path_factory):
     retained = root / "tests/fixtures/chessbench_native_sources"
     scorer_sources = {
         "/scorer/check.py": root / "data/scaffolds/qa/verify/check.py",
+        "/scorer/data/datasets/chessbench_puzzles.py": retained / "chessbench_puzzles.py",
+        "/scorer/data/scaffolds/scorer_input.py": retained / "scorer_input.py",
         "/scorer/data/scaffolds/qa/base.py": retained / "qa_base.py",
         "/scorer/harnessgrad/env_file.py": retained / "env_file.py",
     }

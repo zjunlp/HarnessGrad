@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -123,25 +123,6 @@ def test_external_artifact_scores_authored_xlsx(tmp_path):
     assert evidence['measured'] is True and evidence['reward'] == 1
     assert evidence['scorer_input']['verified'] is True
     assert (stage / 'verifier/reward.txt').read_text() == '1\n'
-
-
-def test_source_identity_uses_current_bytes_without_git(tmp_path, monkeypatch):
-    import shutil
-    from harnessgrad import scoring_identity
-    path = ROOT / 'data/datasets/spreadsheetbench/scoring_profile.py'
-    spec = importlib.util.spec_from_file_location('spreadsheet_profile_control', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    for relative in (*module.SOURCES, 'data/datasets/spreadsheetbench/scoring_profile.py'):
-        target = tmp_path / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(ROOT / relative, target)
-    monkeypatch.setattr(scoring_identity, 'PROVIDERS', tmp_path / 'data/datasets')
-    first = scoring_identity.resolve('spreadsheetbench')
-    scorer = tmp_path / 'data/datasets/spreadsheetbench/verify/check.py'
-    scorer.write_bytes(scorer.read_bytes() + b'\n# source identity control\n')
-    second = scoring_identity.resolve('spreadsheetbench')
-    assert first != second
 
 
 def external_spec(tmp_path):

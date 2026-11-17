@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from data.datasets import tau2_bench, tau3_bench
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 @pytest.fixture(params=[tau2_bench, tau3_bench])

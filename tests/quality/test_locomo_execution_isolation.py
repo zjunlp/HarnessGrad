@@ -10,7 +10,8 @@ import venv
 import pytest
 
 from data.datasets import locomo
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -81,17 +82,19 @@ def test_locked_runtime_declares_complete_dependency_closure():
 
 
 def test_scoring_profile_distinguishes_curve_and_report_aggregation(monkeypatch):
-    from harnessgrad import scoring_identity
+    from harnessgrad.provenance import measurement_components, scoring_identity
     monkeypatch.setattr(locomo, 'rows', lambda: pytest.fail('profile must not load task data'))
     profile = scoring_identity.resolve('locomo')['profile']
     assert profile['metric'] == locomo.METRIC
     assert profile['platform_aggregation'] != profile['report_aggregation']
-    assert 'data/datasets/locomo/lib/scoring.py' in profile['source_sha256']
+    scorer = measurement_components.resolve('locomo')['scorer']
+    assert profile['scorer_sha256'] == scorer['sha256']
+    assert 'scoring' in scorer['details']['components']
 
 
 def test_materialized_scorer_changes_invalidate_context(tmp_path, monkeypatch):
     import shutil
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     assets = tmp_path / 'assets'
     for relative in ('lib/scoring.py', 'verify/check.py'):
         target = assets / relative
@@ -124,7 +127,7 @@ class Block(importlib.abc.MetaPathFinder):
   if name == "nltk" or name.startswith("nltk."): raise AssertionError("platform imported nltk")
 sys.meta_path.insert(0, Block()); sys.path.insert(0, sys.argv[1])
 from data.datasets import locomo
-from harnessgrad import dataset_runtime_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 from data.scaffolds.command_control import materialize, solve, run_check
 row = {"sample_id":"conv-999", "conversation":{"speaker_a":"Ada","speaker_b":"Bo",
  "session_1_date_time":"1 January 2024","session_1":[{"speaker":"Ada","text":"I live in Paris."}]},

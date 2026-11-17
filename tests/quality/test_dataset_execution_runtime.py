@@ -10,7 +10,7 @@ import tempfile
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 from test_dataset_runtime import environment  # shared offline venv/installer control
 
 

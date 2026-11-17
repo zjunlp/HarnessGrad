@@ -59,7 +59,7 @@ def test_stdlib_cli_keeps_status_and_log(tmp_path, monkeypatch, capsys):
 
 def test_setup_and_verifier_do_not_find_platform_package(tmp_path,monkeypatch):
     import data.datasets.scienceworld as dataset
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     import importlib.util
     import hashlib
     jar=tmp_path/'scienceworld.jar';jar.write_bytes(b'authored jar')
@@ -85,7 +85,7 @@ def test_setup_and_verifier_do_not_find_platform_package(tmp_path,monkeypatch):
 
 def test_environment_catalog_mapping_needs_no_managed_runtime(monkeypatch):
     import data.datasets.scienceworld as dataset
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime,'resolve_execution',lambda *args:pytest.fail('ENV must stay read-only and dependency-free'))
     mapping=dataset._Lazy().get('ENV')
     assert len(mapping)==1744

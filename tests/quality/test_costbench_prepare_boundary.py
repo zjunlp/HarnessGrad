@@ -59,7 +59,7 @@ def test_source_guard_rejects_unlisted_and_modified_native_source(tmp_path):
 
 def test_worker_admits_before_importing_benchmark_libraries(tmp_path, monkeypatch):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     events = []
     def reject(binding, role, python):
         events.append((role, python))
@@ -76,7 +76,7 @@ def test_worker_admits_before_importing_benchmark_libraries(tmp_path, monkeypatc
 @pytest.mark.parametrize('dynamic', [False, True])
 def test_controller_publication_and_clean_environment(tmp_path, monkeypatch, dynamic):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(module, 'validate_output', lambda *args, **kwargs: None)
     selected = {'python': '/synthetic/artifact/bin/python'}
     admitted = []
@@ -115,7 +115,7 @@ def test_controller_publication_and_clean_environment(tmp_path, monkeypatch, dyn
 
 def test_dangling_prepared_target_refuses_before_worker_or_reservation(tmp_path, monkeypatch):
     module = controller()
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     selected = {'python': '/synthetic/python'}
     monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda name: selected)
     monkeypatch.setattr(dataset_runtime, 'bind', lambda artifact, role: artifact)
@@ -133,7 +133,7 @@ def test_dangling_prepared_target_refuses_before_worker_or_reservation(tmp_path,
 
 def test_failed_attempt_is_reserved_and_preserved(tmp_path, monkeypatch):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime, 'resolve_execution', lambda name: {'python': '/synthetic/python'})
     monkeypatch.setattr(runtime, 'bind', lambda artifact, role: artifact)
     monkeypatch.setattr(runtime, 'admit_binding', lambda binding, role: None)
@@ -155,7 +155,7 @@ def test_actual_artifact_synthetic_worker_control(tmp_path):
     store = os.environ.get('HG_COSTBENCH_PREPARE_CONTROL_RUNTIME_ROOT')
     if not store:
         pytest.skip('explicit task-owned actual artifact cache required')
-    from harnessgrad.dataset_runtime import resolve_execution, bind, admit_binding
+    from harnessgrad.datasets.runtime import resolve_execution, bind, admit_binding
     binding = bind(resolve_execution('costbench', root=store), 'service')
     admit_binding(binding, 'service')
     assets = tmp_path / 'fixture/data/datasets/costbench'
@@ -198,7 +198,7 @@ def prepare(root, splits, source_root=None):
 
 def test_post_worker_admission_failure_prevents_publication(tmp_path, monkeypatch):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime, 'resolve_execution', lambda name: {'python': '/synthetic/python'})
     monkeypatch.setattr(runtime, 'bind', lambda artifact, role: artifact)
     calls = []
@@ -287,7 +287,7 @@ def synthetic_catalog(module, pending, source_root, monkeypatch):
 @pytest.mark.parametrize('damage', [None, 'wrongdigest', 'missing-private', 'missing-shard'])
 def test_independent_manifest_and_payload_gate_before_publication(tmp_path, monkeypatch, damage):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime, 'resolve_execution', lambda name: {'python': '/synthetic/python'})
     monkeypatch.setattr(runtime, 'bind', lambda artifact, role: artifact)
     monkeypatch.setattr(runtime, 'admit_binding', lambda binding, role: None)
@@ -323,7 +323,7 @@ def test_independent_manifest_and_payload_gate_before_publication(tmp_path, monk
 
 def test_partial_static_is_retained_diagnostic_without_normal_readiness(tmp_path, monkeypatch, capsys):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime, 'resolve_execution', lambda name: {'python': '/synthetic/python'})
     monkeypatch.setattr(runtime, 'bind', lambda artifact, role: artifact)
     monkeypatch.setattr(runtime, 'admit_binding', lambda binding, role: None)
@@ -453,7 +453,7 @@ def test_local_synthetic_proxy_survives_clean_environment_without_api_keys(tmp_p
 
 def test_failed_worker_proxy_diagnostics_are_redacted(tmp_path, monkeypatch, capsys):
     module = controller()
-    import harnessgrad.dataset_runtime as runtime
+    from harnessgrad.datasets import runtime
     monkeypatch.setattr(runtime, 'resolve_execution', lambda name: {'python': '/synthetic/python'})
     monkeypatch.setattr(runtime, 'bind', lambda artifact, role: artifact)
     monkeypatch.setattr(runtime, 'admit_binding', lambda binding, role: None)

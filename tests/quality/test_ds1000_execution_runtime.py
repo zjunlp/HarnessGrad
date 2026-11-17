@@ -18,7 +18,8 @@ from types import ModuleType
 
 import pytest
 
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 ADAPTER = ROOT / "data/datasets/ds1000.py"
@@ -164,7 +165,7 @@ from types import SimpleNamespace
 assert all(importlib.util.find_spec(name) is None for name in ('numpy','pandas','scipy','sklearn','matplotlib','seaborn','torch'))
 sys.path.insert(0, sys.argv[1])
 from data.scaffolds import command_control
-from harnessgrad import dataset_runtime_identity
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 spec=json.loads(Path(sys.argv[2]).read_text())
 identity=dataset_runtime_identity.create(tasks={'ds1000/0':{'verifier':spec['python_runtime']}})
 reward,detail=command_control.run_check(SimpleNamespace(VERIFY={'ds1000/0':spec}),{'task_id':'ds1000/0'},Path(sys.argv[3]))

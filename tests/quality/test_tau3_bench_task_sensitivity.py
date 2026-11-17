@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from data.datasets import tau3_bench as dataset
 from test_tau3_bench_dataset import control_module
-from tools import task_sensitivity as ts
+from tools.studies import task_sensitivity as ts
 
 
 def test_sensitivity_runs_all_tau3_trials_for_identical_harnesses(tmp_path, monkeypatch):

@@ -1,14 +1,12 @@
-"""Source identity for the pinned MATH-500 equivalence scorer and loader."""
-import hashlib
+"""MATH-500 command scorer identity; loader and data declarations are separate."""
+import importlib.util
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[3]
-SOURCES = ('data/datasets/math500.py', 'data/scaffolds/native_qa/__init__.py',
-           'data/scaffolds/native_qa/check.py', 'data/scaffolds/native_qa/scoring.py',
-           'data/scaffolds/native_qa/math_grade.py')
 
 
 def profile():
-    return {'metric': 'math-verify-0.9.0-last-boxed',
-            'source_sha256': {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
-                              for path in SOURCES}}
+    spec = importlib.util.spec_from_file_location('_hg_math500_measurement_profile',
+                                                   Path(__file__).with_name('measurement_profile.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    scorer = module.profile()['scorer']
+    return {'metric': scorer['details']['protocol'], 'scorer_sha256': scorer['sha256']}

@@ -465,7 +465,7 @@ def test_real_observed_native_world_exec_and_sealed_patch(tmp_path,native_image_
 
 @pytest.mark.parametrize('answer,expected',[('correct',1.0),('incorrect',0.0)])
 def test_real_native_harbor_fresh_separate_verifier(harbor_binding,tmp_path,native_image_builder,answer,expected):
-    from harnessgrad.native_judge_identity import selection
+    from harnessgrad.provenance.native_judge_identity import selection
 
     actor_image=_control_image(tmp_path,native_image_builder)
     verifier_image=_control_image(tmp_path,native_image_builder,verifier=True)

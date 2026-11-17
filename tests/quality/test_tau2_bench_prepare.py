@@ -83,6 +83,14 @@ def test_both_halves_are_checked(payload, half):
         prepare.validate_cases(root)
 
 
+def test_check_only_rejects_missing_case_manifest_before_runtime(payload, monkeypatch):
+    root, _, _ = payload
+    (root / "manifest.json").unlink()
+    monkeypatch.setattr(prepare, "check_runtime", lambda _: pytest.fail("runtime checked before case manifest"))
+    with pytest.raises(ValueError, match="missing prepared asset: manifest.json"):
+        prepare.check_only(root, root / "runtime")
+
+
 def test_expected_manifest_digest_is_not_self_trusted(payload):
     root, _, _ = payload
     with (root / "manifest.json").open("a") as stream:
@@ -245,7 +253,7 @@ def test_check_only_cli_requires_no_source_and_reports_failures(tmp_path):
 def test_real_prepared_payload_is_read_only_when_available():
     try:
         root = Path(prepare.dataset.DATASET_ROOT)
-        from harnessgrad.dataset_runtime import resolve_execution
+        from harnessgrad.datasets.runtime import resolve_execution
         runtime = Path(resolve_execution("tau2_bench")["path"])
     except Exception:
         pytest.skip("dataset storage or managed execution artifact is not configured")

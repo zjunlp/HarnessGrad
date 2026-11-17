@@ -15,9 +15,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from harnessgrad import dataset_runtime_identity as runtimes
-from harnessgrad import policies, verification_context
-from harnessgrad.records import _curve_point
+from harnessgrad.datasets import runtime_identity as runtimes
+from harnessgrad.experiment import policies
+from harnessgrad.provenance import verification_context
+from harnessgrad.experiment.records import _curve_point
 from harnessgrad.store.schema import check_point, check_run_meta
 
 
