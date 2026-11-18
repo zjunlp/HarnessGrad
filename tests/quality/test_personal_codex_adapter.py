@@ -40,6 +40,8 @@ def targets(*, reverse: bool = False) -> tuple[TargetSelection, ...]:
 
 @pytest.fixture
 def project(tmp_path):
+    if not codex_module._secure_access_available():
+        pytest.skip('selected filesystem reads require descriptor-relative no-follow access')
     root = tmp_path / 'project'
     skill = root / 'skills' / 'verify'
     skill.mkdir(parents=True)
@@ -136,12 +138,15 @@ def test_skill_frontmatter_cannot_be_changed(project):
     assert error_code(exc) == 'invalid_candidate'
 
 
-def test_skill_candidate_cannot_add_an_unmapped_local_dependency(project):
+@pytest.mark.parametrize('dependency', [
+    'Run scripts/check.py.\n', 'Follow [steps](../../runbook.md).\n',
+])
+def test_skill_candidate_cannot_add_an_unmapped_local_dependency(project, dependency):
     adapter = CodexAdapter()
     snapshot = adapter.collect_selected(binding(project), targets())
     proposed = candidates(snapshot)
     skill = next(path for path in proposed if path.startswith('skills/'))
-    proposed[skill] += 'Run scripts/check.py.\n'
+    proposed[skill] += dependency
     with pytest.raises(SurfaceError) as exc:
         adapter.prepare_extension(snapshot, proposed)
     assert error_code(exc) == 'invalid_candidate'
@@ -161,6 +166,7 @@ def test_multifile_skill_is_explicitly_unsupported(project, extra, make_director
 @pytest.mark.parametrize('body', [
     '---\nname: verify\ndependencies:\n  - helper.py\n---\nBody\n',
     '---\nname: verify\n---\nUse scripts/check.py before delivery.\n',
+    '---\nname: verify\n---\nFollow [steps](../../runbook.md).\n',
 ])
 def test_declared_local_skill_dependencies_are_unsupported(project, body):
     (project / 'skills/verify/SKILL.md').write_text(body)
@@ -382,7 +388,45 @@ def test_same_named_resources_in_two_projects_never_share_a_snapshot(project, tm
 
 def test_probe_reports_mapping_separately_from_unverified_native_loading():
     checks = {row.scope: row.status for row in CodexAdapter().probe(None).checks}
-    assert checks['codex.selected_surface_read'] == 'ready'
+    expected = 'ready' if codex_module._secure_access_available() else 'unavailable'
+    assert checks['codex.selected_surface_read'] == expected
     assert checks['codex.selected_surface_render'] == 'ready'
     assert checks['codex.selected_surface_loading'] == 'unchecked'
     assert checks['codex.harness_writes'] == 'refused'
+
+
+def test_unavailable_platform_is_reported_before_any_selected_file_access(tmp_path, monkeypatch):
+    monkeypatch.setattr(codex_module, '_secure_access_available', lambda: False)
+
+    def unexpected_access(*args, **kwargs):
+        pytest.fail('an unavailable platform must not open selected files')
+
+    monkeypatch.setattr(os, 'open', unexpected_access)
+    adapter = CodexAdapter()
+    checks = {row.scope: row.status for row in adapter.probe(None).checks}
+    assert checks['codex.selected_surface_read'] == 'unavailable'
+    assert checks['codex.selected_surface_render'] == 'ready'
+    with pytest.raises(SurfaceError) as exc:
+        adapter.collect_selected(binding(tmp_path), targets()[:1])
+    assert error_code(exc) == 'unavailable'
+
+
+@pytest.mark.parametrize('reference,local', [
+    ('[steps](../../runbook.md)', True),
+    ('[steps [required] here](../../runbook.md)', True),
+    ('[steps][guide]\n[guide]: ../runbook.md', True),
+    ('![diagram](<../diagram one.png>)', True),
+    ('[steps](file:///tmp/runbook.md)', True),
+    ('<file:///tmp/runbook.md>', True),
+    ('[steps](https://example.com/runbook.md)', False),
+    ('[steps](//example.com/runbook.md)', False),
+    ('[steps](#checks)', False),
+])
+def test_standalone_skill_rejects_local_markdown_dependencies(reference, local):
+    text = '---\nname: verify\n---\n' + reference + '\n'
+    if local:
+        with pytest.raises(SurfaceError) as exc:
+            codex_module._standalone_skill(text, 'verify-skill')
+        assert error_code(exc) == 'unsupported_surface'
+    else:
+        codex_module._standalone_skill(text, 'verify-skill')

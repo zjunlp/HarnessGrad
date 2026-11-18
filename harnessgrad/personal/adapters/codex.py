@@ -87,11 +87,15 @@ class CodexAdapter:
                 status, detail = 'refused', 'Permission denied for the selected version probe.'
             except (OSError, ValueError, UnicodeError, subprocess.SubprocessError):
                 status, detail = 'invalid', 'Selected executable could not provide a bounded Codex version.'
+        secure_read = _secure_access_available()
         checks = (
             Readiness(status, 'codex.executable_version', detail),
             Readiness('ready', 'personal.synthetic_import', 'Only explicitly imported synthetic sessions.'),
-            Readiness('ready', 'codex.selected_surface_read',
-                      'Only caller-selected files below one explicit project binding are read.'),
+            Readiness('ready' if secure_read else 'unavailable',
+                      'codex.selected_surface_read',
+                      'Only caller-selected files below one explicit project binding are read.'
+                      if secure_read else
+                      'Descriptor-relative no-follow access is unavailable on this platform.'),
             Readiness('ready', 'codex.selected_surface_render',
                       'Candidates are rendered from an immutable selected snapshot without writing.'),
             Readiness('unchecked', 'codex.selected_surface_loading',
@@ -333,10 +337,14 @@ def _identity(value: os.stat_result) -> str:
     return f'fs-v1:{dev}:{ino}'
 
 
-def _require_secure_access() -> None:
+def _secure_access_available() -> bool:
     names = ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK')
-    if (not all(hasattr(os, name) for name in names)
-            or os.open not in os.supports_dir_fd):
+    return (all(hasattr(os, name) for name in names)
+            and os.open in os.supports_dir_fd)
+
+
+def _require_secure_access() -> None:
+    if not _secure_access_available():
         raise SurfaceError('unavailable',
                            'Descriptor-relative no-follow access is unavailable on this platform.')
 
@@ -491,6 +499,25 @@ def _standalone_skill(text: str, resource_id: str) -> None:
     if re.search(r'(?im)^(?:dependencies|scripts|references|assets|files)\s*:', prefix):
         raise SurfaceError('unsupported_surface',
                            'A selected Skill declares local dependencies.', resource_id)
-    if re.search(r'(?i)(?:^|[\s`"\'(])(?:\./)?(?:scripts|references|assets)/[^\s)`"\']+', text):
+    if (re.search(r'(?i)(?:^|[\s`"\'(])(?:\./)?(?:scripts|references|assets)/[^\s)`"\']+', text)
+            or _local_skill_link(text)):
         raise SurfaceError('unsupported_surface',
                            'A selected Skill references local supporting files.', resource_id)
+
+
+def _local_skill_link(text: str) -> bool:
+    # Recognize explicit Markdown destinations without reading their targets.
+    patterns = (
+        r'\]\(\s*(?:<([^<>\r\n]+)>|([^\s)]+))',
+        r'(?m)^[ \t]{0,3}\[[^\[\]\r\n]+\]:[ \t]*(?:<([^<>\r\n]+)>|([^\s]+))',
+        r'<(file:[^<>\r\n]+)>',
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            target = next(value for value in match.groups() if value is not None)
+            if target.startswith(('#', '//')):
+                continue
+            scheme = re.match(r'([A-Za-z][A-Za-z0-9+.-]*):', target)
+            if not scheme or len(scheme[1]) == 1 or scheme[1].lower() == 'file':
+                return True
+    return False
