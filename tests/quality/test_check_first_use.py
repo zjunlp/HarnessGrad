@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import check_first_use as check
+from tools.diagnostics import check_first_use as check
 from test_evidence_export import save_run
 
 
@@ -73,7 +73,7 @@ def test_command_timeout_retains_log(tmp_path):
 
 
 def test_failed_preparation_is_not_a_pass(tmp_path, monkeypatch):
-    from harnessgrad import python_exec_runtime
+    from harnessgrad.execution.python_runtime import python_exec_runtime
     monkeypatch.setattr(python_exec_runtime, 'prepare', lambda *a, **k: (_ for _ in ()).throw(
         RuntimeError('missing synthetic runtime')))
     with pytest.raises(RuntimeError, match='missing synthetic runtime'):
@@ -82,7 +82,7 @@ def test_failed_preparation_is_not_a_pass(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize('corrupt_duplicate', [False, True])
 def test_execution_enforces_isolation_and_preservation(tmp_path, monkeypatch, corrupt_duplicate):
-    from harnessgrad import python_exec_runtime
+    from harnessgrad.execution.python_runtime import python_exec_runtime
     monkeypatch.setattr(python_exec_runtime, 'prepare', lambda *a, **k: {'installed': False})
     monkeypatch.setenv('XDG_RUNTIME_DIR', '/run/user/test')
     monkeypatch.setenv('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/test/bus')

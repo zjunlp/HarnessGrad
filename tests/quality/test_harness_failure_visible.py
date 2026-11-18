@@ -182,7 +182,7 @@ if __name__ == "__main__":                                       # pragma: no co
 # ------------------------- 有 trace 但**非零退出**:归因要看得见,分类不许放宽 ---
 
 def _said(monkeypatch) -> list[str]:
-    from harnessgrad import environments
+    from harnessgrad.orchestration import environments
     out: list[str] = []
     monkeypatch.setattr(environments.console, "note",
                         lambda msg, **kw: out.append(msg))
@@ -197,7 +197,7 @@ def test_a_harness_that_died_after_it_started_is_named(monkeypatch):
     (在 `harness_output` 里),却没有任何人读到 —— 日志没有,方法那一侧也没有。读的人
     只能自己猜是"模型写的代码不行"还是"harness 死了"。
     """
-    from harnessgrad import environments
+    from harnessgrad.orchestration import environments
     said = _said(monkeypatch)
     environments._report_harness_failed({
         "harness_failed": {},
@@ -211,7 +211,7 @@ def test_a_harness_that_died_after_it_started_is_named(monkeypatch):
 
 def test_a_healthy_harness_is_not_warned_about(monkeypatch):
     """退出码 0 但 stderr 里有日志,不是故障 —— 否则每一次正常运行都带一条警告。"""
-    from harnessgrad import environments
+    from harnessgrad.orchestration import environments
     said = _said(monkeypatch)
     environments._report_harness_failed({
         "harness_failed": {},
@@ -222,7 +222,7 @@ def test_a_healthy_harness_is_not_warned_about(monkeypatch):
 
 def test_the_empty_trace_case_is_reported_once_not_twice(monkeypatch):
     """两条分支都在,但同一道题只能响一次。"""
-    from harnessgrad import environments
+    from harnessgrad.orchestration import environments
     said = _said(monkeypatch)
     environments._report_harness_failed({
         "harness_failed": {"t01": {"exit_code": 1, "stderr": "no trace",
@@ -235,7 +235,7 @@ def test_the_empty_trace_case_is_reported_once_not_twice(monkeypatch):
 def test_an_old_record_without_a_reason_does_not_get_one_invented(monkeypatch):
     """早于 `reason` 字段的记录里没有它。那时**不能编**一个原因出来 —— 说"没记录原因"
     比说错一个原因好,这和整个平台"只说知道的事"是同一条规矩。"""
-    from harnessgrad import environments
+    from harnessgrad.orchestration import environments
     said = _said(monkeypatch)
     environments._report_harness_failed({
         "harness_failed": {"t01": {"exit_code": 1, "stderr": "boom"}}},

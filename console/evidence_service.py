@@ -4,8 +4,8 @@ import os
 import re
 import threading
 
-from harnessgrad import evidence, evidence_export
-from harnessgrad.receipt_verification import ReceiptStore, ReceiptLimitExceeded, safe_id
+from harnessgrad.evidence_reports import evidence, evidence_export
+from harnessgrad.evidence_reports.receipt_verification import ReceiptStore, ReceiptLimitExceeded, safe_id
 
 
 def _setting(name, default):

@@ -11,7 +11,9 @@ import sys
 
 import pytest
 
-from harnessgrad import native_judge_identity as judge, dataset_runtime_identity as identity, verification_context
+from harnessgrad.datasets import runtime_identity as identity
+from harnessgrad.provenance import native_judge_identity as judge
+from harnessgrad.provenance import verification_context
 from data.scaffolds import native_harbor as native
 from data.scaffolds.native_harbor_runtime import verify, harbor_entry
 from test_native_harbor_python_identity import artifact
@@ -151,7 +153,7 @@ def test_child_validates_selected_model_before_harbor_import(job,monkeypatch):
 
 
 def test_method_projection_reuses_public_identity_and_keeps_gold(job,monkeypatch,tmp_path):
-    from harnessgrad.channel import _stage_task_context
+    from harnessgrad.experiment.channel import _stage_task_context
     task,spec,_,_=capture(job,monkeypatch)
     source=deepcopy(spec)
     work=tmp_path/'method';work.mkdir()
@@ -271,7 +273,7 @@ def test_actual_h0_and_context_follow_prepared_judge_not_ambient_changes(tmp_pat
 
 def test_export_keeps_endpoint_identity_private_and_detects_context_change(job,monkeypatch,tmp_path):
     import importlib.util
-    from harnessgrad import evidence_export
+    from harnessgrad.evidence_reports import evidence_export
     fixtures_path=Path(__file__).with_name('test_evidence_export.py')
     loader=importlib.util.spec_from_file_location('authored_export',fixtures_path)
     fixture=importlib.util.module_from_spec(loader);loader.loader.exec_module(fixture)

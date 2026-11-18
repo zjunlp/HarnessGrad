@@ -7,8 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import policies, scoring_identity as scoring, verification_context as vc
-from harnessgrad.records import _curve_point
+from harnessgrad.experiment import policies
+from harnessgrad.provenance import scoring_identity as scoring, verification_context as vc
+from harnessgrad.experiment.records import _curve_point
 from harnessgrad.loops.eval_side import _baseline_block, _resume_mismatch
 from tools import prepare_h0
 
@@ -84,6 +85,16 @@ def test_disabled_enabled_and_mixed_comparisons(reference, current, expected):
     reference = identity(reference) if reference else None
     current = identity(current) if current else None
     assert bool(scoring.problems(reference, current)) is expected
+
+
+def test_changed_scorer_bytes_do_not_claim_a_judge_or_protocol_change():
+    before = scoring.create({'metric': 'synthetic.v1', 'scorer_sha256': 'a' * 64})
+    after = scoring.create({'metric': 'synthetic.v1', 'scorer_sha256': 'b' * 64})
+    errors = scoring.problems(before, after)
+    assert len(errors) == 1 and 'scoring_identity changed' in errors[0]
+    assert 'judge' not in errors[0] and 'endpoint' not in errors[0]
+    with pytest.raises(ValueError, match='comparability is unknown'):
+        scoring.require_same(before, after)
 
 
 def test_points_keep_legacy_shape_and_record_enabled_profiles():

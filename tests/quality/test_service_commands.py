@@ -12,7 +12,7 @@ import pytest
 from data.scaffolds import registry
 from eval.containers import container
 from eval.service import services
-from harnessgrad.environments import _env_record, _resolve_envs
+from harnessgrad.orchestration.environments import _env_record, _resolve_envs
 
 ROOT = Path(__file__).resolve().parents[2]
 PIN = "sha256:" + "a" * 64

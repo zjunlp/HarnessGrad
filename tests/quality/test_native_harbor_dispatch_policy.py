@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from data.scaffolds import registry, runtime_extensions
-from harnessgrad import dataset_runtime as runtime
-from harnessgrad import dataset_runtime_identity as identity
+from harnessgrad.datasets import runtime
+from harnessgrad.datasets import runtime_identity as identity
 
 DATASETS = ('deepswe','jobbench','swe_bench_pro')
 
@@ -23,7 +23,7 @@ def bound_spec(dataset):
                'role':'verifier','runtime_id':'a'*64,'manifest_path':str(Path(venv).parent/'artifact.json'),
                'path':venv,'python':venv+'/bin/python','runtime_paths':[venv,'/authored/base']}
     entry = Path(runtime_extensions.__file__).resolve().with_name('native_harbor_runtime')/'harbor_entry.py'
-    from harnessgrad.native_judge_identity import selection
+    from harnessgrad.provenance.native_judge_identity import selection
     return {**({'native_judge_identity':selection()['judge_identity']} if dataset=='jobbench' else {}),
             'kind':'command','argv':[binding['python'],'-I','-B',str(entry)],
             'python_runtime':binding,'runtime_paths':list(binding['runtime_paths']),

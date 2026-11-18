@@ -100,7 +100,7 @@ def _execution_runtime():
     The manager inventories the venv and base executable; host libraries and the
     base standard library remain compatibility inputs.
     """
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     selected = dataset_runtime.resolve_execution("tau3_bench")
     override = os.environ.get("HG_DATA_TAU3_BENCH_RUNTIME")
     if override and Path(override).resolve() != Path(selected["path"]).resolve():
@@ -109,7 +109,7 @@ def _execution_runtime():
 
 
 def _setup(tid, row):
-    from harnessgrad.dataset_runtime import bind
+    from harnessgrad.datasets.runtime import bind
     runtime = _execution_runtime()
     public = (DATASET_ROOT / row['path'] / 'public.json').read_bytes()
     if hashlib.sha256(public).hexdigest() != row['public_sha256']:
@@ -158,7 +158,7 @@ def _python_runtime(runtime):
 
 
 def _verify(tid, row):
-    from harnessgrad.dataset_runtime import bind
+    from harnessgrad.datasets.runtime import bind
     runtime = _execution_runtime()
     python, runtime_paths = runtime["python"], runtime["runtime_paths"]
     inputs = [{'path': 'tau3_code', 'from': str(ASSETS), 'immutable': True},

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from harnessgrad.bubblewrap import executable as bubblewrap_executable
+from harnessgrad.execution.bubblewrap import executable as bubblewrap_executable
 
 
 def environment(directory: Path, inherited: dict | None) -> dict:

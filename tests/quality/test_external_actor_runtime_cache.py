@@ -238,7 +238,7 @@ def test_direct_run_one_rechecks_after_execution(installed, monkeypatch):
 def test_h0_lookup_and_verification_bind_external_evidence(installed, tmp_path):
     from tools import prepare_h0
     from test_prepare_h0 import _write_run
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     repo, dependency, _, _ = installed
     current = external.identities(repo)
     config = {'dataset': 'synthetic', 'agent_model': 'fixture', 'agent_backend': 'mock',
@@ -271,7 +271,7 @@ def test_h0_lookup_and_verification_bind_external_evidence(installed, tmp_path):
 def test_fresh_h0_validation_does_not_promote_noncacheable_to_reuse(tmp_path, monkeypatch):
     from tools import prepare_h0
     from test_prepare_h0 import _write_run
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     repo = tmp_path / 'repo'; repo.mkdir()
     (repo / 'harness.json').write_text('{"name":"fixture"}')
     identity = {'kind': 'openclaw', 'cacheable': False, 'installation_sha256': 'x' * 64}

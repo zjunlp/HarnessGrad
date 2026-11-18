@@ -11,7 +11,7 @@ import pytest
 from eval.observe.tracing import _last_usage
 from eval.run import runner
 from eval.service.http_observation import HTTPObservation
-from harnessgrad.records import _cost_of
+from harnessgrad.experiment.records import _cost_of
 from test_unknown_harness_usage import broker_report, finish, parsed
 
 

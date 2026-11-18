@@ -384,7 +384,7 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
         selected_runtime = None
         launch_options = {}
         if "python_runtime" in decl:
-            from harnessgrad.dataset_runtime import admit_binding
+            from harnessgrad.datasets.runtime import admit_binding
             from eval.containers import python_service
             if not isinstance(decl.get("python"), str):
                 raise ValueError("bound Python service requires an explicit interpreter")

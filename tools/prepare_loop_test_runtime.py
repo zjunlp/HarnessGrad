@@ -24,7 +24,8 @@ def main():
     os.environ['HG_REVIEWED_ENVIRONMENT_ONLY'] = '1'
     if args.wheelhouse:
         os.environ['HG_HARNESS_WHEELHOUSE'] = str(args.wheelhouse.resolve())
-    from harnessgrad import config, python_exec_runtime
+    from harnessgrad import config
+    from harnessgrad.execution.python_runtime import python_exec_runtime
     config.reset()
     result = python_exec_runtime.prepare(ROOT / 'base_harness/loop', build=True,
         root=args.store.resolve(), allow_downloads=args.allow_downloads)

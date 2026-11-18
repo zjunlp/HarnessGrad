@@ -2,6 +2,8 @@
 import json
 import shutil
 import subprocess
+import sys
+import sysconfig
 from pathlib import Path
 
 import pytest
@@ -113,8 +115,34 @@ print('Offline fixture process verified selected source and public run evidence.
 '''
 
 
+@pytest.fixture(scope='module')
+def sandbox_python(tmp_path_factory):
+    """Use a supported interpreter without exposing its installed site packages."""
+    system = Path('/usr/bin/python3')
+    probe = subprocess.run([str(system), '-c', 'import sys; raise SystemExit(sys.version_info < (3, 12))'],
+                           capture_output=True, timeout=10) if system.is_file() else None
+    if probe is not None and probe.returncode == 0:
+        return str(system), []
+    runtime = tmp_path_factory.mktemp('sandbox-python') / 'runtime'
+    binary = runtime / 'bin/python'
+    binary.parent.mkdir(parents=True)
+    shutil.copy2(Path(sys.executable).resolve(), binary)
+    version = f'{sys.version_info.major}.{sys.version_info.minor}'
+    lib = runtime / 'lib'
+    lib.mkdir()
+    shutil.copytree(Path(sysconfig.get_path('stdlib')), lib / ('python' + version), symlinks=True,
+                    ignore=shutil.ignore_patterns('site-packages', '__pycache__', '*.pyc', 'test', 'tests', 'ensurepip'))
+    # Some Python builds use a shared libpython; copy only matching runtime libraries.
+    source_lib = Path(sys.base_prefix) / 'lib'
+    for path in source_lib.glob('libpython' + version + '.so*'):
+        if path.is_file():
+            shutil.copy2(path, lib / path.name, follow_symlinks=True)
+    return '/runtime/bin/python', ['--ro-bind', str(runtime), '/runtime',
+                                   '--setenv', 'LD_LIBRARY_PATH', '/runtime/lib']
+
+
 @pytest.mark.parametrize('mode', ['current', 'history', 'explicit', 'none', 'dream'])
-def test_real_bwrap_fake_cli_source_and_channel(tmp_path, mode):
+def test_real_bwrap_fake_cli_source_and_channel(tmp_path, mode, sandbox_python):
     """Execute the complete proposer path with platform/private trees unmounted."""
     if not shutil.which('bwrap'):
         pytest.skip('bubblewrap is unavailable')
@@ -135,7 +163,7 @@ def test_real_bwrap_fake_cli_source_and_channel(tmp_path, mode):
             '/code/eval/ckpt/bun_dependencies.py',
             '--bind', str(work), '/work', '--chdir', '/work',
             '--setenv', 'HOME', '/work', '--setenv', 'PATH', '/usr/bin:/bin',
-            '/usr/bin/python3', '/work/runner.py', mode]
+            *sandbox_python[1], sandbox_python[0], '-I', '-B', '/work/runner.py', mode]
     result = subprocess.run(argv, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout.strip().splitlines()[-1])['private_visible'] is False

@@ -14,7 +14,7 @@ import pytest
 from eval.policy.appworld_reporting import (
     TGC_METRIC, build_report, make_manifest, receipts_from_verdicts,
 )
-from harnessgrad.records import _save_verdicts
+from harnessgrad.experiment.records import _save_verdicts
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -172,8 +172,8 @@ def test_trusted_adapter_exports_only_selected_public_facts_and_verify_split():
     # that is the adapter fact this assertion is really about.
     namespace.update(ASSETS=ROOT / "data/datasets/appworld", VERIFIER_IMAGE="fabricated-image",
                      _RUN_IDS=[row["task_id"] for row in selected])
-    verifier = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == '_verifier')
-    exec(compile(ast.Module(body=[verifier], type_ignores=[]), 'fabricated_verifier', 'exec'), namespace)
+    verifier = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_verifier")
+    exec(compile(ast.Module(body=[verifier], type_ignores=[]), "fabricated_verifier", "exec"), namespace)
     specs = eval(compile(ast.Expression(declaration), "fabricated_verify", "eval"), namespace)
     argv = specs["selected_1"]["argv"]
     assert argv[argv.index("--source-split") + 1] == "dev"
@@ -253,7 +253,7 @@ def test_saved_evidence_supports_reusable_cli_without_dataset_access(tmp_path):
     selected = tmp_path / "manifest.json"
     selected.write_text(json.dumps(manifest))
     out = tmp_path / "report.json"
-    command = [sys.executable, str(ROOT / "tools/report_appworld.py"),
+    command = [sys.executable, str(ROOT / "tools/analysis/report_appworld.py"),
                "--manifest", str(selected), "--verdicts", str(verdict_dir),
                "--trials", "2", "--out", str(out)]
     proc = subprocess.run(command, capture_output=True, text=True, cwd=tmp_path, timeout=10)
@@ -267,3 +267,34 @@ def test_saved_evidence_supports_reusable_cli_without_dataset_access(tmp_path):
     before = out.read_bytes()
     proc = subprocess.run(command, capture_output=True, text=True, cwd=tmp_path, timeout=10)
     assert proc.returncode != 0 and out.read_bytes() == before
+
+
+def test_verification_context_commits_selected_image_and_split_without_exposing_values():
+    """Source-only control: no AppWorld adapter import, dataset or Docker."""
+    from harnessgrad.provenance import verification_context
+
+    tree = ast.parse((ROOT / 'data/datasets/appworld.py').read_text())
+    verifier = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == '_verifier')
+    image_a = 'synthetic/image@sha256:' + 'a' * 64
+    image_b = 'synthetic/image@sha256:' + 'b' * 64
+    tid = 'synthetic_1'
+    namespace = {'ASSETS': ROOT / 'data/datasets/appworld',
+                 'VERIFIER_IMAGE': image_a, '_ROWS': {tid: {'split': 'dev'}}}
+    exec(compile(ast.Module(body=[verifier], type_ignores=[]), 'authored_verifier', 'exec'), namespace)
+    task = {'task_id': tid, 'goal': 'SYNTHETIC_PRIVATE_GOAL'}
+
+    def capture():
+        return verification_context.capture([task], {tid: 'synthetic'},
+            verifiers={tid: namespace['_verifier'](tid)}, sandbox=False)
+
+    first = capture()
+    assert first == capture()
+    namespace['VERIFIER_IMAGE'] = image_b
+    changed_image = capture()
+    assert verification_context.problems(first, changed_image) == ['verification_context changed']
+    namespace['VERIFIER_IMAGE'] = image_a
+    namespace['_ROWS'][tid]['split'] = 'test_normal'
+    changed_split = capture()
+    assert verification_context.problems(first, changed_split) == ['verification_context changed']
+    assert image_a not in json.dumps(first) and image_b not in json.dumps(changed_image)
+    assert task['goal'] not in json.dumps(first)

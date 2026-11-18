@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from driver import ResumeNothingToDo, ResumeRefused, _resume_train_state
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 
 
 def _ctx():
@@ -273,7 +273,7 @@ def test_run_meta_keeps_the_platform_the_curve_began_on(tmp_path: Path) -> None:
     and the write happens before `--resume` reads the record -- so the guard compared the new
     value with itself and let a run whose recorded sha was `deadbeef` continue silently.
     """
-    from harnessgrad.records import _write_run_meta
+    from harnessgrad.experiment.records import _write_run_meta
 
     run_dir = tmp_path / "runs" / "r"
     run_dir.mkdir(parents=True)

@@ -73,7 +73,7 @@ def _check_managed_source(root: Path) -> None:
     # Git initialisation writes .gitignore before runtime preparation. Reject
     # aliases now, while generated local environments remain outside source.
     if has_python_runtime(root):
-        from harnessgrad.python_harness_runtime import source_fingerprint
+        from harnessgrad.execution.python_runtime.python_harness_runtime import source_fingerprint
         source_fingerprint(root)
 
 

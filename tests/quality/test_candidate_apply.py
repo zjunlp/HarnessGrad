@@ -297,7 +297,7 @@ def test_a_bad_candidate_is_unmeasured_not_scored_zero(tmp_path, manifest):
 ])
 def test_rejected_candidate_copy_preserves_evidence_without_admitting_runtime(tmp_path, manifest):
     from eval.ckpt import source_tree
-    from harnessgrad.records import _save_round_state
+    from harnessgrad.experiment.records import _save_round_state
 
     source = tmp_path / "candidate"
     source.mkdir()
@@ -333,7 +333,7 @@ def test_rejected_candidate_copy_preserves_evidence_without_admitting_runtime(tm
 
 @pytest.mark.parametrize("manifest", [b'["not a manifest"]', b"\xff"])
 def test_invalid_manifest_does_not_break_candidate_code_diagnostics(tmp_path, manifest):
-    from harnessgrad import code_metrics
+    from harnessgrad.core import code_metrics
 
     (tmp_path / "harness.json").write_bytes(manifest)
     (tmp_path / "agent.py").write_text("print('source only')\n")

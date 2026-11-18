@@ -12,9 +12,9 @@ from pathlib import Path
 import sys
 from typing import Protocol
 
-import tools.run_summary as run_summary
-from harnessgrad.completion import describe
-from harnessgrad.records import _write_run_meta
+from harnessgrad.evidence_reports import run_summary
+from harnessgrad.experiment.completion import describe
+from harnessgrad.experiment.records import _write_run_meta
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class SummaryWriteNotices:
 
     A finished run announces the page with `console.artifact`, beside `curve`, `workspace`
     and `events`, so a fresh write's "wrote <path>" line would print the same fact twice.
-    Everything else is forwarded to stderr: `tools/run_summary.py` promises that replacing
+    Everything else is forwarded to stderr: `tools/analysis/run_summary.py` promises that replacing
     a *different* earlier summary is never silent, and finishing an earlier run with
     `--resume` is exactly the path that can hit it.
     """

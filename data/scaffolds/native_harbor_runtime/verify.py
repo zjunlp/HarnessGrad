@@ -74,7 +74,7 @@ def export_artifacts(payload,root):
 def _execute_harbor(entry,request_path,response,env,timeout_s,*,entrypoint=None):
     """Selected-process boundary; entrypoint injection is for authored controls only."""
     from data.scaffolds.native_harbor_runtime.python_runtime import admit
-    from harnessgrad.native_judge_identity import admit_selection
+    from harnessgrad.provenance.native_judge_identity import admit_selection
     if 'judge_identity' in entry:admit_selection(entry)
     admit(entry)
     process=subprocess.Popen([entry['harbor_python'],'-I','-B',
@@ -115,7 +115,7 @@ def run(spec,artifact_root,*,task_id,run_id,trial_id,timeout_s):
         if spec.get('python_runtime') != case['runtime']['harbor_runtime']:
             raise ValueError('native Harbor verifier binding differs from private selected case')
         if case['dataset']=='jobbench':
-            from harnessgrad.native_judge_identity import admit_selection
+            from harnessgrad.provenance.native_judge_identity import admit_selection
             admit_selection(case['runtime'])
             if spec.get('native_judge_identity') != case['runtime']['judge_identity']:
                 raise ValueError('JobBench judge declaration differs from the selected private case')

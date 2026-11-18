@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 
 
 def test_real_child_environment_is_phase_limited(monkeypatch, tmp_path):

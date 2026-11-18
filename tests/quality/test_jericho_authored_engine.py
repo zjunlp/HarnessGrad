@@ -116,7 +116,7 @@ def test_authored_program_calls_native_engine_and_matches_public_projection(tmp_
     store = os.environ.get('HG_TEST_JERICHO_RUNTIME_ROOT')
     if not store:
         pytest.skip('set HG_TEST_JERICHO_RUNTIME_ROOT to a prepared external artifact')
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     runtime = resolve_execution('jericho', root=store)
     (tmp_path / 'authored.z3').write_bytes(_authored_story())
     receipts = []

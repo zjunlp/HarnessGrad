@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from eval.run.runner import timeout_verdict          # noqa: E402
-from harnessgrad.records import _curve_point          # noqa: E402
+from harnessgrad.experiment.records import _curve_point          # noqa: E402
 
 
 def test_the_verifiers_own_timeout_verdict_is_a_score():

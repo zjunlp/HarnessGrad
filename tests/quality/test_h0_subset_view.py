@@ -8,9 +8,10 @@ import sys
 
 import pytest
 
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 from harnessgrad.orchestration import h0
 from harnessgrad.orchestration.h0_subset import materialize_subset
+from harnessgrad.provenance import measurement_components
 from test_h0_planning import control, donor
 
 
@@ -63,6 +64,35 @@ def test_forty_task_original_has_exact_selected_view(control, tmp_path, size):
     assert shared.point['h0_subset_view']['new_evaluation_trials'] == 0
     assert shared.point['h0_subset_view']['source_files_sha256']['h0.json']
     assert before == {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+
+
+def test_subset_checks_independent_measurement_components(control, tmp_path):
+    root, ids, context = prepared(tmp_path, control)
+    bundle = {'data_source': measurement_components.data_source('synthetic', origin='source', revision='v1'),
+              'loader': measurement_components.implementation('loader', {'provider': 'a' * 64}),
+              'scorer': measurement_components.implementation('scorer', {'verify': 'b' * 64})}
+    for filename in ('curve.jsonl', 'run_meta.json', 'h0.json'):
+        path = root / filename
+        value = json.loads(path.read_text())
+        value['measurement_components'] = bundle
+        if filename == 'h0.json':
+            value['base']['measurement_components'] = bundle
+        path.write_text(json.dumps(value) + ('\n' if filename.endswith('jsonl') else ''))
+    work, manifest, options, identities, attribution, _ = control
+    selected = ids[:16]
+    identities = replace(identities, verification=verification_context.project(context, selected), measurement=bundle)
+    def load():
+        return h0.load_h0_donor('donor', tmp_path, 'owned-sha')
+    shared = materialize_subset(load(), work, 'owned-sha', manifest, attribution, options,
+                                identities, selected, setups={}, envs={})
+    assert shared.point['measurement_components'] == bundle
+    metadata = root / 'run_meta.json'
+    value = json.loads(metadata.read_text())
+    del value['measurement_components']
+    metadata.write_text(json.dumps(value))
+    with pytest.raises(h0.H0Refused, match='measurement_components missing'):
+        materialize_subset(load(), work, 'owned-sha', manifest, attribution, options,
+                           identities, selected, setups={}, envs={})
 
 
 @pytest.mark.parametrize('damage', ['context', 'score', 'trace', 'verdict', 'source', 'envelope', 'runtime'])

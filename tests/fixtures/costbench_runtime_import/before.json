@@ -1,0 +1,21 @@
+{
+  "files": {
+    "execution.py": "75618afaf4259e820120a9662fad8a93698ba2000de5020dbbf42babfa3b1c38",
+    "prepare_controller.py": "0268b44d3c62b24bf23526b81b70f4325bce81be97f788cb5dec016b37dd818a"
+  },
+  "preparation_source_sha256": "bb14d3e144ede97350206ac58d8dc9d3c04ef5d21956314c99727181a0303a51",
+  "unchanged": {
+    "lib/dynamic_scoring.py": "37168fc617e82003503e843af022e7c55c5184f3a19e6651a3d4ed609cd4139e",
+    "lib/scoring.py": "b2ff120aad82557ff3896c2503664b82d0ae83a170c6b34a66a202a75f4a3cb3",
+    "report.py": "1299dec678c3162ce55f8f8b90719e43fef6baacfb3965e02dc396dcdac96ef0",
+    "source-files.json": "f9137ff0c9bf45a60287d1e19b74000f711d716e5b25a4547847303df890e383",
+    "verify/check.py": "e0cb8dcacee8a3aecf261fcaf55771be26a7792352c2216e9e4d85f51cb96c22"
+  },
+  "verification_context": {
+    "sha256": "4595b733349e37b6a836a760d4e40b88a70bbe5aa5773fd5ad73bd3d998c72d5",
+    "tasks": {
+      "authored/cost": "0405f9852da570ac283162f2f6695aae074e74a620d67954c4be72c58f1cac27"
+    },
+    "version": 1
+  }
+}

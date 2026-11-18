@@ -1,0 +1,30 @@
+{
+  "math": {
+    "profile": {
+      "metric": "math-verify-0.9.0-last-boxed",
+      "source_sha256": {
+        "data/datasets/math.py": "61531f6384ebe26685e544b4511da849d635057672400d06dadb7eb3661692ef",
+        "data/scaffolds/native_qa/__init__.py": "1fe4f0ab12486ad41ea825dbe3892fbd62eee3e207460a2b1f8c17f4f976e7a3",
+        "data/scaffolds/native_qa/check.py": "f7916e295a1258fce62d9aee07ca5092511b0439f93ac222bf9dea03181a272f",
+        "data/scaffolds/native_qa/math_grade.py": "49b9a3c12a8b74b1bafedafa7a9ae1807abee09448d25f59a24d7b6311bc08e4",
+        "data/scaffolds/native_qa/scoring.py": "bb13cea19fb34fd8b0cf0c80537d596ebbb6e955f9c794eec1b65f04a03ad1f4"
+      }
+    },
+    "sha256": "368364e6454ea425f2a7b83602e66a9f86d7b728131bde0e4b510a3f05f9297d",
+    "version": 1
+  },
+  "math500": {
+    "profile": {
+      "metric": "math-verify-0.9.0-last-boxed",
+      "source_sha256": {
+        "data/datasets/math500.py": "b180dfc32591423c34cbf8e98deff4dcdf01aa1b66002fad7b1c5c582596738e",
+        "data/scaffolds/native_qa/__init__.py": "1fe4f0ab12486ad41ea825dbe3892fbd62eee3e207460a2b1f8c17f4f976e7a3",
+        "data/scaffolds/native_qa/check.py": "f7916e295a1258fce62d9aee07ca5092511b0439f93ac222bf9dea03181a272f",
+        "data/scaffolds/native_qa/math_grade.py": "49b9a3c12a8b74b1bafedafa7a9ae1807abee09448d25f59a24d7b6311bc08e4",
+        "data/scaffolds/native_qa/scoring.py": "bb13cea19fb34fd8b0cf0c80537d596ebbb6e955f9c794eec1b65f04a03ad1f4"
+      }
+    },
+    "sha256": "c8a319d05f412be58a7ec272a43dcc0a651166ccef409e62ca72dc6b7c27d468",
+    "version": 1
+  }
+}

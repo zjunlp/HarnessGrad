@@ -25,8 +25,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
 
-import dataset_lint  # noqa: E402
-import new_dataset  # noqa: E402
+from tools.dataset_maintenance import dataset_lint  # noqa: E402
+from tools.dataset_maintenance import new_dataset  # noqa: E402
 from data.scaffolds import command_control  # noqa: E402
 from data.scaffolds import registry  # noqa: E402
 

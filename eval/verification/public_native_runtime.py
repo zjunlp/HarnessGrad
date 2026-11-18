@@ -16,7 +16,7 @@ import tempfile
 
 from data.scaffolds.public_native import DATASETS, PROFILE, ROOT, identity
 from eval.containers import sandbox
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 class PublicRuntime:

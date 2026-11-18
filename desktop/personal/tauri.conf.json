@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HarnessGrad",
+  "version": "0.1.0",
+  "identifier": "org.harnessgrad.personal",
+  "build": { "frontendDist": "assets" },
+  "app": { "windows": [], "withGlobalTauri": true,
+    "security": { "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; style-src 'self'; img-src 'self' data:; script-src 'self'",
+      "capabilities": [{ "identifier": "personal-window", "windows": ["personal"],
+        "remote": {"urls": ["http://127.0.0.1:*"]}, "permissions": ["core:default", "allow-window-action"] }]
+    }
+  },
+  "bundle": { "active": false }
+}

@@ -1,0 +1,43 @@
+{
+  "spreadsheetbench": {
+    "profile": {
+      "formula_runtime": "task-bound verified host installation; private bubblewrap conversion; not hermetic",
+      "metric": "spreadsheetbench.verified_400.named_cells.v1",
+      "per_task_unit": "one released workbook variant",
+      "platform_aggregation": "unweighted mean of measured workbook rewards",
+      "source_sha256": {
+        "data/datasets/spreadsheetbench.py": "f4e43a550a441bfeb90439b172dad4867affe1c50c7dc7b4f37548d4198a5036",
+        "data/datasets/spreadsheetbench/execution-runtime.json": "419008c3a2bb3ffb2f3df78ddafc8ae70e4ed3b1452bd879b50f057b9a8e2c1b",
+        "data/datasets/spreadsheetbench/requirements.lock": "656bd29e73c6119045c1faf63867cbed0f1831e75a574cd36cf9a585bbe2ba5d",
+        "data/datasets/spreadsheetbench/verify/check.py": "03ada902e6f4f88b14ad44710381b6b9ffebb77964ea1fb87125c77c72ac43eb",
+        "data/scaffolds/scorer_input.py": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+        "data/scaffolds/spreadsheet_runtime/actor.py": "eae7b6fdca6527e31a683bb0819a833c3cf7edf356b0109f98a016a7b8063d70",
+        "data/scaffolds/spreadsheet_runtime/native.py": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d"
+      }
+    },
+    "sha256": "d873ba3c78692d5f57713e3771936ba5c2e837612bf2750b6b72652c09d826c2",
+    "version": 1
+  },
+  "spreadsheetbench2": {
+    "profile": {
+      "formula_runtime": "task-bound verified host installation; private bubblewrap UNO; not hermetic",
+      "metric": "spreadsheetbench2.official.accuracy",
+      "per_task_unit": "one official v2 workbook",
+      "platform_aggregation": "unweighted mean of measured workbook accuracies",
+      "source_sha256": {
+        "data/datasets/spreadsheetbench2.py": "1f1becfdcff98e62f8c5b817dce5770e898791cf95d686c23b0e102dcd147f3d",
+        "data/datasets/spreadsheetbench2/PROVENANCE.json": "86c910f6c21f0759c4d825058e07957a0cb577df95ad71f8f82fe97991b86d2e",
+        "data/datasets/spreadsheetbench2/execution-runtime.json": "13c7224eeac08102b333806f0bd10c4789a23f785ab4fa5351bd3ab916e7df7e",
+        "data/datasets/spreadsheetbench2/requirements.lock": "c1797be62d50446a2141622d63cc46d5fa6ea33536aec2ddf73e2d3e54751ee7",
+        "data/datasets/spreadsheetbench2/verify/check.py": "0078a0350a671b5045e8b4ed1dfaff9b5644766a74d011c284cf128e1c416e5c",
+        "data/datasets/spreadsheetbench2/verify/evaluation.py": "04a2a75b29805ab40efe93e202384c365d1d32b9c924c1a4aed56e41249facb0",
+        "data/datasets/spreadsheetbench2/verify/open_spreadsheet.py": "9f50ca883067c99dbd254f2b6620dd97157c1f56ae24e0ec692d30813a82dba1",
+        "data/scaffolds/scorer_input.py": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+        "data/scaffolds/spreadsheet_runtime/actor.py": "eae7b6fdca6527e31a683bb0819a833c3cf7edf356b0109f98a016a7b8063d70",
+        "data/scaffolds/spreadsheet_runtime/native.py": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d"
+      }
+    },
+    "sha256": "823d7e1850e2dbaf34650e48b7dc411539d14b709dea05c260b82b0a78e80406",
+    "version": 1
+  }
+}

@@ -3,7 +3,7 @@ import importlib.util,json,os,pathlib,subprocess,tempfile,threading,http.server
 repo=pathlib.Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('prep',repo/'data/datasets/gaia/prepare.py');p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
 assert os.environ.get('HG_DATASET_RUNTIME_ROOT'), 'set an explicitly prepared native_qa runtime root'
-from harnessgrad import dataset_runtime as d
+from harnessgrad.datasets import runtime as d
 runtime=d.resolve_execution('native_qa');root=pathlib.Path(tempfile.mkdtemp(prefix='gaia-managed-control-'));src=root/'http';src.mkdir()
 row={'task_id':'authored','Question':'Synthetic question','Level':1,'Final answer':'42','file_name':'fixture.txt','file_path':'2023/validation/fixture.txt','Annotator Metadata':{'Steps':'PRIVATE'}}
 request={'root':str(src),'row':row}

@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import code_metrics  # noqa: E402
+from harnessgrad.core import code_metrics  # noqa: E402
 
 
 def _harness(tmp_path: Path, files: dict[str, str], *, entry: str = "agent.py") -> Path:
@@ -225,3 +225,11 @@ emit({{"steps": 1, "changed": True, "generation_tokens": 7}})
     assert "added_but_never_called" in added, code
     assert code["unreachable_modules"] == ["orphan_module.py"], code
     assert points[1]["score"] == 0.0, "诊断不是分数:它不该改变这一轮的分数"
+
+
+def test_legacy_import_refuses_and_canonical_path_owns_implementation():
+    import importlib
+    import pytest
+    with pytest.raises(ImportError, match='harnessgrad.core.code_metrics'):
+        importlib.import_module('harnessgrad.code_metrics')
+    assert code_metrics.__name__ == 'harnessgrad.core.code_metrics'

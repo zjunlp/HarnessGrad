@@ -6,7 +6,8 @@ from pathlib import Path
 import shutil
 import sys
 
-from harnessgrad import python_exec_runtime, task_python
+from harnessgrad.execution.python_runtime import python_exec_runtime
+from harnessgrad.datasets import task_python
 
 
 def _files_python() -> str:

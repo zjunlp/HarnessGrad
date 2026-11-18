@@ -3,7 +3,8 @@ import copy
 
 import pytest
 
-from harnessgrad import evidence_stats, verification_context
+from harnessgrad.evidence_reports import evidence_stats
+from harnessgrad.provenance import verification_context
 
 
 @pytest.fixture

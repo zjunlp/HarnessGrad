@@ -49,7 +49,7 @@ template and explicitly prepare its dependencies in an external store:
 ```bash
 HG_LOOP_TEMPLATE="$(python -c 'from importlib.resources import files; print(files("base_harness").joinpath("loop"))')"
 python -m tools.configure_harness --harness "$HG_LOOP_TEMPLATE" --fetch
-python -m tools.check_first_use --output-root "$HOME/.local/share/harnessgrad/install-checks"
+python -m tools.diagnostics.check_first_use --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
 Preparation may download locked wheels; the checker performs no installation or
@@ -65,7 +65,7 @@ HG_INSTALL_RUN="install-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')
 HG_AGENT_BACKEND=mock harnessgrad run --preset quickstart --improver none \
   --run-id "$HG_INSTALL_RUN" --runs-root "$HOME/harnessgrad-runs" \
   --work-root "$HOME/harnessgrad-work" --fail-on-incomplete
-python -m tools.run_summary "$HOME/harnessgrad-runs/$HG_INSTALL_RUN"
+python -m tools.analysis.run_summary "$HOME/harnessgrad-runs/$HG_INSTALL_RUN"
 ```
 
 The observation command above uses this same result root. These are synthetic

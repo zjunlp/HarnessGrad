@@ -74,7 +74,8 @@ def test_exact_review_only_addition_is_recorded_without_changing_runtime(path):
 
 
 @pytest.mark.parametrize("path", [
-    "eval/container.py", "eval/container_state.py", "data/datasets/gaia/verify/check.py",
+    "eval/container.py", "eval/container_state.py", "eval/verifier.py", "eval/runner.py",
+    "data/datasets/gaia/verify/check.py",
     "eval/gaia_snapshot_attestation.py", "docs/runtime-input.md",
     "tests/runtime_control.py", "data/datasets/gaia/cli/ask", "unknown-runtime.txt",
 ])
@@ -359,3 +360,37 @@ def test_runner_snapshot_failures_are_invalid_and_attempt_owned_teardown(
         assert "commit" not in events
     if failure_stage == "commit":
         assert events.index("stop") < events.index("inspect") < events.index("commit")
+
+
+def test_command_control_import_migration_changes_source_identity_only():
+    import hashlib
+    root = Path(__file__).resolve().parents[2]
+    before = json.loads((root / 'tests/fixtures/command_control_runtime_import/before.json').read_text())
+    raw = (root / 'data/scaffolds/command_control.py').read_bytes()
+    after = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+    assert after != before['git_blob_sha1']
+    reference = source()
+    candidate = deepcopy(reference)
+    path = 'data/scaffolds/command_control.py'
+    reference['files'][path]['oid'] = before['git_blob_sha1']
+    candidate['files'][path]['oid'] = after
+    report = attestation.attest_compatibility(reference, candidate, runtime(), runtime())
+    assert report['runtime_changed_paths'] == [path]
+    assert report['compatible'] is False
+    assert report['evidence_reusable'] is False
+
+
+def test_gaia_preparation_import_changes_full_source_tree_identity():
+    import hashlib
+    root = Path(__file__).resolve().parents[2]
+    old = json.loads((root / 'tests/fixtures/gaia_preparation_runtime_import/before.json').read_text())
+    reference, candidate = source(), source()
+    for path, declaration in old.items():
+        raw = (root / path).read_bytes()
+        current = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+        assert current != declaration['git_blob_sha1']
+        reference['files'][path] = {'mode': '100644', 'oid': declaration['git_blob_sha1']}
+        candidate['files'][path] = {'mode': '100644', 'oid': current}
+    report = attestation.attest_compatibility(reference, candidate, runtime(), runtime())
+    assert report['runtime_changed_paths'] == sorted(old)
+    assert report['compatible'] is False and report['evidence_reusable'] is False

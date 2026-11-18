@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_authored_bundle_uses_isolated_worker_and_binds_preparation(tmp_path, monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     root = tmp_path / 'dataset'
     bundle = root / '_src/data-0.1.0.bundle'
     bundle.parent.mkdir(parents=True)
@@ -161,13 +161,13 @@ def test_authored_bundle_uses_isolated_worker_and_binds_preparation(tmp_path, mo
 
 
 def test_runtime_manifest_has_complete_exact_pins():
-    from harnessgrad.dataset_runtime import execution_descriptor
+    from harnessgrad.datasets.runtime import execution_descriptor
     spec = execution_descriptor('appworld')
     assert spec['pins'] == {'cryptography': '42.0.5', 'cffi': '2.1.1', 'pycparser': '2.21'}
 
 
 def test_unprepared_catalog_load_is_read_only_and_requires_explicit_preparation(tmp_path, monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     root = tmp_path / 'unprepared'
     root.mkdir()
     monkeypatch.setenv('HG_DATA_APPWORLD', str(root))

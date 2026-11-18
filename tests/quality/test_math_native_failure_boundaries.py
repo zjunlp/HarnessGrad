@@ -16,7 +16,7 @@ def test_real_math_failure_boundaries_from_cold_platform(tmp_path):
     store = os.environ.get('HG_TEST_MATH_RUNTIME_ROOT')
     if not store:
         pytest.skip('set HG_TEST_MATH_RUNTIME_ROOT to an explicitly prepared Math execution store')
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     status = dataset_runtime.check_execution('math', root=Path(store))
     if not status['present'] and status['status'] == 'unavailable':
         pytest.skip('selected Math execution artifact is absent; prepare it explicitly outside this test')

@@ -194,7 +194,7 @@ def test_adapter_declares_public_scoring_without_reading_dataset(tmp_path, monke
 
 
 def test_saved_verdict_keeps_native_identity_for_every_trial(tmp_path):
-    from harnessgrad.records import _save_verdicts
+    from harnessgrad.experiment.records import _save_verdicts
     receipt = {'verified': True, 'sha256': binding()['sha256'], 'dataset': 'bird_minidev'}
     result = {'per_task': {'authored': 1.0},
               'verdicts': {'authored': {'passed': True, 'native_runtime': receipt}},

@@ -223,7 +223,7 @@ class _TaskDeclarations(Mapping):
 class _Environments(_TaskDeclarations):
     def __getitem__(self, key):
         self._index(key)
-        from harnessgrad.dataset_runtime import bind, resolve_execution
+        from harnessgrad.datasets.runtime import bind, resolve_execution
         return {"kind": "files", "network": "none",
                 "task_python": bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "actor")}
 
@@ -249,7 +249,7 @@ def setup_for(index: int) -> dict:
 
 
 def verify_for(index: int) -> dict:
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     if hashlib.sha256(EXECUTION_FILE.read_bytes()).hexdigest() != EXECUTION_SHA256:
         raise ValueError("DS-1000 pinned execution.py changed")
     binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "verifier")

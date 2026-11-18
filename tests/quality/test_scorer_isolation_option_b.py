@@ -22,7 +22,7 @@ from eval.admission.pilot_admission import AdmissionError, LOG_CONFIG
 from eval.run import runner
 from eval.verification import verifier
 from eval.verification.isolation import IsolationMismatch, require_comparable
-from harnessgrad.records import _curve_point, _save_verdicts, _write_curve, test_rate_fields as point_fields
+from harnessgrad.experiment.records import _curve_point, _save_verdicts, _write_curve, test_rate_fields as point_fields
 
 
 def point(result):

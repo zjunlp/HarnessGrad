@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from harnessgrad import candidate_runtime, dataset_runtime_identity, task_python, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import task_python
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from eval.containers import external_runtime
 from eval.run import chess_stepwise
 from eval.run.outcomes import _invalid

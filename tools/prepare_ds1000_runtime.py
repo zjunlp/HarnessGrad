@@ -74,7 +74,7 @@ def _manifest():
                 or not re.fullmatch(r"[0-9a-f]{64}", entry["sha256"])):
             raise ValueError("invalid or duplicate CPU wheel manifest entry")
         names.add(name); filenames.add(filename)
-    from harnessgrad.dataset_runtime import execution_descriptor
+    from harnessgrad.datasets.runtime import execution_descriptor
     pins = execution_descriptor("ds1000")["pins"]
     if {entry["name"]: entry["version"] for entry in entries} != pins:
         raise ValueError("CPU wheel manifest does not match the complete locked profile")
@@ -160,7 +160,7 @@ def _offline_index(index, folder):
 def _python_target(python, timeout):
     proc = subprocess.run([python, "-I", "-S", "-B", "-c",
         "import json,os,platform,sys; print(json.dumps([sys.implementation.name,sys.version_info[:2],platform.system(),platform.machine(),os.confstr('CS_GNU_LIBC_VERSION')]))"],
-        capture_output=True, text=True, errors='strict', timeout=timeout,
+        capture_output=True, text=True, errors="strict", timeout=timeout,
         env={"PATH": os.defpath, "LANG": "C.UTF-8"})
     if proc.returncode:
         raise ValueError("this wheel profile requires CPython 3.12 Linux x86_64 with glibc >= 2.28")
@@ -191,7 +191,7 @@ def main(argv=None):
             raise ValueError("timeout must be positive")
         root = _native_store(args.runtime_root)
         folder = _external(args.wheelhouse or str(root) + "-wheels", "wheelhouse")
-        from harnessgrad import dataset_runtime
+        from harnessgrad.datasets import runtime as dataset_runtime
         if not (args.fetch or args.prepare):
             status = dataset_runtime.check_execution("ds1000", root=root)
             print(json.dumps({"mode": "check", "downloaded_bytes": 0, **status}, sort_keys=True))

@@ -5,7 +5,7 @@ import json
 import threading
 from pathlib import Path
 
-from harnessgrad.evidence_export import check_export
+from harnessgrad.evidence_reports.evidence_export import check_export
 from console import evidence_service
 from test_evidence_export import author, save_run, SECRET, PRIVATE_TASK
 
@@ -69,8 +69,8 @@ def test_http_catalog_export_and_guards(tmp_path, monkeypatch):
 def test_receipt_budget_counts_actual_growth_and_recheck(tmp_path, monkeypatch):
     import os
     import pytest
-    from harnessgrad import evidence
-    from harnessgrad.receipt_verification import ReceiptStore, ReceiptLimitExceeded
+    from harnessgrad.evidence_reports import evidence
+    from harnessgrad.evidence_reports.receipt_verification import ReceiptStore, ReceiptLimitExceeded
 
     root = tmp_path / 'receipts'
     (root / 'run').mkdir(parents=True)
@@ -103,7 +103,7 @@ def test_receipt_budget_counts_actual_growth_and_recheck(tmp_path, monkeypatch):
 
 class ReceiptStore_context:
     def __init__(self, *args, **kwargs):
-        from harnessgrad.receipt_verification import ReceiptStore
+        from harnessgrad.evidence_reports.receipt_verification import ReceiptStore
         self.store = ReceiptStore(*args, **kwargs)
 
     def __enter__(self):

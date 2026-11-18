@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 
 from data.scaffolds import registry
-from harnessgrad import dataset_runtime, dataset_runtime_identity
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 

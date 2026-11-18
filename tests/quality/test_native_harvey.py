@@ -165,7 +165,7 @@ def test_real_hg_actor_files_private_native_dual_verifier(tmp_path,monkeypatch,p
     from tools.prepare_native_research import prepare
     from eval.ckpt.git_state import stage_workspace
     from eval.run.runner import run_one
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     task_root=tmp_path/'native/tasks/control/document-product';task_root.mkdir(parents=True)
     (task_root/'documents').mkdir()
     (task_root/'documents/public.md').write_text('PUBLIC_MATTER_DOCUMENT_MARKER\n')

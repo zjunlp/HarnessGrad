@@ -56,7 +56,7 @@ def extract(archive, root):
 
 
 def render(root):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     from renderer_identity import admit_source, digest, platform_identity
     binding = dataset_runtime.bind(dataset_runtime.resolve_execution('jobbench_renderer'), 'service')
     identity = admit_source(root)
@@ -81,7 +81,7 @@ def render(root):
             or platform_identity() != platform_sources):
         raise ValueError('JobBench renderer changed before launch')
     result = subprocess.run([selected['python'], '-I', '-B', str(worker)],
-        input=json.dumps(request), text=True, errors='strict', capture_output=True, env=environment)
+        input=json.dumps(request), text=True, errors="strict", capture_output=True, env=environment)
     dataset_runtime.admit_binding(binding, 'service', python=selected['python'])
     if (admit_source(root) != identity or digest(worker) != worker_sha256
             or digest(__file__) != controller_sha256 or platform_identity() != platform_sources):
@@ -111,7 +111,7 @@ def main(argv=None):
     parser.add_argument('--runtime-root', type=Path)
     parser.add_argument('--python')
     args = parser.parse_args(argv)
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     if args.runtime_root is not None:
         os.environ['HG_DATASET_RUNTIME_ROOT'] = str(args.runtime_root.resolve())
     if args.prepare_runtime or args.check_runtime:

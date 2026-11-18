@@ -8,7 +8,10 @@ import pytest
 from eval.observe import task_verdicts
 from eval.run import runner
 from eval.run.evaluation_plan import IdentityCheck
-from harnessgrad import dataset_runtime, dataset_runtime_identity, snapshot, verification_context
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.core import snapshot
+from harnessgrad.provenance import verification_context
 from harnessgrad.orchestration.interrupted_measurement import (
     InterruptedMeasurementRefused,
     admit,

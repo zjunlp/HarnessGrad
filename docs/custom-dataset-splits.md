@@ -59,7 +59,7 @@ harnessgrad run --config experiments/quickstart.json \
   --set side=eval --set sampling=all --set from_run=math500-study \
   --set run_id=math500-heldout
 
-python3 tools/run_summary.py runs/math500-heldout
+python3 tools/analysis/run_summary.py runs/math500-heldout
 ```
 
 The experiment configuration uses the same `split` string as `driver.py --split`.

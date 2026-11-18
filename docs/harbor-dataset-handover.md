@@ -162,7 +162,7 @@ look finished while being wrong:
   (`src/harbor/agents/oracle.py`, `nop.py`), and `locomo.yaml` runs with `agents: - name: oracle`.
   That proves the *task* is reachable inside Harbor. Our gate 5 asks whether *our platform*, driving
   *our harness*, gets 1 and 0 — a different question. It must be run through
-  `tools/task_difficulty.py` and the `--platform` control path.
+  `tools/studies/task_difficulty.py` and the `--platform` control path.
 * **Step 6 is not satisfied by an upstream link in a README.** It is satisfied by a test that fails
   when the metric moves.
 
@@ -205,7 +205,7 @@ python3 data/datasets/<name>/control.py --oracle --platform   # reward 1 through
 python3 data/datasets/<name>/control.py --noop   --platform   # reward 0 through the platform
 python3 tools/dataset_lint.py                                 # ok <name>
 python3 tools/datasets.py --write                             # DOWNLOADS.md regenerated
-python3 tools/task_difficulty.py --dataset <name>             # rc 0
+python3 tools/studies/task_difficulty.py --dataset <name>             # rc 0
 python3 -m pytest tests/quality -q                            # suite stays green
 ```
 

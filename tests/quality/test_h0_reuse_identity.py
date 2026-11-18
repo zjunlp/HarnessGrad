@@ -15,7 +15,7 @@ def _donor(tmp_path):
 
 
 def _problems(run, agent, *, env=None):
-    from harnessgrad.h0_identity import agent_problems
+    from harnessgrad.provenance.h0_identity import agent_problems
     point = json.loads((run / "curve.jsonl").read_text(encoding="utf-8"))
     return agent_problems(run, point, model=agent["model"], backend=agent["backend"],
                           endpoint=agent["base_url"], env=env)

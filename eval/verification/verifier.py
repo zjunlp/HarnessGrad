@@ -545,7 +545,7 @@ def _verify(workdir: Path, verifier: dict | None, answer: str, **options) -> dic
         python_binding = (verifier or {}).get("python_runtime")
         if "python_runtime" in (verifier or {}):
             try:
-                from harnessgrad.dataset_runtime import admit_binding
+                from harnessgrad.datasets.runtime import admit_binding
                 argv = (verifier or {}).get("argv") or []
                 if len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
                     raise ValueError("requires isolated, bytecode-free Python startup")

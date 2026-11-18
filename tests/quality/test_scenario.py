@@ -25,7 +25,7 @@ def offline_loop_dependencies(tmp_path, monkeypatch):
     still pass through preparation, staging, and execution validation.
     """
     from test_python_harness_store import wheel
-    from harnessgrad import python_harness_runtime
+    from harnessgrad.execution.python_runtime import python_harness_runtime
 
     wheelhouse = tmp_path / "authored-wheelhouse"
     for line in (ROOT / "base_harness/loop/requirements.lock").read_text().splitlines():

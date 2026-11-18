@@ -15,7 +15,8 @@ from eval.observe.tracing import harness_usage_totals
 from eval.run.aggregation import score_of
 from eval.run.outcomes import _harness_failure
 from eval.verification.isolation import common_class, observed_class
-from harnessgrad import snapshot, verification_context
+from harnessgrad.core import snapshot
+from harnessgrad.provenance import verification_context
 
 
 class InterruptedMeasurementRefused(ValueError):

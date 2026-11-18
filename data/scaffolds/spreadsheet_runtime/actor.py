@@ -8,7 +8,7 @@ from collections.abc import Mapping
 
 
 def environment(dataset):
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     return {'kind': 'files', 'network': 'none',
             'task_python': bind(resolve_execution(dataset), 'actor')}
 

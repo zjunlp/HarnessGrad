@@ -1,0 +1,93 @@
+{
+  "foreign_source": {
+    "prompts": [
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t1\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t2\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t3\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: compile topic] Return JSON {\"skills\":[{\"path\":\"skills/name/SKILL.md\",\"name\":\"name\",\"description\":\"trigger\",\"source_task_ids\":[],\"content\":\"reusable procedure\"}]}. Only topic skills, cite task_ids from THESE memories. Preserve unrelated/native skills. General rules require 3 distinct tasks.\nLibrary: {\"skills/main.md\": \"Existing reusable guidance\\n\"}\nMemories: [{\"task_id\": \"t1\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t2\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t3\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}]"
+    ],
+    "report": {
+      "failure": "skill requires distinct current-batch source task IDs"
+    }
+  },
+  "topic_general": {
+    "prompts": [
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t1\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t2\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: reflect] Extract a reusable lesson from ONE failed execution. Return JSON {\"lesson\":\"\",\"trigger\":\"\",\"evidence\":\"\",\"scope_hint\":\"\"}, or {\"skip\":true}. Do not inspect the skill library; never memorize the answer.\n[{\"round\": 0, \"per_task\": {\"t1\": 0, \"t2\": 0, \"t3\": 0, \"t4\": 1}}, {\"task_id\": \"t3\", \"score\": 0, \"verdict\": {\"detail\": \"public feedback\"}}]",
+      "[EvoHarness: compile topic] Return JSON {\"skills\":[{\"path\":\"skills/name/SKILL.md\",\"name\":\"name\",\"description\":\"trigger\",\"source_task_ids\":[],\"content\":\"reusable procedure\"}]}. Only topic skills, cite task_ids from THESE memories. Preserve unrelated/native skills. General rules require 3 distinct tasks.\nLibrary: {\"skills/main.md\": \"Existing reusable guidance\\n\"}\nMemories: [{\"task_id\": \"t1\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t2\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t3\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}]",
+      "[EvoHarness: compile general] Return JSON {\"skills\":[{\"path\":\"skills/name/SKILL.md\",\"name\":\"name\",\"description\":\"trigger\",\"source_task_ids\":[],\"content\":\"reusable procedure\"}]}. Only general skills, cite task_ids from THESE memories. Preserve unrelated/native skills. General rules require 3 distinct tasks.\nLibrary: {\"skills/main.md\": \"Existing reusable guidance\\n\", \"skills/shell/SKILL.md\": \"---\\n{\\n  \\\"name\\\": \\\"shell\\\",\\n  \\\"description\\\": \\\"shell execution\\\",\\n  \\\"upstream\\\": {\\n    \\\"algorithm\\\": \\\"evo_harness\\\",\\n    \\\"level\\\": \\\"topic\\\",\\n    \\\"source_task_ids\\\": [\\n      \\\"t1\\\"\\n    ]\\n  }\\n}\\n---\\nCheck exit status.\\n\"}\nMemories: [{\"task_id\": \"t1\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t2\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}, {\"task_id\": \"t3\", \"lesson\": \"check exit status\", \"trigger\": \"shell\", \"evidence\": \"failure\", \"scope_hint\": \"execution\"}]"
+    ],
+    "report": {
+      "acceptance_rule": "upstream policy with platform study feedback; see fidelity profile",
+      "extra": {
+        "source_commit": "e9c7667945f959d62da27204649a82f94d1b6705",
+        "upstream_policy_port": true
+      },
+      "method": "evo_harness",
+      "note": "evo_harness: 1 candidate states; scoring remains platform-owned",
+      "steps": [
+        {
+          "changed": true,
+          "edit_kind": "harness_source",
+          "files": [
+            "skills/shell/SKILL.md",
+            "skills/general/SKILL.md"
+          ],
+          "files_contents": {
+            "skills/general/SKILL.md": "---\n{\n  \"name\": \"general\",\n  \"description\": \"verify results\",\n  \"upstream\": {\n    \"algorithm\": \"evo_harness\",\n    \"level\": \"general\",\n    \"source_task_ids\": [\n      \"t1\",\n      \"t2\",\n      \"t3\"\n    ]\n  }\n}\n---\nVerify observed results.\n",
+            "skills/main.md": "Existing reusable guidance\n",
+            "skills/shell/SKILL.md": "---\n{\n  \"name\": \"shell\",\n  \"description\": \"shell execution\",\n  \"upstream\": {\n    \"algorithm\": \"evo_harness\",\n    \"level\": \"topic\",\n    \"source_task_ids\": [\n      \"t1\"\n    ]\n  }\n}\n---\nCheck exit status.\n"
+          },
+          "hypothesis": "EvoHarness topic/general native skill curation",
+          "label": "EvoHarness topic/general native skill curation",
+          "method_reported": {
+            "policy_port": {
+              "adoption": "every valid compilation; no score gate",
+              "config": {
+                "general_min_tasks": 3,
+                "max_evidence_chars": 24000,
+                "max_general_skills": 10,
+                "max_library_chars": 48000,
+                "max_skill_chars": 2000,
+                "max_topic_skills": 30,
+                "seed": 42
+              },
+              "hypothesis": "EvoHarness topic/general native skill curation",
+              "invocation": 1,
+              "measurement": "platform only; next call receives feedback",
+              "memories": [
+                {
+                  "evidence": "failure",
+                  "lesson": "check exit status",
+                  "scope_hint": "execution",
+                  "task_id": "t1",
+                  "trigger": "shell"
+                },
+                {
+                  "evidence": "failure",
+                  "lesson": "check exit status",
+                  "scope_hint": "execution",
+                  "task_id": "t2",
+                  "trigger": "shell"
+                },
+                {
+                  "evidence": "failure",
+                  "lesson": "check exit status",
+                  "scope_hint": "execution",
+                  "task_id": "t3",
+                  "trigger": "shell"
+                }
+              ],
+              "method": "evo_harness",
+              "parent_round": 0,
+              "state_scope": "adaptation-visible study channel",
+              "variant": "upstream-policy-port"
+            }
+          }
+        }
+      ],
+      "stop": false
+    }
+  }
+}

@@ -1,11 +1,9 @@
-"""The outcome classifiers have one owner across runner import paths."""
-import eval.runner as legacy_runner
+"""The outcome classifiers have one owner in the run layer."""
 import eval.run.runner as runner
 from eval.run import outcomes
 
 
-def test_runner_paths_share_the_canonical_classifiers():
-    assert legacy_runner is runner
+def test_runner_uses_the_canonical_classifiers():
     for name in ("_PROVIDER_FAILURES", "_provider_failure", "_stopped_by_signals",
                  "_invalid", "timeout_verdict", "_spread", "_harness_failure"):
         assert getattr(runner, name) is getattr(outcomes, name)

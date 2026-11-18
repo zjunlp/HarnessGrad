@@ -1,0 +1,11 @@
+{
+  "bootstrap_sha256": "cb27f7b2f66ec787921e34151c4ed4d0c91f2c62367267c6a4d61b50b69681dc",
+  "other_modules_sha256": "5bc875bf298613f43ca3232ca065c990396d9723548229877551f104bf5da91d",
+  "verification_context": {
+    "sha256": "7a6c2f8764daaa25fc08f6fa00062ee6202ae620b500ae822edb29ae4df4e05e",
+    "tasks": {
+      "authored/native": "70869aba4cfbc933788a2e547e036c4524615350eae79e7a09610b537553885b"
+    },
+    "version": 1
+  }
+}

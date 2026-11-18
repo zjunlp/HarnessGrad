@@ -1,6 +1,6 @@
 # Test lanes: which files run alone, and why
 
-`tools/run_tests.py` runs one pytest process per test file across two lanes:
+`tools/testing/run_tests.py` runs one pytest process per test file across two lanes:
 
 * a **parallel lane** with `--jobs N` workers, for files that share a machine safely;
 * an **exclusive lane** at concurrency **1**, which runs *beside* the parallel lane,
@@ -13,7 +13,7 @@ disappears when the file runs alone is an isolation defect in the test, not a
 regression in the platform. Running such a file at concurrency 1 is the only
 correct way to run it, and it still overlaps everything else.
 
-`tools/run_tests.py`'s `EXCLUSIVE` tuple names those files. This document records
+`tools/testing/run_tests.py`'s `EXCLUSIVE` tuple names those files. This document records
 the **signals** an entry must show, the **method** used to derive them, the
 **per-file lane table**, and the **experiments** that moved a file between lanes.
 
@@ -196,7 +196,7 @@ wall clock (the machine is shared, so timing is not evidence here).
 | `test_web_gateway.py` (kept — control) | 3 failed, 40 passed | `test_config`, `test_runner_admission` | identical failure set; kept on its real-signal table, not this run |
 
 The two pre-existing failure sets were re-checked against the original commit
-(`git stash` of `tools/run_tests.py`, i.e. the old `EXCLUSIVE` tuple): they fail
+(`git stash` of the then tools/run_tests.py, i.e. the old `EXCLUSIVE` tuple; the current file is `tools/testing/run_tests.py`): they fail
 identically, so they are environmental, not lane-related.
 
 ### Additions (fixed name collides)
@@ -222,7 +222,7 @@ local images), not contention — but both keep the lane on signals (c)/(d).
 * Falsification of the guard: a bogus `EXCLUSIVE` entry with no signal, a stale
   name, a duplicate, and an undocumented `SLOW`/`EXCLUSIVE` overlap were each
   injected and each was rejected.
-* `python3 tools/run_tests.py --list` after the original change: **141 parallel files,
+* `python3 tools/testing/run_tests.py --list` after the original change: **141 parallel files,
   9 exclusive files**; after the two source fixes above: **143 parallel, 7 exclusive**.
   Re-measured 2026-11-03 on the release tree: **348 parallel, 7 exclusive** (355 files
   total, 3255 s of parallel work at 32 jobs, 1361 s exclusive). The exclusive lane stayed

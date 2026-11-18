@@ -37,9 +37,9 @@ def test_missing_configured_registry_does_not_fall_back(monkeypatch, tmp_path):
 
 
 def test_cli_route_is_recorded_and_passed_only_to_method(monkeypatch, tmp_path):
-    from harnessgrad.methods import _method_env
+    from harnessgrad.execution.method_runner import _method_env
     from methods.cli_improver import _restrict_env, applies
-    from harnessgrad.identity import _improver_identity
+    from harnessgrad.provenance.identity import _improver_identity
 
     launcher = tmp_path / "dsh"
     launcher.write_text("#!/bin/sh\nprintf 'dsh 1.2.3\\n'\n")

@@ -69,7 +69,7 @@ provider/runtime failures cannot become normal zero scores.
 - **LiveMathBench**: one platform trial is one native solver sample and one judge
   label. The curve is named single-sample-label accuracy. Run the declared number
   of independent trials (native default n=48) and use
-  `python3 tools/report_livemathbench.py CURVE --n 48 --k 16` for the unchanged
+  `python3 tools/analysis/report_livemathbench.py CURVE --n 48 --k 16` for the unchanged
   hypergeometric G-Pass/mG-Pass formulas. The report refuses missing/invalid labels;
   it never renames HG's pass^k formula as G-Pass.
 

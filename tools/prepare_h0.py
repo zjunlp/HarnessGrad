@@ -50,12 +50,13 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from harnessgrad import scoring_identity
-from harnessgrad import dataset_runtime_identity
-from harnessgrad import verification_context
+from harnessgrad.provenance import scoring_identity
+from harnessgrad.provenance import measurement_components
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from eval.containers import external_runtime
-from harnessgrad import candidate_runtime
-from harnessgrad import h0_identity
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.provenance import h0_identity
 from harnessgrad import config as platform_config
 
 DEFAULT_RUNS = pathlib.Path("/tmp/hg-h0-runs")
@@ -133,20 +134,20 @@ def harness_context(source, *, env=None, selection=None):
         if candidate_runtime.has_python(staged):
             program = '''import json,sys
 from pathlib import Path
-from harnessgrad import candidate_runtime as r
+from harnessgrad.execution import candidate_runtime as r
 from data.scaffolds import registry
 request=json.loads(sys.argv[2])
 with registry.provider_session():
  if request is None:
   value=r.admit(Path(sys.argv[1]))
  else:
-  from harnessgrad.dataset_runtime_identity import h0_selection
+  from harnessgrad.datasets.runtime_identity import h0_selection
   _,setups,_,envs=h0_selection(request)
   value=r.admit(Path(sys.argv[1]),envs=envs,setups=setups)
  print(json.dumps(value))
 '''
             result = subprocess.run([sys.executable, "-B", "-c", program, str(staged), json.dumps(selection)],
-                                    cwd=ROOT, env=env, capture_output=True, text=True, errors='strict', timeout=120)
+                                    cwd=ROOT, env=env, capture_output=True, text=True, errors="strict", timeout=120)
             if result.returncode:
                 raise ValueError("H0 candidate runtime preflight failed: " + result.stderr[-3000:])
             binding = candidate_runtime.validate(json.loads(result.stdout))
@@ -164,8 +165,8 @@ def _verification_preflight(dataset, side, task_ids, split, sampling, environmen
 import json, sys
 from contextlib import redirect_stdout
 from data.scaffolds import registry
-from harnessgrad.dataset_runtime_identity import h0_selection
-from harnessgrad.verification_context import capture
+from harnessgrad.datasets.runtime_identity import h0_selection
+from harnessgrad.provenance.verification_context import capture
 request = json.loads(sys.argv[1])
 with redirect_stdout(sys.stderr), registry.provider_session():
     ids, setups, verifiers, envs = h0_selection(request)
@@ -179,7 +180,7 @@ with redirect_stdout(sys.stderr), registry.provider_session():
 print(json.dumps(result))
 """
     result = subprocess.run([sys.executable, '-B', '-c', program, json.dumps(request)],
-                            cwd=ROOT, env=environment, capture_output=True, text=True, errors='strict', timeout=120)
+                            cwd=ROOT, env=environment, capture_output=True, text=True, errors="strict", timeout=120)
     if result.returncode:
         raise ValueError('H0 verification context preflight failed')
     return verification_context.validate(json.loads(result.stdout))
@@ -216,6 +217,9 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         **({'selection': {'dataset': args.dataset, 'side': args.side, 'task_ids': ids,
                           'split': split, 'sampling': getattr(args, 'sampling', 'all')}}
            if image_contract else {}))
+    scoring = scoring_identity.resolve(args.dataset)
+    components = measurement_components.resolve(args.dataset)
+    measurement_components.require_scoring_alignment(scoring, components)
     return {
         "dataset": args.dataset,
         "side": args.side,
@@ -228,7 +232,8 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         "trials": args.trials,
         "sampling": getattr(args, "sampling", "all"),
         **split_fields,
-        **scoring_identity.fields(scoring_identity.resolve(args.dataset)),
+        **scoring_identity.fields(scoring),
+        **measurement_components.fields(components),
         **dataset_runtime_identity.fields(dataset_identity),
         **verification_context.fields(verifier_context),
         **context,
@@ -246,6 +251,17 @@ def points(path: pathlib.Path) -> list[dict]:
             except ValueError:
                 continue
     return out
+
+
+def component_copy_problems(payload, metadata, curve, configuration):
+    """Compare every recorded H0 identity copy with the requested configuration."""
+    expected = (configuration or {}).get('measurement_components')
+    copies = [payload.get('measurement_components'), (payload.get('base') or {}).get('measurement_components'),
+              metadata.get('measurement_components'), curve[0].get('measurement_components') if curve else None]
+    if isinstance(metadata.get('h0_configuration'), dict):
+        copies.append(metadata['h0_configuration'].get('measurement_components'))
+    return [error for recorded in copies
+            for error in measurement_components.bundle_problems(recorded, expected)]
 
 
 def find_existing(config: dict, runs_root: pathlib.Path, *, source=None, env=None) -> tuple[pathlib.Path, dict] | None:
@@ -271,6 +287,9 @@ def find_existing(config: dict, runs_root: pathlib.Path, *, source=None, env=Non
         if not compatible:
             continue
         payload = json.loads(h0.read_text(encoding="utf-8"))
+        curve = points(run / "curve.jsonl")
+        if component_copy_problems(payload, metadata, curve, config):
+            continue
         identity = config.get("scoring_identity")
         if identity is not None or payload.get("scoring_identity") is not None:
             curve = points(run / "curve.jsonl")
@@ -310,6 +329,7 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
     meta_path = run / "run_meta.json"
     metadata = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
     curve = points(run / "curve.jsonl")
+    problems.extend(component_copy_problems(payload, metadata, curve, configuration))
     recorded_runtimes = [payload.get("dataset_runtime_identity"), base.get("dataset_runtime_identity"),
                          metadata.get("dataset_runtime_identity"),
                          curve[0].get("dataset_runtime_identity") if curve else None]

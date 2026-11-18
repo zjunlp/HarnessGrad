@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 def test_service_requires_prepared_runtime(monkeypatch):
     from data.datasets import alfworld
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     def missing(name):
         assert name == 'alfworld'
         raise dataset_runtime.DatasetRuntimeUnavailable('explicit preparation required')
@@ -23,7 +23,7 @@ def test_service_requires_prepared_runtime(monkeypatch):
 
 def test_selected_service_binding_and_exact_inputs(monkeypatch):
     from data.datasets import alfworld
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     selected = {'python': '/selected/python'}
     binding = {'python': '/selected/python', 'role': 'service'}
     monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda name: selected)
@@ -64,7 +64,7 @@ assert adapter._GYM_ENV.LOG_FILENAME == 'alf_actions.jsonl'
 
 
 def test_recipe_is_separate_from_native_scorer():
-    from harnessgrad.dataset_runtime import execution_descriptor
+    from harnessgrad.datasets.runtime import execution_descriptor
     declaration = execution_descriptor('alfworld')
     assert declaration['python'] == '3.12'
     assert declaration['pins']['alfworld'] == '0.4.2'

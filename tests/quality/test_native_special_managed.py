@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import pytest
 from data.scaffolds.native_research import special_runtime, swe_native, harvey_native
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 def test_no_platform_or_operator_interpreter_fallback(monkeypatch):
@@ -61,7 +61,7 @@ def test_internal_identity_projection_excludes_host_paths_and_private_case_diges
     assert 'private_context_sha256' not in text
     assert public['execution_identity']['runtime_id'] == 'a'*64
     assert 'binding' not in public['execution_identity']
-    from harnessgrad.channel import _stage_task_context
+    from harnessgrad.experiment.channel import _stage_task_context
     _stage_task_context(tmp_path, [{'task_id': 'control', 'goal': 'public goal'}],
                         {}, {}, {'verdicts': {'control': {'evidence': {'native_runtime': public}}}}, ['control'])
     staged = ''.join(p.read_text() for p in (tmp_path/'_harnessgrad/tasks').rglob('*') if p.is_file())

@@ -14,8 +14,9 @@ import sys
 import pytest
 
 from eval.run import runner
-from harnessgrad import candidate_runtime, snapshot
-from harnessgrad import python_harness_runtime as runtime
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.core import snapshot
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
 from test_miniagent_harness import HARNESS, ROOT, managed_miniagent, miniagent_store  # noqa: F401
 
 

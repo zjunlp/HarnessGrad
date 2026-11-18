@@ -99,8 +99,8 @@ assert_platform_imports()
 
 def test_static_split_inventory_needs_neither_runtime_nor_data(qa_platform, tmp_path):
     run(qa_platform, '''
-from harnessgrad import dataset_runtime
-from harnessgrad.dataset_provider import DatasetProvider
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets.provider import DatasetProvider
 from tools import split_inventory
 def forbidden(*args,**kwargs):
     raise AssertionError('static inventory entered provider runtime')
@@ -120,7 +120,7 @@ def test_public_entries_do_not_fall_back_when_provider_is_unprepared(qa_platform
     run(qa_platform, '''
 from data.scaffolds import registry
 from data.scaffolds.qa import control
-from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
 from tools import split_inventory,dataset_classes
 name,store=sys.argv[2:4]
 try:
@@ -143,7 +143,7 @@ assert_platform_imports()
 def test_unknown_control_task_is_an_explicit_error_before_workdir_creation(qa_platform, tmp_path, name):
     run(qa_platform, '''
 from data.scaffolds.qa import control
-from harnessgrad.dataset_provider import DatasetProviderError
+from harnessgrad.datasets.provider import DatasetProviderError
 name,work=sys.argv[2:4]
 try:
     control.main(['--dataset',name,'--oracle','--task-id',name+'/unknown/0','--workdir',work])

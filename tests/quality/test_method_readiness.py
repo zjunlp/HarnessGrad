@@ -11,8 +11,8 @@ from unittest.mock import patch
 import pytest
 
 import driver
-from harnessgrad import readiness
-from harnessgrad.methods import _check_method_entrypoint
+from harnessgrad.orchestration import readiness
+from harnessgrad.execution.method_runner import _check_method_entrypoint
 
 
 ROOT = Path(__file__).resolve().parents[2]

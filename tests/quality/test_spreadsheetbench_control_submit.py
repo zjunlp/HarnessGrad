@@ -83,7 +83,7 @@ def test_failed_submission_prints_both_streams(control_record, tmp_path, capfd):
 
 
 def test_authored_formula_control_preserves_input_and_scores_private_copy(tmp_path):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     runtime_root = os.environ.get("HG_SPREADSHEETBENCH_TEST_RUNTIME_ROOT")
     native_manifest = os.environ.get("HG_SPREADSHEET_NATIVE_MANIFEST")
     if not runtime_root or not native_manifest:

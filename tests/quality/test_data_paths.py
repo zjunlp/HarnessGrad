@@ -15,7 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from harnessgrad import paths  # noqa: E402
 from harnessgrad.env_file import read_env_file  # noqa: E402
-from tools import dataset_lint, datasets  # noqa: E402
+from tools.dataset_maintenance import dataset_lint
+from tools import datasets  # noqa: E402
 
 
 @pytest.fixture

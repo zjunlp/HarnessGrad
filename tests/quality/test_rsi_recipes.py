@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data.scaffolds.native_qa.prepare import prepare
-from harnessgrad.experiments import load, to_argv
+from harnessgrad.experiment.config import load, to_argv
 
 RECIPES = {
     'bbeh': 'bbeh',

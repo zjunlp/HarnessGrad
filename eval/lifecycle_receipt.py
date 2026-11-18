@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.admission.lifecycle_receipt`.
+"""Removed import guard: use :mod:`eval.admission.lifecycle_receipt`."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.admission import lifecycle_receipt as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError('eval.lifecycle_receipt was removed; import eval.admission.lifecycle_receipt instead')

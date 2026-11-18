@@ -1,10 +1,11 @@
 """Execute a harness on a task set. Framework-owned (INTERFACE.md §0)."""
 from __future__ import annotations
-from harnessgrad import slots
-from harnessgrad import dataset_runtime_identity as dataset_runtime_identity_mod
-from harnessgrad import candidate_runtime
-from harnessgrad import python_exec_runtime
-from harnessgrad import verification_context as verification_context_mod
+from harnessgrad.execution import slots
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity_mod
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_exec_runtime
+from harnessgrad.provenance import verification_context as verification_context_mod
+from harnessgrad.provenance import measurement_components as measurement_components_mod
 
 import json
 import os
@@ -37,7 +38,7 @@ from eval.run import task_verification
 from eval.run.actor_environment import _files_python
 from eval.run.scheduling import _held, _in_parallel, _all_unstarted
 from eval.run.measurement_cache import native_cache_matches as _native_cache_matches
-import tools.web_gateway as web_gateway_mod
+import eval.service.web_gateway as web_gateway_mod
 from eval.ckpt.git_state import STATE_DIRNAME
 from eval.run.integrity import PLATFORM_ROOT, diff, snapshot
 # The three layers this module used to contain, now separate modules. `runner` decides
@@ -50,7 +51,7 @@ from eval.run.outcomes import (
     _PROVIDER_FAILURES, _provider_failure, _stopped_by_signals, _invalid,
     timeout_verdict, _spread, _harness_failure,
 )
-from harnessgrad import task_python
+from harnessgrad.datasets import task_python
 from eval.policy.runtime_policy import admit_native_network, phase_timeout, stage_agent_runtime
 from eval.observe.tracing import (_last_identity, _last_usage, _materialize,
                                   _write_progress, process_outcome, harness_usage_totals, environment_usage_totals)
@@ -80,7 +81,7 @@ def _improver_credentials() -> set[str]:
     loader so there is one reader of that file, not two.
     """
     try:
-        from tools.improver import load_config
+        from harnessgrad.improvers.resolver import load_config
         config = load_config() or {}
     except Exception:                                          # noqa: BLE001
         return set()
@@ -1109,7 +1110,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              dataset_runtime_identity: dict | None = None,
              harness_runtime_identity: dict | None = None,
              verification_context: dict | None = None,
-             task_budget_context=None) -> dict:
+             task_budget_context=None, measurement_components=None) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1132,6 +1133,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                             if verification_context is not None else {}),
                          **({'harness_runtime_identity': harness_runtime_identity}
                             if harness_runtime_identity is not None else {}),
+                         **measurement_components_mod.fields(measurement_components),
                          diagnostic_authorization=diagnostic_authorization,
                          **({'task_budget_context': task_budget_context} if task_budget_context is not None else {}))
         if diagnostic_authorization is not None:
@@ -1169,7 +1171,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               dataset_runtime_identity: dict | None = None,
               harness_runtime_identity: dict | None = None,
               verification_context: dict | None = None,
-              task_budget_context=None) -> dict:
+              task_budget_context=None, measurement_components=None) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1187,6 +1189,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     that used four containers at once is a different claim about this host than one that
     used one.
     """
+    if measurement_components is not None:
+        measurement_components = measurement_components_mod.validate_bundle(measurement_components)
     if diagnostic_authorization is not None:
         diagnostic_authorization.require_scope(
             run_id, [t["task_id"] for t in tasks], trials=trials, jobs=jobs, round_no=round_no)
@@ -1289,7 +1293,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         return measurement_cache.MeasurementIdentity(
             harness_sha, tid, trials, task_context, task_runtimes[tid], selected_harness,
             runtime_identities, ((verifiers or {}).get(tid) or {}).get('scorer_bundle'),
-            native_identities.get(tid), evaluation_protocols.get(tid))
+            native_identities.get(tid), evaluation_protocols.get(tid), measurement_components)
 
     def measurement_key(task):
         return measurement_identity(task, context).key()
@@ -1359,6 +1363,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         task_context = verification_context_mod.project(context, [tid]) if context is not None else None
         runtime_fields = {**dataset_runtime_identity_mod.fields(task_runtime),
                           **candidate_runtime.fields(selected_harness),
+                          **measurement_components_mod.fields(measurement_components),
                           **verification_context_mod.fields(task_context)}
         if task_budget_stops:
             reason = {'stage': 'task budget', 'detail': 'Task budget stopped before task launch'}
@@ -1431,6 +1436,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         if cache_allowed and not fresh_measurement(tid):
             runtime_fields = {**dataset_runtime_identity_mod.fields(task_runtimes[tid]),
                 **verification_context_mod.fields(verification_context_mod.project(context, [tid])),
+                **measurement_components_mod.fields(measurement_components),
                 **candidate_runtime.fields(selected_harness)}
             cache[key] = aggregation.measured_cache_entry(tid, result, failure, scores, evidence, runtime_fields)
 
@@ -1465,6 +1471,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                 'scope': 'task', 'split': task_budget_context.split,
                 'tasks': task_budget_stops, 'ledger_path': str(task_budget_context.binding.ledger_path)}
     return {**repeated, **task_budget_fields, **dataset_runtime_identity_mod.fields(runtime_identity),
+            **measurement_components_mod.fields(measurement_components),
             **verification_context_mod.fields(context),
             **candidate_runtime.fields(selected_harness),
             "per_task": scores.per_task, "per_task_std": scores.per_task_std, "score_std": score_std,

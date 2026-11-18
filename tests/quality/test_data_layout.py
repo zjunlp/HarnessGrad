@@ -250,7 +250,7 @@ def test_adapter_asset_directories_move_beside_their_adapters():
                 # narrow allowlist and validate each descriptor rather than
                 # treating every unpaired directory as acceptable.
                 if path.name in {'jobbench_renderer', 'native_harbor', 'native_qa'}:
-                    from harnessgrad.dataset_runtime import execution_descriptor
+                    from harnessgrad.datasets.runtime import execution_descriptor
                     assert execution_descriptor(path.name) is not None
                     continue
                 errors.append(f"Orphaned adapter assets: {_relative(path)}/; "

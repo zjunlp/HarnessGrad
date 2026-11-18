@@ -42,7 +42,7 @@ def test_late_evening_invocation_that_cannot_fit_waits_until_next_night():
 
 
 def test_platform_waits_before_snapshot_and_subprocess_launch(tmp_path, monkeypatch):
-    import harnessgrad.methods as methods
+    from harnessgrad.execution import method_runner as methods
     import harnessgrad.training_window as window
     calls = []
     monkeypatch.setenv('HG_TRAIN_NIGHT_ONLY', '1')
@@ -61,7 +61,7 @@ def test_platform_waits_before_snapshot_and_subprocess_launch(tmp_path, monkeypa
 
 
 def test_night_admission_refuses_receipt_inside_harness(tmp_path, monkeypatch):
-    import harnessgrad.methods as methods
+    from harnessgrad.execution import method_runner as methods
     monkeypatch.setenv('HG_TRAIN_NIGHT_ONLY', '1')
     with pytest.raises(ValueError, match='separate admission receipt'):
         methods._call_method(tmp_path, ['fake'], {}, 4200)

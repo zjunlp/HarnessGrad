@@ -169,7 +169,7 @@ def main():
                              json.loads(args.expected_cells.read_text()), include_splits=True,
                              mode=args.mode)
     from execution import binding, observation
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     selected = (json.loads(args.runtime_binding.read_text()) if args.runtime_binding is not None
                 else binding('verifier'))
     if args.runtime is not None and args.runtime.resolve() != Path(selected['path']):

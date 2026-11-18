@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.run.runner`.
+"""Retired import; use the run-layer implementation."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.run import runner as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError("eval.runner was removed; import eval.run.runner instead")

@@ -18,7 +18,7 @@ from test_tau3_bench_dataset import control_module
 
 @pytest.fixture(scope='module', autouse=True)
 def require_execution_runtime():
-    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
     try:
         dataset._execution_runtime()
     except DatasetRuntimeUnavailable as exc:

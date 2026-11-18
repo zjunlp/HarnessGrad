@@ -14,8 +14,10 @@ def test_unprovisioned_adapters_import_but_loading_names_the_missing_configurati
 import importlib
 from harnessgrad import paths
 paths._settings = lambda: {}
-for name in ('appworld', 'terminal_bench'):
+for name in ('appworld', 'terminal_bench', 'costbench', 'costbench_dynamic'):
     module = importlib.import_module('data.datasets.' + name)
+    if name.startswith('costbench'):
+        assert not hasattr(module, 'OFFICIAL_EVAL')
     try:
         module.load()
     except (ValueError, FileNotFoundError) as error:

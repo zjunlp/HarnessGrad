@@ -39,7 +39,7 @@ POOL_KNOB = "HG_APPWORLD_POOL"
 @pytest.fixture(scope="module")
 def official() -> dict[str, list[str]]:
     """The release's four declared task lists, decrypted from the official bundle."""
-    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
     try:
         return appworld.split_ids()
     except DatasetRuntimeUnavailable as exc:

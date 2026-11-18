@@ -10,8 +10,9 @@ import pytest
 
 from eval.ckpt.git_state import commit_state, init_repo
 from eval.run import runner
-from harnessgrad import candidate_runtime, config
-from harnessgrad import python_harness_runtime as runtime
+from harnessgrad.execution import candidate_runtime
+from harnessgrad import config
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
 
 
 @pytest.fixture

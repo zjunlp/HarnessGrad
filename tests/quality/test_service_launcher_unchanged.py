@@ -208,20 +208,25 @@ def test_the_envelope_is_the_only_place_the_flags_come_from(tmp_path):
     assert container_mod.envelope(declared)["memory_mb"] == 2048
 
 
-def test_container_state_observation_uses_writable_container_shape(monkeypatch):
-    """The observed shape must describe the writable container actually launched."""
-    from types import SimpleNamespace
-    shape = runner._environment_shape(_env(state="container"))
-    assert shape['read_only'] is False
+def test_container_state_observation_uses_its_writable_shape(monkeypatch):
+    """The state launcher is observed as writable; use a stub instead of Docker."""
+    env = _env(state="container", services=[], network="none")
+    shape = runner._environment_shape(env)
+    assert shape['read_only'] is False and shape['image'] == AGENT
     calls = []
+    receipt = {'synthetic': 'container-state observation'}
+    class Observation:
+        def receipt(self):
+            return receipt
     def observe(image, limits, **kwargs):
         calls.append((image, limits, kwargs))
-        return SimpleNamespace(receipt=lambda: {'synthetic': True})
+        return Observation()
     monkeypatch.setattr(runner, '_OBSERVATIONS', {})
     monkeypatch.setattr(runner.container_observation_mod, 'observe_for', observe)
-    assert runner._observations_for({"a": _env(state="container")},
-                                    [{"task_id": "a"}], run_id="r") == {'a': {'synthetic': True}}
-    assert calls[0][2]['container_state'] is True and calls[0][2]['read_only'] is False
+    assert runner._observations_for({"a": env}, [{"task_id": "a"}], run_id="r") == {'a': receipt}
+    assert calls == [(AGENT, {'cpus': 2.0, 'memory_mb': 4096},
+                      {'network': 'none', 'run_id': 'r', 'read_only': False,
+                       'container_state': True})]
 
 
 # ------------------------------------------- the declaration reaches the launcher ---

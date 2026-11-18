@@ -8,7 +8,7 @@ from data.scaffolds import registry
 
 @pytest.mark.parametrize('name', ['gsm8k', 'triviaqa', 'hotpotqa'])
 def test_parquet_qa_provider_discovery_is_static(name, monkeypatch):
-    from harnessgrad.dataset_runtime import descriptor
+    from harnessgrad.datasets.runtime import descriptor
     def reject_import(*args, **kwargs):
         raise AssertionError('provider discovery imported an adapter')
     monkeypatch.setattr(registry.importlib, 'import_module', reject_import)

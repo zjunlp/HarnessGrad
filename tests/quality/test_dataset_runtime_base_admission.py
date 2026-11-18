@@ -7,8 +7,8 @@ import sysconfig
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
-from harnessgrad import dataset_runtime_identity as identity
+from harnessgrad.datasets import runtime
+from harnessgrad.datasets import runtime_identity as identity
 
 
 @pytest.fixture

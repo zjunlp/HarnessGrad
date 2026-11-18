@@ -23,7 +23,7 @@ def test_legacy_module_reexports_the_canonical_reader():
 def test_consumers_use_the_canonical_reader():
     from eval.containers import container_state
     from eval.run import runner
-    from harnessgrad import channel
+    from harnessgrad.experiment import channel
     from tools import serve_ui
 
     assert channel._loop_facts is tracing.loop_facts

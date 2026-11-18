@@ -15,11 +15,13 @@ import sys
 
 from eval.run.metrics import select_task_set
 from harnessgrad import config as platform_config
-from harnessgrad import candidate_runtime, dataset_runtime_identity, scoring_identity, verification_context, h0_identity
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, scoring_identity, verification_context, h0_identity
 from eval.containers import external_runtime
-from harnessgrad.environments import _env_record
-from harnessgrad.identity import _identity
-from harnessgrad.records import _curve_point, _cost_of, _scored, test_rate_fields
+from harnessgrad.orchestration.environments import _env_record
+from harnessgrad.provenance.identity import _identity
+from harnessgrad.experiment.records import _curve_point, _cost_of, _scored, test_rate_fields
 from .historical_evidence import base_from_point, read_trace_bodies, require_verification_context
 
 
@@ -41,6 +43,7 @@ class H0Identities:
     verification: dict | None
     initial_actor: dict | None
     current_actor: dict | None
+    measurement: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -127,6 +130,8 @@ def admit_h0_donor_records(donor: H0Donor, work: Path, identities: H0Identities,
                 current = dataset_runtime_identity.project(current, selected_ids)
             dataset_runtime_identity.require_same(recorded, current)
         metadata = json.loads((donor.directory / "run_meta.json").read_text())
+        measurement_components.require_same(metadata.get("measurement_components"), identities.measurement)
+        measurement_components.require_same(donor.point.get("measurement_components"), identities.measurement)
         require_context(metadata.get("verification_context"), identities.verification)
         require_context(donor.point.get("verification_context"), identities.verification,
             list((donor.point.get("sampling") or {}).get("task_ids") or (donor.point.get("per_task") or {})))
@@ -135,6 +140,8 @@ def admit_h0_donor_records(donor: H0Donor, work: Path, identities: H0Identities,
         candidate_runtime.admit(work, identities.initial_actor, envs=envs, setups=setups, sandbox=options.sandbox)
         external_runtime.admit_reuse(work, donor.point)
         if donor.payload is not None:
+            measurement_components.require_same(donor.payload.get("measurement_components"), identities.measurement)
+            measurement_components.require_same((donor.payload.get("base") or {}).get("measurement_components"), identities.measurement)
             external_runtime.admit_reuse(work, donor.payload.get('base') or {})
         candidate_runtime.require_same(metadata.get("harness_runtime_identity"), identities.initial_actor)
         candidate_runtime.require_same(donor.point.get("harness_runtime_identity"), identities.initial_actor)
@@ -206,6 +213,7 @@ def measure_h0(measurement: Callable, work, tasks, scorable, cache, source_sha, 
     return measurement(work, tasks, scorable, cache, harness_sha=source_sha,
         trials=options.trials, jobs=options.jobs, progress_dir=run_dir, sandbox=options.sandbox,
         setups=setups, verifiers=verifiers, **dataset_runtime_identity.fields(identities.dataset),
+        **measurement_components.fields(identities.measurement),
         **candidate_runtime.fields(identities.current_actor), verification_context=identities.verification,
         envs=envs, run_id=attribution.run_id, run_seed=run_seed, recordings_root=run_dir / "recordings",
         **({"diagnostic_authorization": diagnostic_authorization} if diagnostic_authorization is not None else {}),
@@ -215,7 +223,8 @@ def measure_h0(measurement: Callable, work, tasks, scorable, cache, source_sha, 
 def write_raw_h0(run_dir, run_id, source_sha, base, identities, reporter):
     try:
         (run_dir / "h0.json").write_text(json.dumps({"base": base, "h0_sha": source_sha, "run_id": run_id,
-            **scoring_identity.fields(identities.scoring), **dataset_runtime_identity.fields(identities.dataset),
+            **scoring_identity.fields(identities.scoring), **measurement_components.fields(identities.measurement),
+            **dataset_runtime_identity.fields(identities.dataset),
             **verification_context.fields(identities.verification),
             **candidate_runtime.fields(identities.initial_actor)}, default=str))
     except (TypeError, OSError) as exc:
@@ -242,7 +251,7 @@ def build_h0_point(base, source_sha, manifest, attribution, options, identities,
     return _curve_point(run_id=attribution.run_id, round_index=0,
         identity=_identity(manifest, source_sha, attribution.mode, improver=attribution.improver,
             declared=base.get("identity_declared"), jobs=options.jobs, trials=options.trials, gpu_budget=options.gpu_budget),
-        sampling=selection.sampling, scoring_identity=identities.scoring,
+        sampling=selection.sampling, scoring_identity=identities.scoring, measurement_components=identities.measurement,
         dataset_runtime_identity=identities.dataset, harness_runtime_identity=identities.initial_actor,
         verification_context=verification_context.project(base.get("verification_context"), selection.task_ids),
         scores=[base["per_task"][task] for task in _scored(base, selection.task_ids)], task_ids=_scored(base, selection.task_ids),

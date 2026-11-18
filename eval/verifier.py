@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.verification.verifier`.
+"""Retired import; use the verification-layer implementation."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.verification import verifier as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError("eval.verifier was removed; import eval.verification.verifier instead")

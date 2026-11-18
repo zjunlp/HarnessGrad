@@ -10,15 +10,16 @@ import pytest
 
 from data.datasets import strongreject as dataset
 from data.scaffolds import registry
-from harnessgrad import scoring_identity as scoring
+from harnessgrad.provenance import scoring_identity as scoring
 from tools import prepare_h0
 from test_strongreject_dataset import endpoint, prepared
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_only_strongreject_has_opted_in():
-    assert {p.parent.name for p in scoring.PROVIDERS.glob("*/scoring_profile.py")} == {"strongreject"}
+def test_strongreject_scoring_profile_is_discoverable_without_task_data(monkeypatch):
+    monkeypatch.setattr(dataset, 'rows', lambda: pytest.fail('identity must not load task data'))
+    assert scoring.resolve('strongreject')['profile']['metric'].startswith('strongreject.rubric.defense.')
 
 
 def test_resolved_judge_endpoint_and_parameters_define_identity(monkeypatch):
@@ -47,6 +48,9 @@ def test_resolved_judge_endpoint_and_parameters_define_identity(monkeypatch):
 
 def test_h0_configuration_separates_judges(monkeypatch):
     from types import SimpleNamespace
+    monkeypatch.setattr(prepare_h0.dataset_runtime_identity, 'resolve_h0', lambda *a, **k: None)
+    monkeypatch.setattr(prepare_h0, '_verification_preflight', lambda *a, **k: None)
+    monkeypatch.setattr(prepare_h0, 'harness_context', lambda *a, **k: {'harness_sha': 'synthetic'})
     args = SimpleNamespace(dataset="strongreject", side="train", study_ids=None,
                            model="agent", endpoint="endpoint", trials=1)
     monkeypatch.setenv("HG_STRONGREJECT_JUDGE_MODEL", "judge-a")
@@ -58,40 +62,49 @@ def test_h0_configuration_separates_judges(monkeypatch):
 @pytest.mark.parametrize("changed", ["adapter", "scorer", "templates", "transport"])
 def test_scoring_dependencies_are_versioned_without_checkout_paths(tmp_path, monkeypatch, changed):
     import shutil
-    original = scoring.resolve("strongreject")
-    assets = tmp_path / "repo/data/datasets/strongreject"
-    transport = assets.parents[2] / "eval/service"
-    for name in ("verify/check.py", "lib/scoring.py", "scoring_profile.py", "specs/sources.json"):
-        target = assets / name
+    from harnessgrad.provenance import measurement_components
+    assets = tmp_path / "data/datasets/strongreject"
+    paths = ('data/datasets/strongreject.py', 'data/datasets/strongreject/prepare.py',
+             'data/datasets/strongreject/measurement_profile.py', 'data/datasets/strongreject/scoring_profile.py',
+             'data/datasets/strongreject/specs/sources.json', 'data/datasets/strongreject/verify/check.py',
+             'data/datasets/strongreject/lib/scoring.py', 'eval/service/judge.py',
+             'eval/service/judge_request.py', 'eval/service/tool_transport.py')
+    for name in paths:
+        target = tmp_path / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(dataset.ASSETS / name, target)
-    shutil.copyfile(dataset.ASSETS.with_suffix(".py"), assets.with_suffix(".py"))
-    transport.mkdir(parents=True)
-    for name in ("judge.py", "judge_request.py", "tool_transport.py"):
-        shutil.copyfile(dataset.ASSETS.parents[2] / "eval/service" / name, transport / name)
-    monkeypatch.setattr(dataset, "ASSETS", assets)
-    assert scoring.resolve("strongreject") == original
-    if changed == "templates":
-        sources = copy.deepcopy(dataset.SOURCES)
-        next(e for e in sources["files"] if e["path"] == "upstream-judge_templates.json")["sha256"] = "0" * 64
-        monkeypatch.setattr(dataset, "SOURCES", sources)
-    elif changed == "adapter":
-        with assets.with_suffix(".py").open("a") as handle:
-            handle.write("\n# synthetic adapter version change\n")
+        shutil.copyfile(ROOT / name, target)
+    monkeypatch.setattr(scoring, 'PROVIDERS', tmp_path / 'data/datasets')
+    monkeypatch.setattr(measurement_components, 'PROVIDERS', tmp_path / 'data/datasets')
+    original = scoring.resolve('strongreject')
+    before = measurement_components.resolve('strongreject')
+    if changed == 'templates':
+        path = assets / 'specs/sources.json'
+        sources = json.loads(path.read_text())
+        next(e for e in sources['files'] if e['path'] == 'upstream-judge_templates.json')['sha256'] = '0' * 64
+        path.write_text(json.dumps(sources))
+        monkeypatch.setattr(dataset, 'SOURCES', sources)
     else:
-        path = assets / "verify/check.py" if changed == "scorer" else transport / "judge.py"
-        with path.open("a") as handle:
-            handle.write("\n# synthetic version change\n")
-    assert scoring.resolve("strongreject") != original
-
+        path = (assets.with_suffix('.py') if changed == 'adapter' else
+                assets / 'verify/check.py' if changed == 'scorer' else tmp_path / 'eval/service/judge.py')
+        path.write_bytes(path.read_bytes() + b'\n# synthetic version change\n')
+    after = measurement_components.resolve('strongreject')
+    assert scoring.resolve('strongreject') != original
+    assert after['scorer'] != before['scorer']
+    assert after['data_source'] == before['data_source']
+    assert (after['loader'] != before['loader']) == (changed == 'adapter')
 
 def test_h0_preparation_loads_the_same_dotenv_configuration(tmp_path, monkeypatch):
     monkeypatch.setattr(os, "environ", dict(os.environ))
     monkeypatch.delenv("HG_STRONGREJECT_JUDGE_MODEL", raising=False)
     monkeypatch.setattr(prepare_h0, "ROOT", tmp_path)
+    monkeypatch.setattr(prepare_h0, 'harness_source', lambda *a: tmp_path / 'synthetic-harness')
+    monkeypatch.setattr(prepare_h0.candidate_runtime, 'has_python', lambda *a: False)
+    monkeypatch.setattr(prepare_h0.dataset_runtime_identity, 'resolve_h0', lambda *a, **k: None)
+    monkeypatch.setattr(prepare_h0, '_verification_preflight', lambda *a, **k: None)
+    monkeypatch.setattr(prepare_h0, 'harness_context', lambda *a, **k: {'harness_sha': 'synthetic'})
     (tmp_path / ".env").write_text("HG_STRONGREJECT_JUDGE_MODEL=dotenv-judge\nHG_JUDGE_API_KEY=dotenv-secret\n")
     recorded = {}
-    def lookup(config, root):
+    def lookup(config, root, **kwargs):
         recorded.update(config)
         return None
     monkeypatch.setattr(prepare_h0, "find_existing", lookup)

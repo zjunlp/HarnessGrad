@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(ROOT), str(Path(__file__).resolve().parent)]
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from renderer_identity import admit_source, digest, platform_identity
 
 

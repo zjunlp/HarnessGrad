@@ -15,7 +15,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from harnessgrad import candidate_runtime, python_harness_runtime, snapshot
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime
+from harnessgrad.core import snapshot
 from harnessgrad.loops import eval_side
 from tools import prepare_h0
 

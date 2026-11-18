@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pytest
 
-from harnessgrad.budget_dispatch import (
+from harnessgrad.execution.budget_dispatch import (
     BudgetDispatcher,
     BudgetExceeded,
     BudgetViolation,

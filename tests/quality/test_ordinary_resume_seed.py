@@ -9,7 +9,10 @@ import pytest
 
 import driver
 from eval.run import repeated_trials
-from harnessgrad import config, candidate_runtime, python_harness_runtime, verification_context
+from harnessgrad import config
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime
+from harnessgrad.provenance import verification_context
 
 
 @pytest.fixture
@@ -154,7 +157,7 @@ def test_invalid_resume_seed_plan_cannot_rewrite_metadata(interrupted_driver, da
 
 def test_driver_eval_resume_rejects_drift_before_changing_old_workspace(interrupted_driver, monkeypatch):
     from eval.observe.console import CONSOLE
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     state = interrupted_driver
     work = state.run.parent.parent / 'work' / 'eval' / 'workspace'
     def snapshot(root):

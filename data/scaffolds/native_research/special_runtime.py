@@ -5,12 +5,12 @@ from pathlib import Path
 
 
 def binding(dataset):
-    from harnessgrad.dataset_runtime import resolve_execution, bind
+    from harnessgrad.datasets.runtime import resolve_execution, bind
     return bind(resolve_execution(dataset), 'verifier')
 
 
 def admit(selected):
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     return admit_binding(selected, 'verifier')['python']
 
 

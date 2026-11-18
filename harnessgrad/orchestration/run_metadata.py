@@ -10,7 +10,9 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 
 from harnessgrad.config.areas import RunConfig
-from harnessgrad import candidate_runtime, dataset_runtime_identity, scoring_identity, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, scoring_identity, verification_context
 from eval.policy import diagnostic_policy
 
 
@@ -20,6 +22,7 @@ class IdentityRecords:
     dataset: dict | None
     verification: dict | None
     harness: dict | None
+    measurement: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,7 @@ class AttributionRecord:
 
 def identity_fields(identities: IdentityRecords) -> dict:
     return {**scoring_identity.fields(identities.scoring),
+            **measurement_components.fields(identities.measurement),
             **dataset_runtime_identity.fields(identities.dataset),
             **verification_context.fields(identities.verification),
             **candidate_runtime.fields(identities.harness)}

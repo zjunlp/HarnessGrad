@@ -26,8 +26,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad.channel import _stage_for_method                    # noqa: E402
-from harnessgrad.environments import (_narrow_to_run,                # noqa: E402
+from harnessgrad.experiment.channel import _stage_for_method                    # noqa: E402
+from harnessgrad.orchestration.environments import (_narrow_to_run,                # noqa: E402
                                       _required_env_kinds, _resolve_envs)
 
 

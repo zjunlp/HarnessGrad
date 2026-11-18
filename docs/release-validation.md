@@ -131,7 +131,7 @@ sweeps are expensive for a real reason: each re-runs classification or an oracle
 control *per dataset*, under patched inputs.
 
 They are kept, not deleted: deleting a sweep because it is slow is how a "total and closed"
-classification stops being either. What changed is *when* they run. `tools/ci_select.py` maps
+classification stops being either. What changed is *when* they run. `tools/testing/ci_select.py` maps
 a changed path to the tests that can reach it —
 
 | change | selected |
@@ -173,9 +173,9 @@ but cannot cancel a scheduled or manually requested full run on the same ref.
   so they cannot silently suppress test planning/execution. The final summary reads
   their raw outcomes and fails the advisory job if any tracked step failed or did
   not run. Job-level `continue-on-error` means that failure need not fail the workflow.
-- The report writes `plan.json`, then invokes `tools/run_selected.py --plan plan.json
+- The report writes `plan.json`, then invokes `tools/testing/run_selected.py --plan plan.json
   --jobs 4 --output-json "$RUNNER_TEMP/quality-suite.json"`. Only schedule/manual
-  adds `--full`. The wrapper delegates execution to `tools/run_tests.py`; no fast
+  adds `--full`. The wrapper delegates execution to `tools/testing/run_tests.py`; no fast
   filtering removes planned slow files. A full push/PR plan is deferred, not run.
 - An always-run `actions/upload-artifact@v4` step uploads the plan and machine-readable
   suite receipt as `quality-selection-<run_id>-<run_attempt>`. Missing files warn;

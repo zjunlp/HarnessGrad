@@ -5,7 +5,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from harnessgrad import bubblewrap, python_harness_runtime as runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
+from harnessgrad.execution import bubblewrap
 from eval.containers import python_service
 
 

@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 
 from eval.containers import sandbox
-from harnessgrad import python_harness_runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime
 from tools import validate_harness as validator
 
 
@@ -71,7 +71,7 @@ def test_managed_contributor_offline_prepare_readonly_check_and_sandbox_smoke(tm
     import os
     import tempfile
     from test_python_harness_store import wheel
-    from harnessgrad.python_artifacts import remove_instance
+    from harnessgrad.execution.python_runtime.python_artifacts import remove_instance
     storage = Path(tempfile.mkdtemp(prefix='hg-contributor-control-', dir=Path.home()/'.cache'))
     try:
         repo = storage/'source'; repo.mkdir()
@@ -133,7 +133,8 @@ Path(a.workdir,'answer.txt').write_text('ok')
 
 @pytest.mark.parametrize("drift_call", [2, 3])
 def test_managed_smoke_runtime_drift_refuses_success(managed, monkeypatch, drift_call):
-    from harnessgrad import candidate_runtime, python_exec_runtime
+    from harnessgrad.execution import candidate_runtime
+    from harnessgrad.execution.python_runtime import python_exec_runtime
     root,marker=managed
     binding = {'authored': 'identity'}
     calls=[]
@@ -159,7 +160,8 @@ def test_managed_smoke_runtime_drift_refuses_success(managed, monkeypatch, drift
 
 
 def test_managed_smoke_classifies_manifest_drift_after_copy(managed, monkeypatch):
-    from harnessgrad import candidate_runtime, python_exec_runtime
+    from harnessgrad.execution import candidate_runtime
+    from harnessgrad.execution.python_runtime import python_exec_runtime
     root, marker = managed
     binding = {'authored': 'identity'}
     original_admit = candidate_runtime.admit

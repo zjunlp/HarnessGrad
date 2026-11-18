@@ -133,7 +133,7 @@ assert set(registry.load_envs(name,task_ids=[selected]))=={selected}
 public=json.dumps(tasks)+json.dumps(setups)
 assert 'PRIVATE_' not in public and 'VIOLET_PRIVATE' not in public
 spec=verifiers[selected]
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 context=verification_context.capture(tasks, {}, verifiers=verifiers)
 assert context==verification_context.capture(tasks, {}, verifiers=verifiers)
 assert 'PRIVATE_' not in json.dumps(context)

@@ -80,7 +80,7 @@ def test_state_symlinks_are_denied_without_overwriting(env, tmp_path, link_locat
 
 def test_snapshot_is_not_listed_while_checkout_is_in_progress(env, monkeypatch):
     server, run, candidates = env
-    from harnessgrad import snapshot
+    from harnessgrad.core import snapshot
     source = run / "source"
     tree(source)
     snapshot.write(run, 1, source, run_id=RUN, harness_sha=None)

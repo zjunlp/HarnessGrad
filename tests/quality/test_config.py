@@ -205,7 +205,7 @@ def test_the_migrated_modules_read_the_snapshot_not_the_raw_environment(monkeypa
     monkeypatch.setenv("HG_AGENT_BACKEND", "openai")
     config.reset()
 
-    from harnessgrad.identity import _backend_of, _conflict, _model_of
+    from harnessgrad.provenance.identity import _backend_of, _conflict, _model_of
     assert _model_of(None) == "env-model"
     assert _backend_of(None) == "openai"
     assert _conflict({"agent_model": "declared"}) == {

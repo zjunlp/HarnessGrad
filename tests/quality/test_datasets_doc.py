@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data.scaffolds import registry  # noqa: E402
-import tools.datasets_doc as doc  # noqa: E402
+import tools.dataset_maintenance.datasets_doc as doc  # noqa: E402
 
 DOC_PATH = ROOT / "DATASETS.md"
 

@@ -247,7 +247,7 @@ def test_the_method_sandbox_binds_the_improver_but_never_the_platform(tmp_path):
     这类已经绑过的树不重复绑(计划的读者是人)。而工具那棵树必须真的被绑,否则
     `--improver codex` 只能在 `--no-sandbox` 下用 —— 那正是它之前的状态。
     """
-    import harnessgrad.methods as methods
+    from harnessgrad.execution import method_runner as methods
     tool = tmp_path / "node_modules" / "@openai" / "codex"
     tool.mkdir(parents=True)
     plan = methods._method_sandbox_plan(
@@ -263,7 +263,7 @@ def test_the_method_sandbox_binds_the_improver_but_never_the_platform(tmp_path):
 @pytest.mark.skipif(shutil.which('bwrap') is None, reason='bubblewrap is not installed')
 @pytest.mark.parametrize('binding', ['ancestor', 'ancestor-alias', 'platform-alias', 'child-alias'])
 def test_method_runtime_cannot_reopen_platform_through_parent_or_alias(tmp_path, monkeypatch, binding):
-    from harnessgrad import methods
+    from harnessgrad.execution import method_runner as methods
     from eval.containers import sandbox
 
     shared = tmp_path / 'shared'
@@ -322,7 +322,7 @@ print(json.dumps({{
 @pytest.mark.parametrize('location', ['tmp', 'var-tmp', 'configured', 'configured-ancestor'])
 @pytest.mark.parametrize('alias', [False, True])
 def test_method_runtime_cannot_expose_shared_temporary_root(tmp_path, monkeypatch, location, alias):
-    from harnessgrad import methods
+    from harnessgrad.execution import method_runner as methods
     from eval.containers import sandbox
 
     if location in ('tmp', 'var-tmp'):
@@ -433,7 +433,7 @@ def test_the_method_environment_is_pointed_at_the_resolved_endpoint(monkeypatch)
     少了这一步,`HG_METHOD_*` 会来自 `.env`,而曲线点上是注册表里的名字 —— 记录和实际
     调用的端点就不是同一个东西了。钥匙从注册表点名的变量复制,不进记录。
     """
-    import harnessgrad.methods as methods
+    from harnessgrad.execution import method_runner as methods
     monkeypatch.setenv("DEEPSEEK_API_KEY", "secret-value")
     env = methods._method_env(Path("/tmp"), {
         "name": "deepseek", "base_url": "https://api.deepseek.com/v1",
@@ -730,7 +730,7 @@ def test_the_launcher_lives_where_the_method_sandbox_already_looks():
     放着每道题的期望答案。所以 launcher 和 `cli_improver.py` 放在一起 —— `methods/` 本来
     就是为这个绑定的 —— 而这条测试把那个位置约束写下来,免得以后有人"整理"回 `improvers/`。
     """
-    from harnessgrad.methods import PLATFORM_ROOT as HG_ROOT
+    from harnessgrad.execution.method_runner import PLATFORM_ROOT as HG_ROOT
 
     config = improver.load_config()
     launcher = (ROOT / config["improvers"]["dsh"]["launcher"]).resolve()

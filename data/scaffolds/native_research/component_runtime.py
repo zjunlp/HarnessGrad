@@ -5,7 +5,7 @@ provisioning error, never permission to import packages from the platform.
 """
 import os
 from harnessgrad.config.areas import ConfigMissing
-from harnessgrad.dataset_runtime import bind, resolve_execution
+from harnessgrad.datasets.runtime import bind, resolve_execution
 
 
 def binding(name, role):

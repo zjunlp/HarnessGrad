@@ -1,6 +1,6 @@
 """A finished run leaves its one page behind: `end-summary.md` and `end-summary.json`.
 
-`tools/run_summary.py` already knows how to turn a run directory into that page; the gap
+`tools/analysis/run_summary.py` already knows how to turn a run directory into that page; the gap
 this file pins is that a reader had to know to run it. These tests ask a **real** driver
 (mock backend, one improvement round, no sandbox) whether the page is there when the run
 returns, whether `--no-summary` keeps it away, and whether a summary that blows up changes

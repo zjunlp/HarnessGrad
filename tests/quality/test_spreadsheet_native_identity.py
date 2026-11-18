@@ -165,3 +165,28 @@ print('actual UNO available; undeclared global sentinel absent; both aliases rea
                             [record['python'], '-I', '-B', '-c', code]),
                             env=minimal_env(), capture_output=True, text=True, timeout=20)
     assert result.returncode == 0, result.stderr
+
+
+def test_malformed_uno_worker_output_cannot_publish_workbooks(tmp_path, monkeypatch):
+    import importlib.util
+    from types import SimpleNamespace
+    from data.scaffolds.spreadsheet_runtime import native
+
+    source = tmp_path / 'upstream.py'
+    source.write_text('# authored source\n')
+    workbook = tmp_path / 'workbook.xlsx'
+    workbook.write_bytes(b'authored workbook')
+    fake_package = tmp_path / 'tqdm'
+    fake_package.mkdir()
+    (fake_package / '__init__.py').write_text('')
+    monkeypatch.setattr(importlib.util, 'find_spec', lambda name: SimpleNamespace(origin=str(fake_package / '__init__.py')))
+    monkeypatch.setattr(native, 'reject_active_content', lambda path: None)
+    monkeypatch.setattr(native, 'sandbox_command', lambda *a, **k: ['authored-worker'])
+    def malformed(*args, **kwargs):
+        raise UnicodeDecodeError('utf-8', b'\xff', 0, 1, 'authored invalid output')
+    monkeypatch.setattr(native.subprocess, 'run', malformed)
+    record = {'python': '/authored/python', 'program_dir': '/authored/program',
+              'soffice_binary': '/authored/soffice'}
+    with pytest.raises(UnicodeDecodeError):
+        native.isolated_uno_recalculate(record, source, [workbook])
+    assert workbook.read_bytes() == b'authored workbook'

@@ -1,6 +1,6 @@
 """Offline coverage for pooling model measurements in difficulty reports."""
 
-from tools import task_difficulty
+from tools.studies import task_difficulty
 
 
 def test_pro_measurements_contribute_to_pooled_and_filtered_difficulty():

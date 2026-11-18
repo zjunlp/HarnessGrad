@@ -21,7 +21,7 @@ import pytest
 from eval.run import tool_relay
 from eval.service.tool_transport import call
 from eval.verification import verifier
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 ROOT = Path(__file__).resolve().parents[2]

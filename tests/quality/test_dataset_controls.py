@@ -290,7 +290,7 @@ def _require_control_runtime(name: str) -> None:
     if name == 'appworld' and not os.environ.get('AW_PYTHON'):
         pytest.skip('AppWorld local control requires an explicitly configured AW_PYTHON')
     if name == 'alfworld':
-        from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable, resolve_execution
+        from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable, resolve_execution
         try:
             resolve_execution('alfworld')
         except DatasetRuntimeUnavailable as exc:
@@ -300,7 +300,7 @@ def _require_control_runtime(name: str) -> None:
 
 
 def test_control_runtime_preconditions_distinguish_missing_and_invalid(monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     monkeypatch.delenv('AW_PYTHON', raising=False)
     with pytest.raises(pytest.skip.Exception, match='AW_PYTHON'):
         _require_control_runtime('appworld')

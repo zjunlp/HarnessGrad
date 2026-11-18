@@ -95,6 +95,8 @@ CURVE_POINT: tuple[Field, ...] = (
           kinds=(dict,)),
     Field("scoring_identity", "optional adapter scoring profile and its digest; absence "
                              "preserves legacy records", required=False, kinds=(dict,)),
+    Field("measurement_components", "independent data-source, loader and scorer declarations",
+          required=False, kinds=(dict,)),
     Field("verification_context", "private content equality commitments for selected measurement inputs; "
                                   "not for actor, method or public export payloads", required=False, kinds=(dict,)),
     Field("dataset_runtime_identity", "optional bound dataset provider/actor/service/verifier "
@@ -210,25 +212,31 @@ def check_point(point: dict, *, index: int = 0) -> tuple[list[str], list[str]]:
             f"{where}: `measured_by_platform` is not true -- this number is a claim by "
             f"the method, not a measurement by the platform")
     if "scoring_identity" in point:
-        from harnessgrad.scoring_identity import validate
+        from harnessgrad.provenance.scoring_identity import validate
         try:
             validate(point["scoring_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"{where}: {exc}")
+    if "measurement_components" in point:
+        from harnessgrad.provenance.measurement_components import validate_bundle
+        try:
+            validate_bundle(point["measurement_components"])
+        except (TypeError, ValueError) as exc:
+            problems.append(f"{where}: invalid measurement_components: {exc}")
     if "verification_context" in point:
-        from harnessgrad.verification_context import validate
+        from harnessgrad.provenance.verification_context import validate
         try:
             validate(point["verification_context"])
         except (TypeError, ValueError) as exc:
             problems.append(f"{where}: {exc}")
     if "dataset_runtime_identity" in point:
-        from harnessgrad.dataset_runtime_identity import validate
+        from harnessgrad.datasets.runtime_identity import validate
         try:
             validate(point["dataset_runtime_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"{where}: {exc}")
     if "harness_runtime_identity" in point:
-        from harnessgrad.candidate_runtime import validate
+        from harnessgrad.execution.candidate_runtime import validate
         try:
             validate(point["harness_runtime_identity"])
         except (TypeError, ValueError) as exc:
@@ -254,25 +262,31 @@ def check_run_meta(meta: dict) -> tuple[list[str], list[str]]:
         if name not in meta:
             notes.append(f"run_meta: no `{name}` (added {when})")
     if "scoring_identity" in meta:
-        from harnessgrad.scoring_identity import validate
+        from harnessgrad.provenance.scoring_identity import validate
         try:
             validate(meta["scoring_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"run_meta: {exc}")
+    if "measurement_components" in meta:
+        from harnessgrad.provenance.measurement_components import validate_bundle
+        try:
+            validate_bundle(meta["measurement_components"], dataset=meta.get("dataset"))
+        except (TypeError, ValueError) as exc:
+            problems.append(f"run_meta: invalid measurement_components: {exc}")
     if "verification_context" in meta:
-        from harnessgrad.verification_context import validate
+        from harnessgrad.provenance.verification_context import validate
         try:
             validate(meta["verification_context"])
         except (TypeError, ValueError) as exc:
             problems.append(f"run_meta: {exc}")
     if "dataset_runtime_identity" in meta:
-        from harnessgrad.dataset_runtime_identity import validate
+        from harnessgrad.datasets.runtime_identity import validate
         try:
             validate(meta["dataset_runtime_identity"])
         except (TypeError, ValueError) as exc:
             problems.append(f"run_meta: {exc}")
     if "harness_runtime_identity" in meta:
-        from harnessgrad.candidate_runtime import validate
+        from harnessgrad.execution.candidate_runtime import validate
         try:
             validate(meta["harness_runtime_identity"])
         except (TypeError, ValueError) as exc:

@@ -10,7 +10,7 @@ import sys
 
 import pytest
 
-from harnessgrad import readiness
+from harnessgrad.orchestration import readiness
 
 ROOT = Path(__file__).resolve().parents[2]
 WRAPPER = ROOT / 'methods/lightrsi/run.py'

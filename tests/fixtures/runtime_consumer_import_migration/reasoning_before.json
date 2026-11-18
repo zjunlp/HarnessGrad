@@ -1,0 +1,57 @@
+{
+  "components": {
+    "data_source": {
+      "details": {
+        "dataset": "reasoning_gym",
+        "declared_artifact_sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177",
+        "origin": "historical pinned pool; acquisition not asserted",
+        "revision": "sha256:c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
+      },
+      "kind": "data_source",
+      "sha256": "683a91fea862fc5d50ea9ec4198a13480703aa759659eedf18bfcad3918baa29",
+      "version": 1
+    },
+    "loader": {
+      "details": {
+        "components": {
+          "adapter": "d8f6b57499f958c76fab22d627f34cc76034d72f805b38b77b00e62f2a0b518d",
+          "prepare": "aedfece0679ae893ea2b2845f32fff958c0d88607c4148023bafcc843461348a",
+          "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+          "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+        },
+        "protocol": null
+      },
+      "kind": "loader",
+      "sha256": "14e04de13e2f522a5cb6baca588178880d231de37285c6e56d0d59ce3fb2bb88",
+      "version": 1
+    },
+    "scorer": {
+      "details": {
+        "components": {
+          "adapter": "d8f6b57499f958c76fab22d627f34cc76034d72f805b38b77b00e62f2a0b518d",
+          "env_file": "c808079294197a889fdfb5ecefd1da194447e90803fd1183d568737d8229af86",
+          "paths": "2461e31e25c64a1e35fe2dbfd744dfbe1b4cf24f28b9df951338ddfb2a668171",
+          "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+          "qa_check": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f",
+          "qa_evidence": "ce97451202f521d33e75e1505d43bf13daf0797864a20412ed4d538c2d190865",
+          "qa_prediction": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e",
+          "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383",
+          "wrapper": "75aadd45bfab562b07f8d56493a47448b505d0d3531f829569b27f35578e2544"
+        },
+        "protocol": "reasoning-gym-0.1.25-score-answer"
+      },
+      "kind": "scorer",
+      "sha256": "38cddd00e32d40121ec5d2428c500a77c8886634e94ce223519942522f7a83f4",
+      "version": 1
+    }
+  },
+  "normalized_adapter_ast_sha256": "8e84ac9b53699f1bc5b4d64c9e5270ea3f2d78490d0c4edb4d7b491ea491f648",
+  "scoring": {
+    "profile": {
+      "metric": "reasoning-gym-0.1.25-score-answer",
+      "scorer_sha256": "38cddd00e32d40121ec5d2428c500a77c8886634e94ce223519942522f7a83f4"
+    },
+    "sha256": "7b0c3857fd23268a7a218c466c2e0df8508b59e1ebb42b80257d5dc0c3297fd5",
+    "version": 1
+  }
+}

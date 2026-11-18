@@ -1,6 +1,6 @@
 """The adapter contract is checked by code, not by prose.
 
-`docs/adapter-spec.md` says what an adapter must write; `tools/check_trace_contract.py`
+`docs/adapter-spec.md` says what an adapter must write; `tools/validation/check_trace_contract.py`
 says whether a trace does. Both halves exist because the failure they describe is silent:
 the platform reads every harness's trace with **one** extractor (`loop_facts`), it counts
 `reply` records as model turns and `command` records as executed actions, and a harness that
@@ -33,7 +33,7 @@ def _tool(name: str, path: Path):
 
 @pytest.fixture(scope="module")
 def checker():
-    return _tool("_check_trace_contract", ROOT / "tools" / "check_trace_contract.py")
+    return _tool("_check_trace_contract", ROOT / "tools" / "validation" / "check_trace_contract.py")
 
 
 def _trace(rows: list[dict]) -> str:

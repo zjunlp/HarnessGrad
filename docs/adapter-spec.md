@@ -96,8 +96,8 @@ What a manifest may add is a **`components` map**: a map for reading, never a fe
 }
 ```
 
-The ten components are `harnessgrad/components.py:COMPONENTS` — the same list
-`tools/dataset_classes.py` re-exports as `EXERCISES`, so a dataset's demand and a round's edit
+The ten components are `harnessgrad/core/components.py:COMPONENTS` — the same list
+`tools/dataset_maintenance/dataset_classes.py` re-exports as `EXERCISES`, so a dataset's demand and a round's edit
 are phrased over one vocabulary. Every launchable base harness carries a map (2026-11-02);
 `oracle` does not, because it is a control that is never edited. A round's curve point then
 carries `editable_surface_touched` (the paths `git diff` moved) and
@@ -152,7 +152,7 @@ environment spoke. The platform counts `observations`, `nonzero_returns` and a
 `return_codes` histogram, so "twelve commands, all zero" and "twelve commands, all 127"
 stop looking identical to a method.
 
-**Check a trace against this with `python3 tools/check_trace_contract.py <trace.jsonl>`.**
+**Check a trace against this with `python3 tools/validation/check_trace_contract.py <trace.jsonl>`.**
 
 ### Measured: what the contract is for
 
@@ -168,7 +168,7 @@ clause 3 and clause 4 exist and why they are checked rather than suggested.
 
 ### Where the six base harnesses stand
 
-Checked with `tools/check_trace_contract.py` where a trace could be produced without a
+Checked with `tools/validation/check_trace_contract.py` where a trace could be produced without a
 model; the rest are read from their source.
 
 | harness | 1 identity | 2 usage | 3 turns | 4 feedback | 5 terminal |
@@ -261,7 +261,7 @@ channel it needs.
 `v1` is the shape above. `v0` is what `base_harness/loop` writes and what **every trace
 stored so far** contains: the same answer inline on the action record, as `exit`/`output`.
 
-The reader (`loop_facts`) reads both, and `tools/check_trace_contract.py` says which one it
+The reader (`loop_facts`) reads both, and `tools/validation/check_trace_contract.py` says which one it
 saw. Measured on a real `loop` trace, before and after:
 
     before: commands 32, observations 0
@@ -299,7 +299,7 @@ lets its final message be the answer. Whichever it is, the adapter records which
 3. Model: read the six variables in section 1 and translate them into the CLI's own
    config; add a `mock` path so the harness runs with no network.
 4. Environment: work in the workdir, never read a verifier, and follow the task's delivery contract per section 5.
-5. Trace: the five clauses of section 4 — run `tools/check_trace_contract.py` until it says
+5. Trace: the five clauses of section 4 — run `tools/validation/check_trace_contract.py` until it says
    `OK`.
 6. Validate the source and run the smoke check for the declared runtime.
    See [checking your harness](writing_a_harness.md#5-checking-your-harness-before-contributing).

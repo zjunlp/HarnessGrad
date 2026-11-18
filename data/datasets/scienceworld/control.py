@@ -73,7 +73,7 @@ def _record(task_id: str | None) -> dict:
 def _gold(record: dict, workdir: Path) -> list[str]:
     """Generate references only in the selected isolated operator Python."""
     from eval.containers import python_service
-    from harnessgrad.dataset_runtime import bind, resolve_execution, admit_binding
+    from harnessgrad.datasets.runtime import bind, resolve_execution, admit_binding
     selected = bind(resolve_execution('scienceworld'), 'service')
     runtime = admit_binding(selected, 'service')
     declaration = scienceworld._setup(record, binding=selected)['tool_relay']
@@ -88,7 +88,7 @@ def _gold(record: dict, workdir: Path) -> list[str]:
             runtime_paths=runtime['runtime_paths'],
             read_paths=[*declaration['read_paths'], str(program)])
         proc = subprocess.run(command, env=python_service.environment(directory, {}),
-                              capture_output=True, text=True, errors='strict', timeout=900)
+                              capture_output=True, text=True, errors="strict", timeout=900)
         if proc.returncode != 0:
             raise RuntimeError('ScienceWorld trusted reference worker failed; control is unmeasured')
         actions = json.loads(proc.stdout)

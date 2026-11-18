@@ -1,0 +1,15 @@
+{
+  "profile": {
+    "metric": "reasoning-gym-0.1.25-score-answer",
+    "source_sha256": {
+      "data/datasets/reasoning_gym.py": "d8f6b57499f958c76fab22d627f34cc76034d72f805b38b77b00e62f2a0b518d",
+      "data/datasets/reasoning_gym/check.py": "75aadd45bfab562b07f8d56493a47448b505d0d3531f829569b27f35578e2544",
+      "data/datasets/reasoning_gym/prepare.py": "d64edbf7c4644f61ea29ca14034ec74f1573247d1dc78a89dc2eecd709d3062b",
+      "data/scaffolds/qa/base.py": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+      "data/scaffolds/qa/prediction.py": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e",
+      "data/scaffolds/qa/verify/check.py": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f"
+    }
+  },
+  "sha256": "fe20ea87fd411972725311f0f5fbd3f30bc997096cb00b89fb5ef54efcf671c3",
+  "version": 1
+}

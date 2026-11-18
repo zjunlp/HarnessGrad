@@ -35,7 +35,7 @@ def snapshot_module():
     """平台自己的 `harnessgrad/snapshot.py`：测试写快照、对照签出都用同一份实现。"""
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-    from harnessgrad import snapshot
+    from harnessgrad.core import snapshot
 
     return snapshot
 
@@ -166,3 +166,23 @@ def test_a_corrupt_snapshot_is_skipped_and_named_in_the_error(tmp_path, monkeypa
     # 没有补丁可重放，因此走不到任何一路；理由里说明快照存在但签不出来。
     assert (code, answer["error"]) == (409, "unsafe-recovery")
     assert "snapshots/round-1.json invalid" in answer["detail"]
+
+
+def test_snapshot_loader_supports_old_platform_and_refuses_broken_new_path(tmp_path):
+    import shutil
+    from console import snapshots
+    base = tmp_path / 'platform/harnessgrad'
+    base.mkdir(parents=True)
+    shutil.copyfile(ROOT / 'harnessgrad/core/snapshot.py', base / 'snapshot.py')
+    legacy = snapshots.load(tmp_path / 'platform')
+    assert legacy is not None and callable(legacy.load)
+    (base / 'core').mkdir()
+    current = base / 'core/snapshot.py'
+    shutil.copyfile(ROOT / 'harnessgrad/core/snapshot.py', current)
+    loaded = snapshots.load(tmp_path / 'platform')
+    assert Path(loaded.__file__) == current
+    current.write_text('this is invalid python !')
+    assert snapshots.load(tmp_path / 'platform') is None
+    current.unlink()
+    current.symlink_to(base / 'missing.py')
+    assert snapshots.load(tmp_path / 'platform') is None

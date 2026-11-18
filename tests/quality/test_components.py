@@ -3,7 +3,7 @@
 Two things are pinned here, and the first is the one that rots silently:
 
 1. **There is one list.** `tools/dataset_classes.py::FUNCTIONS` and
-   `harnessgrad.components.COMPONENTS` are the same object, because "which component does a
+   `harnessgrad.core.components.COMPONENTS` are the same object, because "which component does a
    dataset exercise" and "which component did a round's edit touch" are the same decomposition
    of a harness. Two copies is how a taxonomy rots -- the moment one grows, every claim phrased
    over the other is silently about a different set -- so the dataset side re-exports this one.
@@ -26,7 +26,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import components  # noqa: E402
+from harnessgrad.core import components  # noqa: E402
 
 
 def _harness(tmp_path: Path, declaration=None) -> Path:

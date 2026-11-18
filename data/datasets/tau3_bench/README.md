@@ -137,7 +137,7 @@ for supported execution paths and interruption behavior.
 The platform emits `repeated-trials.json`; add task-weighted domain metrics with:
 
 ```bash
-python tools/tau3_report.py /path/to/repeated-trials.json
+python tools/analysis/tau3_report.py /path/to/repeated-trials.json
 ```
 
 A report for a selected subset is explicitly labelled; it is not a full-base result.

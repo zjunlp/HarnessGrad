@@ -31,7 +31,7 @@ async def run(request):
     from data.scaffolds.native_harbor_runtime.python_runtime import admit
     admit(request['case']['runtime'],python=sys.executable)
     if request['case']['dataset']=='jobbench':
-        from harnessgrad.native_judge_identity import validate_selection
+        from harnessgrad.provenance.native_judge_identity import validate_selection
         chosen=validate_selection(request['case']['runtime'])
         if request.get('verifier_env',{}).get('JUDGE_MODEL') != chosen['judge_identity']['model']:
             raise ValueError('JobBench child model differs from prepared selection')

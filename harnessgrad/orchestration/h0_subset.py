@@ -6,8 +6,9 @@ import hashlib
 import json
 
 from eval.run.aggregation import Scores
-from harnessgrad import dataset_runtime_identity, scoring_identity, verification_context
-from harnessgrad.records import _curve_point, level_fields, test_rate_fields
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, scoring_identity, verification_context
+from harnessgrad.experiment.records import _curve_point, level_fields, test_rate_fields
 from .historical_evidence import require_verification_context, reused_measurement
 from . import h0
 
@@ -116,6 +117,7 @@ def materialize_subset(donor, work, source_sha, manifest, attribution, options, 
             if scores.per_task[tid] != base['per_task'][tid]:
                 raise ValueError('donor trial mean and measurement score disagree')
         base.update(verification_context.fields(verification_context.project(identities.verification, selected)))
+        base.update(measurement_components.fields(identities.measurement))
         base.update(dataset_runtime_identity.fields(dataset_runtime_identity.project(identities.dataset, selected)))
         base.update(per_task_std=scores.per_task_std, per_task_trials=scores.per_task_trials,
                     per_task_scorer_isolation=scores.per_task_isolation, score_std=scores.run_spread(),
@@ -136,7 +138,8 @@ def materialize_subset(donor, work, source_sha, manifest, attribution, options, 
         point = _curve_point(run_id=attribution.run_id, round_index=0,
             identity=alias['identity'], sampling=sampling, scores=[base['per_task'][tid] for tid in selected],
             task_ids=selected, train_scores=[base['per_task'][tid] for tid in selected], train_ids=selected,
-            scoring_identity=identities.scoring, dataset_runtime_identity=base.get('dataset_runtime_identity'),
+            scoring_identity=identities.scoring, measurement_components=identities.measurement,
+            dataset_runtime_identity=base.get('dataset_runtime_identity'),
             harness_runtime_identity=identities.initial_actor, verification_context=base['verification_context'],
             env_record=h0._env_record(envs, selected), model_gateway=raw.get('model_gateway'),
             harness_runtime=raw.get('harness_runtime'), evaluation_protocols=base.get('evaluation_protocols'),

@@ -41,6 +41,10 @@ usage:
   {program} preset path NAME             print a bundled recipe path
   {program} split create|check ...      create or validate an experiment partition
   {program} harness install|list ...    install or list base harness versions
+  {program} method list|show ...        inspect method declarations
+  {program} customize inspect|collect|propose|review|patch  inspect and prepare a candidate
+  {program} personal serve|status|stop|project|import|demo|inspect|desktop  personal read-only setup
+  {program} personal model-config|model-demo  explicit model config and offline budget demo
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
@@ -233,8 +237,17 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         return 0
     if command == 'split':
-        from harnessgrad.splits import main as split_main
+        from harnessgrad.experiment.splits import main as split_main
         return split_main(rest)
+    if command == "customize":
+        from harnessgrad.entrypoints.customization import main as customization_main
+        return customization_main(rest)
+    if command == 'personal':
+        from harnessgrad.entrypoints.personal import main as personal_main
+        return personal_main(rest)
+    if command == "method":
+        from harnessgrad.entrypoints.method_catalogue import main as method_main
+        return method_main(rest)
     if command == "harness":
         from tools.install_harness import main as harness_main
         return harness_main(rest)

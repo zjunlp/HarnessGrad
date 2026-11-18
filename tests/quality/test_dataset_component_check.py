@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 from test_dataset_execution_runtime import execution
 from test_dataset_runtime import environment
 from tools import datasets
@@ -48,7 +48,7 @@ def cold_check(component, *, json_output=True):
 import sys
 sys.path.insert(0,{str(ROOT)!r})
 from tools import datasets
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from data.scaffolds import registry
 from pathlib import Path
 datasets.ROOT=Path({str(source)!r})

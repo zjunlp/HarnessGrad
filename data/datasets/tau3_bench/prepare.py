@@ -186,7 +186,7 @@ def main():
     parser.add_argument('--reuse-bundle', action='store_true', help='validate an existing payload; never repair it')
     parser.add_argument('--prepare-runtime', action='store_true', help='explicitly build the managed execution artifact')
     args = parser.parse_args()
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     if args.prepare_runtime and (args.check_only or args.reuse_bundle or args.runtime or args.archive or args.fetch):
         parser.error("--prepare-runtime is a separate action")
     if args.prepare_runtime:

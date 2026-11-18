@@ -6,12 +6,12 @@ REPREPARE = ('Prepare explicitly with `python -m data.scaffolds.native_harbor_ru
 
 
 def resolve(*, root=None):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     return dataset_runtime.bind(dataset_runtime.resolve_execution(PROFILE, root=root), 'verifier')
 
 
 def admit(entry, *, python=None):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     binding = entry.get('harbor_runtime') if isinstance(entry, dict) else None
     if not isinstance(binding, dict):
         raise ValueError('legacy Harbor path-only runtime is unbound; ' + REPREPARE)

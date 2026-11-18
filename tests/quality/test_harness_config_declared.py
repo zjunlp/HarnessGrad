@@ -52,7 +52,7 @@ def test_the_loop_harness_declares_the_budgets_it_actually_used(tmp_path, monkey
 
 def test_the_declaration_lands_on_the_curve_point(tmp_path):
     """平台把它抬成 `identity.harness_config`,读者不必知道声明的形状。"""
-    from harnessgrad.identity import _identity
+    from harnessgrad.provenance.identity import _identity
 
     man = {"name": "loop", "version": "1"}
     declared = {"harness": "loop", "config": {"max_steps": 16, "output_limit": 4000}}
@@ -64,7 +64,7 @@ def test_the_declaration_lands_on_the_curve_point(tmp_path):
 
 def test_a_harness_that_declares_nothing_gets_no_config_key(tmp_path):
     """缺席是"这个外壳没说",不是"预算是零"。"""
-    from harnessgrad.identity import _identity
+    from harnessgrad.provenance.identity import _identity
 
     man = {"name": "loop", "version": "1"}
     assert "harness_config" not in _identity(man, "a" * 40, "a", declared=None)

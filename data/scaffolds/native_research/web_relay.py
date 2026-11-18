@@ -15,7 +15,7 @@ import threading
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from eval.service.tool_transport import Relay
-from tools.web_gateway import WebGateway, ProviderError
+from eval.service.web_gateway import WebGateway, ProviderError
 
 
 def main():

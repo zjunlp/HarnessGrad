@@ -147,7 +147,7 @@ dependency sets in `EXTRACTED_UNIT_IMPORTS` in the guard. The initial leaves are
 | --- | --- | --- |
 | `eval.run.outcomes` | `eval.observe.tracing` | `__future__` |
 | `console.record_reader` | None | `__future__`, `json`, `math`, `pathlib`, `re`, `time` |
-| `harnessgrad.entrypoints.experiment_config` | `harnessgrad.config`, `harnessgrad.experiments` | `__future__`, `pathlib` |
+| `harnessgrad.entrypoints.experiment_config` | `harnessgrad.config`, `harnessgrad.experiment.config` | `__future__`, `pathlib` |
 | `harnessgrad.entrypoints.run_parser` | `harnessgrad.entrypoints.experiment_config` | `__future__`, `argparse`, `collections.abc`, `pathlib` |
 
 The same guard now covers selected-dataset planning, owned source leases,

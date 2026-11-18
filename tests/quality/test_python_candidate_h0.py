@@ -13,9 +13,9 @@ import pytest
 
 from eval.ckpt.git_state import stage_workspace
 from eval.ckpt.source_tree import copy_harness
-from harnessgrad import candidate_runtime as candidate
-from harnessgrad import python_harness_runtime as runtime
-from harnessgrad import snapshot
+from harnessgrad.execution import candidate_runtime as candidate
+from harnessgrad.execution.python_runtime import python_harness_runtime as runtime
+from harnessgrad.core import snapshot
 from tools import prepare_h0
 from test_prepare_h0 import _write_run
 

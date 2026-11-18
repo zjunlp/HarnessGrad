@@ -1,0 +1,15 @@
+{
+  "artifacts": {},
+  "provider": {
+    "dataset": "synthetic",
+    "descriptor_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "manifest_path": "/synthetic/store/artifact.json",
+    "path": "/synthetic/store/venv",
+    "python": "/synthetic/store/venv/bin/python",
+    "requirements_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "runtime_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "sha256": "4d1f0c63aa47a432333525595125711de6bd06a406cd401236c714b6aac56fb9",
+  "tasks": {},
+  "version": 1
+}

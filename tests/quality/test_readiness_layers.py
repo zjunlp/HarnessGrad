@@ -4,8 +4,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from harnessgrad.provisioning import normalize_provision_status
-from tools import dataset_lint as lint
+from harnessgrad.datasets.provisioning import normalize_provision_status
+from tools.dataset_maintenance import dataset_lint as lint
 
 
 @pytest.fixture
@@ -86,7 +86,7 @@ def test_contradictions_fail(snapshot):
 
 
 def test_dataset_inventory_never_calls_full_status(monkeypatch):
-    from harnessgrad import readiness
+    from harnessgrad.orchestration import readiness
     monkeypatch.setattr(readiness.datasets, "published", lambda: ["synthetic"])
     monkeypatch.setattr(readiness.datasets, "load", lambda name: ([{"task_id": "a"}], {}))
     status = Mock(side_effect=AssertionError("full status must not run"))
@@ -95,3 +95,14 @@ def test_dataset_inventory_never_calls_full_status(monkeypatch):
     assert check.ok and check.readiness.status == "ready"
     assert check.readiness.scope == "public-task-inventory"
     status.assert_not_called()
+
+
+def test_readiness_contract_is_shared_and_legacy_import_refuses():
+    import importlib
+    from harnessgrad.core.readiness import Readiness
+    from harnessgrad.datasets.provisioning import normalize_provision_status
+    fact = normalize_provision_status({'present': True})
+    assert type(fact) is Readiness
+    assert fact.as_dict() == {'status': 'ready', 'scope': 'adapter-provision-status', 'detail': ''}
+    with pytest.raises(ImportError, match='harnessgrad.core.readiness'):
+        importlib.import_module('harnessgrad.provisioning')

@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from harnessgrad import slots
+from harnessgrad.execution import slots
 from console import submissions
 from test_console_launch_preflight import _console, _form, _prepare
 

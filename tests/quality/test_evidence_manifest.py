@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import evidence
+from harnessgrad.evidence_reports import evidence
 
 
 def pack(**overrides):

@@ -7,7 +7,7 @@ import urllib.request
 import pytest
 
 from eval.service import modelgate
-from harnessgrad import native_judge_identity
+from harnessgrad.provenance import native_judge_identity
 from data.scaffolds.native_harbor_runtime.judge_gateway import open_gateway
 
 

@@ -91,7 +91,7 @@ def execution_runtime_name(name):
 
 def managed_runtime(name):
     """Static opt-in discovery for preparation tools; does not load an adapter."""
-    from harnessgrad.dataset_runtime import descriptor
+    from harnessgrad.datasets.runtime import descriptor
     if descriptor(name) is not None:
         return True
     return execution_runtime_name(name) is not None
@@ -119,10 +119,10 @@ def provider(name: str):
     session = _PROVIDER_SESSION.get()
     if session is not None and name in session:
         return session[name]
-    from harnessgrad.dataset_runtime import descriptor
+    from harnessgrad.datasets.runtime import descriptor
     if descriptor(name) is None:
         return None
-    from harnessgrad.dataset_provider import DatasetProvider
+    from harnessgrad.datasets.provider import DatasetProvider
     client = DatasetProvider(name, freeze_runtime=session is not None)
     if session is not None:
         session[name] = client
@@ -580,7 +580,7 @@ def _check_env(spec, tid: str, name: str) -> None:
         if "network" in spec and spec["network"] != "none":
             raise ValueError("files network policy must be 'none' or omitted")
         if "task_python" in spec:
-            from harnessgrad.task_python import validate
+            from harnessgrad.datasets.task_python import validate
             validate(spec)
         if "agent_runtime" in spec:
             runtime = spec["agent_runtime"]
@@ -813,7 +813,7 @@ def _selected_tasks(name: str, tasks: list[dict], task_ids) -> list[dict]:
 @contextmanager
 def _declaration_batch():
     from data.scaffolds.declarations import scope
-    from harnessgrad.dataset_runtime import execution_declarations
+    from harnessgrad.datasets.runtime import execution_declarations
     with scope(), execution_declarations():
         yield
 
@@ -898,7 +898,7 @@ def _check_setup(spec, tid: str, name: str) -> None:
         raise ValueError(f"dataset {name!r}: SETUP[{tid!r}] must be a dict")
     relay = spec.get("tool_relay") or {}
     if "python_runtime" in relay:
-        from harnessgrad.dataset_runtime import validate_binding
+        from harnessgrad.datasets.runtime import validate_binding
         if not isinstance(relay.get("python"), str):
             raise ValueError("bound Python service requires an explicit interpreter")
         validate_binding(relay["python_runtime"], "service", python=relay["python"])
@@ -951,7 +951,7 @@ def _check_verifier(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: VERIFY[{tid!r}] must be a dict")
     if "python_runtime" in spec:
-        from harnessgrad.dataset_runtime import validate_binding
+        from harnessgrad.datasets.runtime import validate_binding
         argv = spec.get("argv")
         if not isinstance(argv, list) or len(argv) < 4 or argv[1:3] != ["-I", "-B"]:
             raise ValueError("bound Python verifier requires isolated, bytecode-free startup")

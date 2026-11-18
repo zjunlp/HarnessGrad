@@ -13,7 +13,7 @@ import pytest
 from eval.service.native_model_route import NativeModelRoute
 from eval.service.modelgate import ModelGateway
 from eval.service.request_budget import TaskHTTPBudget, task_http_context
-from harnessgrad.budget_integration import bind_budget
+from harnessgrad.execution.budget_integration import bind_budget
 
 
 class Provider(BaseHTTPRequestHandler):

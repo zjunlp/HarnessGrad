@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad import records
+from harnessgrad.experiment import records
 from harnessgrad.orchestration import run_completion as finish
 
 

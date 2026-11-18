@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from tools import run_tests as runner
-from tools import run_selected as selector
+from tools.testing import run_tests as runner
+from tools.testing import run_selected as selector
 
 
 @pytest.fixture
@@ -188,7 +188,7 @@ def test_selector_provenance_present_in_initial_child_checkpoint(tmp_path, monke
 def test_hard_interruption_keeps_atomic_checkpoint(tmp_path):
     output = tmp_path / "interrupted.json"
     script = (
-        "import os, signal\nfrom tools.run_tests import QualityReceipt\n"
+        "import os, signal\nfrom tools.testing.run_tests import QualityReceipt\n"
         f"r = QualityReceipt({str(output)!r}, ['a', 'b'], ['a', 'b'])\n"
         "i = r.start('a', ['fake-pytest', 'a'])\nr.launched(i)\nr.end(i, 1, 0.1)\n"
         "r.start('b', ['fake-pytest', 'b'])\n"

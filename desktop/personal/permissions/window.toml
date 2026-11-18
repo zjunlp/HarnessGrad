@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-window-action"
+description = "Allow the personal service page to invoke the window-only controls."
+commands.allow = ["window_action"]

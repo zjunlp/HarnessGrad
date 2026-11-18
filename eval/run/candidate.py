@@ -43,7 +43,7 @@ from pathlib import Path
 def _validator():
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-    import tools.validate_harness as harness_validator
+    from harnessgrad.execution import harness_validation as harness_validator
     return harness_validator
 
 

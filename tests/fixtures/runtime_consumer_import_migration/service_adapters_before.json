@@ -1,0 +1,27 @@
+{
+  "agentdojo": {
+    "measurement_components": null,
+    "normalized_ast_sha256": "30800631fc3db3effeb6274689fe9bf1b1dc92b54bcf5b3ffd491ac7b435d854",
+    "scoring_identity": null
+  },
+  "alfworld": {
+    "measurement_components": null,
+    "normalized_ast_sha256": "3c28c21d04850dd514b5033bb4e742223b17effb6be0f97797e6ba233627fb66",
+    "scoring_identity": null
+  },
+  "appworld": {
+    "measurement_components": null,
+    "normalized_ast_sha256": "473efd807f521b390a1b5e297817bd7853f9d949ec3bb2299615826730de08d6",
+    "scoring_identity": null
+  },
+  "jericho": {
+    "measurement_components": null,
+    "normalized_ast_sha256": "c0edcc5fe35cf60063ecf96048e40ff5efe7c486b610c66db755a2da9ee07be5",
+    "scoring_identity": null
+  },
+  "scienceworld": {
+    "measurement_components": null,
+    "normalized_ast_sha256": "e961c153ebc06083baf8f9d2113fffe4e5e3291bb38b81886c191d795142986d",
+    "scoring_identity": null
+  }
+}

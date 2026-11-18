@@ -111,7 +111,7 @@ def validate_native_benchmark(spec):
             or spec.get('result_contract') != {'version': 1, 'score_range': [0, 1], 'require_exit_zero': True}):
         raise ValueError('native_benchmark requires its fixed command/result contract and no other runtime')
     if name in {'deepswe', 'jobbench', 'swe_bench_pro'}:
-        from harnessgrad.dataset_runtime import validate_binding
+        from harnessgrad.datasets.runtime import validate_binding
         selected = validate_binding(spec.get('python_runtime'), 'verifier')
         entry = Path(__file__).resolve().with_name('native_harbor_runtime') / 'harbor_entry.py'
         if (selected['dataset'] != 'native_harbor'

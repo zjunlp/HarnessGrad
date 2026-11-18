@@ -1,0 +1,19 @@
+{
+  "normalized_ast": {
+    "data/datasets/scienceworld/control.py": "1415d69d8743564a0ac1e58b9d08f498c93a73e021bcdfe24efd024853a85f38",
+    "data/datasets/tau2_bench/prepare.py": "2de92a54e614ef2b0cee918978a3cc259502992e14597285e33feea5f2242d9f",
+    "data/datasets/tau3_bench/prepare.py": "6f45bbb7cc0b4670a27f5e0cebb741fd3bec67d160757229deb0f4f2d3350199"
+  },
+  "tau_preparation_identity": {
+    "data/datasets/tau2_bench.py": "33a8562cae191308ac228c897495b71027453e3db3b5737bb5d1132db566d870",
+    "data/datasets/tau2_bench/lib/bootstrap.py": "2cfe29b51dd2bc939295824489c73b2ac038cd6dc931fc013efaf3f59f29e8b9",
+    "data/datasets/tau2_bench/prepare.py": "4bae3560058870975cf0b5329a3a763698ad4149a0c5d1f60f7d62b958cfbca4",
+    "data/datasets/tau3_bench.py": "d5188bc011c196c14ee11eec59b22718422bdb58594ce7f7101e9c2375a62c8e",
+    "data/datasets/tau3_bench/lib/bootstrap.py": "d773ddead0019e95a07e7e9cbcda06ae68f6495f6c0dfc21abb930825aa4afa4",
+    "data/datasets/tau3_bench/lib/runtime.py": "a28f00cc26922e0c325aa812e244877a0265f3d45439195c2c4e8edc3622a774",
+    "data/datasets/tau3_bench/prepare.py": "902e540f5e5f4d1790fa61601c2c09efff4b4dc5eb9b59334e22b123604b7d0d",
+    "tools/_tau_prepare.py": "f08b17c529c9042db41960ca3b73d262945e380dbac8863f4d509f4cbab3028d",
+    "tools/prepare_tau2_bench.py": "384e25d3ef8e96ac3a7451ea443590f5f12d01ad46548e75b169cf91790a3696",
+    "tools/prepare_tau3_bench.py": "54e239b516b7be92314c6097fecd40ff1cfe83b6adc565dacb35b1414ec8784b"
+  }
+}

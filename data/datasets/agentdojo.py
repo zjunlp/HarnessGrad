@@ -128,7 +128,7 @@ def oracle_files(task):
 
 
 def _execution_runtime():
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     return resolve_execution('agentdojo')
 
 
@@ -150,7 +150,7 @@ def __getattr__(name):
     if name == 'ENV':
         return {f'agentdojo/{i}': {'kind': 'files'} for i in _indices()}
     if name == 'SETUP':
-        from harnessgrad.dataset_runtime import bind
+        from harnessgrad.datasets.runtime import bind
         runtime = _execution_runtime()
         source = _source_root()
         # One agent-visible program and no data. The interaction environment is served over the
@@ -178,7 +178,7 @@ def __getattr__(name):
             },
         } for i in _indices()}
     if name == 'VERIFY':
-        from harnessgrad.dataset_runtime import bind
+        from harnessgrad.datasets.runtime import bind
         runtime = _execution_runtime()
         return {f'agentdojo/{i}': {
             'kind': 'command', 'python_runtime': bind(runtime, 'verifier'),

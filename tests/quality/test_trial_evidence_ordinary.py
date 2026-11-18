@@ -7,7 +7,7 @@ import pytest
 
 from data.scaffolds.registry import _check_verifier
 from eval.run import runner, trial_evidence
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 from harnessgrad.loops import eval_side
 from ordinary_evidence_helpers import evaluation
 from test_repeated_trial_resume import session

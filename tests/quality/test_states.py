@@ -22,8 +22,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from harnessgrad import channel as channel_mod                # noqa: E402
-from harnessgrad.channel import _stage_for_method              # noqa: E402
+from harnessgrad.experiment import channel as channel_mod                # noqa: E402
+from harnessgrad.experiment.channel import _stage_for_method              # noqa: E402
 from eval.ckpt.git_state import (commit_state, init_repo, materialize,  # noqa: E402
                             reset_hard)
 
@@ -62,7 +62,7 @@ def test_every_round_becomes_a_directory_a_method_can_build_on(tmp_path):
 
 
 def test_resume_stages_missing_git_parent_from_verified_run_snapshot(tmp_path):
-    from harnessgrad import snapshot
+    from harnessgrad.core import snapshot
     old, shas = _repo(tmp_path, ["print('v0')\n", "print('v1')\n"])
     source = tmp_path / 'saved-source'
     materialize(old, shas[1], source)

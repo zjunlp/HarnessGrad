@@ -35,6 +35,7 @@ import os
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -284,29 +285,60 @@ def test_the_overlay_cannot_reach_the_graded_snapshot(tmp_path):
     mount = tmp_path / "overlay"
     mount.mkdir()
     (mount / "proof.txt").write_text("sentinel\n", encoding="utf-8")
-    name = "hg-test-overlay-commit"
-    subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=60)
-    subprocess.run(["docker", "rmi", "-f", "hg-test-overlay-snap"], capture_output=True,
-                   timeout=60)
+    token = uuid.uuid4().hex
+    name = f"hg-test-overlay-{token}"
+    snapshot = f"hg-test-overlay-snap:{token}"
+    created = committed = False
     try:
         subprocess.run(["docker", "create", "--name", name, "--network", "none",
                         "-v", f"{mount}:/overlay:ro", "--entrypoint", "sh", image,
                         "-c", "sleep 60"], capture_output=True, text=True, timeout=120,
                        check=True)
+        created = True
         subprocess.run(["docker", "start", name], capture_output=True, timeout=120,
                        check=True)
-        subprocess.run(["docker", "commit", name, "hg-test-overlay-snap"],
+        subprocess.run(["docker", "commit", name, snapshot],
                        capture_output=True, timeout=300, check=True)
+        committed = True
         proc = subprocess.run(["docker", "run", "--rm", "--network", "none",
-                               "--entrypoint", "sh", "hg-test-overlay-snap", "-c",
+                               "--entrypoint", "sh", snapshot, "-c",
                                "[ -e /overlay/proof.txt ] && echo PRESENT || echo ABSENT"],
                               capture_output=True, text=True, timeout=120)
         assert "ABSENT" in proc.stdout, (
             "bind mount 的内容进了快照 —— harness 的依赖会出现在校验器运行的环境里")
     finally:
-        subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=120)
-        subprocess.run(["docker", "rmi", "-f", "hg-test-overlay-snap"],
-                       capture_output=True, timeout=120)
+        if created:
+            subprocess.run(["docker", "rm", "-f", name], capture_output=True, timeout=120)
+        if committed:
+            subprocess.run(["docker", "rmi", "-f", snapshot],
+                           capture_output=True, timeout=120)
+
+
+@pytest.mark.parametrize("fail_create", [False, True])
+def test_overlay_control_only_cleans_its_own_resources(tmp_path, monkeypatch, fail_create):
+    calls = []
+    monkeypatch.setattr(sys.modules[__name__], "_a_local_image", lambda: "synthetic/image:tag")
+
+    def fake_run(argv, **kwargs):
+        calls.append(argv)
+        if fail_create and argv[1] == "create":
+            raise subprocess.CalledProcessError(1, argv)
+        return subprocess.CompletedProcess(argv, 0, stdout="ABSENT\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    if fail_create:
+        with pytest.raises(subprocess.CalledProcessError):
+            test_the_overlay_cannot_reach_the_graded_snapshot(tmp_path)
+        assert [argv[1] for argv in calls] == ["create"]
+        return
+    test_the_overlay_cannot_reach_the_graded_snapshot(tmp_path)
+    assert [argv[1] for argv in calls] == ["create", "start", "commit", "run", "rm", "rmi"]
+    name = calls[0][3]
+    snapshot = calls[2][3]
+    assert name.startswith("hg-test-overlay-") and name != "hg-test-overlay-commit"
+    assert snapshot.startswith("hg-test-overlay-snap:")
+    assert calls[4][-1] == name and calls[5][-1] == snapshot
+    assert snapshot in calls[3]
 
 
 # ------------------------------------------------ host overlays: the `files` 那半 ---
@@ -435,7 +467,7 @@ def test_a_files_run_is_told_about_its_missing_overlay(tmp_path, capsys):
     两种环境的修法不同:`exec` 是 `--dataset`(按镜像的 Python 版本建),
     `files` 是那个解释器本身(默认就是宿主),所以两条消息不能共用一个命令。
     """
-    import harnessgrad.environments as environments
+    from harnessgrad.orchestration import environments
     repo = _harness(tmp_path / "hw")
     environments._warn_missing_overlay(repo, {"t": {"kind": "files"}}, "alfworld")
     files_note = capsys.readouterr().out

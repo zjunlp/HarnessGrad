@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
 
 import data.scaffolds.registry as registry  # noqa: E402
-import dataset_lint  # noqa: E402
+from tools.dataset_maintenance import dataset_lint  # noqa: E402
 
 
 @pytest.fixture(scope="module")

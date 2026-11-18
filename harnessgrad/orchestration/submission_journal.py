@@ -14,7 +14,7 @@ import shutil
 import stat
 import tempfile
 
-from harnessgrad import snapshot
+from harnessgrad.core import snapshot
 
 
 class SubmissionJournalError(ValueError):

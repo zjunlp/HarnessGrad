@@ -78,7 +78,7 @@ def cli_provider_base_url(improver: dict) -> str:
 def probe_tool_calls(base_url: str, model: str, *, provider=cli_provider) -> tuple[bool | None, str]:
     """Ask the endpoint whether it returns structured tool_calls. Never raises.
 
-    Reuses `tools/probe_tool_calls.py`'s request shapes so the door and the CLI agree on
+    Shares the execution-layer probe with `tools/diagnostics/probe_tool_calls.py` so the door and the CLI agree on
     what "supports tool calls" means. `responses` decides, because that is the wire a codex
     improver uses; `chat` is reported in the detail for a reader who needs to know which
     path failed. A declared but unset CLI credential returns None (unprobed),
@@ -86,7 +86,7 @@ def probe_tool_calls(base_url: str, model: str, *, provider=cli_provider) -> tup
     """
     try:
         sys.path.insert(0, str(PLATFORM_ROOT))
-        import tools.probe_tool_calls as probe
+        from harnessgrad.execution import tool_call_probe as probe
     except Exception as exc:                                             # noqa: BLE001
         return False, f"the probe itself could not be imported: {exc}"
     # Only the selected CLI credential may authorize this request. A tokenless
@@ -100,8 +100,8 @@ def probe_tool_calls(base_url: str, model: str, *, provider=cli_provider) -> tup
     else:
         key = "local"
     try:
-        resp_ok, resp_why = probe._calls_responses(base_url, model, key, 120.0)
-        chat_ok, chat_why = probe._calls_chat(base_url, model, key, 120.0)
+        resp_ok, resp_why = probe.probe_responses(base_url, model, key, 120.0)
+        chat_ok, chat_why = probe.probe_chat(base_url, model, key, 120.0)
     except Exception as exc:                                             # noqa: BLE001
         return False, f"the probe raised: {type(exc).__name__}: {exc}"
     detail = f"responses: {resp_why} | chat: {chat_why}"
@@ -178,7 +178,7 @@ def resolve_readiness(request: ImproverRequest, *, reporter, load_config,
     # `<tool_call><function=...>` **text** and codex needs structured calls on
     # `wire_api = "responses"`. The requirement had been raised before and was written down
     # nowhere (`grep -rn tool_call docs/ INTERFACE.md` was empty), so it kept being
-    # rediscovered instead of enforced. `tools/probe_tool_calls.py` is the check.
+    # rediscovered instead of enforced. `tools/diagnostics/probe_tool_calls.py` is the check.
     #
     # What it can and cannot decide: a **custom** provider in the CLI's own config names a
     # `base_url`, so that endpoint can be probed and refused. A hosted provider's endpoint

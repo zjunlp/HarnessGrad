@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.admission.scorer_admission`.
+"""Removed import guard: use :mod:`eval.admission.scorer_admission`."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.admission import scorer_admission as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError('eval.scorer_admission was removed; import eval.admission.scorer_admission instead')

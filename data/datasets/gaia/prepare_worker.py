@@ -7,7 +7,7 @@ import sys
 
 # -I removes checkout paths; add only this reviewed worker's repository owner.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 def main():

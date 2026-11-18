@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from harnessgrad import config as platform_config
-from harnessgrad import experiments
+from harnessgrad.experiment import config as experiments
 
 
 def expand_experiment_argv(argv: list[str]) -> list[str] | None:

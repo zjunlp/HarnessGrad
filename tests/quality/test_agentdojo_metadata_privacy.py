@@ -62,14 +62,14 @@ def metadata_boundary(monkeypatch, adapter_code):
         # (the package), not as `data.scaffolds.roots`; both spellings are on the list so
         # the guard keeps refusing a *reader* while allowing a path resolver.
         if name not in {"__future__", "json", "os", "subprocess", "pathlib", "harnessgrad.paths",
-                        "harnessgrad.dataset_runtime", "data.scaffolds",
+                        "harnessgrad.datasets.runtime", "data.scaffolds",
                         "data.scaffolds.qa", "data.scaffolds.qa.base",
                         "data.scaffolds.roots"}:
             denied("non-metadata import")()
         return original_import(name, *args, **kwargs)
 
     import harnessgrad.paths as paths
-    import harnessgrad.dataset_runtime
+    import harnessgrad.datasets.runtime
     # No real QA dependency, provisioned pool, runtime or verifier is imported.
     # Restore the guards before pytest renders results or tears fixtures down.
     with monkeypatch.context() as guard:

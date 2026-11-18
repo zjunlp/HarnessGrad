@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from harnessgrad import channel
+from harnessgrad.experiment import channel
 
 
 def declaration():

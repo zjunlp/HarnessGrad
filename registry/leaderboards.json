@@ -678,7 +678,7 @@
     },
     {
       "name": "measurement identity in the matrix",
-      "path": "tools/results_matrix.py",
+      "path": "tools/analysis/results_matrix.py",
       "contributor": "trancefornow",
       "since": "2026-11-03",
       "note": "a row carries the harness, split and scorer identity its score was measured with"

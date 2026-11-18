@@ -268,7 +268,7 @@ class Dataset:
                 'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
                 'timeout_s':30,'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
         if self.name in ('math','math500'):
-            from harnessgrad.dataset_runtime import bind, resolve_execution
+            from harnessgrad.datasets.runtime import bind, resolve_execution
             binding = bind(resolve_execution('math'), 'verifier')
             spec['argv'][:2] = [binding['python'], '-I', '-B']
             spec['python_runtime'] = binding

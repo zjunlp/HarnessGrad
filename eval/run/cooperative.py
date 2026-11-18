@@ -40,7 +40,7 @@ def run(repo, task, *, setup, verifier, env, timeout_s, verify_timeout_s,
     workers=setup['workers']
     bun_identity=None
     try:
-        from harnessgrad import candidate_runtime
+        from harnessgrad.execution import candidate_runtime
         if candidate_runtime.has_python(repo):
             raise ValueError('managed Python candidates do not support workers')
         validate_workers(workers)

@@ -4,7 +4,8 @@ from types import SimpleNamespace
 import pytest
 
 from data.scaffolds import provider_worker as worker, registry
-from harnessgrad import dataset_provider as client, dataset_runtime as runtime
+from harnessgrad.datasets import provider as client
+from harnessgrad.datasets import runtime
 
 
 @pytest.mark.parametrize("reason", ["reference actions unavailable", True])
@@ -94,7 +95,7 @@ def test_real_worker_rejects_private_public_fields_without_echoing_contents(tmp_
 sys.path.insert(0,sys.argv[1])
 from types import SimpleNamespace
 from data.scaffolds import provider_worker as worker, registry
-from harnessgrad import dataset_runtime as runtime
+from harnessgrad.datasets import runtime
 request=json.load(sys.stdin)
 task={'task_id':'native/one','goal':'public mentions walkthrough and credentials',
       'inputs':{'account':'public-user','credentials':'public account description'}}

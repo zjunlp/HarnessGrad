@@ -7,7 +7,10 @@ from pathlib import Path
 import sys
 from typing import Callable
 
-from harnessgrad import candidate_runtime, dataset_runtime_identity, task_python, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import task_python
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from eval.containers import external_runtime
 from eval.observe import progress
 from eval.observe.tracing import _last_usage

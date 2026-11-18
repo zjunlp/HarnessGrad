@@ -10,7 +10,8 @@ import json
 from pathlib import Path
 import threading
 
-from harnessgrad import config, dataset_runtime
+from harnessgrad import config
+from harnessgrad.datasets import runtime as dataset_runtime
 from eval.run.runner import run_one
 
 ASSERTION = 'The assistant reports the authored arithmetic result.'

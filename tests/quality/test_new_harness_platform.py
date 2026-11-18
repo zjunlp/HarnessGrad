@@ -19,9 +19,9 @@ sys.path.insert(0, str(ROOT))
 from eval.ckpt.git_state import commit_state, content_sha, stage_workspace
 from eval.observe.tracing import loop_facts
 from eval.run.runner import run_one
-from tools.check_trace_contract import inspect as inspect_trace
+from tools.validation.check_trace_contract import inspect as inspect_trace
 from tools.validate_harness import source_identity
-from harnessgrad import candidate_runtime
+from harnessgrad.execution import candidate_runtime
 from test_miniagent_harness import managed_miniagent, miniagent_store  # noqa: F401
 
 

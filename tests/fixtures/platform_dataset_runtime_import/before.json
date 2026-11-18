@@ -1,0 +1,438 @@
+{
+  "chessbench_puzzles": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "chessbench_puzzles",
+          "declared_artifact_sha256": "099d54e681a07b9e82b4462aaf5436a6e833edc6f56b92ea7c2d2413f7efbe48",
+          "origin": "https://storage.googleapis.com/searchless_chess/data/puzzles.csv",
+          "revision": "90ae0e6b121673fc3079aaeffa047580bb600c0a"
+        },
+        "kind": "data_source",
+        "sha256": "e892619260c25fa2a45b734332e46fc61de5dfe4fce6bd8690052b2cd291a166",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "affd201859532bc28b2a2a8656cc651b2ae81cc72eddbe0ac214e978edc43387",
+            "provider": "b883fb268b695e9bc08ee0dba51d2ec7b7dbe191e1234104ac76e79f65ff8d1e",
+            "provider_worker": "00cd7545ccfaa2f3492eafa019d10497101d8d9b37c280ba8f3ba9a376c8a155",
+            "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+            "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "89d090f7321bc471999502d59a78af7cfe8683ae884b6f3df2be7f5e5f87e50a",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "adapter": "affd201859532bc28b2a2a8656cc651b2ae81cc72eddbe0ac214e978edc43387",
+            "native_runtime": "1dd47b9a27c0598c89c55c08579e7f85655b821166bc8a8150645e9379479599",
+            "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+            "qa_verifier": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f",
+            "stepwise": "7f9a34ca2c0bde43e8164fd4d498151cfda9e90692e5989570a7bbefdc10fffd",
+            "stepwise_worker": "28b582c4824e87cf72d3eaf6f35f3659d4cae0b28326a6d28ed9c1ba6b51ccce"
+          },
+          "protocol": "ChessBench strict legal puzzle replay v1"
+        },
+        "kind": "scorer",
+        "sha256": "cefb9cd6495441d30761db5d16060736fcfd9d4b33210250ed305e50933244ba",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "metric": "ChessBench strict legal puzzle replay v1",
+        "scorer_sha256": "cefb9cd6495441d30761db5d16060736fcfd9d4b33210250ed305e50933244ba",
+        "upstream_diagnostic": "ChessBench upstream puzzle replay (unchecked push)"
+      },
+      "sha256": "840bffe1b4409d95c566c2f96c92a1e61b3b3d558ba3d1c984fed811121d8049",
+      "version": 1
+    }
+  },
+  "locomo": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "locomo",
+          "declared_artifact_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+          "origin": "https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json",
+          "revision": "3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376"
+        },
+        "kind": "data_source",
+        "sha256": "8a107717ad41342e84dde1a67781d5cff6f77b4606d32a994fa9326881b3e79e",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "491561739fe0202c722ef43b66cf6e94e812b59c4d1b32e8fecaff302f7ee62c",
+            "inputs": "b871ed04da9a4b419f5782b3ff69526e8b7a71fcbbd676dd5fdbed7fddb5e5a4"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "14279ef641a2ffff59b784dde966807851a0b2d2312151504dea30391fb8555d",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "aggregation": "1bb0a24b604351989cc8ad6f28b80de5a7534021a55177d1b02931a7e8b2cdd8",
+            "check": "9ed9e0b7cb579f5634dd9b8bf1f2759cf00ad1703998de1257185b5ef874f4b1",
+            "declared_harbor_scorer": "593df86ea5cfc8e21b05ee2812050ff081a5e43d6be1ab2f05467de8daa6632b",
+            "scoring": "99b8529201032d1240155b44a195cb234ceb99e6d2954f04c60c3ad4cf7fcea3"
+          },
+          "protocol": "locomo.harbor.question_micro_mean.v1"
+        },
+        "kind": "scorer",
+        "sha256": "007bda62bc4732bda85090139ba89cf1a438a79d011af0d8b858ee6ab1341f38",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "metric": "locomo.harbor.question_micro_mean.v1",
+        "per_task_unit": "one conversation",
+        "platform_aggregation": "unweighted mean of conversation rewards",
+        "report_aggregation": "question-weighted mean over the selected complete set",
+        "scorer_sha256": "007bda62bc4732bda85090139ba89cf1a438a79d011af0d8b858ee6ab1341f38"
+      },
+      "sha256": "d40101c7b70f6986dfdaf9e4722d668162f6737e3a0f01eda6829aecc737b0e0",
+      "version": 1
+    }
+  },
+  "math": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "math",
+          "declared_artifact_sha256": null,
+          "origin": "https://huggingface.co/datasets/EleutherAI/hendrycks_math",
+          "revision": "21a5633873b6a120296cce3e2df9d5550074f4a3"
+        },
+        "kind": "data_source",
+        "sha256": "3f3b1543212351dce7addced80057ad437bb619a19ad3f07f43b9a8517c9ae1e",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "61531f6384ebe26685e544b4511da849d635057672400d06dadb7eb3661692ef",
+            "native_qa": "1fe4f0ab12486ad41ea825dbe3892fbd62eee3e207460a2b1f8c17f4f976e7a3",
+            "preparation": "e08a210c1f63d0ab19293b124ce49d01c646b61a469b607a339c280cb20ec989"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "fd2e94b45a6d9e5eba7644f85ccc2b8c0e744f40a9d9a766440c21c3d003c64c",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "bbeh_official": "0d04d1409787942a897d9a0502ba6ca2253b5186d5b9419efa8a52d025991cbd",
+            "check": "f7916e295a1258fce62d9aee07ca5092511b0439f93ac222bf9dea03181a272f",
+            "math_grade": "49b9a3c12a8b74b1bafedafa7a9ae1807abee09448d25f59a24d7b6311bc08e4",
+            "metrics": "efcf846a124fddfb4be932c151820394b0d52cec54f5b3bb90dd6979323c9d9f",
+            "office_reward": "ea2b1eb8936063df2d9a62f751551cc03e66ce54b9ff75e23e1376a966361fc9",
+            "scoring": "bb13cea19fb34fd8b0cf0c80537d596ebbb6e955f9c794eec1b65f04a03ad1f4"
+          },
+          "protocol": "math-verify-0.9.0-last-boxed"
+        },
+        "kind": "scorer",
+        "sha256": "770c05f7acf79215e4189e2f342b363146a907fec14c422048ff44ad482ec3a9",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "metric": "math-verify-0.9.0-last-boxed",
+        "scorer_sha256": "770c05f7acf79215e4189e2f342b363146a907fec14c422048ff44ad482ec3a9"
+      },
+      "sha256": "6bbe0202a9f2e5161e64ae40c5d3cd280da542bd06ff57f620283576aaa81384",
+      "version": 1
+    }
+  },
+  "math500": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "math500",
+          "declared_artifact_sha256": null,
+          "origin": "https://huggingface.co/datasets/HuggingFaceH4/MATH-500",
+          "revision": "6e4ed1a2a79af7d8630a6b768ec859cb5af4d3be"
+        },
+        "kind": "data_source",
+        "sha256": "bf448f139c1f4c8090822ab96e9a9d2c6e4205f3e9532f6e7ae87d9c5fb7f113",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "b180dfc32591423c34cbf8e98deff4dcdf01aa1b66002fad7b1c5c582596738e",
+            "native_qa": "1fe4f0ab12486ad41ea825dbe3892fbd62eee3e207460a2b1f8c17f4f976e7a3",
+            "preparation": "e08a210c1f63d0ab19293b124ce49d01c646b61a469b607a339c280cb20ec989"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "dd52b4dd178bdb8d7362875b0f6f06e446caa41870f60ef8dcc1807900a471dc",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "bbeh_official": "0d04d1409787942a897d9a0502ba6ca2253b5186d5b9419efa8a52d025991cbd",
+            "check": "f7916e295a1258fce62d9aee07ca5092511b0439f93ac222bf9dea03181a272f",
+            "math_grade": "49b9a3c12a8b74b1bafedafa7a9ae1807abee09448d25f59a24d7b6311bc08e4",
+            "metrics": "efcf846a124fddfb4be932c151820394b0d52cec54f5b3bb90dd6979323c9d9f",
+            "office_reward": "ea2b1eb8936063df2d9a62f751551cc03e66ce54b9ff75e23e1376a966361fc9",
+            "scoring": "bb13cea19fb34fd8b0cf0c80537d596ebbb6e955f9c794eec1b65f04a03ad1f4"
+          },
+          "protocol": "math-verify-0.9.0-last-boxed"
+        },
+        "kind": "scorer",
+        "sha256": "770c05f7acf79215e4189e2f342b363146a907fec14c422048ff44ad482ec3a9",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "metric": "math-verify-0.9.0-last-boxed",
+        "scorer_sha256": "770c05f7acf79215e4189e2f342b363146a907fec14c422048ff44ad482ec3a9"
+      },
+      "sha256": "6bbe0202a9f2e5161e64ae40c5d3cd280da542bd06ff57f620283576aaa81384",
+      "version": 1
+    }
+  },
+  "reasoning_gym": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "reasoning_gym",
+          "declared_artifact_sha256": "c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177",
+          "origin": "historical pinned pool; acquisition not asserted",
+          "revision": "sha256:c0ff4eaef318cd59afcc61472ebe206362fc0211c4b589ed0d53946a569bd177"
+        },
+        "kind": "data_source",
+        "sha256": "683a91fea862fc5d50ea9ec4198a13480703aa759659eedf18bfcad3918baa29",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "d8f6b57499f958c76fab22d627f34cc76034d72f805b38b77b00e62f2a0b518d",
+            "prepare": "d64edbf7c4644f61ea29ca14034ec74f1573247d1dc78a89dc2eecd709d3062b",
+            "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+            "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "09cf3115cdaf20c801baa82c9bdd4b9d529e142131b5b77b32d136f4e3300c11",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "adapter": "d8f6b57499f958c76fab22d627f34cc76034d72f805b38b77b00e62f2a0b518d",
+            "env_file": "c808079294197a889fdfb5ecefd1da194447e90803fd1183d568737d8229af86",
+            "paths": "2461e31e25c64a1e35fe2dbfd744dfbe1b4cf24f28b9df951338ddfb2a668171",
+            "qa_base": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+            "qa_check": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f",
+            "qa_evidence": "ce97451202f521d33e75e1505d43bf13daf0797864a20412ed4d538c2d190865",
+            "qa_prediction": "598ebb5fe688f561d6cb6388ef202be4233de14058c51e65391613c7a6bedd7e",
+            "qa_read": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383",
+            "wrapper": "75aadd45bfab562b07f8d56493a47448b505d0d3531f829569b27f35578e2544"
+          },
+          "protocol": "reasoning-gym-0.1.25-score-answer"
+        },
+        "kind": "scorer",
+        "sha256": "38cddd00e32d40121ec5d2428c500a77c8886634e94ce223519942522f7a83f4",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "metric": "reasoning-gym-0.1.25-score-answer",
+        "scorer_sha256": "38cddd00e32d40121ec5d2428c500a77c8886634e94ce223519942522f7a83f4"
+      },
+      "sha256": "7b0c3857fd23268a7a218c466c2e0df8508b59e1ebb42b80257d5dc0c3297fd5",
+      "version": 1
+    }
+  },
+  "spreadsheetbench": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "spreadsheetbench",
+          "declared_artifact_sha256": "10ef893dd29cb13ab97143ea787e68cdc9574a13873ab9a54e50b31dc03fc949",
+          "origin": "https://hf-mirror.com/datasets/KAKA22/SpreadsheetBench/resolve/ab0b742b0fc95b946f212d80ac7771b5531272e4/spreadsheetbench_verified_400.tar.gz",
+          "revision": "ab0b742b0fc95b946f212d80ac7771b5531272e4"
+        },
+        "kind": "data_source",
+        "sha256": "5ad12e9800ff0819af4faf58c45dc09629279441d313c8efad95845b7bd73508",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "8e3a717b39c7a357d513d17afa6fba7984d4e7b0c81168ca1b526f91ed8e3095"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "0c7858cfba82ca7521692bb4cae571e86bdebd3abb821cadd42119ef3b1c47eb",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "check": "03ada902e6f4f88b14ad44710381b6b9ffebb77964ea1fb87125c77c72ac43eb",
+            "input_binding": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+            "native_runtime": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d"
+          },
+          "protocol": "spreadsheetbench.verified_400.named_cells.v1"
+        },
+        "kind": "scorer",
+        "sha256": "826ba6bedd8b70ba1d70853b85ca33e3122fe903d9ec27655253f8d92c6bb234",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "formula_runtime": "task-bound verified host installation; private bubblewrap conversion; not hermetic",
+        "metric": "spreadsheetbench.verified_400.named_cells.v1",
+        "per_task_unit": "one released workbook variant",
+        "platform_aggregation": "unweighted mean of measured workbook rewards",
+        "scorer_sha256": "826ba6bedd8b70ba1d70853b85ca33e3122fe903d9ec27655253f8d92c6bb234"
+      },
+      "sha256": "3dad8d7d5b618b9badaea874e4825abf11dcc091385afb0d1e23cf86573394d7",
+      "version": 1
+    }
+  },
+  "spreadsheetbench2": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "spreadsheetbench2",
+          "declared_artifact_sha256": null,
+          "origin": "https://huggingface.co/datasets/KAKA22/SpreadsheetBench-v2/resolve/5a2215ed4121945ab09d8723df2995602090b042/spreadsheetbench-v2-09-10.zip",
+          "revision": "5a2215ed4121945ab09d8723df2995602090b042"
+        },
+        "kind": "data_source",
+        "sha256": "789198263a5d3ff85ea0b2d8e6c2c5f258987475b1a1a471dade70f65124020d",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "3a473a1694234831d6f31c4f9251085147c8de1de9ca24257832864852cd16d0",
+            "prepare": "c8eed960d4cc1dd7b9fb2690850dfb183f52f035286575c6657b0f2947c84d18",
+            "safe_file": "37ebd2c728e6709294b183d2843112affaba37f9d94f9cd9bf26058262ea6825"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "36a8272504d9ce8c09be490e6d8362fe081f6f8511d76bc64bc0c07114764bce",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "check": "0078a0350a671b5045e8b4ed1dfaff9b5644766a74d011c284cf128e1c416e5c",
+            "declared_upstream": "9d999075e0212d9a5e3e7839710aefe127509d63a42d99038bce0a062af3ffa1",
+            "evaluation": "04a2a75b29805ab40efe93e202384c365d1d32b9c924c1a4aed56e41249facb0",
+            "input_binding": "21dc52db8e7352152a4c3f80fb94972f1f05c2f3432cd76a9eacd206e79a9dae",
+            "native_runtime": "06cb0e8c6fb1225c2fdd4958f4a5ea5fd98961380eea2fbdc55982963b37a78d",
+            "open_spreadsheet": "9f50ca883067c99dbd254f2b6620dd97157c1f56ae24e0ec692d30813a82dba1"
+          },
+          "protocol": "spreadsheetbench2.official.accuracy"
+        },
+        "kind": "scorer",
+        "sha256": "f230534047d55ecdde75adad5d09023f1f953669890e6b51306017a2be1e5091",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "formula_runtime": "task-bound verified host installation; private bubblewrap UNO; not hermetic",
+        "metric": "spreadsheetbench2.official.accuracy",
+        "per_task_unit": "one official v2 workbook",
+        "platform_aggregation": "unweighted mean of measured workbook accuracies",
+        "scorer_sha256": "f230534047d55ecdde75adad5d09023f1f953669890e6b51306017a2be1e5091"
+      },
+      "sha256": "65b60debd95bf92c4f33e3bfc87bfff7e037dc20e387fa353217489a2f50639a",
+      "version": 1
+    }
+  },
+  "strongreject": {
+    "components": {
+      "data_source": {
+        "details": {
+          "dataset": "strongreject",
+          "declared_artifact_sha256": null,
+          "origin": "Harbor StrongREJECT task metadata and StrongREJECT upstream CSV",
+          "revision": "9f65cabfdadf2f2ddfff8da83b325f1efc5c3f3f:bf6780b11c6bf811720f17dad1418de194aa296188023f7f77b5e3934e24061b"
+        },
+        "kind": "data_source",
+        "sha256": "0042bc60ac40d4b4161d1536fa37641bd932b2e714fc62d1d43aa1b182607983",
+        "version": 1
+      },
+      "loader": {
+        "details": {
+          "components": {
+            "adapter": "78c61d8891d6bffe3f596b51e6fe4f3217c20f661adb925d8a23b7a253f24eed",
+            "prepare": "84c4a66687b8007c0a79c65038e9b3dfa6d3041be9fa8835bd4ad7e9fa62fa82"
+          },
+          "protocol": null
+        },
+        "kind": "loader",
+        "sha256": "a28ab8e532b6a4f2b323cedfbe37075ecf83698104adb6de2843ac66253f3a45",
+        "version": 1
+      },
+      "scorer": {
+        "details": {
+          "components": {
+            "adapter": "78c61d8891d6bffe3f596b51e6fe4f3217c20f661adb925d8a23b7a253f24eed",
+            "check": "4cb97954447b6ed103ac7156c883e92e20f6f060655dd9f0ed852731752ef4a1",
+            "declared_upstream": "2c215f3894cd62801bff9e38dbd2908c009c2d054cef931e1804bc3512549766",
+            "judge": "d980fa041b4edbeb5ab688ca320b7fa286f022458d67953159e0c687486d4172",
+            "judge_request": "678fdbd9a77dd854e6643a21ed718ae3d8ebe85d0200e1c5f6ffbecdc67394e2",
+            "scoring": "c74b41aab5a3845cffbb18a5ceba77d2ab10a5ea4e2de704afc4230d5cdb4702",
+            "transport": "d0542698f3747926e967efe7e647af18a82ee53102f4f130eae382a251eef8dc"
+          },
+          "protocol": "strongreject.rubric.defense.authored-judge.v1"
+        },
+        "kind": "scorer",
+        "sha256": "d8fa67f61164d85ca4be949ca5a28ba4f4970ee318596eb41463af0cacc4c82e",
+        "version": 1
+      }
+    },
+    "scoring": {
+      "profile": {
+        "endpoint_sha256": "36cadaaab23ade9073cef01a1abf8fed7e4975fffa157e7360ffd9639c71eb0a",
+        "judge": {
+          "max_calls": 1,
+          "max_line_bytes": null,
+          "max_output_tokens": null,
+          "model": "authored-judge",
+          "parameters": {
+            "temperature": 0
+          },
+          "response_max_bytes": null,
+          "timeout_s": 300
+        },
+        "metric": "strongreject.rubric.defense.authored-judge.v1",
+        "scorer_sha256": "d8fa67f61164d85ca4be949ca5a28ba4f4970ee318596eb41463af0cacc4c82e"
+      },
+      "sha256": "8e64553b6825bfdf64ea9d5f648c628927778f9e5c93f291a6248e8a2acc4fdd",
+      "version": 1
+    }
+  }
+}

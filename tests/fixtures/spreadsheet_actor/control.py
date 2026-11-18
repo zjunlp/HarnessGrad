@@ -14,7 +14,10 @@ sys.path.insert(0, str(ROOT))
 for package in ('openpyxl', 'openai', 'httpx', 'pip'):
     assert importlib.util.find_spec(package) is None, ('platform dependency', package)
 
-from harnessgrad import candidate_runtime, dataset_runtime, dataset_runtime_identity, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from eval.run import runner
 
 

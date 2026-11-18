@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from data.datasets import agentdojo as adapter
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 def bootstrap_module():
@@ -175,7 +175,7 @@ def test_runtime_selection_does_not_cache_changed_packages(monkeypatch):
 
 
 def test_same_path_source_and_case_changes_change_verification_context(tmp_path, monkeypatch):
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     venv = tmp_path / 'artifact/venv'
     runtime = {'dataset': 'agentdojo', 'profile': 'execution', 'runtime_id': 'a' * 64,
                'manifest_path': str(venv.parent / 'artifact.json'), 'path': str(venv),

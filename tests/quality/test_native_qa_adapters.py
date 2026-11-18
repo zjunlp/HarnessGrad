@@ -155,7 +155,7 @@ def test_office_corpus_is_public_and_separate(tmp_path):
 
 
 def test_math_never_falls_back_to_string_match(tmp_path,monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     adapter=fixture('math500',tmp_path/'data')
     real=importlib.metadata.version
     def absent(name):
@@ -224,7 +224,7 @@ def _synthetic_math_runtime(root):
 
 @pytest.mark.parametrize('name',['math','math500'])
 def test_math_selected_verifier_binds_artifact_and_keeps_gold_private(name,tmp_path,monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     adapter=fixture(name,tmp_path/'data')
     selected=_synthetic_math_runtime(tmp_path)
     monkeypatch.setattr(dataset_runtime, 'resolve_execution', lambda dataset: selected)
@@ -243,7 +243,7 @@ def test_math_selected_verifier_binds_artifact_and_keeps_gold_private(name,tmp_p
 
 @pytest.mark.parametrize('name',['math','math500'])
 def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     from eval.verification import verifier as verification
     adapter=fixture(name,tmp_path/'data')
     selected=_synthetic_math_runtime(tmp_path)
@@ -269,7 +269,7 @@ def test_math_verifier_rejects_hidden_tmp_runtime(name,tmp_path,monkeypatch):
 def test_math_real_native_equivalence(gold,prediction,want):
     store = os.environ.get('HG_TEST_MATH_RUNTIME_ROOT')
     if store:
-        from harnessgrad import dataset_runtime
+        from harnessgrad.datasets import runtime as dataset_runtime
         selected = dataset_runtime.resolve_execution('math', root=Path(store))
         code = ('import json,sys;sys.path.insert(0,sys.argv[1]);'
                 'from data.scaffolds.native_qa.scoring import score;'

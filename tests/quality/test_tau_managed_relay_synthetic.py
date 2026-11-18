@@ -14,7 +14,7 @@ from eval.service.tool_transport import call
 @pytest.mark.parametrize('version', [2, 3])
 def test_native_bound_tau_relay_reads_only_declared_inputs(tmp_path, monkeypatch, version):
     from eval.run import tool_relay
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     adapter = importlib.import_module(f'data.datasets.tau{version}_bench')
     fixture = tmp_path / 'fixture'
     assets = fixture / f'data/datasets/tau{version}_bench'

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from harnessgrad.experiments import (
+from harnessgrad.experiment.config import (
     ExperimentError,
     KNOWN_KEYS,
     from_cli,
@@ -234,8 +234,8 @@ def test_yaml_needs_pyyaml_and_fails_without_an_import_error(
 
 
 def test_importing_the_module_does_not_import_yaml() -> None:
-    source = (ROOT / "harnessgrad/experiments.py").read_text(encoding="utf-8")
-    tree = ast.parse(source, filename="harnessgrad/experiments.py")
+    source = (ROOT / "harnessgrad/experiment/config.py").read_text(encoding="utf-8")
+    tree = ast.parse(source, filename="harnessgrad/experiment/config.py")
     for node in tree.body:
         if isinstance(node, ast.Import):
             assert all(alias.name != "yaml" for alias in node.names)

@@ -39,7 +39,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import data.scaffolds.registry as datasets   # noqa: E402
-import harnessgrad.readiness as readiness    # noqa: E402
+from harnessgrad.orchestration import readiness    # noqa: E402
 
 #: Method admission is present even when zero rounds make it optional.
 CHECKS = ["python", "git", "bwrap", "dataset", "harness", "loop-runtime", "writable", "disk", "method"]
@@ -274,7 +274,7 @@ def test_check_only_creates_no_run_directory(tmp_path):
     (True, "Harness runtime publication must not be a link"),
 ])
 def test_check_only_reports_corrupt_loop_runtime(tmp_path, linked, diagnostic):
-    from harnessgrad import python_harness_runtime
+    from harnessgrad.execution.python_runtime import python_harness_runtime
 
     runtime = tmp_path / "runtime"
     declaration = python_harness_runtime.descriptor(ROOT / "base_harness/loop")
@@ -340,3 +340,19 @@ def test_prepare_only_writes_a_redacted_run_meta_and_launches_nothing(tmp_path):
     assert not (run_dir / "curve.jsonl").exists()
     assert not (run_dir / "events.jsonl").exists()
     assert not (Path(tmp_path / "work") / "prepared-probe").exists()
+
+
+def test_failed_check_gates_prepare_before_reserving_run(tmp_path):
+    """Combining the flags must not publish a preparation record after a failed check."""
+    runs = tmp_path / 'runs'
+    work = tmp_path / 'work'
+    proc = _driver('--check-only', '--prepare-only', '--dataset', 'demo',
+                   '--harness-path', str(tmp_path / 'missing-harness'), '--run-id', 'refused',
+                   '--rounds', '0', '--runs-root', str(runs), '--work-root', str(work),
+                   '--no-sandbox', env={'HG_AGENT_BACKEND': 'mock',
+                                        'HG_REVIEWED_ENVIRONMENT_ONLY': '1',
+                                        'HG_DATA_ROOT': str(tmp_path / 'missing-data'),
+                                        'HG_HARNESS_RUNTIME_ROOT': str(tmp_path / 'runtime')})
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert 'harness' in proc.stdout and 'refusing to run' in proc.stderr
+    assert not runs.exists() and not work.exists()

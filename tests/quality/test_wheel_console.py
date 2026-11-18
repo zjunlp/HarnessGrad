@@ -148,7 +148,7 @@ import json, os, threading, urllib.request
 from unittest.mock import patch
 from pathlib import Path
 from console import server, record_reader
-from harnessgrad.evidence_export import check_export
+from harnessgrad.evidence_reports.evidence_export import check_export
 assert server.ROOT.resolve().is_relative_to(Path(os.environ["VIRTUAL_ENV"]).resolve())
 run = server.RUNS / "synthetic"
 run.mkdir(parents=True)

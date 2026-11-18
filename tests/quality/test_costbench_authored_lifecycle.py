@@ -21,7 +21,7 @@ def test_control_help_needs_only_standard_library(tmp_path):
 
 def test_missing_execution_artifact_fails_read_only(tmp_path):
     control = runpy.run_path(str(CONTROL))
-    from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
     with pytest.raises(DatasetRuntimeUnavailable):
         control['run'](tmp_path / 'absent-runtime', tmp_path / 'absent-bundle', tmp_path / 'output')
     assert not (tmp_path / 'output').exists()

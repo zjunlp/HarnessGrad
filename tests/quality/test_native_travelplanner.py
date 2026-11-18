@@ -108,7 +108,7 @@ def test_prepared_adapter_conversion_and_hash_custody(planning, tmp_path, monkey
 def test_managed_native_constraint_controls(planning, tmp_path):
     """Same authored native constraint controls in the admitted component Python."""
     import subprocess
-    from harnessgrad.dataset_runtime import resolve_execution, DatasetRuntimeUnavailable
+    from harnessgrad.datasets.runtime import resolve_execution, DatasetRuntimeUnavailable
     try:
         runtime = resolve_execution('travelplanner')
     except DatasetRuntimeUnavailable as exc:

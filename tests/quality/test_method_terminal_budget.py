@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from harnessgrad.method_attempts import MethodAttempts
+from harnessgrad.experiment.method_attempts import MethodAttempts
 from methods.stop_status import SCHEMA, TerminalStop, terminal_stop
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -140,7 +140,7 @@ sys.exit(EXIT)
 
 
 def test_log_copy_is_private_and_rejects_symlink(tmp_path):
-    from harnessgrad.records import _keep_method_logs
+    from harnessgrad.experiment.records import _keep_method_logs
     import stat
     work = tmp_path / 'workspace'
     work.mkdir()

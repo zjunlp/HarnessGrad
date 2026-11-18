@@ -15,8 +15,9 @@ import venv
 
 import pytest
 
-from harnessgrad import config, dataset_runtime
-from harnessgrad.python_artifacts import remove_instance
+from harnessgrad import config
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.execution.python_runtime.python_artifacts import remove_instance
 from test_miniagent_harness import managed_miniagent, miniagent_store  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -148,8 +149,8 @@ def test_unprepared_provider_never_falls_back_to_the_empty_platform(qa_platform,
     store = tmp_path/'unprepared'
     run(qa_platform, '''
 from data.scaffolds import registry
-from harnessgrad.dataset_provider import DatasetProvider
-from harnessgrad.dataset_runtime import DatasetRuntimeUnavailable
+from harnessgrad.datasets.provider import DatasetProvider
+from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
 name,store=sys.argv[2:4]
 state=DatasetProvider(name).check()
 assert not state['present'] and state['scope']=='dataset-provider-runtime',state
@@ -168,7 +169,8 @@ assert_platform_imports()
 @pytest.mark.parametrize('name', NAMES)
 def test_static_tools_and_dependency_checks_use_the_provider_environment(qa_platform, name):
     run(qa_platform, '''
-from tools import datasets,datasets_doc,prepare_dataset,dataset_lint
+from tools import datasets,datasets_doc,prepare_dataset
+from tools.dataset_maintenance import dataset_lint
 name=sys.argv[2]
 module=datasets._download_adapter(name)
 entries=module.downloads()
@@ -194,8 +196,8 @@ def test_missing_data_and_corrupt_data_keep_distinct_readiness_states(qa_platfor
     if failure == 'corrupt':
         (folder/'validation-00000-of-00001.parquet').write_bytes(b'authored corrupt Parquet')
     run(qa_platform, '''
-from harnessgrad.dataset_provider import DatasetProvider
-from tools import dataset_lint
+from harnessgrad.datasets.provider import DatasetProvider
+from tools.dataset_maintenance import dataset_lint
 name,failure=sys.argv[2:4]
 state=DatasetProvider(name).check()
 assert not state['present'] and state['status']==('data_missing' if failure=='missing' else 'invalid'),state

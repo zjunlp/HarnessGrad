@@ -1,14 +1,12 @@
-"""Source identity for Reasoning Gym's library-owned scoring route."""
-import hashlib
+"""Library-owned scoring route; historical pool declaration is separate."""
+import importlib.util
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[3]
-SOURCES = ('data/datasets/reasoning_gym.py', 'data/datasets/reasoning_gym/check.py',
-           'data/datasets/reasoning_gym/prepare.py', 'data/scaffolds/qa/base.py',
-           'data/scaffolds/qa/verify/check.py', 'data/scaffolds/qa/prediction.py')
 
 
 def profile():
-    return {'metric': 'reasoning-gym-0.1.25-score-answer',
-            'source_sha256': {path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
-                              for path in SOURCES}}
+    spec = importlib.util.spec_from_file_location('_hg_reasoning_gym_measurement',
+                                                   Path(__file__).with_name('measurement_profile.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    scorer = module.profile()['scorer']
+    return {'metric': scorer['details']['protocol'], 'scorer_sha256': scorer['sha256']}

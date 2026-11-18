@@ -226,7 +226,7 @@ def _goal(record: dict) -> str:
 def _setup(record: dict) -> dict:
     """Publish only a stdlib client and bind the trusted single-game service."""
     import json
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
 
     binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "service")
     rom = Path(record["path"]).resolve(strict=True)

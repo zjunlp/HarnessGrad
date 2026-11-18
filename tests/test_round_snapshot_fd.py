@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from console import round_snapshot as rs
-from harnessgrad import snapshot
+from harnessgrad.core import snapshot
 
 
 def artifact(files, **changes):

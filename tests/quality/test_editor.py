@@ -403,6 +403,7 @@ def _cli_harness(tmp_path: Path, monkeypatch) -> Path:
     helper fails with `SystemExit: a method needs HG_METHOD_BASE_URL ...` if it comes back.
     """
     import editor
+    # Direct unit calls do not have the driver's isolated method working directory.
     monkeypatch.setattr(editor, "_method_workspace", lambda: tmp_path)
     base = _write_harness(tmp_path / "h")
     (base / "_harnessgrad" / "round.json").write_text(json.dumps(
@@ -462,6 +463,7 @@ def test_a_cli_improver_that_declines_is_still_a_no_change(tmp_path, monkeypatch
     reply = editor.ask("prompt", base=base, parent=base)
     assert "no_change" in reply, reply
     assert "retry cap" in str(reply["no_change"]), reply
+    assert any(tmp_path.glob('improver-*-receipt.log'))
 
 
 def test_a_file_the_cli_improver_deleted_is_carried_as_a_deletion(tmp_path, monkeypatch):
@@ -567,7 +569,7 @@ def test_what_the_improver_left_behind_survives_the_round(tmp_path, monkeypatch)
     """
     import cli_improver
     import editor
-    from harnessgrad.records import _keep_method_logs
+    from harnessgrad.experiment.records import _keep_method_logs
     monkeypatch.delenv("HG_IMPROVER", raising=False)
     base = _cli_harness(tmp_path, monkeypatch)
     method_ws = tmp_path / "method_ws"
@@ -924,7 +926,7 @@ def test_the_staged_improver_says_whether_it_is_a_cli():
     CLI",每个方法都退回到 chat endpoint —— codex 被解析了、被探测了、**从未被启动**。记录
     里少一个字段,挡掉的是整个 CLI 层,而曲线上只看得出"这个方法改得很粗糙"。
     """
-    from harnessgrad.identity import _improver_identity
+    from harnessgrad.provenance.identity import _improver_identity
 
     got = _improver_identity({"name": "codex", "kind": "cli", "path": "/x/codex.js",
                               "ok": True, "reason": ""})
@@ -956,7 +958,7 @@ def test_an_endpoint_improver_is_not_dispatched_as_a_cli(tmp_path):
     # `base_url`,而平台从来不写它(`IMPROVER_IDENTITY_FIELDS` 里没有),于是一条通过的测试
     # 掩盖了真实形状会走到 CLI 分支:`--improver deepseek` 去 `Path("https://api.deepseek.com/v1")`,
     # 整轮以 "the platform named an improver at ... which does not exist inside this sandbox" 死掉。
-    from harnessgrad.identity import _improver_identity
+    from harnessgrad.provenance.identity import _improver_identity
 
     root = _write_harness(tmp_path / "h")
     recorded = _improver_identity({"name": "deepseek", "kind": "openai-compatible",

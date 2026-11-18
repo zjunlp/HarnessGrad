@@ -433,7 +433,7 @@ def _setup(record: dict) -> dict:
     `VERIFY.inputs` keeps the game, and that copy is the one the runner stages for the
     relay: the same bytes, read by the check and by the relay, never by the agent.
     """
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
 
     binding = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), "service")
     return {

@@ -54,7 +54,7 @@ def test_declared_bun_candidate_without_preparation_cannot_launch(tmp_path, monk
 
 
 def test_formal_entrypoint_projects_harness_runtime_without_changing_improver(tmp_path, monkeypatch):
-    from harnessgrad import methods
+    from harnessgrad.execution import method_runner as methods
     parent, receipt, calls = prepared(tmp_path, monkeypatch)
     improver = {"name": "dsh", "home": "/unchanged/home", "model": "unchanged"}
     request = {"base_harness": str(parent), "improver": dict(improver)}

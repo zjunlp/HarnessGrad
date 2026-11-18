@@ -12,9 +12,10 @@ from types import ModuleType
 
 import pytest
 
-from harnessgrad import config, readiness
-from harnessgrad.completion import describe
-from harnessgrad.experiments import to_argv
+from harnessgrad import config
+from harnessgrad.orchestration import readiness
+from harnessgrad.experiment.completion import describe
+from harnessgrad.experiment.config import to_argv
 
 ROOT = Path(__file__).resolve().parents[2]
 

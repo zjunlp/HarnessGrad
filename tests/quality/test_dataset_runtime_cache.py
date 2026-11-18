@@ -12,9 +12,9 @@ import pytest
 
 from eval.observe.tracing import _write_progress
 from eval.run import runner
-from harnessgrad import dataset_runtime
-from harnessgrad import dataset_runtime_identity as identity
-from harnessgrad import verification_context as context
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import runtime_identity as identity
+from harnessgrad.provenance import verification_context as context
 from harnessgrad.loops.eval_side import (
     _baseline_block, _merge_prior, _resume_mismatch, _resume_runtime_mismatch,
 )

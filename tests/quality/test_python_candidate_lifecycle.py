@@ -19,8 +19,9 @@ import pytest
 
 from eval.ckpt.source_tree import copy_harness
 from eval.observe.tracing import _write_progress
-from harnessgrad import candidate_runtime
-from harnessgrad import python_harness_runtime, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.execution.python_runtime import python_harness_runtime
+from harnessgrad.provenance import verification_context
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -216,7 +217,7 @@ def test_dependency_edits_are_measured_and_resume_keeps_each_checkpoints_binding
 
 
 def test_managed_last_checkpoint_can_resume_from_its_portable_snapshot(session):
-    from harnessgrad import snapshot
+    from harnessgrad.core import snapshot
     from eval.ckpt.source_tree import PYTHON_GENERATED
 
     assert session.run("study", 1) == 0

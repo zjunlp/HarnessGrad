@@ -1236,7 +1236,7 @@ permits a candidate to spend more only in proportion to the score it gains — s
 run needs a number. But that number is **inflated by construction**: the method has read
 the traces of exactly the tasks it is scored on. It is a progress indicator, not a result.
 
-So every point carries `score_kind`, and `tools/plot_curve.py` **refuses to put a training
+So every point carries `score_kind`, and `tools/analysis/plot_curve.py` **refuses to put a training
 curve and an exam curve on one axis** — the same treatment `files` vs `exec` gets (§2.5.4),
 and for the same reason. A reader who wants the fitting diagnostic asks it across two
 records rather than reading two columns of one.
@@ -1498,7 +1498,7 @@ last, is not about telling runs apart but about telling *candidates* apart:
   harness that dies that way is `invalid` with `stage: "harness model call"` — never `0.0`.
 * **`candidate_code`** — what the method handed over, *as code*: file and definition counts,
   the modules not reachable from the entrypoint's import closure, and the module-level
-  definitions no one names (`harnessgrad/code_metrics.py`, `kind: "python-static-v1"`).
+  definitions no one names (`harnessgrad/core/code_metrics.py`, `kind: "python-static-v1"`).
   Present on a round where a method produced a candidate, absent on H0 and on an eval run,
   because neither handed one over. *Reason, measured by HarnessDev on their own evolved
   harnesses: "of 169 new functions or classes, 113 are reachable from the entry point, 31 are
@@ -1613,7 +1613,7 @@ repository rather than a claim in a paper. The platform records it every round:
 | --- | --- |
 | `improve_entrypoint` / `accept_entrypoint` | the surface the harness *declares* |
 | `editable_surface_touched` | which paths a round *actually* moved, from `git diff` |
-| `editable_surface_components` | which of the ten components those paths belong to, from the manifest's `components` map (`harnessgrad/components.py`; a map for reading, never a fence) |
+| `editable_surface_components` | which of the ten components those paths belong to, from the manifest's `components` map (`harnessgrad/core/components.py`; a map for reading, never a fence) |
 
 `"method/accept.py"` appearing in `editable_surface_touched` means the method
 rewrote its own acceptance rule. That is the line most published systems state
@@ -2742,7 +2742,7 @@ Three things follow, and they are the platform's:
 
 1. **The deployment configures its model server** with tool-call support and a parser
    compatible with the selected model's actual chat template.
-2. **`tools/probe_tool_calls.py` is the check** -- one tool definition, both wires, exit 0
+2. **`tools/diagnostics/probe_tool_calls.py` is the check** -- one tool definition, both wires, exit 0
    only when a structured call comes back. A model that fails it is not a worse model; it is
    a model that cannot drive an agent shell, and this is the only thing that distinguishes
    the two.

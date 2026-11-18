@@ -120,7 +120,7 @@ SALT = b"Nvx#rYcYQ2%btf"
 
 def _decrypt(data: bytes, runtime: dict) -> bytes:
     # Re-admit the current publication before each use; never install implicitly.
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     admitted = resolve_execution("appworld")
     if (admitted["runtime_id"], admitted["manifest_path"]) != (runtime["runtime_id"], runtime["manifest_path"]):
         raise ValueError("appworld preparation runtime changed during selection")
@@ -135,7 +135,7 @@ def _decrypt(data: bytes, runtime: dict) -> bytes:
 
 def bundle_zip(bundle_path: Path | str | None = None, *, _runtime: dict | None = None) -> zipfile.ZipFile:
     """Decrypt in the explicitly prepared external runtime, never in platform Python."""
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     runtime = _runtime if _runtime is not None else resolve_execution("appworld")
     path = Path(bundle_path) if bundle_path else BUNDLE
     return zipfile.ZipFile(io.BytesIO(_decrypt(path.read_bytes(), runtime)))
@@ -219,7 +219,7 @@ def prepare() -> Path:
 
     Existing official files must match the pinned bundle. Extra user files are retained.
     """
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     runtime = resolve_execution("appworld")
     worker = Path(__file__).resolve().parent / "appworld" / "decrypt_bundle.py"
     worker_sha = hashlib.sha256(worker.read_bytes()).hexdigest()

@@ -118,7 +118,7 @@ def test_a_shell_entrypoint_without_a_shim_is_not_measurable(tmp_path: Path) -> 
 def test_both_examples_declare_a_readable_components_map() -> None:
     """§5.2 of the page: the map is what makes `editable_surface_components` non-empty."""
     sys.path.insert(0, str(ROOT))
-    from harnessgrad import components
+    from harnessgrad.core import components
 
     for example in (BASH, REACT):
         declared = components.declared_components(example)

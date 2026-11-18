@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from eval.run import runner
-from harnessgrad import verification_context as context
+from harnessgrad.provenance import verification_context as context
 
 
 def test_context_tracks_declarations_sources_and_private_inputs(tmp_path):

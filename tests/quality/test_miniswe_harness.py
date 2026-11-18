@@ -86,7 +86,7 @@ def test_the_manifest_satisfies_the_contributor_contract():
 
 def test_a_mock_run_writes_an_answer_and_a_trace(tmp_path, native_harness,managed_miniswe):
     """The whole entrypoint, as the platform invokes it: argv, cwd, exit code, artifacts."""
-    from harnessgrad import candidate_runtime
+    from harnessgrad.execution import candidate_runtime
     from eval.run import runner
 
     if shutil.which("bwrap") is None:

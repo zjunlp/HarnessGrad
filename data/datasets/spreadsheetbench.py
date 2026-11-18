@@ -232,7 +232,7 @@ def _verifier(record: dict) -> dict:
     re-materializes them immediately before grading -- the same rule ALFWorld's game file
     follows, and the reason a dataset with an artifact can be graded honestly.
     """
-    from harnessgrad.dataset_runtime import bind, resolve_execution
+    from harnessgrad.datasets.runtime import bind, resolve_execution
     binding = bind(resolve_execution("spreadsheetbench"), "verifier")
     from data.scaffolds.spreadsheet_runtime.metadata import selected_native
     native = selected_native()
@@ -330,7 +330,7 @@ def _ensure() -> list[dict]:
 
 def provision_status() -> dict:
     tarball = DATASET_ROOT / "_src" / TARBALL
-    from harnessgrad.dataset_runtime import check_execution
+    from harnessgrad.datasets.runtime import check_execution
     execution = check_execution("spreadsheetbench")
     data_present = (DATASET_ROOT / TASKS_JSON).is_file() and tarball.is_file()
     native = _native_status()

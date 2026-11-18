@@ -298,7 +298,15 @@ harnessgrad_work/
 !/docs/moving-docker-data-root.md
 !/docs/architecture.md
 !/docs/import-direction.md
+!/docs/import-migration.md
+!/docs/provenance-separation-design.md
 !/docs/test-suite.md
+# Published refactor validation record; keep other local validation notes private.
+!/docs/validation/
+/docs/validation/*
+!/docs/validation/shared-foundation-offline.md
+!/docs/validation/decoding-inventory.md
+!/docs/validation/refactor-review.md
 !/docs/data-split-plan.md
 !/docs/dataset-splits.md
 !/docs/custom-dataset-splits.md
@@ -511,3 +519,7 @@ data/candidates/
 !/docs/improver-artifact-manifest.md
 !/docs/task_http_budget.md
 !/docs/treatment-resume-contract.md
+
+# Personal foundation architecture and scoped validation; working notes remain local.
+!/docs/personal-evolution.md
+!/docs/validation/personal-foundation.md

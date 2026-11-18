@@ -18,7 +18,7 @@ from collections.abc import Callable
 
 from eval.ckpt.git_state import manifest
 from eval.ckpt.source_tree import copy_harness
-from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
+from harnessgrad.execution.harness_validation import check as check_harness, source_identity, filesystem_identity
 from harnessgrad.loops.eval_side import _eval_source, _eval_from_record
 
 

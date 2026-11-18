@@ -11,9 +11,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import dataset_provider as client
+from harnessgrad.datasets import provider as client
 from data.scaffolds import provider_worker as worker
-from tools import dataset_lint
+from tools.dataset_maintenance import dataset_lint
 
 
 def test_inventory_does_not_materialize_every_verifier_or_return_private_answers(monkeypatch):

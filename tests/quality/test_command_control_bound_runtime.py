@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from data.scaffolds import command_control as control
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 
 @pytest.fixture

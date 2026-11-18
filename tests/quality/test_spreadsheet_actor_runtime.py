@@ -12,7 +12,10 @@ import venv
 
 import pytest
 
-from harnessgrad import dataset_runtime, dataset_runtime_identity, task_python, verification_context
+from harnessgrad.datasets import runtime as dataset_runtime
+from harnessgrad.datasets import task_python
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import verification_context
 from data.scaffolds import registry
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -114,7 +117,7 @@ def test_default_loop_edits_workbooks_from_empty_platform(tmp_path):
 
 
 def test_method_round_history_and_task_context_hide_private_runtime_coordinates(tmp_path):
-    from harnessgrad import channel
+    from harnessgrad.experiment import channel
     actor = binding()
     identity = dataset_runtime_identity.create(tasks={'private-task-association': {'actor': actor}})
     secret_hash = 'f' * 64

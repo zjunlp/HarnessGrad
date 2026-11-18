@@ -25,8 +25,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from eval.metrics import mean  # noqa: E402
-from harnessgrad.records import (  # noqa: E402
+from eval.run.metrics import mean  # noqa: E402
+from harnessgrad.experiment.records import (  # noqa: E402
     _curve_point,
     level_fields,
     per_level_breakdown,

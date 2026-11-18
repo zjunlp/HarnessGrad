@@ -37,8 +37,8 @@ import eval.service.container_observation as container_observation
 import eval.service.services as services
 from data.scaffolds import registry
 from eval.run.runner import evaluate, run_one
-from harnessgrad.environments import _env_record, _resolve_envs
-from harnessgrad.records import _cost_of
+from harnessgrad.orchestration.environments import _env_record, _resolve_envs
+from harnessgrad.experiment.records import _cost_of
 from policy_assertions import assert_driver_policy_refusal, assert_invalid_policy, assert_policy_refusal
 
 ROOT = Path(__file__).resolve().parents[2]

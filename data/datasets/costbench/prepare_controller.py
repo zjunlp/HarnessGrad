@@ -65,7 +65,7 @@ class SourceGuard(importlib.abc.MetaPathFinder, importlib.abc.Loader):
 
 
 def worker(request_path):
-    from harnessgrad.dataset_runtime import admit_binding
+    from harnessgrad.datasets.runtime import admit_binding
     request = json.loads(Path(request_path).read_text())
     admit_binding(request['binding'], 'service', python=sys.executable)
     if source_hash() != request['source_sha256']:
@@ -89,7 +89,7 @@ def worker(request_path):
 
 def main(argv=None, *, dynamic=False):
     from harnessgrad.paths import dataset_root
-    from harnessgrad.dataset_runtime import prepare_execution, resolve_execution, bind, admit_binding
+    from harnessgrad.datasets.runtime import prepare_execution, resolve_execution, bind, admit_binding
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=dataset_root('costbench'))
     parser.add_argument('--install', action='store_true')

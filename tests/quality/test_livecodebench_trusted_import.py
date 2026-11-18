@@ -11,7 +11,7 @@ import pytest
 
 from data.scaffolds.scorer_input import bind
 from eval.verification.verifier import _verify
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 
 ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE_SHA = '56c7c42aee979def86b69547ecd6d5a877a0e4940af8923bf4325ca0defecbaf'

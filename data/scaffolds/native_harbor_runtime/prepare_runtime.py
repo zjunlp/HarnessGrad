@@ -57,7 +57,7 @@ def main():
         raise ValueError('--harbor-python must equal the selected managed artifact; no external venv fallback')
     harbor_entry={'harbor_runtime':harbor_binding,'harbor_python':harbor_binding['python']}
     admit(harbor_entry)
-    from harnessgrad.native_judge_identity import selection, admit_selection
+    from harnessgrad.provenance.native_judge_identity import selection, admit_selection
     judge_selection=selection() if args.dataset=='jobbench' else {}
     original=inspect(args.actor_image);actor_image=original['Id']
     if original['Config'].get('Volumes'):raise ValueError('native actor image may not declare volumes')
@@ -100,7 +100,7 @@ def main():
     args.manifest.parent.mkdir(parents=True,exist_ok=True)
     admit(harbor_entry)
     if args.dataset=='jobbench':admit_selection(entry)
-    from harnessgrad.python_artifacts import atomic_json
+    from harnessgrad.execution.python_runtime.python_artifacts import atomic_json
     atomic_json(args.manifest,manifest)
     print(json.dumps({'runtime_prepared':True,'task_id':row.task_id,'manifest':str(args.manifest),
                       'actor_image':actor_image,'production_authorized':False}))

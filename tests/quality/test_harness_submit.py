@@ -265,7 +265,7 @@ def test_the_summary_counts_empty_commands_separately(tmp_path):
 
 def test_the_round_summary_names_the_tasks_the_interface_ate(tmp_path):
     """轮级摘要(方法读的第一份)必须点名"哪几道题被接口吃掉了"。"""
-    from harnessgrad.channel import _loop_summary
+    from harnessgrad.experiment.channel import _loop_summary
     good = ('{"step": 0, "reply": "{}"}\n'
             '{"step": 0, "command": "pwd", "exit": 0, "output": "/app\\n"}\n')
     eaten = ('{"step": 0, "reply": "{}"}\n'

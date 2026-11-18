@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 
 from harnessgrad.loops.mode_a import _copy_round_traces, _identical_prior
-from harnessgrad.verification_context import capture
+from harnessgrad.provenance.verification_context import capture
 
 CONTEXT = capture([{"task_id": "t1"}, {"task_id": "t2"}], {"t1": "a", "t2": "b"})
 

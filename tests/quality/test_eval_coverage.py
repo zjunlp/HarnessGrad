@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from harnessgrad.loops import eval_side
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 
 
 @pytest.mark.parametrize("resume", [False, True])

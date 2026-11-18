@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from tools import results_matrix
+from tools.analysis import results_matrix
 
 
 # ------------------------------------------------------------------------- fixtures

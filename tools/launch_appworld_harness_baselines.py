@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.appworld_campaign_state import (IDENTITY_SCHEMA, POLICY, POOLS, RecoveryError,
     digest, file_hash, read, selection_identity, validate_identity, runtime_commitment)
-from tools.validate_harness import check as check_harness, source_identity, filesystem_identity
+from harnessgrad.execution.harness_validation import check as check_harness, source_identity, filesystem_identity
 from harnessgrad.paths import main_checkout
 from harnessgrad.env_file import REVIEWED_ENVIRONMENT_ONLY
 

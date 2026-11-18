@@ -89,7 +89,7 @@ def test_check_restores_work_root_after_verifier_exception(tmp_path, monkeypatch
     def timed_out(*args, **kwargs):
         raise subprocess.TimeoutExpired("synthetic verifier", 15)
 
-    monkeypatch.setattr("eval.verifier._verify", timed_out)
+    monkeypatch.setattr("eval.verification.verifier._verify", timed_out)
     with pytest.raises(subprocess.TimeoutExpired):
         control.run_check(module, {"task_id": "synthetic"}, tmp_path)
     assert os.environ.get("HARNESSGRAD_WORK_ROOT") == inherited_root

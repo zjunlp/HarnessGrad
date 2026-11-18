@@ -7,12 +7,12 @@ import sys
 
 def runtime():
     """Select the current published artifact; each captured binding stays immutable."""
-    from harnessgrad.dataset_runtime import resolve_execution
+    from harnessgrad.datasets.runtime import resolve_execution
     return resolve_execution('costbench')
 
 
 def binding(role):
-    from harnessgrad.dataset_runtime import bind
+    from harnessgrad.datasets.runtime import bind
     return bind(runtime(), role)
 
 
@@ -30,7 +30,7 @@ def read_paths(assets, transport, folder, root):
 
 def provision_status(root, prepared, roster, detail):
     """Report data and execution dependencies without installing or launching."""
-    from harnessgrad.dataset_runtime import check_execution
+    from harnessgrad.datasets.runtime import check_execution
     from harnessgrad.paths import DataRootNotConfigured
     try:
         root = str(root)

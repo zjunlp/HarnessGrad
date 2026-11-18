@@ -9,9 +9,10 @@ import sys
 
 import pytest
 
-from harnessgrad import evidence, scoring_identity, verification_context
-from harnessgrad.evidence_export import build_export, check_export, write_export
-from harnessgrad.receipt_verification import ReceiptStore, canonical, digest, verify_receipts
+from harnessgrad.evidence_reports import evidence
+from harnessgrad.provenance import scoring_identity, verification_context
+from harnessgrad.evidence_reports.evidence_export import build_export, check_export, write_export
+from harnessgrad.evidence_reports.receipt_verification import ReceiptStore, canonical, digest, verify_receipts
 
 ROOT = Path(__file__).resolve().parents[2]
 SECRET = 'sk-' + 'hiddenCredential' * 3
@@ -282,7 +283,7 @@ def test_cli_exports_verifies_and_refuses_overwrite_without_leaking(source, tmp_
     document = tmp_path / 'author.json'
     document.write_text(json.dumps(author()))
     output = tmp_path / 'pack.json'
-    argv = [sys.executable, str(ROOT / 'tools/evidence_export.py')]
+    argv = [sys.executable, str(ROOT / 'tools/analysis/evidence_export.py')]
     exported = subprocess.run(argv + ['--manifest', str(document), '--runs-root', str(source), '--out', str(output)],
                               cwd=tmp_path, capture_output=True, text=True, timeout=20)
     assert exported.returncode == 0, exported.stderr
@@ -387,7 +388,7 @@ def test_missing_receipt_refuses_before_publishing_output(source, tmp_path):
     doc_path = tmp_path / 'author.json'
     doc_path.write_text(json.dumps(author()))
     output = tmp_path / 'pack.json'
-    result = subprocess.run([sys.executable, str(ROOT / 'tools/evidence_export.py'), '--manifest', str(doc_path),
+    result = subprocess.run([sys.executable, str(ROOT / 'tools/analysis/evidence_export.py'), '--manifest', str(doc_path),
                              '--runs-root', str(source), '--out', str(output)], capture_output=True, timeout=20)
     assert result.returncode == 2 and not output.exists()
     assert not list(tmp_path.glob('.evidence-*'))

@@ -11,7 +11,7 @@ explicitly, as shown in the first-use guide. Preparation may download locked whe
 the subsequent control does not install packages, download data or contact models.
 
 ```bash
-python tools/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
+python tools/diagnostics/check_first_use.py --output-root "$HOME/.local/share/harnessgrad/install-checks"
 ```
 
 Use `--runtime-root /path/to/prepared-store` if preparation used a custom store.
@@ -57,7 +57,7 @@ directory with the build source removed. With the matching Loop runtime already
 prepared in an external store, the same control is available as a module:
 
 ```bash
-python -m tools.check_first_use --runtime-root /path/to/prepared-store \
+python -m tools.diagnostics.check_first_use --runtime-root /path/to/prepared-store \
   --output-root "$HOME/.local/share/harnessgrad/wheel-checks"
 ```
 

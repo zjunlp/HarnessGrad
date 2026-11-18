@@ -26,7 +26,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import harnessgrad.snapshot as snapshot  # noqa: E402
+import harnessgrad.core.snapshot as snapshot  # noqa: E402
 from harnessgrad.loops import mode_a  # noqa: E402
 
 
@@ -247,3 +247,22 @@ def test_the_wrapper_never_lets_a_snapshot_failure_abort_the_round(tmp_path, mon
     assert len(lines) == 1, lines
     assert "run-9" in lines[0] and "round 2" in lines[0] and "disk full" in lines[0]
     assert not (tmp_path / "runs").exists()
+
+
+def test_pre_move_snapshot_remains_byte_identical_and_loadable(tmp_path):
+    fixture = ROOT / 'tests/fixtures/snapshot_migration/before.json'
+    old = snapshot.load(fixture)
+    work = tmp_path / 'work'
+    work.mkdir()
+    (work / 'agent.py').write_text('print("authored snapshot")\n')
+    generated = snapshot.write(tmp_path / 'run', 1, work, run_id='authored', harness_sha='synthetic')
+    assert generated.read_bytes() == fixture.read_bytes()
+    assert snapshot.load(generated) == old
+    snapshot.check_out(fixture, tmp_path / 'restored')
+    snapshot.verify(fixture, tmp_path / 'restored')
+
+
+def test_retired_snapshot_import_names_replacement():
+    import importlib
+    with pytest.raises(ImportError, match='harnessgrad.core.snapshot'):
+        importlib.import_module('harnessgrad.snapshot')

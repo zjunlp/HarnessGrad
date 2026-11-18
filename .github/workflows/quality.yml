@@ -9,8 +9,8 @@
 #           the answer is the same, and a red result is a change to fix.
 #
 #   report  advisory. The catalogue documents (DATASETS.md, the refusal declarations) and the
-#           part of the suite this change can reach, through `tools/ci_select.py` and
-#           `tools/run_tests.py` with exactly the selected files, including slow ones. These
+#           part of the suite this change can reach, through `tools/testing/ci_select.py` and
+#           `tools/testing/run_tests.py` with exactly the selected files, including slow ones. These
 #           depend on what the machine has -- optional
 #           extras, provisioned datasets, a relay or a container runtime -- so a failure can
 #           mean "this runner is bare" rather than "this change is wrong". The job still runs
@@ -215,12 +215,12 @@ jobs:
           base='${{ github.event.pull_request.base.sha || github.event.before }}'
           case '${{ github.event_name }}' in
             schedule|workflow_dispatch)
-              python3 tools/ci_select.py --force-full --plan "$RUNNER_TEMP/quality-evidence/plan.json" ;;
+              python3 tools/testing/ci_select.py --force-full --plan "$RUNNER_TEMP/quality-evidence/plan.json" ;;
             *)
-              python3 tools/ci_select.py --base "$base" --head '${{ github.sha }}' \
+              python3 tools/testing/ci_select.py --base "$base" --head '${{ github.sha }}' \
                 --plan "$RUNNER_TEMP/quality-evidence/plan.json" --without-guards ;;
           esac
-          python3 tools/ci_select.py --describe "$RUNNER_TEMP/quality-evidence/plan.json"
+          python3 tools/testing/ci_select.py --describe "$RUNNER_TEMP/quality-evidence/plan.json"
 
       # The suite runs from the plan, and only that: the first version passed the selection
       # through a shell string, where an empty value silently means "no --file at all" and
@@ -235,9 +235,9 @@ jobs:
           # manual dispatch both ask for it explicitly. Every other event runs the selection.
           case '${{ github.event_name }}' in
             schedule|workflow_dispatch)
-              python3 tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
+              python3 tools/testing/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --full --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
             *)
-              python3 tools/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
+              python3 tools/testing/run_selected.py --plan "$RUNNER_TEMP/quality-evidence/plan.json" --jobs 4 --output-json "$RUNNER_TEMP/quality-evidence/suite.json" ;;
           esac
 
       # A change with no computable base (a force-push) or a core path selects everything.

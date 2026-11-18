@@ -1,9 +1,3 @@
-"""Compatibility alias for :mod:`eval.observe.console`.
+"""Removed import guard: use :mod:`eval.observe.console`."""
 
-New code imports the canonical path. Module identity (including private names,
-patch targets and mutable state) is shared; see docs/architecture.md.
-"""
-import sys as _sys
-from eval.observe import console as _implementation
-
-_sys.modules[__name__] = _implementation
+raise ImportError('eval.console was removed; import eval.observe.console instead')

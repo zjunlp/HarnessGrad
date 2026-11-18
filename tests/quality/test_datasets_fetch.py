@@ -39,7 +39,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-import tools.datasets as datasets  # noqa: E402
+import tools.dataset_maintenance.datasets as datasets  # noqa: E402
 
 #: A real `raw.githubusercontent.com` URL from `data/datasets/strongreject.py` (same path
 #: shape as all 155 of its entries), so the assertion is about the host the run measured

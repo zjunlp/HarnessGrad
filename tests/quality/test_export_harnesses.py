@@ -162,7 +162,7 @@ def write_snapshot(run: Path, work: Path, round_no: int, sha: str) -> Path:
     the exporter has to accept the artifact the run actually produces.
     """
     sys.path.insert(0, str(ROOT))
-    from harnessgrad import snapshot
+    from harnessgrad.core import snapshot
 
     return snapshot.write(run, round_no, work, run_id=RUN, harness_sha=sha)
 
@@ -428,3 +428,22 @@ def test_a_point_without_a_harness_sha_exports_but_is_marked_unverified(tmp_path
     assert "sources   r0=state" in done.stdout
     manifest = (exported(tmp_path / "out") / "PROVENANCE.md").read_text(encoding="utf-8")
     assert "unverified: the curve point records no harness_sha" in manifest
+
+
+def test_snapshot_export_loader_supports_older_layout_and_refuses_broken_new(tmp_path, monkeypatch):
+    import shutil
+    from tools import export_harnesses
+    monkeypatch.setattr(export_harnesses, 'ROOT', tmp_path)
+    base = tmp_path / 'harnessgrad'
+    base.mkdir()
+    shutil.copyfile(ROOT / 'harnessgrad/core/snapshot.py', base / 'snapshot.py')
+    assert export_harnesses._snapshot_api() is not None
+    (base / 'core').mkdir()
+    current = base / 'core/snapshot.py'
+    shutil.copyfile(ROOT / 'harnessgrad/core/snapshot.py', current)
+    assert Path(export_harnesses._snapshot_api().__file__) == current
+    current.write_text('this is invalid python !')
+    assert export_harnesses._snapshot_api() is None
+    current.unlink()
+    current.symlink_to(base / 'missing.py')
+    assert export_harnesses._snapshot_api() is None

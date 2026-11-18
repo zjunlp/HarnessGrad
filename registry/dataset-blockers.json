@@ -707,7 +707,7 @@
       {
        "kind": "repository",
        "locator": "\"locomo\": (\"evidence\", \"long_context\")",
-       "path": "tools/dataset_classes.py"
+       "path": "tools/dataset_maintenance/dataset_classes.py"
       },
       {
        "kind": "repository",

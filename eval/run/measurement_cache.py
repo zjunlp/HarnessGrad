@@ -5,7 +5,9 @@ from dataclasses import dataclass
 import hashlib
 import json
 
-from harnessgrad import candidate_runtime, dataset_runtime_identity, verification_context
+from harnessgrad.execution import candidate_runtime
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, verification_context
 from eval.containers import external_runtime
 from eval.run import chess_stepwise
 from eval.verification.isolation import declared_class
@@ -24,6 +26,7 @@ class MeasurementIdentity:
     scorer_bundle: dict | None
     native: dict | None
     protocol: str | None
+    components: dict | None = None
 
     def key(self) -> str:
         key = f'{self.harness_sha}:{self.task_id}:{self.trials}'
@@ -45,6 +48,10 @@ class MeasurementIdentity:
                 self.native, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         if self.protocol == chess_stepwise.STEPWISE:
             key += ':' + chess_stepwise.STEPWISE
+        if self.components is not None:
+            components = measurement_components.validate_bundle(self.components)
+            key += ':measurement-components:' + hashlib.sha256(json.dumps(
+                components, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
         return key
 
 
@@ -77,6 +84,8 @@ def _matches_identities(hit, identity: MeasurementIdentity):
     except external_runtime.RuntimeUnavailable:
         return False
     if dataset_runtime_identity.problems(hit.get('dataset_runtime_identity'), identity.dataset):
+        return False
+    if measurement_components.bundle_problems(hit.get('measurement_components'), identity.components):
         return False
     if (hit.get('verification_context') is None or
             verification_context.problems(hit.get('verification_context'), identity.context)):

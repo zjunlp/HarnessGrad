@@ -55,7 +55,7 @@ def test_supported_authored_game_native_relay_client_and_shipped_score(tmp_path,
     store=os.environ.get('HG_TEST_JERICHO_RUNTIME_ROOT')
     if not store:
         pytest.skip('explicit native control requires HG_TEST_JERICHO_RUNTIME_ROOT')
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     from data.scaffolds.scorer_input import inventory_digest
     from eval.service.tool_transport import call
     runtime=dataset_runtime.resolve_execution('jericho',root=store)

@@ -8,9 +8,9 @@ from unittest.mock import Mock
 import pytest
 
 from data.scaffolds import registry
-from harnessgrad import dataset_runtime as runtime
-from harnessgrad import dataset_runtime_identity as identity
-from harnessgrad import verification_context
+from harnessgrad.datasets import runtime
+from harnessgrad.datasets import runtime_identity as identity
+from harnessgrad.provenance import verification_context
 from tools import prepare_h0
 from test_dataset_runtime import environment
 from test_dataset_execution_runtime import execution, _unprepared_binding
@@ -97,7 +97,7 @@ def test_exact_provider_admission_survives_index_change_but_rejects_tampering(en
 
 
 def test_provider_session_freezes_actual_requests_and_resets_afterward(subprocess_provider, monkeypatch):
-    client, _, _ = subprocess_provider
+    client, _, data_root = subprocess_provider
     selected = client.catalog()['runtime']
     admission = Mock(side_effect=lambda name, value: dict(value))
     monkeypatch.setattr(runtime, 'admit_provider', admission)
@@ -109,10 +109,16 @@ def test_provider_session_freezes_actual_requests_and_resets_afterward(subproces
         assert registry.provider('gsm8k') is first
         assert first.catalog()['runtime'] == selected
         assert registry.provider_runtime('gsm8k') == selected
-        # The second catalog call is cached; issue a real provider request to
-        # verify it re-admits the frozen runtime instead of resolving anew.
-        first._request('resolve', task_ids=['t'])
+        # A cache hit has no worker request; a changed storage snapshot must
+        # re-admit the already selected artifact rather than resolve a new one.
+        admission.assert_not_called()
+        changed_storage = {'HG_DATA_GSM8K': str(data_root / 'alternate')}
+        assert first.catalog(config_snapshot=changed_storage)['runtime'] == selected
         admission.assert_called_once_with('gsm8k', selected)
+        admission.side_effect = runtime.DatasetRuntimeUnavailable('authored artifact changed')
+        with pytest.raises(runtime.DatasetRuntimeUnavailable, match='authored artifact changed'):
+            first.catalog(config_snapshot={'HG_DATA_GSM8K': str(data_root / 'tampered')})
+        assert admission.call_count == 2
         with registry.provider_session():
             assert registry.provider_runtime('gsm8k') is None
         assert registry.provider_runtime('gsm8k') == selected
@@ -242,3 +248,52 @@ def test_h0_lookup_and_verification_require_all_identity_copies(execution, tmp_p
     with pytest.raises(SystemExit, match='dataset_runtime_identity'):
         prepare_h0.verify(run, None, 1, configuration=config)
     assert all(path.read_bytes() == content for path, content in before.items())
+
+
+def test_h0_preflight_uses_canonical_module_entrypoint(monkeypatch):
+    """The subprocess uses the relocated module, with explicit request and environment."""
+    import sys
+    monkeypatch.setattr(registry, 'managed_runtime', lambda _name: True)
+    call = Mock(return_value=SimpleNamespace(returncode=0, stdout='null', stderr=''))
+    monkeypatch.setattr(identity.subprocess, 'run', call)
+    environment = {'HG_DATA_ROOT': '/synthetic/data'}
+    assert identity.resolve_h0('gsm8k', side='train', task_ids=['one'], env=environment) is None
+    args, options = call.call_args
+    assert args[0] == [sys.executable, '-B', '-m', 'harnessgrad.datasets.runtime_identity']
+    assert options['cwd'] == Path(__file__).resolve().parents[2] and options['env'] is environment
+    assert json.loads(options['input']) == {'dataset': 'gsm8k', 'side': 'train', 'task_ids': ['one'],
+                                             'split': 'declared', 'sampling': 'all'}
+
+
+def test_pre_move_synthetic_identity_remains_valid():
+    fixture = Path(__file__).resolve().parents[1] / 'fixtures/dataset_runtime_identity/before.json'
+    previous = json.loads(fixture.read_text())
+    assert previous['sha256'] == '4d1f0c63aa47a432333525595125711de6bd06a406cd401236c714b6aac56fb9'
+    assert identity.validate(previous) == previous
+    assert identity.create(provider=previous['provider']) == previous
+
+
+@pytest.mark.parametrize('canonical_first', [True, False])
+def test_old_runtime_identity_import_refuses_in_fresh_process(tmp_path, canonical_first):
+    import subprocess
+    import sys
+
+    root = Path(__file__).resolve().parents[2]
+    code = '''import importlib
+if %r:
+    importlib.import_module('harnessgrad.datasets.runtime_identity')
+try:
+    importlib.import_module('harnessgrad.dataset_runtime_identity')
+except ImportError as exc:
+    assert 'harnessgrad.datasets.runtime_identity' in str(exc)
+else:
+    raise AssertionError('removed identity import unexpectedly succeeded')
+assert importlib.import_module('harnessgrad.datasets.runtime_identity')
+''' % canonical_first
+    env = {**os.environ, 'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONPATH': str(root)}
+    result = subprocess.run([sys.executable, '-B', '-c', code], cwd=tmp_path, env=env,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    old = subprocess.run([sys.executable, '-B', '-m', 'harnessgrad.dataset_runtime_identity'],
+                         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=20)
+    assert old.returncode != 0 and 'harnessgrad.datasets.runtime_identity' in old.stderr

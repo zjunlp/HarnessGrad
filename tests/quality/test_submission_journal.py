@@ -11,7 +11,7 @@ from harnessgrad.orchestration.submission_journal import SubmissionJournalError,
 from eval.ckpt.git_state import commit_state, init_repo, reset_hard
 from eval.ckpt.source_tree import copy_harness
 from harnessgrad.loops import mode_a
-from harnessgrad import verification_context
+from harnessgrad.provenance import verification_context
 
 
 def test_error_only_submission_is_not_reserved_as_a_candidate():
@@ -181,7 +181,7 @@ def test_failed_method_attempt_does_not_block_later_saved_candidate(tmp_path, mo
     init_repo(work); sha = commit_state(work, 'initial')
     run = tmp_path / 'runs' / 'run-a'; run.mkdir(parents=True)
     if prior_session:
-        from harnessgrad.method_attempts import MethodAttempts
+        from harnessgrad.experiment.method_attempts import MethodAttempts
         ledger = MethodAttempts(run, 'run-a')
         ledger.finish(ledger.begin(1), {'method_usage': {'total_tokens': 4}})
     scratch = tmp_path / 'method-scratch'; scratch.mkdir()
@@ -384,7 +384,7 @@ print(json.dumps({"round": req["round_index"], "score": point["score"], "trace":
 ''')
             args.method_entrypoint = [sys.executable, str(method)]
             real_stage = mode_a._stage_for_method
-            from harnessgrad.methods import _call_method as real_method
+            from harnessgrad.execution.method_runner import _call_method as real_method
             def next_round_evidence(work_arg, prior, traces, **kwargs):
                 assert prior['round'] == 2 and prior['score'] == 0.5
                 assert traces == result['traces'] and kwargs['result'] is result

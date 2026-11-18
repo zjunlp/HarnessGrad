@@ -14,8 +14,8 @@ command.
 Create an author manifest, then run from the checkout:
 
 ```bash
-python3 tools/evidence_export.py --manifest concerns.json --runs-root /path/to/study-runs --out evidence.json
-python3 tools/evidence_export.py --verify evidence.json
+python3 tools/analysis/evidence_export.py --manifest concerns.json --runs-root /path/to/study-runs --out evidence.json
+python3 tools/analysis/evidence_export.py --verify evidence.json
 ```
 
 The output must be outside the run root, and its parent directory must already exist.
@@ -72,7 +72,7 @@ there is no default to the latest or best result. Only the recorded `score` metr
 supported. An unmeasured request needs a reason and cannot carry a result.
 
 The input is an author draft: `created_utc`, observed statuses and round lists are filled
-by the exporter. The resulting `manifest` satisfies `harnessgrad.evidence.check_manifest`.
+by the exporter. The resulting `manifest` satisfies `harnessgrad.evidence_reports.evidence.check_manifest`.
 The draft itself need not satisfy that completed-manifest contract.
 
 ## What the pack establishes

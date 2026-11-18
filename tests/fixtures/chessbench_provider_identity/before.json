@@ -1,0 +1,19 @@
+{
+  "profile": {
+    "metric": "ChessBench strict legal puzzle replay v1",
+    "source_sha256": {
+      "data/datasets/chessbench_puzzles.py": "affd201859532bc28b2a2a8656cc651b2ae81cc72eddbe0ac214e978edc43387",
+      "data/runtimes/chessbench_puzzles-native.json": "1dd47b9a27c0598c89c55c08579e7f85655b821166bc8a8150645e9379479599",
+      "data/scaffolds/provider_worker.py": "00cd7545ccfaa2f3492eafa019d10497101d8d9b37c280ba8f3ba9a376c8a155",
+      "data/scaffolds/qa/base.py": "0a9d1aa1261d3c0c0543171ca8816e6da70e339fb9f2660bfbc8fb9cb6c96e4f",
+      "data/scaffolds/qa/read.py": "b28b1150ddf307a1cf037e3e0cb280117d13157687551329b27c24e0526bb383",
+      "data/scaffolds/qa/verify/check.py": "ebf7a2484ca9d9b204a329626e4b3dbf4f70884470bd8cecf8f0ae6e6121116f",
+      "eval/run/chess_stepwise.py": "292224f6b219e9ae20479b25daf63ad87b0027147e5e9d45aaadda840ae78d17",
+      "eval/run/chess_stepwise_worker.py": "28b582c4824e87cf72d3eaf6f35f3659d4cae0b28326a6d28ed9c1ba6b51ccce",
+      "harnessgrad/dataset_provider.py": "edb3899add2a9905087342389b2fd0ff21327888208f3226ebaae39e9223dffa"
+    },
+    "upstream_diagnostic": "ChessBench upstream puzzle replay (unchecked push)"
+  },
+  "sha256": "961cf27bbc6b6e55f3a5cb1095384ae05d1ffd4f68942e8ebb6363a8bbd4fa04",
+  "version": 1
+}

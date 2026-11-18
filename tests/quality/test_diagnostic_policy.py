@@ -369,7 +369,7 @@ def test_eval_side_records_failure_or_pending_lifecycle_before_refusing_curve(
                                   cleanup=attestation("unknown"), snapshot=attestation("unknown"))
         policy.write_receipt(tmp_path / "diagnostic_receipt.json", row)
         return row["coverage"]["measured_trials"] == len(selected)
-    from harnessgrad import verification_context
+    from harnessgrad.provenance import verification_context
     planned_tasks = [dict(task_id=selected[0])]
     planned_context = verification_context.capture(planned_tasks, {}, {}, {}, {})
     code = eval_side._run_eval_side(

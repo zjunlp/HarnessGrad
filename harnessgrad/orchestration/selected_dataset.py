@@ -16,8 +16,10 @@ from eval.policy import diagnostic_policy
 from eval.run import metrics
 from eval.run.metrics import select_task_set
 from harnessgrad import config as platform_config
-from harnessgrad import dataset_runtime_identity, readiness, scoring_identity, verification_context
-from harnessgrad.environments import _check_env_kinds, _narrow_to_run, _required_env_kinds, _resolve_envs
+from harnessgrad.orchestration import readiness
+from harnessgrad.datasets import runtime_identity as dataset_runtime_identity
+from harnessgrad.provenance import measurement_components, scoring_identity, verification_context
+from harnessgrad.orchestration.environments import _check_env_kinds, _narrow_to_run, _required_env_kinds, _resolve_envs
 
 
 class DatasetSource(Protocol):
@@ -73,6 +75,7 @@ class SelectedRunPlan:
     scoring_identity: dict | None
     dataset_runtime_identity: dict | None
     verification_context: dict
+    measurement_components: dict | None = None
 
 
 class SelectedRunRefused(Exception):
@@ -196,13 +199,15 @@ def _selected_model_admission(options, model, scenario, harness_source, setups, 
 def _selected_identities(options, selection, setups, verifiers, envs):
     try:
         scoring = scoring_identity.resolve(options.dataset)
+        components = measurement_components.resolve(options.dataset)
+        measurement_components.require_scoring_alignment(scoring, components)
     except (OSError, TypeError, ValueError) as exc:
         raise SelectedRunRefused(f"invalid scoring profile: {exc}", channel="console") from exc
     try:
         runtime = dataset_runtime_identity.capture(options.dataset, selection.ids, setups, verifiers, envs)
     except (OSError, TypeError, ValueError) as exc:
         raise SelectedRunRefused(f"invalid dataset runtime identity: {exc}", channel="console") from exc
-    return scoring, runtime
+    return scoring, runtime, components
 
 
 def _selected_environment_context(options, partition, selection, harness_source, setups, verifiers, envs):
@@ -223,10 +228,10 @@ def _selected_environment_context(options, partition, selection, harness_source,
 def admit_selected_run(options, partition, selection, *, model, scenario, harness_source,
                        setups, verifiers, envs) -> SelectedRunPlan:
     _selected_model_admission(options, model, scenario, harness_source, setups, verifiers, envs)
-    scoring, runtime = _selected_identities(options, selection, setups, verifiers, envs)
+    scoring, runtime, components = _selected_identities(options, selection, setups, verifiers, envs)
     envs, context = _selected_environment_context(
         options, partition, selection, harness_source, setups, verifiers, envs)
-    return SelectedRunPlan(partition, selection, setups, verifiers, envs, scoring, runtime, context)
+    return SelectedRunPlan(partition, selection, setups, verifiers, envs, scoring, runtime, context, components)
 
 
 def build_selected_run_plan(options: SelectionOptions, source: DatasetSource, *, runs_root: Path,

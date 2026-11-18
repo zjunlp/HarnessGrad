@@ -143,7 +143,7 @@ def test_a_named_trial_that_failed_is_readable_on_disk(tmp_path):
     这条测试是拿真实缺口写的:一个 0.667 旁边的 `passed: true`。修复之后,同一个目录里
     有 `t1.trial2.jsonl`(失败那次),而判据 JSON 里有 `trial_scores: [1, 0, 1]`。
     """
-    from harnessgrad.records import _save_traces, _save_verdicts
+    from harnessgrad.experiment.records import _save_traces, _save_verdicts
 
     res = {"per_task": {"t1": 2 / 3}, "per_task_std": {"t1": 0.4714},
            "per_task_trials": {"t1": [1.0, 0.0, 1.0]},

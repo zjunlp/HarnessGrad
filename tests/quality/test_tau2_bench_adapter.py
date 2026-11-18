@@ -96,6 +96,8 @@ def test_directories_alone_do_not_claim_provisioning(tmp_path, monkeypatch):
     (tmp_path / "runtime/bin").mkdir(parents=True)
     (tmp_path / "runtime/bin/python").write_text("not an interpreter")
     (tmp_path / "bundle").mkdir()
+    store = tmp_path / "missing-managed-store"
+    monkeypatch.setenv("HG_DATASET_RUNTIME_ROOT", str(store))
     monkeypatch.setattr(dataset, "DATASET_ROOT", tmp_path)
     monkeypatch.setattr(dataset, "RUNTIME", tmp_path / "runtime")
     monkeypatch.setattr(dataset, "_execution_runtime", lambda: {
@@ -103,7 +105,8 @@ def test_directories_alone_do_not_claim_provisioning(tmp_path, monkeypatch):
     status = dataset.provision_status()
     assert status["present"] is False
     assert status["tasks"] == 0
-    assert "manifest" in status["detail"]
+    assert "tau2_bench" in status["detail"] and "Prepare explicitly" in status["detail"]
+    assert not store.exists()
 
 
 def test_provisioning_requires_valid_gate_receipt(selected_case, monkeypatch):

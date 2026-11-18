@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from data.scaffolds import registry
-from harnessgrad import dataset_runtime
-from tools import prepare_dataset
+from harnessgrad.datasets import runtime as dataset_runtime
+from tools.dataset_maintenance import prepare_dataset
 
 
 def test_existing_aliases_are_static():

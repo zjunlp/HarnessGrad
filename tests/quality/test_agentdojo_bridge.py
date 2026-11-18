@@ -116,7 +116,7 @@ def test_cli_has_no_snapshot_path_at_all(tmp_path, monkeypatch):
     monkeypatch.setattr(dataset, '_indices', lambda: [0])
     # This test runs only the source-only CLI, never the native relay. Supply a
     # local placeholder binding so SETUP can be inspected without a runtime.
-    from harnessgrad import dataset_runtime
+    from harnessgrad.datasets import runtime as dataset_runtime
     monkeypatch.setattr(dataset, '_execution_runtime', lambda: {'python': sys.executable})
     monkeypatch.setattr(dataset_runtime, 'bind', lambda runtime, role: {'role': role})
     (tmp_path / 'dojo.initial.json').write_text(json.dumps({'suite': 'banking'}))

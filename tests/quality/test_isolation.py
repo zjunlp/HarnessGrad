@@ -408,7 +408,7 @@ def test_the_method_side_guard_fails_the_call(tmp_path):
         "sys.path.insert(0, str(Path(__file__).parent))\n"
         # Addressed through the layer the guard lives in: `driver.py` is the
         # entrypoint, and what this probe needs is the check around a method call.
-        "from harnessgrad.methods import PlatformTampered, _call_method\n"
+        "from harnessgrad.execution.method_runner import PlatformTampered, _call_method\n"
         "try:\n"
         "    _call_method(Path('.'), [sys.executable, "
         f"{str(cheat)!r}], {{}}, 60, sandboxed=False)\n"

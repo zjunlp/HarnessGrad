@@ -8,7 +8,7 @@ how the raw string becomes a value (`"kind"`), and whether it is a credential th
 never be written down (`"secret"`).
 
 The areas are grouped by **what they configure**, not by which module reads them: the
-agent's model is read by `driver.py`, `harnessgrad/identity.py` and `eval/run/runner.py`,
+agent's model is read by `driver.py`, `harnessgrad/provenance/identity.py` and `eval/run/runner.py`,
 and it is one thing. Before this package existed the 38 variables below were read with
 `os.environ.get(...)` at 30-odd points of use, so nothing on disk said what the surface
 *was* and a run could observe two different values of the same variable.
@@ -65,7 +65,7 @@ class ConfigMissing(ValueError):
 class AgentConfig:
     """The model that solves the tasks.
 
-    Read by `driver.py` (at the door), `harnessgrad/identity.py` (what a curve point
+    Read by `driver.py` (at the door), `harnessgrad/provenance/identity.py` (what a curve point
     says ran) and `eval/run/runner.py` (whether a containerised harness needs the internet).
     One agent, one area: a score without this model is comparable to nothing.
     """

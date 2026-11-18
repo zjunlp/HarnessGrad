@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from harnessgrad import run_namespace as ns
+from harnessgrad.execution import run_namespace as ns
 
 
 @pytest.fixture
@@ -211,7 +211,7 @@ def test_preparation_binds_untyped_runtime_environment(tmp_path):
 
 
 def test_hg_snapshot_redacts_secrets_and_ignores_console_environment():
-    from harnessgrad.run_namespace import effective_hg_environment
+    from harnessgrad.execution.run_namespace import effective_hg_environment
     a = effective_hg_environment({'HG_AGENT_API_KEY': 'sensitive-a',
         'HG_JUDGE_TOKEN': 'secret-a', 'HG_CONSOLE_TOKEN': 'a', 'HG_APPWORLD_POOL': 'test',
         'HG_JUDGE_MAX_OUTPUT_TOKENS': '42'})

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 @pytest.fixture
 def runner(monkeypatch):
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
-    spec = importlib.util.spec_from_file_location("portable_run_tests", ROOT / "tools/run_tests.py")
+    spec = importlib.util.spec_from_file_location("portable_run_tests", ROOT / "tools/testing/run_tests.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     monkeypatch.delenv("HG_TEST_TMPDIR", raising=False)

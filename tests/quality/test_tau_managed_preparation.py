@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessgrad import dataset_runtime
+from harnessgrad.datasets import runtime as dataset_runtime
 from tools import _tau_prepare as control
 
 

@@ -84,7 +84,7 @@ def test_container_state_exec_receives_verified_bun_environment(tmp_path, monkey
     monkeypatch.setattr(docker, "exec_in", execute)
     receipt = {}
     # Use the internal seam to isolate runtime propagation from image policy admission.
-    result = runner._run_one(repo, {"task_id": "offline-control", "prompt": "unused"},
+    result = runner._run_one(repo, {"task_id": "offline-control", "goal": "unused"},
                              env={"kind": "exec", "state": "container", "image": "not-launched"},
                              runtime_receipt=receipt)
     assert result["exit_code"] == 0
