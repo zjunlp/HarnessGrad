@@ -115,7 +115,7 @@ def _tables(src: pathlib.Path, hashes=None) -> tuple[list, list]:
     (src / "preparation-runtime.json").write_text(json.dumps(identity, sort_keys=True))
     selected = dataset_runtime.admit_binding(binding, "service")
     proc = subprocess.run([selected["python"], "-I", "-B", str(worker)],
-        input=json.dumps({"inputs": inputs, "binding": binding}), text=True, capture_output=True,
+        input=json.dumps({"inputs": inputs, "binding": binding}), text=True, errors='strict', capture_output=True,
         env=dataset_runtime._child_environment())
     if proc.returncode:
         raise ValueError("gaia: Parquet preparation worker failed; retained attempt for inspection")

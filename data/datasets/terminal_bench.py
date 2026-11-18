@@ -78,6 +78,7 @@ score on the eval side is a score on a third of the benchmark, not on the benchm
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from harnessgrad.paths import dataset_root
 
 
@@ -271,9 +272,36 @@ def load():
     return tasks, {t["task_id"]: "" for t in tasks}
 
 
-SETUP = {r[0]["task_id"]: r[1] for r in _all()}
-VERIFY = {r[0]["task_id"]: r[2] for r in _all()}
-ENV = {r[0]["task_id"]: r[3] for r in _all()}
+_declaration_rows = None
+
+
+class _LazyDeclarations(Mapping):
+    """Keep discovery independent of a local Terminal-Bench installation."""
+    def __init__(self, column):
+        self.column = column
+        self._value = None
+
+    def _load(self):
+        global _declaration_rows
+        if self._value is None:
+            if _declaration_rows is None:
+                _declaration_rows = _all()
+            self._value = {row[0]["task_id"]: row[self.column] for row in _declaration_rows}
+        return self._value
+
+    def __getitem__(self, key):
+        return self._load()[key]
+
+    def __iter__(self):
+        return iter(self._load())
+
+    def __len__(self):
+        return len(self._load())
+
+
+SETUP = _LazyDeclarations(1)
+VERIFY = _LazyDeclarations(2)
+ENV = _LazyDeclarations(3)
 
 #: **No division.** Terminal-Bench declares no train/eval split -- it is an exam, and its
 #: own documentation says so -- so the whole pool is evaluation material and this adapter

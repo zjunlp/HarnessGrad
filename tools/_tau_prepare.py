@@ -237,7 +237,7 @@ def launch(request, *, program=None):
                                       'source_identity': request['source_identity']}, sort_keys=True))
     request['_phase'] = 'worker-execution'
     with tempfile.TemporaryDirectory(prefix='hg-tau-worker-private-') as private:
-        proc = subprocess.run(argv, input=json.dumps(request), capture_output=True, text=True,
+        proc = subprocess.run(argv, input=json.dumps(request), capture_output=True, text=True, errors='replace',
                               env=environment(private), cwd=private, check=False)
     if attempt:
         # Raw diagnostics stay in this mode-0700 owned attempt, never the receipt/error.

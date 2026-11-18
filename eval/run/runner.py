@@ -320,11 +320,28 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             observation: dict | None = None,
             harness_runtime_identity: dict | None = None,
             _worker: dict | None = None,
-            _private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None) -> dict:
+            _private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None,
+            task_budget_context=None) -> dict:
     # A direct caller must learn configuration faults before paying for actor work.
     # Construction reuses the broker's frozen declaration/config checks; entering
     # the broker (socket creation and requests) remains verifier-only. Evaluation
     # cache hits never reach run_one and need no newly configured judge.
+    if task_budget_context is not None:
+        unsupported = ((setup or {}).get('workers') is not None or
+            ((env or {}).get('kind') == 'exec' and (env or {}).get('state') == 'container') or
+            ((env or {}).get('kind') != 'exec' and
+             (not sandbox or (env or {}).get('network') != 'none')))
+        if unsupported:
+            result = _invalid(task, ValueError('unsupported strict task budget route'),
+                              stage='task budget admission', service=None)
+            result['task_budget_stop'] = {'reason': 'unsupported_strict_task_route', 'split': task_budget_context.split}
+            return result
+        stop = task_budget_context.admission_stop()
+        if stop:
+            result = _invalid(task, ValueError('strict task model budget exhausted before actor launch'),
+                              stage='task budget admission', service=None)
+            result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split, **stop}
+            return result
     judge_spec = (verifier or {}).get("judge")
     if judge_spec is not None:
         from eval.service.judge import Judge, JudgeUnavailable
@@ -415,6 +432,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             env, run_id, run_seed, recordings_root, trial_id=trial_id,
             runtime_receipt=runtime_receipt, worker=_worker,
             dataset_runtime_identity=dataset_runtime_identity,
+            **({"task_budget_context": task_budget_context} if task_budget_context is not None else {}),
             **candidate_runtime.fields(selected_harness),
             **({'private_paths': _private_paths} if _private_paths else {}),
             **({'evidence_output': evidence_output} if evidence_output is not None else {}))
@@ -431,6 +449,16 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 'exception': {'type': type(exc).__name__, 'detail': str(exc)},
                 'trial_evidence_output': evidence_output, 'runtime_services': runtime_receipt}
         raise
+    if task_budget_context is not None:
+        stops = (result.get('model_gateway') or {}).get('budget_stops') or []
+        if stops:
+            runtime_receipt['task_budget'] = {'stops': stops, 'observed_verdict': dict(result.get('verdict') or {})}
+            result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split,
+                                          'reason': stops[0]['reason'], 'requests': stops}
+            result['invalid'] = {'stage': 'task budget',
+                                 'detail': 'Task model HTTP budget stopped: ' + stops[0]['reason']}
+            result['verdict'] = {**(result.get('verdict') or {}),
+                                 'unmeasured': 'task model HTTP budget stopped'}
     if refusal is None:
         try:
             external_runtime.require_current(repo, external_identities)
@@ -476,7 +504,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             runtime_receipt: dict | None = None, worker: dict | None = None,
             evidence_output: dict | None = None,
             harness_runtime_identity: dict | None = None,
-            private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None) -> dict:
+            private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None,
+            task_budget_context=None) -> dict:
     """Run the harness on one task in a throwaway dir, off the platform's disk.
 
     Returns {task_id, answer, trace, exit_code}. A non-zero exit is recorded as
@@ -612,7 +641,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
     package_overlays = ()
     workspace = TaskWorkspace()
     workdir = workspace.path
-    session = TaskSession(workspace, runtime_receipt)
+    session = TaskSession(workspace, runtime_receipt,
+        **({"task_budget_context": task_budget_context} if task_budget_context is not None else {}))
     capture = TaskOutputCapture(workdir, evidence_output)
     try:
         if (bun_preparation or {}).get("responses_overlay"):
@@ -761,6 +791,14 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
         # cannot reach a model on the host's loopback -- measured, every obvious route
         # fails -- and the wrong fix is `--network bridge`, which would give the task the
         # internet and silently change what it is (`eval/service/modelgate.py`).
+        if task_budget_context is not None:
+            base = child_env.get('HG_AGENT_BASE_URL')
+            if (not base or os.environ.get('HG_AGENT_BACKEND', 'mock') == 'mock' or
+                    (is_exec and (not base.startswith('http://') or not modelgate_mod.is_host_local(base)))):
+                result = _invalid(task, ValueError('unsupported strict task model endpoint'),
+                                  stage='task budget admission', service=None)
+                result['task_budget_stop'] = {'reason': 'unsupported_strict_task_endpoint', 'split': task_budget_context.split}
+                return result
         if is_exec:
             base = child_env.get("HG_AGENT_BASE_URL")
             if base and os.environ.get("HG_AGENT_BACKEND", "mock") != "mock" \
@@ -777,7 +815,11 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 session.start_native_model(base, factory=NativeModelRoute,
                                            observe_http=model_failure.enabled(verifier))
             except (modelgate_mod.GatewayUnavailable, ValueError) as exc:
-                return _invalid(task, exc, stage="native model route admission", service=None)
+                result = _invalid(task, exc, stage="native model route admission", service=None)
+                if task_budget_context is not None:
+                    result['task_budget_stop'] = {'reason': 'strict_native_route_unavailable',
+                                                  'split': task_budget_context.split}
+                return result
 
         # How the harness finds the services, and the whole of what it is told about
         # them. `HG_SVC_*` rather than `HG_ENV_*`: the environment's own model,
@@ -1066,7 +1108,8 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              persist_trial_report: bool = True,
              dataset_runtime_identity: dict | None = None,
              harness_runtime_identity: dict | None = None,
-             verification_context: dict | None = None) -> dict:
+             verification_context: dict | None = None,
+             task_budget_context=None) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1089,7 +1132,8 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                             if verification_context is not None else {}),
                          **({'harness_runtime_identity': harness_runtime_identity}
                             if harness_runtime_identity is not None else {}),
-                         diagnostic_authorization=diagnostic_authorization)
+                         diagnostic_authorization=diagnostic_authorization,
+                         **({'task_budget_context': task_budget_context} if task_budget_context is not None else {}))
         if diagnostic_authorization is not None:
             result["enforcement"] = diagnostic_authorization.record()
         return result
@@ -1124,7 +1168,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               persist_trial_report: bool = True,
               dataset_runtime_identity: dict | None = None,
               harness_runtime_identity: dict | None = None,
-              verification_context: dict | None = None) -> dict:
+              verification_context: dict | None = None,
+              task_budget_context=None) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1290,9 +1335,22 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     trial_options = trial_worker.RunOptions(
         repo, sandbox, run_id, run_seed, round_no, harness_sha, trials, len(tasks),
         recordings_root, diagnostic_authorization, private_paths)
+    task_budget_stops = {}
+    def measure_task(*args, **kwargs):
+        if task_budget_stops:
+            result = _invalid(args[1], ValueError('task budget already stopped'),
+                              stage='task budget', service=None)
+            result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split,
+                                          'reason': 'task_budget_already_stopped'}
+            return result
+        result = run_one(*args,
+            **({'task_budget_context': task_budget_context} if task_budget_context is not None else {}), **kwargs)
+        if result.get('task_budget_stop'):
+            task_budget_stops[args[1]['task_id']] = result['task_budget_stop']
+        return result
     task_worker = trial_worker.TaskTrialWorker(
         trial_options, trial_worker.RunBindings(selected_harness, runtime_identities),
-        measure=lambda *a, **kw: run_one(*a, **kw),
+        measure=measure_task,
         write_progress=lambda *a, **kw: _write_progress(*a, **kw))
 
     def _measure(task_index: int, task: dict) -> dict:
@@ -1302,6 +1360,10 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         runtime_fields = {**dataset_runtime_identity_mod.fields(task_runtime),
                           **candidate_runtime.fields(selected_harness),
                           **verification_context_mod.fields(task_context)}
+        if task_budget_stops:
+            reason = {'stage': 'task budget', 'detail': 'Task budget stopped before task launch'}
+            _write_progress(progress_dir, round_no, tid, [], reason, **runtime_fields)
+            return {'task_id': tid, 'invalid': reason}
         enforcement = (diagnostic_authorization.record()
                        if diagnostic_authorization is not None else None)
         refusal, observation = evaluation_plan.admit_before_cache(
@@ -1392,7 +1454,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             trial_protocol, tasks, trial_rows, trials=trials, trial_identity=trial_identity,
             run_id=run_id, round_no=round_no, harness_sha=harness_sha,
             progress_dir=progress_dir, persist=persist_trial_report)}
-    return {**repeated, **dataset_runtime_identity_mod.fields(runtime_identity),
+    task_budget_fields = {}
+    if task_budget_context is not None:
+        task_budget_fields['task_budget_usage'] = {
+            'scope': 'current_task_ledger_cumulative', 'split': task_budget_context.split,
+            'ledger_path': str(task_budget_context.binding.ledger_path),
+            'counters': task_budget_context.binding.counters()}
+        if task_budget_stops:
+            task_budget_fields['task_budget_stop'] = {
+                'scope': 'task', 'split': task_budget_context.split,
+                'tasks': task_budget_stops, 'ledger_path': str(task_budget_context.binding.ledger_path)}
+    return {**repeated, **task_budget_fields, **dataset_runtime_identity_mod.fields(runtime_identity),
             **verification_context_mod.fields(context),
             **candidate_runtime.fields(selected_harness),
             "per_task": scores.per_task, "per_task_std": scores.per_task_std, "score_std": score_std,

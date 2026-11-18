@@ -141,7 +141,7 @@ class ImproverReadiness:
 
 def resolve_readiness(request: ImproverRequest, *, reporter, load_config,
                       resolve_config, provider_url=cli_provider_base_url,
-                      probe=probe_tool_calls) -> ImproverReadiness:
+                      probe=probe_tool_calls, before_probe=None) -> ImproverReadiness:
     """Resolve identity and apply the CLI tool gate with its original soft errors.
 
     Resolution exceptions become an unresolved declaration; provider and reporting
@@ -188,8 +188,10 @@ def resolve_readiness(request: ImproverRequest, *, reporter, load_config,
     # tool support better than a one-shot probe does.
     improver_tool_calls: bool | None = None
     improver_tool_calls_detail = ""
+    base_url = provider_url(improver) if improver.get("ok") and improver.get("kind") == "cli" else ""
+    if before_probe is not None:
+        before_probe(improver, base_url)
     if improver.get("ok") and improver.get("kind") == "cli":
-        base_url = provider_url(improver)
         if base_url:
             if platform_config.current().improver.skip_tool_gate == "1":
                 improver_tool_calls_detail = "gate skipped by HG_IMPROVER_SKIP_TOOL_GATE"

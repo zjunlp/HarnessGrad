@@ -504,3 +504,10 @@ data/candidates/
 
 # Public native scorer preparation is a supported cross-machine workflow.
 !/docs/public-native-scoring.md
+
+# Generic evidence and verified H0 view contracts.
+!/docs/h0-subset-view.md
+!/docs/method-terminal-and-archive.md
+!/docs/improver-artifact-manifest.md
+!/docs/task_http_budget.md
+!/docs/treatment-resume-contract.md

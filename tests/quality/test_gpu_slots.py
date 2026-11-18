@@ -23,6 +23,39 @@ sys.path.insert(0, str(ROOT))
 
 from harnessgrad import slots                                           # noqa: E402
 
+
+def test_host_headroom_wait_tolerates_an_hour_by_default(tmp_path, monkeypatch):
+    monkeypatch.delenv("HG_SLOT_GUARD_TIMEOUT", raising=False)
+    budget = slots.SlotBudget(tmp_path, 1)
+    samples = iter([{"ok": False, "reason": "busy"}, {"ok": True}])
+    monkeypatch.setattr(slots, "host_pressure", lambda *args: next(samples))
+    clock = iter([0.0, 3601.0, 3601.0])
+    monkeypatch.setattr(slots.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(slots.time, "sleep", lambda _: None)
+    with budget.hold():
+        pass
+    assert budget.guard_timeout == 4 * 60 * 60
+
+
+def test_explicit_host_headroom_watchdog_still_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("HG_SLOT_GUARD_TIMEOUT", "0.01")
+    budget = slots.SlotBudget(tmp_path, 1)
+    monkeypatch.setattr(slots, "host_pressure", lambda *args: {"ok": False, "reason": "busy"})
+    with pytest.raises(slots.SlotBudgetError, match="busy"):
+        with budget.hold():
+            pass
+
+
+def test_zero_explicitly_disables_only_the_headroom_watchdog(tmp_path, monkeypatch):
+    monkeypatch.setenv("HG_SLOT_GUARD_TIMEOUT", "0")
+    budget = slots.SlotBudget(tmp_path, 1)
+    samples = iter([{"ok": False, "reason": "busy"}, {"ok": True}])
+    monkeypatch.setattr(slots, "host_pressure", lambda *args: next(samples))
+    monkeypatch.setattr(slots.time, "sleep", lambda _: None)
+    with budget.hold():
+        pass
+    assert budget.guard_timeout == 0
+
 CHILD = textwrap.dedent('''
     import os, sys, time
     sys.path.insert(0, {root!r})

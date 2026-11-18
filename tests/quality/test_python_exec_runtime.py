@@ -11,6 +11,7 @@ from harnessgrad import candidate_runtime, python_exec_runtime as runtime
 from harnessgrad import python_harness_runtime as native
 from test_python_harness_store import candidate, wheel  # noqa: F401
 from test_loop_managed_runtime import loop_store, loop_images  # noqa: F401
+from loop_runtime_fixtures import prepared_loop_runtime  # noqa: F401
 
 
 @pytest.fixture

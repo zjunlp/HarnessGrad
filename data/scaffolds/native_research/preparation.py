@@ -19,7 +19,7 @@ def prepare_component(name, output, config, *, fetch=False, judge_model=None):
     request = dict(name=name, output=str(output), config=config, fetch=fetch,
                    judge_model=judge_model, runtime=selected)
     proc = subprocess.run([runtime['python'], '-I', '-B', str(worker)],
-        input=json.dumps(request), text=True, capture_output=True, env=environment)
+        input=json.dumps(request), text=True, errors='replace', capture_output=True, env=environment)
     if proc.returncode:
         raise RuntimeError('native preparation component failed; diagnostics may contain private source data')
     return json.loads((Path(output) / 'manifest.json').read_bytes())

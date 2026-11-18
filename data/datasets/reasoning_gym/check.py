@@ -17,7 +17,7 @@ def main():
     for name in ('verifier/reward.txt', 'verifier/evidence.json'):
         Path(name).unlink(missing_ok=True)
     result = subprocess.run([sys.executable, '-I', '-B', 'qa/lib/verify/check.py',
-                             *sys.argv[1:]], capture_output=True, text=True)
+                             *sys.argv[1:]], capture_output=True, text=True, errors='replace')
     if result.returncode not in (0, 1):
         return 2
     try:

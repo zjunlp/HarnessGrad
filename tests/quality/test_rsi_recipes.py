@@ -5,7 +5,6 @@ are authored instrument fixtures, never reported benchmark/model measurements.
 """
 from __future__ import annotations
 
-import ast
 import json
 import os
 from pathlib import Path
@@ -29,11 +28,8 @@ RECIPES = {
 
 
 def command_flags():
-    tree = ast.parse((ROOT / 'driver.py').read_text())
-    return {arg.value for node in ast.walk(tree)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-        and node.func.attr == 'add_argument'
-        for arg in node.args if isinstance(arg, ast.Constant) and isinstance(arg.value, str)}
+    from harnessgrad.entrypoints.run_parser import build_parser
+    return set(build_parser()._option_string_actions)
 
 
 @pytest.mark.parametrize('slug,dataset', RECIPES.items())

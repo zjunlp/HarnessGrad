@@ -18,6 +18,7 @@ from data.scaffolds.qa import control
 
 @pytest.fixture(autouse=True)
 def forbid_full_pool(monkeypatch):
+    from data.scaffolds import registry
     def forbidden(*args, **kwargs):
         pytest.fail("selected controls must not load the full Chess pool")
 
@@ -26,6 +27,8 @@ def forbid_full_pool(monkeypatch):
     monkeypatch.setattr(dataset, "load", forbidden)
     monkeypatch.setattr(dataset._SPEC, "ensure", forbidden)
     monkeypatch.setattr(dataset._SPEC, "build", forbidden)
+    with registry._local_provider():
+        yield
 
 
 @pytest.fixture

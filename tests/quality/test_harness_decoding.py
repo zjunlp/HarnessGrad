@@ -57,7 +57,9 @@ ROOT = Path(__file__).resolve().parents[2]
 # The retired model-service API no longer spawns a host process.
 # Portable harness preparation added three tool subprocess probes; each is
 # checked, and OpenClaw version/admission output is explicitly strict UTF-8.
-EXPECTED_CALLS = {"base_harness": 11, "eval": 15, "data": 47, "harnessgrad": 7, "tools": 38}
+# Preparation and runtime probes added since the prior inventory have been
+# reviewed: diagnostics replace invalid bytes; identity/path probes stay strict.
+EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 10, "tools": 45}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
@@ -124,6 +126,8 @@ def _subprocess_text_calls(path: Path):
 
 
 def test_every_live_text_subprocess_says_how_to_decode():
+    # Identity, version, JSON and filesystem-path probes may use explicit
+    # strict decoding: replacing a byte there could silently change identity.
     offenders, checked = [], {}
     for root in EXPECTED_CALLS:
         checked[root] = 0
@@ -145,15 +149,15 @@ def test_every_live_text_subprocess_says_how_to_decode():
                 site = f"{relative}:{lineno}"
                 if not has_errors and site not in EXCEPTIONS:
                     offenders.append(site)
-    assert checked == EXPECTED_CALLS, (
-        f"text-mode subprocess inventory changed: {checked}; expected {EXPECTED_CALLS}. "
-        "Review new/removed calls and the matcher before updating these counts (66 total).")
     assert not offenders, (
         "these live subprocess calls request text without `errors=`, so one non-UTF-8 byte "
         "can abort capture or lose output in a reader thread:\n  "
         + "\n  ".join(offenders)
         + "\nAdd `errors=\"replace\"` (lossy on the offending byte, but the trace stays valid UTF-8) or "
           "record the site in EXCEPTIONS with the reason it must stay strict.")
+    assert checked == EXPECTED_CALLS, (
+        f"text-mode subprocess inventory changed: {checked}; expected {EXPECTED_CALLS}. "
+        "Review new/removed calls and the matcher before updating these counts.")
 
 
 def test_the_strict_exceptions_are_still_real_sites():

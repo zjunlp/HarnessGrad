@@ -19,6 +19,10 @@ waiting, which is negligible against a task that takes a minute.
 **Not a rate limiter.** The budget does not slow anything down or queue work behind a
 schedule; it only stops `N` from exceeding a capacity the endpoint was measured to have. A run
 that is alone in the system still gets its `--jobs`.
+
+When host headroom checks are enabled, the default watchdog waits four hours.
+Set `HG_SLOT_GUARD_TIMEOUT` to another number of seconds; zero disables the
+headroom watchdog. This does not disable the resource checks.
 """
 from __future__ import annotations
 
@@ -40,7 +44,9 @@ DEFAULT_DIR = "hg-gpu-slots"
 DEFAULT_RESERVED_CORES = 0
 DEFAULT_MIN_FREE_MEMORY = 0.0
 DEFAULT_MIN_FREE_GB = 0.0
-DEFAULT_GUARD_TIMEOUT = 1800.0
+# A busy shared host can remain above the reserve longer than a single task.
+# Keep a finite watchdog, but permit ordinary multi-hour shared-host queues.
+DEFAULT_GUARD_TIMEOUT = 4 * 60 * 60.0
 
 
 def _reserved_cores(cpus: int) -> int:

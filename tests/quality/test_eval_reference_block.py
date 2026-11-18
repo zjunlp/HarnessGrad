@@ -14,7 +14,9 @@ same measurement as one taken with 40, even when the harness is identical.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
+from harnessgrad import verification_context
 
 from harnessgrad.loops.eval_side import _baseline_block
 
@@ -27,6 +29,8 @@ def _point(*, jobs: int = 40, tasks: tuple[str, ...] = ("t1", "t2", "t3")) -> di
                      "agent_backend": "vllm", "harness_name": "loop",
                      "framework_version": "1.0"},
         "per_task": {task: 0.0 for task in tasks},
+        "verification_context": verification_context.create({
+            task: hashlib.sha256(task.encode()).hexdigest() for task in tasks}),
     }
 
 
@@ -39,6 +43,8 @@ def _reference(tmp_path: Path, *, jobs: int = 13,
                      "agent_backend": "vllm", "harness_name": "loop",
                      "framework_version": "1.0"},
         "per_task": {task: 0.0 for task in tasks},
+        "verification_context": verification_context.create({
+            task: hashlib.sha256(task.encode()).hexdigest() for task in tasks}),
     }))
     return path
 

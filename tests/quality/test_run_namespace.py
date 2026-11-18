@@ -60,6 +60,45 @@ def test_concurrent_reservations_have_one_winner(args):
         assert sum(pool.map(attempt, range(24))) == 1
 
 
+def test_driver_lock_excludes_same_run_and_releases(args):
+    with ns.driver_lock(args, 'same'):
+        with pytest.raises(ns.NamespaceRefused, match='another driver'):
+            with ns.driver_lock(args, 'same'):
+                pytest.fail('second writer admitted')
+        with ns.driver_lock(args, 'other'):
+            pass
+    with ns.driver_lock(args, 'same'):
+        pass
+
+
+def test_real_driver_refuses_locked_run_before_namespace_claim(args):
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[2]
+    env = dict(os.environ, HG_AGENT_BACKEND='mock', PYTHONDONTWRITEBYTECODE='1')
+    cmd = [sys.executable, str(repo / 'driver.py'), '--dataset', 'demo', '--harness', 'loop_plain',
+           '--run-id', 'same', '--sampling', 'all', '--side', 'train', '--rounds', '0',
+           '--improver', 'none', '--runs-root', str(args.runs_root), '--work-root', str(args.work_root)]
+    with ns.driver_lock(args, 'same'):
+        result = subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True, timeout=120)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert 'another driver is already running' in result.stderr
+    assert not (args.runs_root / 'same').exists()
+
+
+def test_driver_lock_rejects_symlink_directory(args, tmp_path):
+    args.runs_root.mkdir()
+    outside = tmp_path / 'outside'; outside.mkdir()
+    (args.runs_root / '.driver-locks').symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ns.NamespaceRefused):
+        with ns.driver_lock(args, 'same'):
+            pytest.fail('unsafe lock admitted')
+    assert not list(outside.iterdir())
+
+
 def test_shared_work_root_blocks_other_run_root(args, tmp_path):
     ns.reserve(args, 'same')
     other = SimpleNamespace(runs_root=tmp_path / 'other', work_root=args.work_root)

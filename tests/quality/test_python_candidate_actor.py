@@ -305,7 +305,7 @@ Path('verifier/reward.txt').write_text('1' if not facts['actor_importable'] and 
         'inputs':[{'path':'check.py','content':check}],
         'reward_file':'/verifier/reward.txt','evidence_file':'/verifier/evidence.json',
         'result_contract':{'version':1,'score_range':[0,1],'require_exit_zero':True}}
-    result=runner.run_one(actor.repo,{'task_id':'scorer-boundary'},verifier=verifier,
+    result=runner.run_one(actor.repo,{'task_id':'scorer-boundary','goal':'offline scorer boundary'},verifier=verifier,
         env={'kind':'files','network':'none'},harness_runtime_identity=actor.binding)
     assert result['verdict'].get('score')==1,result
     facts=result['verdict']['evidence']
@@ -408,7 +408,7 @@ def test_cache_requires_its_binding_and_changed_source_gets_a_fresh_measurement(
     calls=Mock(wraps=original);monkeypatch.setattr(runner,'run_one',calls)
     cache={}
     def evaluate(binding):
-        return runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,
+        return runner._evaluate(actor.repo,[{'task_id':'control','goal':'offline cache fixture'}],{'control':'ok'},cache=cache,
             harness_sha='same-source',envs={'control':{'kind':'files','network':'none'}},
             harness_runtime_identity=binding)
     assert not evaluate(actor.binding)['invalid']
@@ -429,13 +429,13 @@ def test_cache_requires_its_binding_and_changed_source_gets_a_fresh_measurement(
 def test_corrupt_runtime_cannot_bypass_admission_through_cache(actor, monkeypatch):
     cache={}
     kwargs={'envs':{'control':{'kind':'files','network':'none'}},'harness_runtime_identity':actor.binding}
-    runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,**kwargs)
+    runner._evaluate(actor.repo,[{'task_id':'control','goal':'offline cache fixture'}],{'control':'ok'},cache=cache,**kwargs)
     cfg=Path(actor.binding['artifact']['path'])/'pyvenv.cfg'
     original,mode=cfg.read_bytes(),stat.S_IMODE(cfg.stat().st_mode)
     try:
         cfg.chmod(mode|stat.S_IWUSR);cfg.write_bytes(original+b'\n# changed artifact\n');cfg.chmod(mode)
         monkeypatch.setattr(runner,'run_one',Mock(side_effect=AssertionError('corrupt runtime launched')))
-        result=runner._evaluate(actor.repo,[{'task_id':'control'}],{'control':'ok'},cache=cache,**kwargs)
+        result=runner._evaluate(actor.repo,[{'task_id':'control','goal':'offline cache fixture'}],{'control':'ok'},cache=cache,**kwargs)
         assert result['invalid'] and not result['per_task'] and not result['cached_tasks']
     finally:
         cfg.chmod(mode|stat.S_IWUSR);cfg.write_bytes(original);cfg.chmod(mode)

@@ -353,6 +353,29 @@ def _integer(value: Any, name: str) -> int:
     return value
 
 
+def _safe_raw_usage(usage):
+    """Keep accounting numbers/presence, never arbitrary provider text or config."""
+    scalar = {'prompt_tokens', 'input_tokens', 'completion_tokens', 'output_tokens',
+              'total_tokens', 'cached_tokens', 'cache_read_tokens', 'reasoning_tokens'}
+    nested = {'completion_tokens_details', 'prompt_tokens_details',
+              'input_tokens_details', 'output_tokens_details'}
+    detail = {'cached_tokens', 'reasoning_tokens', 'audio_tokens', 'text_tokens',
+              'image_tokens', 'accepted_prediction_tokens', 'rejected_prediction_tokens'}
+    clean = {}
+    for key in scalar | nested:
+        if key not in usage:
+            continue
+        value = usage[key]
+        if key in scalar:
+            clean[key] = value if type(value) in (int, float) and math.isfinite(value) else None
+        elif isinstance(value, Mapping):
+            clean[key] = {k: v if type(v) in (int, float) and math.isfinite(v) else None
+                          for k, v in value.items() if k in detail}
+        else:
+            clean[key] = None
+    return clean
+
+
 class BudgetDispatcher:
     """Trusted, file-backed reservation and dispatch boundary."""
 
@@ -481,7 +504,7 @@ class BudgetDispatcher:
             if state.get("profile_hash") != self.profile.digest or state.get("profile") != self.profile.data:
                 raise LedgerTampered("immutable profile identity mismatch")
             unknown = state.get("unknown_requests", [])
-            if unknown and (prompt or output):
+            if unknown:
                 raise BudgetExceeded("unknown_usage", unknown, "reconciliation required")
             retry = retry_of is not None
             if retry:
@@ -640,6 +663,7 @@ class BudgetDispatcher:
                 state["violations"].append({"request_id": request_id,
                     "reason": "usage is not an object", "at": float(self.clock())})
                 raise UsageValidationError("usage must be an object")
+            record["raw_usage"] = _safe_raw_usage(usage)
             normalized: dict[str, int] = {}
             try:
                 for key, value in usage.items():
@@ -652,6 +676,7 @@ class BudgetDispatcher:
                     elif key not in {
                         "cached_tokens", "cache_read_tokens", "reasoning_tokens",
                         "completion_tokens_details", "prompt_tokens_details",
+                        "input_tokens_details", "output_tokens_details",
                     }:
                         raise UsageValidationError(f"unsupported usage field: {key}")
             except UsageValidationError as exc:
@@ -681,7 +706,7 @@ class BudgetDispatcher:
                                ("total_tokens", actual_total)):
                 state["spent"][key] += value
                 state["roles"][record["role"]][f"spent_{key}"] += value
-            record.update({"status": "settled", "usage": normalized})
+            record.update({"status": "settled", "usage": normalized, "raw_usage": _safe_raw_usage(usage)})
             if request_id in state["unknown_requests"]:
                 state["unknown_requests"].remove(request_id)
 
@@ -701,6 +726,11 @@ class BudgetDispatcher:
                             ("total_tokens", record["total_reserved"])):
             state["reserved"][key] -= amount
             role_state[key] -= amount
+
+    def reserve(self, role: str, prompt_tokens: int, max_output_tokens: int,
+                retry_of: str | None = None) -> DispatchRequest:
+        """Reserve before transport construction; caller must reconcile the ticket."""
+        return self._reserve(role, prompt_tokens, max_output_tokens, retry_of)
 
     def dispatch_with_result(self, callback_factory: Callable[..., Any], payload: Any,
                              role: str, prompt_tokens: int, max_output_tokens: int,

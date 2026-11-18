@@ -59,6 +59,13 @@ EXTRACTED_UNIT_IMPORTS = {
         "harnessgrad.scoring_identity", "harnessgrad.verification_context", "harnessgrad.h0_identity",
         "harnessgrad.environments", "harnessgrad.identity", "harnessgrad.records",
         "harnessgrad.orchestration.historical_evidence"},
+    "harnessgrad/orchestration/h0_subset.py": {
+        "__future__", "copy", "hashlib", "json", "eval.run.aggregation",
+        "harnessgrad.dataset_runtime_identity", "harnessgrad.scoring_identity",
+        "harnessgrad.verification_context", "harnessgrad.records",
+        "harnessgrad.orchestration.historical_evidence", "harnessgrad.orchestration.h0"},
+    "harnessgrad/orchestration/treatment_identity.py": {
+        "__future__", "hashlib", "json", "os", "pathlib", "re", "stat"},
     "harnessgrad/orchestration/run_metadata.py": {
         "__future__", "collections.abc", "dataclasses", "eval.policy.diagnostic_policy",
         "harnessgrad.candidate_runtime", "harnessgrad.config.areas", "harnessgrad.dataset_runtime_identity",

@@ -42,7 +42,7 @@ def main(argv=None):
                     environment[key]=str(directory)
                 probe = subprocess.run([binding['python'],'-I','-B','-c',code,
                     str(Path(__file__).resolve().parents[3]),json.dumps({'harbor_runtime':binding,'harbor_python':binding['python']})],
-                    env=environment,cwd=temporary,capture_output=True,text=True,check=True,timeout=60)
+                    env=environment,cwd=temporary,capture_output=True,text=True,errors='strict',check=True,timeout=60)
             result['probe'] = json.loads(probe.stdout)
         dataset_runtime.admit_binding(binding,'verifier',python=binding['python'])
         result['binding'] = binding

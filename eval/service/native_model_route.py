@@ -23,6 +23,19 @@ class _Handler(socketserver.BaseRequestHandler):
     def handle(self):
         owner = self.server.owner
         owner.stats.connection()
+        if owner.budget_context is not None:
+            from eval.service.request_budget import serve_budgeted
+            with owner.lock:
+                if owner.stopped:
+                    return
+                owner.connections.add(self.request)
+            try:
+                serve_budgeted(self.request, owner.target, owner.budget_context, owner.budget_stop, owner,
+                               owner.http.connection() if owner.http is not None else None, owner.stats, owner.settlement)
+            finally:
+                with owner.lock:
+                    owner.connections.discard(self.request)
+            return
         upstream = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Track both ends before connecting so stop() can also cancel a handshake.
         with owner.lock:
@@ -59,7 +72,7 @@ class _Server(socketserver.ThreadingUnixStreamServer):
 
 
 class NativeModelRoute:
-    def __init__(self, base_url: str, *, observe_http=False):
+    def __init__(self, base_url: str, *, observe_http=False, budget_context=None):
         parsed = urlsplit(base_url)
         # TLS/userinfo need a different transport contract. Fail rather than
         # quietly dropping encryption, credentials or URL semantics.
@@ -69,6 +82,10 @@ class NativeModelRoute:
         self.target = (parsed.hostname, parsed.port or 80)
         self.path = parsed.path
         self.stats = GatewayStats()
+        self.budget_context = budget_context
+        self.budget_stops = []
+        from eval.service.request_budget import Settlement
+        self.settlement = Settlement()
         self.http = None
         if observe_http:
             from eval.service.http_observation import HTTPObservation
@@ -95,8 +112,17 @@ class NativeModelRoute:
             self.stop()
             raise GatewayUnavailable(f"native offline model socket unavailable: {exc}") from exc
 
+    def budget_stop(self, reason, request_id):
+        with self.lock:
+            self.budget_stops.append({'reason': reason, 'request_id': request_id})
+
+    def wait_settled(self):
+        return self.settlement.wait()
+
     def account(self):
-        return {"transport": "unix+isolated-loopback", **self.stats.as_dict()}
+        if self.budget_context is not None:
+            self.wait_settled()
+        return {"transport": "unix+isolated-loopback", **self.stats.as_dict(), **({"budget_stops": list(self.budget_stops)} if self.budget_context is not None else {})}
 
     def stop(self):
         with self.lock:
@@ -114,6 +140,8 @@ class NativeModelRoute:
         if self.server is not None:
             self.server.server_close()
             self.server = None
+        if self.budget_context is not None:
+            self.wait_settled()
         if self.directory is not None:
             shutil.rmtree(self.directory)
             self.directory = None

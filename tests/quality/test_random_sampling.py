@@ -10,7 +10,6 @@ the cheapest honest policy the most expensive one to *evaluate*.
 """
 from __future__ import annotations
 
-import ast
 import json
 import subprocess
 import sys
@@ -35,21 +34,20 @@ def test_random_policy_reads_no_scores() -> None:
 
 
 def test_driver_narrows_random_before_h0_and_keeps_score_policies_late() -> None:
-    """Source, not a second table: the early block is above `evaluate(...)` and only for these."""
-    source = (ROOT / "driver.py").read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    early = [node for node in ast.walk(tree) if isinstance(node, ast.If)
-             and ast.unparse(node.test) == "args.sampling.startswith('random_')"]
-    assert early, "the early random_N narrowing is gone"
-    assert any(any(isinstance(n, ast.Assign)
-                   and ast.unparse(n) == "side_ids = select_task_set({}, args.sampling, within=side_ids)"
-                   for n in node.body) for node in early)
-    # The score-based policies must NOT be narrowed early: they need the whole side's scores.
-    for policy in ("below_", "above_"):
-        assert f'args.sampling.startswith("{policy}")' not in source
-    # `evaluate(` is the round-0 measurement; the early block has to precede it.
-    assert source.index('args.sampling.startswith("random_")') < source.index(
-        "base = evaluate(work, tasks_all")
+    """The actual pre-H0 selection narrows only score-independent policies."""
+    from harnessgrad.orchestration.selected_dataset import (
+        DatasetPartition, SelectionOptions, select_run_tasks,
+    )
+    tasks = [{'task_id': tid} for tid in DEMO_TRAIN]
+    partition = DatasetPartition(tasks, {}, {'train': DEMO_TRAIN, 'eval': []},
+                                 None, None, None, None)
+    def selected(policy):
+        options = SelectionOptions('demo', 'declared', 'train', None, policy,
+                                   'fixture', None, True, False)
+        return select_run_tasks(options, partition, None)
+    assert selected('random_2').ids == select_task_set({}, 'random_2', within=DEMO_TRAIN)
+    for policy in ('below_0.5', 'above_0.5'):
+        assert selected(policy).ids == DEMO_TRAIN
 
 
 def test_random_run_measures_only_the_sampled_tasks(tmp_path: Path) -> None:
@@ -57,7 +55,7 @@ def test_random_run_measures_only_the_sampled_tasks(tmp_path: Path) -> None:
     runs = tmp_path / "runs"
     expected = select_task_set({}, "random_1", within=DEMO_TRAIN)
     proc = subprocess.run(
-        [sys.executable, "driver.py", "--dataset", "demo", "--harness", "loop",
+        [sys.executable, "driver.py", "--dataset", "demo", "--harness", "loop_plain",
          "--side", "train", "--sampling", "random_1", "--rounds", "0",
          "--improver", "none", "--trials", "1", "--jobs", "1",
          "--run-id", "random-one", "--runs-root", str(runs),

@@ -172,6 +172,8 @@ def test_trusted_adapter_exports_only_selected_public_facts_and_verify_split():
     # that is the adapter fact this assertion is really about.
     namespace.update(ASSETS=ROOT / "data/datasets/appworld", VERIFIER_IMAGE="fabricated-image",
                      _RUN_IDS=[row["task_id"] for row in selected])
+    verifier = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == '_verifier')
+    exec(compile(ast.Module(body=[verifier], type_ignores=[]), 'fabricated_verifier', 'exec'), namespace)
     specs = eval(compile(ast.Expression(declaration), "fabricated_verify", "eval"), namespace)
     argv = specs["selected_1"]["argv"]
     assert argv[argv.index("--source-split") + 1] == "dev"

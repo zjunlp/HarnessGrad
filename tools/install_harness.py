@@ -113,7 +113,7 @@ def _check_toolchain(node_root: Path) -> None:
         env = {"PATH": os.defpath, "HOME": home, "NODE_DISABLE_COMPILE_CACHE": "1"}
         for argv, version in ((npm[:1], f"v{NODE_VERSION}"), (npm, NPM_VERSION)):
             actual = subprocess.check_output([*argv, "--version"], cwd=home, env=env,
-                                             text=True, timeout=20).strip()
+                                             text=True, errors='strict', timeout=20).strip()
             if actual != version:
                 raise ValueError(f"{Path(argv[-1]).name} version mismatch: expected {version}, found {actual}")
 

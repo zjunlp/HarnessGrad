@@ -97,6 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="mode B only: argv for the method's own runner, e.g. "
                          "'python /path/to/rrsi_wrap.py'. Defaults to "
                          "harness.json's improve_entrypoint.")
+    ap.add_argument("--treatment-manifest", type=Path, default=None,
+                    help="opt into versioned exact wrapper/dependency/configuration commitments; "
+                         "required unchanged on future resume, independently of platform waivers")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--budget-profile", default=None,
                     help="JSON trusted-dispatch profile; required for approved Task25 runs")
@@ -151,6 +154,12 @@ def build_parser() -> argparse.ArgumentParser:
                          "REASON is recorded with both hashes and both git shas under the run's "
                          "`platform-seams/`, so the curve says which code measured which rounds "
                          "instead of hiding it")
+    ap.add_argument("--resume-supplement-run", default=None, metavar="RUN_ID",
+                    help="experimental: recover an interrupted train round from an independently "
+                         "measured complementary run; requires --resume and the private "
+                         "method-submission journal")
+    ap.add_argument('--resume-batch-supplement', default=None, metavar='ROUND=RUN_ID[,ROUND=RUN_ID]',
+                    help='experimental: use fully measured saved batch candidates on resume')
     ap.add_argument("--from-round", type=int, default=None,
                     help="--side eval: which round of that run (default: its last)")
     ap.add_argument("--h0-from", default=None, metavar="RUN_ID",
@@ -161,6 +170,9 @@ def build_parser() -> argparse.ArgumentParser:
                          "trace set, which is the one thing a comparison cannot absorb. The "
                          "reused point records `shared_from` naming the run it came from. "
                          "Refused unless both runs share the base harness sha")
+    ap.add_argument("--h0-subset-view", action="store_true",
+                    help="derive a verified proper subset of an original --h0-from donor; "
+                         "requires --sampling all and explicit current --tasks")
     ap.add_argument("--baseline", default=None,
                     help="a frozen reference point to measure this run against, as a JSON "
                          "file holding one curve point (the object a `curve.jsonl` line "
@@ -263,10 +275,30 @@ def parse_run_args(
         if '--no-sandbox' in expanded:
             ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
     args = ap.parse_args(expanded)
+    if args.resume_batch_supplement:
+        if not args.resume_supplement_run:
+            ap.error('--resume-batch-supplement requires --resume-supplement-run')
+        seen_rounds = set()
+        for entry in args.resume_batch_supplement.split(','):
+            number, sep, name = entry.partition('=')
+            if (not sep or not number.isascii() or not number.isdecimal() or int(number) < 1 or
+                    int(number) in seen_rounds or not name or name in ('.', '..') or
+                    '/' in name or '\\' in name):
+                ap.error('--resume-batch-supplement must be a unique ROUND=RUN_ID')
+            seen_rounds.add(int(number))
+    if args.resume_supplement_run is not None:
+        name = args.resume_supplement_run
+        if (not args.resume or getattr(args, 'side', scenario_defaults.get('side')) != 'train' or
+                not name or name in ('.', '..') or
+                '/' in name or '\\' in name):
+            ap.error('--resume-supplement-run requires --resume, train side, and a run ID')
     if args.harness_runtime_binding is not None and (args.resume or args.h0_from):
         ap.error("--harness-runtime-binding cannot be combined with --resume or --h0-from")
     explicit = set(vars(args)) & scenario_defaults.keys()
     for field, default in scenario_defaults.items():
         if not hasattr(args, field):
             setattr(args, field, default)
+    if args.h0_subset_view and (not args.h0_from or args.resume or args.sampling != "all"
+                                or not args.tasks or args.side != "train"):
+        ap.error("--h0-subset-view requires --h0-from, --sampling all, explicit --tasks, --side train, and no --resume")
     return ap, args, explicit

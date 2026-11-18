@@ -28,6 +28,7 @@ def cli(tmp_path, monkeypatch, case):
     """Exercise the actual editor bridge, replacing only the external CLI process."""
     import cli_improver
     import editor
+    monkeypatch.setattr(editor, '_method_workspace', lambda: tmp_path)
 
     workspace = tmp_path / "cli"
     workspace.mkdir()

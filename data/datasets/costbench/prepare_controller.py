@@ -130,7 +130,7 @@ def main(argv=None, *, dynamic=False):
     launch = "import sys,pathlib;sys.path.insert(0,sys.argv[1]);p=pathlib.Path(sys.argv[1])/'data/datasets/costbench/prepare_controller.py';d={'__file__':str(p),'__name__':'_prepare_entry'};exec(compile(p.read_bytes(),str(p),'exec'),d);d['worker'](sys.argv[2])"
     result = subprocess.run([binding['python'], '-I', '-B', '-c', launch,
                              str(ASSETS.parents[2]), str(request_path)], env=env, cwd=stage,
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, errors='replace')
     for value, stream in ((result.stdout, sys.stdout), (result.stderr, sys.stderr)):
         if value:
             print(redact_network_credentials(value, env), end='', file=stream)

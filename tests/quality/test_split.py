@@ -430,16 +430,32 @@ def test_a_task_outside_the_run_cannot_refuse_it():
         monkey.undo()
 
 
-def test_the_narrowing_happens_before_the_image_preflight():
-    """收窄必须在镜像预检**之前**。顺序反了,收窄就只是装饰。
+def test_the_narrowing_happens_before_the_image_preflight(monkeypatch):
+    """The selected environment alone reaches the capability gate and resolver."""
+    from types import SimpleNamespace
+    from harnessgrad.orchestration import selected_dataset as selected
 
-    这条按源码顺序查,因为这个顺序不是风格问题:预检是那条拒绝的发出者,它看到的
-    表是哪一份,决定了运行被不被拒。
-    """
-    src = (ROOT / "driver.py").read_text(encoding="utf-8")
-    narrow = src.index("_narrow_to_run(setups, verifiers, envs, side_ids)")
-    gate = src.index("_check_env_kinds(man_at_door, _required_env_kinds(envs))")
-    preflight = src.index("envs, env_problem = _resolve_envs(envs)")
-    assert narrow < gate < preflight, (
-        "收窄必须排在能力门禁和镜像预检之前;现在的顺序是 "
-        f"narrow@{narrow} gate@{gate} preflight@{preflight}")
+    class Source:
+        def load_tasks(self, name, *, task_ids):
+            assert task_ids == ['t01']
+            return [], {'t01': {}, 'e01': {}}, {'t01': {}, 'e01': {}}
+
+        def load_envs(self, name, *, task_ids):
+            assert task_ids == ['t01']
+            return {'t01': {'kind': 'files'}, 'e01': {'kind': 'exec', 'image': 'ghost'}}
+
+    options = SimpleNamespace(dataset='demo', sandbox=False)
+    selection = SimpleNamespace(ids=['t01'], tasks=[{'task_id': 't01'}])
+    setups, verifiers, envs = selected.load_selected_declarations(options, Source(), selection, None)
+    calls = []
+    monkeypatch.setattr(selected, 'manifest', lambda path: {})
+    monkeypatch.setattr(selected, '_check_env_kinds',
+                        lambda man, kinds: calls.append(('gate', kinds)))
+    def resolve(items):
+        calls.append(('resolve', set(items)))
+        return items, None
+    monkeypatch.setattr(selected, '_resolve_envs', resolve)
+    monkeypatch.setattr(selected.verification_context, 'capture', lambda *a, **k: {})
+    selected._selected_environment_context(options, SimpleNamespace(scorable={}), selection,
+                                           'harness', setups, verifiers, envs)
+    assert calls == [('gate', {'files'}), ('resolve', {'t01'})]

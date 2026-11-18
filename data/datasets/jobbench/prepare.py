@@ -81,7 +81,7 @@ def render(root):
             or platform_identity() != platform_sources):
         raise ValueError('JobBench renderer changed before launch')
     result = subprocess.run([selected['python'], '-I', '-B', str(worker)],
-        input=json.dumps(request), text=True, capture_output=True, env=environment)
+        input=json.dumps(request), text=True, errors='strict', capture_output=True, env=environment)
     dataset_runtime.admit_binding(binding, 'service', python=selected['python'])
     if (admit_source(root) != identity or digest(worker) != worker_sha256
             or digest(__file__) != controller_sha256 or platform_identity() != platform_sources):

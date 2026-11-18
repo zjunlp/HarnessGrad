@@ -219,7 +219,7 @@ def provision_status():
                  "from bootstrap import bootstrap; bootstrap(sys.argv[2])")
         subprocess.run([runtime['python'], '-I', '-B', '-c', probe,
                         str(ASSETS / 'lib'), str(DATASET_ROOT / 'bundle')],
-                       check=True, capture_output=True, text=True, timeout=30)
+                       check=True, capture_output=True, text=True, errors='replace', timeout=30)
         return {'root': root, 'present': True, 'tasks': len(rows),
                 'runtime': runtime['path'], 'runtime_id': runtime['runtime_id'],
                 'model_health_checked': False}

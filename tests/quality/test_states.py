@@ -61,6 +61,41 @@ def test_every_round_becomes_a_directory_a_method_can_build_on(tmp_path):
         assert (d / "harness.json").is_file(), "状态必须是完整 harness,不是若干文件"
 
 
+def test_resume_stages_missing_git_parent_from_verified_run_snapshot(tmp_path):
+    from harnessgrad import snapshot
+    old, shas = _repo(tmp_path, ["print('v0')\n", "print('v1')\n"])
+    source = tmp_path / 'saved-source'
+    materialize(old, shas[1], source)
+    run = tmp_path / 'run-a'; run.mkdir()
+    artifact = snapshot.write(run, 1, source, run_id='run-a', harness_sha=shas[1])
+    newroot = tmp_path / 'fresh'; newroot.mkdir()
+    work, _ = _repo(newroot, ["print('v0')\n"])
+    history = _history(shas)
+    _stage_for_method(work, history[-1], {}, history=history, run_dir=run)
+    states = work / '_harnessgrad/states'
+    assert (states / 'round-1/agent.py').read_text() == "print('v1')\n"
+    assert json.loads((states / 'index.json').read_text())['round-1']['sha'] == shas[1]
+    artifact.unlink()
+    snapshot.write(run, 1, source, run_id='run-a', harness_sha='different')
+    _stage_for_method(work, history[-1], {}, history=history, run_dir=run)
+    assert 'round-1' not in json.loads((states / 'index.json').read_text())['kept']
+
+
+def test_history_stages_nested_train_traces_but_excludes_other_tasks(tmp_path):
+    work, shas = _repo(tmp_path, ["print('v0')\n"])
+    run = tmp_path / 'run-a'; traces = run / 'round0_traces'; traces.mkdir(parents=True)
+    for name in ('train/one.jsonl', 'train/one.trial1.jsonl', 'heldout/secret.jsonl'):
+        path = traces / name; path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{"event":"test"}\n')
+    history = _history(shas)
+    _stage_for_method(work, history[-1], {}, history=history, run_dir=run,
+                      task_ids=['train/one'])
+    dest = work / '_harnessgrad/history/traces/round-0'
+    assert (dest / 'train/one.jsonl').is_file()
+    assert (dest / 'train/one.trial1.jsonl').is_file()
+    assert not (dest / 'heldout/secret.jsonl').exists()
+
+
 def test_the_channel_is_not_copied_into_the_states(tmp_path):
     """`_harnessgrad/` 是通道不是 harness。被复制进去的话,它就成了一个会被提交的文件,
     而一个 no-op 轮次会因此铸出新的 sha,控制曲线看起来在动。"""

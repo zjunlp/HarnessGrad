@@ -57,7 +57,7 @@ def configure(harness: Path, binary: Path, *, expected_version: str | None = Non
                                   work_root=work, repo=work, task_dir=task, env=env, network="none",
                                   runtime_paths=tuple(map(Path, record["runtime_paths"])))
         result = subprocess.run(command, cwd=task, env=env, input="", capture_output=True,
-                                text=True, timeout=30)
+                                text=True, errors='replace', timeout=30)
         if result.returncode or result.stdout.strip() not in (version, f"opencode v{version}"):
             raise ValueError(f"OpenCode sandbox version probe failed for {version}: "
                              f"{(result.stderr or result.stdout)[-1200:]}")

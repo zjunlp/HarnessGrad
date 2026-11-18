@@ -160,7 +160,7 @@ def _offline_index(index, folder):
 def _python_target(python, timeout):
     proc = subprocess.run([python, "-I", "-S", "-B", "-c",
         "import json,os,platform,sys; print(json.dumps([sys.implementation.name,sys.version_info[:2],platform.system(),platform.machine(),os.confstr('CS_GNU_LIBC_VERSION')]))"],
-        capture_output=True, text=True, timeout=timeout,
+        capture_output=True, text=True, errors='strict', timeout=timeout,
         env={"PATH": os.defpath, "LANG": "C.UTF-8"})
     if proc.returncode:
         raise ValueError("this wheel profile requires CPython 3.12 Linux x86_64 with glibc >= 2.28")

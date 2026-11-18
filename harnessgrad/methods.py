@@ -234,6 +234,13 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
     it would be the wrong trade.
     """
     env = _method_env(work, improver)
+    # Only the platform admission receipt supplies this internal, optional bound.
+    env.pop('HG_META_INVOCATION_TOKEN_LIMIT', None)
+    allowance = request.get('meta_invocation_token_limit')
+    if allowance is not None:
+        if type(allowance) is not int or allowance < 0:
+            raise ValueError('invalid trusted method invocation allowance')
+        env['HG_META_INVOCATION_TOKEN_LIMIT'] = str(allowance)
     where = cwd or scratch or work
     try:
         # A method copies source without installations. Supply the prepared,
@@ -273,8 +280,19 @@ def _call_entrypoint(work: Path, argv: list[str], request: dict,
         return {"_error": f"refusing to run the method: sandbox unavailable: {exc}"}
 
     if proc.returncode != 0:
+        # A producer may report a terminal budget status and still exit nonzero.
+        # Parse the control envelope, never infer termination from error prose.
+        from methods.stop_status import terminal_stop
+        try:
+            payload = json.loads(proc.stdout)
+        except (ValueError, TypeError):
+            payload = {}
+        status = terminal_stop(payload)
         return {"_error": f"exit {proc.returncode}",
-                "_stderr": proc.stderr[-1500:]}
+                "_stderr": proc.stderr[-1500:],
+                **({'terminal_stop': status} if status else {}),
+                **({'method_usage': payload['method_usage']}
+                   if isinstance(payload, dict) and isinstance(payload.get('method_usage'), dict) else {})}
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
@@ -286,7 +304,8 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
                  cwd: Path | None = None, readonly: tuple[Path, ...] = (),
                  runtime: tuple[str, ...] = (),
                  improver: dict | None = None,
-                 rejected_candidate: bool = False) -> dict:
+                 rejected_candidate: bool = False,
+                 admission_receipt: Path | None = None) -> dict:
     """Invoke a method with the platform's own files checked before and after.
 
     Detection, not prevention: a method runs as an ordinary subprocess with the
@@ -294,6 +313,20 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
     What this does is refuse a content mismatch. The snapshots do not identify
     its writer: concurrent user edits and untracked artifacts can also cause it.
     """
+    night_only = os.environ.get('HG_TRAIN_NIGHT_ONLY', '0')
+    if night_only not in {'0', '1'}:
+        raise ValueError('HG_TRAIN_NIGHT_ONLY must be 0 or 1')
+    if night_only == '1':
+        from harnessgrad.training_window import wait_for_admission
+        if admission_receipt is None:
+            raise ValueError('night-only method calls require a separate admission receipt')
+        receipt_path = Path(admission_receipt)
+        if receipt_path.is_symlink():
+            raise ValueError('training window receipt cannot be a symlink')
+        receipt = receipt_path.resolve()
+        if receipt.is_relative_to(Path(work).resolve()):
+            raise ValueError('training window receipt cannot be inside the Harness workspace')
+        wait_for_admission(timeout_s, receipt)
     before = snapshot(PLATFORM_ROOT)
     reply = _call_entrypoint(work, argv, request, timeout_s=timeout_s,
                              sandboxed=sandboxed, scratch=scratch, cwd=cwd,

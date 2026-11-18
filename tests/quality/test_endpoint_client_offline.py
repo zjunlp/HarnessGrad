@@ -259,7 +259,8 @@ def test_null_or_missing_content_preserves_usage_trace_and_parse_retry(endpoint,
     with pytest.raises(editor.UnparseableReply):
         editor.ask('fixture')
     assert len(requests) == 2 and editor.spent()['calls'] == 2
-    assert editor.spent()['input'] == 8 and editor.spent()['output'] == 4
+    assert editor.spent()['input'] is None and editor.spent()['output'] == 4
+    assert editor.cache_read_tokens() is None
     records = [json.loads(p.read_text()) for p in (tmp_path / 'endpoint').glob('*.json')]
     assert len(records) == 2 and all(record['reply'] == '' for record in records)
 
@@ -295,6 +296,8 @@ def test_platform_method_entrypoint_mounts_transport_and_makes_one_synthetic_cal
     (base / 'harness.json').write_text('{"name":"synthetic","version":"1","entrypoint":"agent.py"}')
     (base / 'agent.py').write_text('# synthetic source\n')
     (base / '_harnessgrad').mkdir()
+    (base / '_harnessgrad' / 'round.json').write_text(
+        json.dumps({'round': 0, 'score': 0.0, 'score_kind': 'training'}))
     harness_root = tmp_path / "harness-work"
     harness_root.mkdir()
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(harness_root))

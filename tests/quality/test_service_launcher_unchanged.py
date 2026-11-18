@@ -208,13 +208,20 @@ def test_the_envelope_is_the_only_place_the_flags_come_from(tmp_path):
     assert container_mod.envelope(declared)["memory_mb"] == 2048
 
 
-def test_container_state_environments_are_not_probed_yet(monkeypatch):
-    """That launcher has a different envelope and network; a probe of this shape would be
-    a receipt for a container nobody starts. It keeps today's refusal."""
+def test_container_state_observation_uses_writable_container_shape(monkeypatch):
+    """The observed shape must describe the writable container actually launched."""
+    from types import SimpleNamespace
     shape = runner._environment_shape(_env(state="container"))
-    assert shape is None
+    assert shape['read_only'] is False
+    calls = []
+    def observe(image, limits, **kwargs):
+        calls.append((image, limits, kwargs))
+        return SimpleNamespace(receipt=lambda: {'synthetic': True})
+    monkeypatch.setattr(runner, '_OBSERVATIONS', {})
+    monkeypatch.setattr(runner.container_observation_mod, 'observe_for', observe)
     assert runner._observations_for({"a": _env(state="container")},
-                                    [{"task_id": "a"}], run_id="r") == {}
+                                    [{"task_id": "a"}], run_id="r") == {'a': {'synthetic': True}}
+    assert calls[0][2]['container_state'] is True and calls[0][2]['read_only'] is False
 
 
 # ------------------------------------------- the declaration reaches the launcher ---

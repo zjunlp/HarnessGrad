@@ -56,6 +56,10 @@ require_api = protocol.require_api                           # noqa: E402
 # run. The platform keeps its own copy in `eval/candidate.py`, and that one is the judge.
 candidate = _siblings.load("apply")
 endpoint_client = _siblings.load("endpoint_client")
+archive_io = _siblings.load("improver_archive")
+stop_status = _siblings.load("stop_status")
+usage_observation = _siblings.load("usage_evidence")
+_TERMINAL_STOP: dict = {}
 
 #: The framework<->method channel. Gitignored, so committing it cannot mint a sha.
 CHANNEL = "_harnessgrad"
@@ -984,7 +988,30 @@ _SPENT: dict = {"input": 0, "output": 0, "calls": 0, "model": None,
                 # and was recorded as `generation_tokens: 0` -- a claim that the improver
                 # spent nothing, when the truth is "nobody counted". `None` is the honest
                 # value and the platform already distinguishes it from zero.
-                "source": None, "unknown_endpoint_usage": False, "unknown_cli_usage": False, "unknown_transport_attempts": 0}
+                "source": None, "unknown_endpoint_usage": False, "unknown_cli_usage": False, "unknown_transport_attempts": 0, "reported_total": 0, "total_unknown": False,
+                "cache_read_unknown": False, "fresh_input_unknown": False, "output_unknown": False}
+
+
+# Unlike phase-local _SPENT, this survives reset_spent() within one method process.
+_PAST_META_USAGE = {'reported_total': 0, 'complete': True}
+_INVOCATION_TOKEN_LIMIT = os.environ.get('HG_META_INVOCATION_TOKEN_LIMIT')
+
+
+def _meta_admit():
+    """Gate a new CLI session or endpoint request; never constrain an in-flight call."""
+    if _TERMINAL_STOP:
+        raise stop_status.TerminalStop(dict(_TERMINAL_STOP))
+    if _INVOCATION_TOKEN_LIMIT is None:
+        return
+    value = _INVOCATION_TOKEN_LIMIT
+    valid = isinstance(value, str) and value.isascii() and value.isdigit()
+    usage = method_usage()
+    code = ('budget_usage_unknown' if not valid or not usage['complete'] else
+            'budget_exhausted' if usage['total_tokens'] >= int(value) else None)
+    if code:
+        _TERMINAL_STOP.update(schema='harnessgrad.terminal-stop.v1', code=code,
+                              retryable=False, scope='meta_session')
+        raise stop_status.TerminalStop(dict(_TERMINAL_STOP))
 
 
 #: The last CLI improver run's own account, attached to whichever step the method
@@ -1000,33 +1027,141 @@ DASH_USAGE_PREFIX = "dsh-usage "
 
 
 def parse_usage_lines(transcript: str) -> dict | None:
-    """Sum every `dsh-usage {json}` line a CLI wrote, or `None` if it wrote none.
+    """Aggregate complete distinct CLI observations; ambiguity remains unknown."""
+    observation = _cli_usage_observation(transcript)
+    return (observation['lower_bounds'] if observation['canonical_complete']
+            and observation['cache_read_complete'] else None)
 
-    A CLI round makes many model calls, and the CLI prints one line per call, so the round's
-    spend is the sum. `None` -- not a zero dict -- because "this CLI does not report usage"
-    and "this CLI spent nothing" are different facts, and only one of them is plausible.
-    """
-    total = {"input": 0, "output": 0, "cache_read": 0, "calls": 0}
+
+def _cli_usage_observation(transcript, capture_complete=True):
+    """Reported lower bounds and explicit totals; no missing field becomes zero."""
+    lower = {'input': 0, 'output': 0, 'cache_read': 0, 'calls': 0}
+    canonical = bool(capture_complete)
+    totals_complete = bool(capture_complete)
+    cache_complete = bool(capture_complete)
+    input_complete = output_complete = bool(capture_complete)
+    reported_total = 0
     found = False
-    for line in (transcript or "").splitlines():
-        line = line.strip()
-        if not line.startswith(DASH_USAGE_PREFIX):
+    seen = {}
+    for line in (transcript or '').splitlines():
+        if not line.strip().startswith(DASH_USAGE_PREFIX):
             continue
-        try:
-            payload = json.loads(line[len(DASH_USAGE_PREFIX):])
-        except (ValueError, TypeError):
-            continue
-        if not isinstance(payload, dict):
-            continue
-        for key, field in (("input_tokens", "input"), ("output_tokens", "output"),
-                           ("cache_read_tokens", "cache_read")):
-            value = payload.get(key)
-            if isinstance(value, bool) or not isinstance(value, int):
-                continue
-            total[field] += value
-        total["calls"] += 1
         found = True
-    return total if found else None
+        try:
+            value = json.loads(line.strip()[len(DASH_USAGE_PREFIX):])
+        except (ValueError, TypeError):
+            value = None
+        if not isinstance(value, dict):
+            canonical = totals_complete = False
+            cache_complete = False
+            input_complete = output_complete = False
+            continue
+        identity = usage_observation.transport_identity(value)
+        key = ((identity['session_id'], identity['attempt_id'], identity['request_id'])
+               if identity['session_id'] and identity['attempt_id'] else None)
+        values = {}
+        for provider_key, field in (('input_tokens', 'input'), ('output_tokens', 'output'),
+                                    ('cache_read_tokens', 'cache_read')):
+            number = value.get(provider_key)
+            if type(number) is int and number >= 0:
+                values[field] = number
+            else:
+                values[field] = 0  # numerical lower bound, never a reported zero
+                if field != 'cache_read':
+                    canonical = False
+                    if field == 'input':
+                        input_complete = False
+                    else:
+                        output_complete = False
+        evidence = value.get('usage_evidence')
+        fields = evidence.get('fields') if isinstance(evidence, dict) else None
+        reported_cache = value.get('cache_read_tokens')
+        cache_known = type(reported_cache) is int and reported_cache >= 0
+        if evidence is not None:
+            raw = evidence.get('raw') if isinstance(evidence, dict) else None
+            details = raw.get('prompt_tokens_details') if isinstance(raw, dict) else None
+            observed = ([raw.get(key) for key in ('prompt_cache_hit_tokens', 'cache_read_input_tokens',
+                         'cacheReadTokens', 'cacheRead')] if isinstance(raw, dict) else [])
+            if isinstance(details, dict):
+                observed.append(details.get('cached_tokens'))
+            observed = {v for v in observed if type(v) is int and v >= 0}
+            cache_known = (isinstance(fields, dict) and fields.get('cacheReadTokens') == 'observed'
+                           and len(observed) == 1 and (reported_cache is None or
+                           (type(reported_cache) is int and reported_cache in observed)))
+            if cache_known:
+                values['cache_read'] = next(iter(observed))
+        if not cache_known:
+            # Without a defensible split the reported prompt is not a lower
+            # bound on fresh input: in the worst case every prompt token is cached.
+            values['input'] = 0
+            values['cache_read'] = 0
+            cache_complete = False
+        if key is not None and key in seen:
+            # Repeated attempt observations may be duplicates or incremental
+            # reports. Do not add them twice or claim a complete cost.
+            previous = seen[key]
+            for field in ('input', 'output', 'cache_read'):
+                lower[field] += max(previous[field], values[field]) - previous[field]
+                previous[field] = max(previous[field], values[field])
+            canonical = totals_complete = cache_complete = input_complete = output_complete = False
+            continue
+        if key is not None:
+            seen[key] = values.copy()
+        lower['calls'] += 1
+        for field in ('input', 'output', 'cache_read'):
+            lower[field] += values[field]
+        raw_total = value.get('total_tokens')
+        if evidence is not None:
+            # A normalized/derived CLI total does not establish wire presence.
+            raw = evidence.get('raw') if isinstance(evidence, dict) else None
+            fields = evidence.get('fields') if isinstance(evidence, dict) else None
+            if not isinstance(fields, dict) or fields.get('cacheReadTokens') != 'observed':
+                cache_complete = False
+            raw_total = None
+            if (isinstance(raw, dict) and isinstance(fields, dict)
+                    and fields.get('totalTokens') == 'observed'):
+                raw_total = next((raw[key] for key in ('total_tokens', 'totalTokens', 'total')
+                                  if key in raw), None)
+        if type(raw_total) is int and raw_total >= 0:
+            reported_total += raw_total
+            observed_input = value.get('input_tokens')
+            observed_output = value.get('output_tokens')
+            known_parts = sum(v for v in (observed_input, observed_output)
+                              if type(v) is int and v >= 0)
+            if raw_total < known_parts:
+                totals_complete = False
+        else:
+            totals_complete = False
+    return {'lower_bounds': lower, 'canonical_complete': canonical and found,
+            'cache_read_complete': cache_complete and found,
+            'input_complete': input_complete and found, 'output_complete': output_complete and found,
+            'complete': totals_complete and found,
+            'reported_total_lower_bound': reported_total,
+            'total_tokens': reported_total if totals_complete and found else None}
+
+
+def _account_cli_observation(transcript, capture_complete=True):
+    observation = _cli_usage_observation(transcript, capture_complete)
+    lower = observation['lower_bounds']
+    for key in ('input', 'output', 'cache_read', 'calls'):
+        _SPENT[key] += lower[key]
+    if not observation['cache_read_complete']:
+        _SPENT['cache_read_unknown'] = True
+        _SPENT['fresh_input_unknown'] = True
+    if not observation['input_complete']:
+        _SPENT['fresh_input_unknown'] = True
+    if not observation['output_complete']:
+        _SPENT['output_unknown'] = True
+    if observation['canonical_complete']:
+        _SPENT['source'] = 'cli_reported'
+    else:
+        _SPENT['unknown_cli_usage'] = True
+        _SPENT['source'] = 'cli_unreported'
+    _SPENT['reported_total'] = (_SPENT.get('reported_total', 0)
+                                + observation['reported_total_lower_bound'])
+    if not observation['complete']:
+        _SPENT['total_unknown'] = True
+    return observation
 
 
 def improver_run() -> dict:
@@ -1061,12 +1196,31 @@ def spent() -> dict:
     otherwise cannot tell "the improver did nothing" from "the improver's spend was not
     reported".
     """
-    return {k: _SPENT[k] for k in ("input", "output", "calls", "model")}
+    result = {k: _SPENT[k] for k in ("input", "output", "calls", "model")}
+    if _SPENT.get('fresh_input_unknown'):
+        result['input'] = None
+    if _SPENT.get('output_unknown'):
+        result['output'] = None
+    return result
+
+
+def method_usage() -> dict:
+    """Canonical split plus independently observed total and admission completeness."""
+    result = spent()
+    complete = not _SPENT.get('total_unknown') and not _SPENT.get('unknown_transport_attempts')
+    complete = complete and _PAST_META_USAGE['complete']
+    lower_bound = _PAST_META_USAGE['reported_total'] + _SPENT.get('reported_total', 0)
+    result.update(total_tokens=lower_bound if complete else None, complete=complete,
+                  observed_total_tokens_lower_bound=lower_bound,
+                  total_scope='method_invocation', split_scope='current_phase')
+    return result
 
 
 def cache_read_tokens() -> int | None:
     """Prompt tokens the provider served from cache, or `None` when nobody reported any."""
-    if spend_source() in ("cli_unreported", "endpoint_unreported", "mixed_unreported"):
+    if (_SPENT.get('cache_read_unknown') or _SPENT.get('unknown_transport_attempts') or
+            (not _SPENT.get('calls') and spend_source() in
+             ("cli_unreported", "endpoint_unreported", "mixed_unreported"))):
         return None
     return _SPENT["cache_read"]
 
@@ -1079,7 +1233,8 @@ def spent_tokens() -> int | None:
     tokens", which is a different and false statement -- and one a cost-aware rule would
     act on.
     """
-    if spend_source() in ("cli_unreported", "endpoint_unreported", "mixed_unreported"):
+    if (_SPENT.get('fresh_input_unknown') or _SPENT.get('output_unknown') or
+            spend_source() in ("cli_unreported", "endpoint_unreported", "mixed_unreported")):
         return None
     return _SPENT["input"] + _SPENT["output"]
 
@@ -1092,14 +1247,18 @@ def reset_spent() -> None:
     -- the two-stage loops that ask a proposer and then a critic -- and for tests, which
     share an interpreter and would otherwise read each other's numbers.
     """
+    phase_complete = not _SPENT.get('total_unknown') and not _SPENT.get('unknown_transport_attempts')
+    _PAST_META_USAGE['reported_total'] += _SPENT.get('reported_total', 0)
+    _PAST_META_USAGE['complete'] = _PAST_META_USAGE['complete'] and phase_complete
     # `cache_read` resets with the rest: a per-phase window that kept the previous phase's
     # cache reads would report a split that belongs to a different call.
     _SPENT.update(input=0, output=0, calls=0, model=None, source=None, cache_read=0,
+                  cache_read_unknown=False, fresh_input_unknown=False, output_unknown=False,
                   unknown_endpoint_usage=False, unknown_cli_usage=False,
-                  unknown_transport_attempts=0)
+                  unknown_transport_attempts=0, reported_total=0, total_unknown=False)
 
 
-def _cached_prompt_tokens(usage) -> int:
+def _cached_prompt_tokens(usage) -> int | None:
     """Prompt tokens the provider says it served from cache, in any of the shapes it uses.
 
     Three spellings exist in the wild and a client sees different ones depending on how it
@@ -1108,9 +1267,6 @@ def _cached_prompt_tokens(usage) -> int:
     three is the difference between an endpoint row that can be compared with a CLI row and
     one that silently reports zero cache hits.
     """
-    def as_int(value) -> int:
-        return int(value) if isinstance(value, int) and not isinstance(value, bool) else 0
-
     details = getattr(usage, "prompt_tokens_details", None)
     if details is not None:
         cached = getattr(details, "cached_tokens", None)
@@ -1130,32 +1286,63 @@ def _cached_prompt_tokens(usage) -> int:
             cached = extra.get(name)
             if isinstance(cached, int) and not isinstance(cached, bool):
                 return cached
-    return 0
+    return None
 
 
 def _record_usage(usage, model: str | None) -> None:
     """Add one reply's usage. One call is counted whether or not the provider reported it."""
     _SPENT["calls"] += 1
+    raw_total = getattr(usage, 'total_tokens', None)
+    if type(raw_total) is int and raw_total >= 0:
+        _SPENT['reported_total'] = _SPENT.get('reported_total', 0) + raw_total
+    else:
+        _SPENT['total_unknown'] = True
     # Later reported usage cannot fill a gap from an earlier call in this window.
     if _SPENT.get("source") == "cli_unreported":
         _SPENT["unknown_cli_usage"] = True
+        if _SPENT['calls'] == 1:
+            _SPENT['cache_read_unknown'] = True
+            _SPENT['fresh_input_unknown'] = True
     if usage is None:
         _SPENT["unknown_endpoint_usage"] = True
+        _SPENT['cache_read_unknown'] = True
+        _SPENT['fresh_input_unknown'] = True
+        _SPENT['output_unknown'] = True
     _SPENT["source"] = "endpoint_unreported" if _SPENT["unknown_endpoint_usage"] else "endpoint"
     _SPENT["model"] = getattr(usage, "model", None) or model or _SPENT["model"]
     if usage is None:
         return
-    prompt = int(getattr(usage, "prompt_tokens", 0) or 0)
+    prompt = getattr(usage, 'prompt_tokens', None)
+    output = getattr(usage, 'completion_tokens', None)
+    prompt_known = type(prompt) is int and prompt >= 0
+    known_parts = sum(v for v in (prompt, output) if type(v) is int and v >= 0)
+    if type(raw_total) is int and raw_total >= 0 and raw_total < known_parts:
+        _SPENT['total_unknown'] = True
+    if type(prompt) is not int or prompt < 0 or type(output) is not int or output < 0:
+        _SPENT['unknown_endpoint_usage'] = True
+        _SPENT['source'] = 'endpoint_unreported'
+        if type(prompt) is not int or prompt < 0:
+            _SPENT['fresh_input_unknown'] = True
+        if type(output) is not int or output < 0:
+            _SPENT['output_unknown'] = True
+    prompt = prompt if type(prompt) is int and prompt >= 0 else 0
+    output = output if type(output) is int and output >= 0 else 0
     cached = _cached_prompt_tokens(usage)
+    if type(cached) is not int or cached < 0 or (prompt_known and cached > prompt):
+        _SPENT['cache_read_unknown'] = True
+        _SPENT['fresh_input_unknown'] = True
+        cached = None
     # **Cache reads are reported here too, and subtracted from the input count.** The
     # provider gives a single `prompt_tokens` that includes whatever it served from its
     # cache, while the CLI channel reports the two *disjoint* (its `inputTokens` already
     # excludes cache reads). Keeping one convention is what makes a mixed method's two
     # rows add up: input is the tokens that were actually priced as fresh, cache_read is
     # the cheap remainder, and neither contains the other.
-    _SPENT["input"] += max(0, prompt - cached)
-    _SPENT["cache_read"] += cached
-    _SPENT["output"] += int(getattr(usage, "completion_tokens", 0) or 0)
+    if cached is not None:
+        if prompt_known:
+            _SPENT["input"] += prompt - cached
+        _SPENT["cache_read"] += cached
+    _SPENT["output"] += output
 
 
 def skill_block(base: Path | None) -> str:
@@ -1252,53 +1439,66 @@ def _method_workspace() -> Path:
     return Path.cwd()
 
 
+def _private_log(path: Path, text: str) -> None:
+    """Write a private regular log without following or truncating links."""
+    try:
+        if any(p.is_symlink() for p in (path.parent, *path.parent.parents)):
+            raise OSError('symlink in archive directory')
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                raise OSError('archive target is not a private regular file')
+            os.fchmod(stream.fileno(), 0o600)
+            stream.truncate(0)
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except OSError as exc:
+        raise archive_io.ArchiveFailure('Cannot persist method evidence') from exc
+
+
 def _keep_improver_transcript(result: dict, improver_ws: Path) -> list[str]:
-    """Copy what the CLI improver left behind to where the platform will keep it.
+    """Keep full observed output separately from the historical display tail.
 
-    **Both files the improver writes are destroyed, and both are evidence.** `propose` writes
-    the transcript -- up to 200 kB of what it read, what it tried, and why it changed nothing
-    -- to `<improver_ws>/improver.log`, and the launcher writes the model pin to
-    `<improver_ws>/.dsh-model-pin.yml`. Both statements about that contract are in the tree
-    (`methods/cli_improver.py`'s module docstring and `harnessgrad/records.py:642`) and both
-    were false for every sandboxed round:
-
-      * `improver_ws` is a `tempfile.mkdtemp` under `/tmp`, and
-        `eval/containers/sandbox.py` mounts an **empty tmpfs** on `/tmp` ("a private /tmp, so
-        two runs cannot read each other's task directories") -- so it is gone with the
-        namespace, not merely un-copied;
-      * `_keep_method_logs` scans the *method workspace*, which is a different directory and a
-        host path bound into the namespace.
-
-    Measured: twelve surviving `hg-cli-ask-*` directories on the host, every one of them
-    empty, and every one of them from a test run -- a test stubs `propose`, so it leaves the
-    directory and nothing in it, while a real round leaves nothing at all. The question this
-    costs is the one a comparison of *methods* is mostly about: did the improver read the
-    traces, or did it guess?
-
-    Written as `*.log` at the method workspace root, which is the convention
-    `_keep_method_logs` documents, so no new path convention is invented and the platform
-    still does not need to know which method it is. Returns the names written.
+    Direct capture files already in the host-bound method workspace survive
+    namespace destruction. Test/legacy results are copied there before returning.
+    Native tool-body stores are not implied by complete CLI stdout/stderr.
     """
-    written: list[str] = []
     destination = _method_workspace()
     if not destination.is_dir():
-        return written
-    transcript = str(result.get("transcript") or "")
-    payloads = [(f"improver-{improver_ws.name}.log", transcript[-200_000:])]
-    pin = improver_ws / ".dsh-model-pin.yml"
-    if pin.is_file():
-        # The pin is the record of which model the improver was *actually* given, which is not
-        # always the registry's value: `HG_IMPROVER_MODEL` overrides it, and without this the
-        # override would be invisible in the record.
-        payloads.append((f"improver-{improver_ws.name}-model-pin.log",
-                         pin.read_text(errors="replace")[:4_000]))
-    for name, text in payloads:
-        if not text:
-            continue
-        try:
-            (destination / name).write_text(text, encoding="utf-8")
-        except OSError:
-            continue
+        raise archive_io.ArchiveFailure('Method archive directory is missing')
+    transcript = str(result.get('transcript') or '')
+    captured = result.get('transcript_archive')
+    if not (isinstance(captured, dict) and captured.get('full')
+            and Path(captured['full']['path']).parent == destination.absolute()):
+        archive = archive_io.TranscriptArchive(destination,
+            coverage='returned_cli_text', raw_representation='decoded_text_utf8_reencoding')
+        archive.feed(transcript.encode('utf-8'))
+        captured = archive.finish(complete=bool((captured or {}).get('complete', True)),
+                                  outcome=(captured or {}).get('outcome', 'returned'))
+    for kind in ('full', 'tail', 'receipt'):
+        expected = captured[kind]
+        actual = archive_io.file_record(expected['path'])
+        if actual['sha256'] != expected['sha256'] or actual['bytes'] != expected['bytes']:
+            raise archive_io.ArchiveFailure('CLI archive identity changed')
+    result['transcript_archive'] = captured
+    # Legacy direct CLI callers may have declared a store in private scratch.
+    artifact_records = result.get('artifact_archive') or {}
+    artifact_manifest = artifact_records.get('manifest') or {}
+    if artifact_manifest and Path(artifact_manifest['path']).parent != destination.absolute():
+        artifact_io = _siblings.load('improver_artifacts')
+        result['artifact_archive'] = artifact_io.persist_artifact_manifest(
+            improver_ws / 'evidence-artifacts/artifact-manifest.json',
+            allowed_root=improver_ws / 'evidence-artifacts',
+            destination=destination)
+    name = f'improver-{improver_ws.name}.log'
+    _private_log(destination / name, transcript[-200_000:])
+    written = [name, *[Path(captured[k]['path']).name for k in ('full', 'tail', 'receipt')]]
+    pin = improver_ws / '.dsh-model-pin.yml'
+    if pin.is_file() and not pin.is_symlink():
+        name = f'improver-{improver_ws.name}-model-pin.log'
+        _private_log(destination / name, pin.read_text(errors='replace')[:4_000])
         written.append(name)
     return written
 
@@ -1338,10 +1538,18 @@ def _keep_improver_audit(result: dict, improver_ws: Path) -> list[str]:
         "schema_version": 1, "unit": "unicode_characters",
         "original_chars": length, "retained_start": max(0, length - 200_000),
         "retained_end": length, "retained_chars": min(length, 200_000),
-        "truncated": length > 200_000, "stream_order": "stdout_then_stderr",
+        "truncated": length > 200_000,
+        "stream_order": (result.get('transcript_archive') or {}).get('coverage', 'stdout_then_stderr'),
+        "full_transcript": (result.get('transcript_archive') or {}).get('full'),
+        "capture_complete": (result.get('transcript_archive') or {}).get('complete'),
+        "native_body_coverage": (result.get('transcript_archive') or {}).get('native_body_coverage', 'unknown'),
+        "declared_body_coverage": (result.get('artifact_archive') or {}).get('native_body_coverage', 'not_declared'),
+        "artifact_manifest": (result.get('artifact_archive') or {}).get('manifest'),
         **identities,
     }
     records = []
+    seen_identities = {}
+    duplicate_identity = False
     for line_index, line in enumerate(transcript.splitlines()):
         line = line.strip()
         if not line.startswith(DASH_USAGE_PREFIX):
@@ -1365,6 +1573,19 @@ def _keep_improver_audit(result: dict, improver_ws: Path) -> list[str]:
                                else "invalid")
         record["status"] = "parsed" if valid else "malformed"
         record["coverage"] = coverage
+        record['usage_evidence'] = usage_observation.usage_evidence(payload)
+        credentials = [value for key, value in os.environ.items()
+                       if re.search(r'(?:KEY|TOKEN|SECRET|PASSWORD)$', key) and value]
+        record.update(usage_observation.transport_identity(payload or {}, credentials=credentials))
+        identity = ((record['session_id'], record['attempt_id'], record['request_id'])
+                    if record['session_id'] and record['attempt_id'] else None)
+        if identity is not None and identity in seen_identities:
+            record['duplicate_of'] = seen_identities[identity]
+            duplicate_identity = True
+        elif identity is not None:
+            seen_identities[identity] = record['ordinal']
+        record['provider_calls'] = None
+        record['call_count_basis'] = 'usage_observation_not_provider_request_count'
         records.append(record)
     complete_usage = None
     if records:
@@ -1373,11 +1594,16 @@ def _keep_improver_audit(result: dict, improver_ws: Path) -> list[str]:
             complete_usage[field] = (sum(record[field] for record in records)
                                      if all(record[field] is not None for record in records) else None)
         complete_usage["calls"] = len(records) if all(record["status"] == "parsed" for record in records) else None
+        if duplicate_identity:
+            complete_usage = {field: None for field in ('input', 'output', 'cache_read', 'calls')}
     ledger = {
         "schema_version": 1, "source": "full_in_memory_transcript",
         "status": ("reported" if complete_usage and all(v is not None for v in complete_usage.values())
                    else "partially_reported" if records else "unknown"),
         "usage": complete_usage, "canonical_usage_aggregate": usage,
+        "reported_usage_lower_bounds": _cli_usage_observation(transcript)['lower_bounds'] if records else None,
+        "observed_usage": _cli_usage_observation(transcript,
+            (result.get("transcript_archive") or {}).get("complete", True)),
         "records": records, "line_index_base": 0,
         "provider_completeness": "unknown",
         "retries": None, "provider_seconds": None, **identities,
@@ -1385,11 +1611,7 @@ def _keep_improver_audit(result: dict, improver_ws: Path) -> list[str]:
     written = []
     for suffix, payload in (("transcript-metadata", metadata), ("usage-ledger", ledger)):
         name = f"improver-{improver_ws.name}-{suffix}.log"
-        try:
-            (destination / name).write_text(json.dumps(payload, sort_keys=True) + "\n",
-                                            encoding="utf-8")
-        except OSError:
-            continue
+        _private_log(destination / name, json.dumps(payload, sort_keys=True) + "\n")
         written.append(name)
     return written
 
@@ -1518,6 +1740,7 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
     Giving it the parent (not the incumbent) is what keeps a parent-selection rule real: DGM
     choosing round 3 must have the improver edit round 3's tree.
     """
+    _meta_admit()
     import cli_improver                                            # noqa: PLC0415
     # **The same facts the endpoint path gets.** `ask` prepends `run_facts` before it
     # dispatches, and the CLI branch returns before that line -- so a CLI improver was handed
@@ -1552,88 +1775,123 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
         # have no generated state; propose still validates their dependency inputs.
         req["harness_runtime"] = json.loads(runtime_receipt.read_text())
     pointer = evidence_pointer(context) if context is not None else "No evidence requested."
-    result = cli_improver.propose(req, parent, prompt=prompt, facts=facts, evidence=pointer)
-    result["audit_identity"] = _editor_audit_identity(parent, evidence_root)
-    _keep_improver_transcript(result, workspace)
-    _keep_improver_audit(result, workspace)
-    artifacts = _read_cli_artifacts(workspace)
-    # **What the improver itself cost, as far as anyone can see.** `propose` returns a
-    # `reported` block -- exit code, wall-clock seconds, which files moved, and what the
-    # environment boundary withheld -- and `_ask_cli` used to drop it on the floor, so a
-    # nine-method batch could not answer "how long did the improver take per round".
-    # Tokens are *not* in it: the CLI's provider is built in, so the honest record is the
-    # wall clock plus the prompt size we constructed ourselves.
-    reported = result.get("reported") or {}
-    # What the provider said it spent, if this CLI reports it at all.
-    usage = parse_usage_lines(result.get("transcript") or "")
-    if usage:
-        _SPENT["source"] = "cli_reported"
-        _SPENT["input"] += usage["input"]
-        _SPENT["output"] += usage["output"]
-        _SPENT["cache_read"] += usage["cache_read"]
-        _SPENT["calls"] += usage["calls"]
-    _LAST_IMPROVER.clear()
-    _LAST_IMPROVER.update({
-        "exit_code": reported.get("exit_code"),
-        "seconds": reported.get("seconds"),
-        "files_changed": len(result.get("files") or []),
-        "env_withheld": reported.get("env_withheld"),
-        "prompt_chars": len(prompt),
-        # A token count we can defend: the prompt is ours, so its length is exact and
-        # the usual characters-per-token ratio makes the estimate reproducible. Label
-        # it as an estimate in the name, not in a comment nobody reads.
-        "prompt_tokens_estimate": round(len(prompt) / 4),
-        "spend_reported": bool(usage),
-        **({"usage": usage} if usage else {}),
-        **result["audit_identity"],
-        **({"dsh_identity": {field: reported["dsh_identity"][field]
-                            for field in ("model", "provider", "profile")}}
-           if isinstance(reported.get("dsh_identity"), dict)
-           and all(isinstance(reported["dsh_identity"].get(field), str)
-                   for field in ("model", "provider", "profile")) else {}),
-    })
-    if not usage:
-        _SPENT["unknown_cli_usage"] = True
-        _SPENT["source"] = "cli_unreported"
-    edits: list[dict] = []
-    for rel in result["files"]:
-        path = Path(result["candidate"]) / rel
-        if not path.is_file():
-            # **A file the improver removed is an edit, not a read failure.** `_changed_files`
-            # walks the pristine side and names what the candidate no longer has, so a
-            # deletion arrives here -- and this loop used to swallow it in `except OSError:
-            # continue`. Two consequences, both silent: a round that deleted one file and
-            # edited another measured a tree that still contained the deleted file, and a
-            # round that *only* deleted files produced an empty `edits`, fell into the
-            # `no_change` return below, and recorded "the improver decided to change nothing"
-            # for a change it had actually made. That is the same collapse `UnparseableReply`
-            # exists to prevent, one layer down.
-            edits.append({"path": rel, "delete": True})
-            continue
-        edits.append({"path": rel, "content": path.read_text(errors="replace")})
-    if not edits:
-        # **A crashed CLI improver is not a decision.** `cli_improver.run` already draws this
-        # line (`if code != 0 and not changed:` -> `reported["error"]`), and this path did
-        # not: it wrapped whatever the improver had printed into `{"no_change": <prose>}`,
-        # so a call that never ran became a method saying "I chose not to change anything".
-        # Measured (`v12-dgm`, 2026-10-05): the improver was codex, three rounds printed
-        # prose and edited nothing, and the curve read "DGM: no child produced" -- a decision
-        # nobody made, in the shape `UnparseableReply`'s own docstring forbids.
-        #
-        # Raised, not returned, because the two callers already do the right thing with an
-        # exception: `ask_for_json` retries it with the failure fed back, and a method that
-        # calls `ask` directly records it as an outage rather than as a proposal it declined.
-        if result["exit_code"] != 0:
-            raise UnparseableReply(
-                f"the CLI improver exited {result['exit_code']} and changed nothing: "
-                f"{(result['note'] or '').strip()[:300]}")
-        # Exit 0 with no files is a genuine decline, and `cli_improver`'s prompt makes it name
-        # a mechanism, so the note *is* the reason. Kept as `no_change` on purpose.
-        return {"no_change": result["note"] or (
-            "the CLI improver exited 0 and changed nothing"), "artifacts": artifacts}
-    return {"files": edits,
-            "hypothesis": result["note"] or f"{len(edits)} file(s) edited by the CLI",
-            "artifacts": artifacts}
+    req['archive_directory'] = str(_method_workspace().absolute())
+    try:
+        result = cli_improver.propose(req, parent, prompt=prompt, facts=facts, evidence=pointer)
+    except Exception as exc:
+        # Ordinary configuration/launch errors before execution do not consume admission.
+        # Evidence failures or explicitly started processes may already have been charged.
+        if (getattr(exc, 'terminal_stop', None) or getattr(exc, 'execution_started', False)
+                or getattr(exc, 'observed_transcript', None) is not None):
+            _account_cli_observation(getattr(exc, 'observed_transcript', None) or '',
+                                     getattr(exc, 'capture_complete', False))
+        status = stop_status.terminal_stop({'terminal_stop': getattr(exc, 'terminal_stop', None)})
+        if status:
+            _TERMINAL_STOP.update(status)
+        raise
+    observation = _account_cli_observation(result.get('transcript') or '',
+        (result.get('transcript_archive') or {}).get('complete', True))
+    try:
+        result["audit_identity"] = _editor_audit_identity(parent, evidence_root)
+        # **What the improver itself cost, as far as anyone can see.** `propose` returns a
+        # `reported` block -- exit code, wall-clock seconds, which files moved, and what the
+        # environment boundary withheld -- and `_ask_cli` used to drop it on the floor, so a
+        # nine-method batch could not answer "how long did the improver take per round".
+        # Tokens are *not* in it: the CLI's provider is built in, so the honest record is the
+        # wall clock plus the prompt size we constructed ourselves.
+        reported = result.get("reported") or {}
+        # What the provider said it spent, if this CLI reports it at all.
+        usage = parse_usage_lines(result.get("transcript") or "")
+        _LAST_IMPROVER.clear()
+        _LAST_IMPROVER.update({
+            "exit_code": reported.get("exit_code"),
+            "seconds": reported.get("seconds"),
+            "files_changed": len(result.get("files") or []),
+            "env_withheld": reported.get("env_withheld"),
+            "prompt_chars": len(prompt),
+            # A token count we can defend: the prompt is ours, so its length is exact and
+            # the usual characters-per-token ratio makes the estimate reproducible. Label
+            # it as an estimate in the name, not in a comment nobody reads.
+            "prompt_tokens_estimate": round(len(prompt) / 4),
+            "spend_reported": bool(usage) or observation['complete'],
+            "usage_lower_bounds": observation["lower_bounds"],
+            "total_tokens": observation["total_tokens"],
+            "usage_complete": observation["complete"],
+            **({"usage": usage} if usage else {}),
+            **result["audit_identity"],
+            **({"dsh_identity": {field: reported["dsh_identity"][field]
+                                for field in ("model", "provider", "profile")}}
+               if isinstance(reported.get("dsh_identity"), dict)
+               and all(isinstance(reported["dsh_identity"].get(field), str)
+                       for field in ("model", "provider", "profile")) else {}),
+        })
+        if not observation['canonical_complete']:
+            _SPENT["unknown_cli_usage"] = True
+            _SPENT["source"] = "cli_unreported"
+        try:
+            _keep_improver_transcript(result, workspace)
+            _keep_improver_audit(result, workspace)
+            declared_terminal = stop_status.terminal_stop(result)
+            if declared_terminal:
+                raise stop_status.TerminalStop(declared_terminal)
+            artifacts = _read_cli_artifacts(workspace)
+        except Exception as exc:
+            status = stop_status.terminal_stop({'terminal_stop': getattr(exc, 'terminal_stop', None)})
+            if status:
+                _TERMINAL_STOP.update(status)
+            raise
+        edits: list[dict] = []
+        for rel in result["files"]:
+            path = Path(result["candidate"]) / rel
+            if not path.is_file():
+                # **A file the improver removed is an edit, not a read failure.** `_changed_files`
+                # walks the pristine side and names what the candidate no longer has, so a
+                # deletion arrives here -- and this loop used to swallow it in `except OSError:
+                # continue`. Two consequences, both silent: a round that deleted one file and
+                # edited another measured a tree that still contained the deleted file, and a
+                # round that *only* deleted files produced an empty `edits`, fell into the
+                # `no_change` return below, and recorded "the improver decided to change nothing"
+                # for a change it had actually made. That is the same collapse `UnparseableReply`
+                # exists to prevent, one layer down.
+                edits.append({"path": rel, "delete": True})
+                continue
+            edits.append({"path": rel, "content": path.read_text(errors="replace")})
+        if not edits:
+            # **A crashed CLI improver is not a decision.** `cli_improver.run` already draws this
+            # line (`if code != 0 and not changed:` -> `reported["error"]`), and this path did
+            # not: it wrapped whatever the improver had printed into `{"no_change": <prose>}`,
+            # so a call that never ran became a method saying "I chose not to change anything".
+            # Measured (`v12-dgm`, 2026-10-05): the improver was codex, three rounds printed
+            # prose and edited nothing, and the curve read "DGM: no child produced" -- a decision
+            # nobody made, in the shape `UnparseableReply`'s own docstring forbids.
+            #
+            # Raised, not returned, because the two callers already do the right thing with an
+            # exception: `ask_for_json` retries it with the failure fed back, and a method that
+            # calls `ask` directly records it as an outage rather than as a proposal it declined.
+            if result["exit_code"] != 0:
+                raise UnparseableReply(
+                    f"the CLI improver exited {result['exit_code']} and changed nothing: "
+                    f"{(result['note'] or '').strip()[:300]}")
+            # Exit 0 with no files is a genuine decline, and `cli_improver`'s prompt makes it name
+            # a mechanism, so the note *is* the reason. Kept as `no_change` on purpose.
+            return {"no_change": result["note"] or (
+                "the CLI improver exited 0 and changed nothing"), "artifacts": artifacts}
+        return {"files": edits,
+                "hypothesis": result["note"] or f"{len(edits)} file(s) edited by the CLI",
+                "artifacts": artifacts}
+    except Exception as exc:
+        declared = stop_status.terminal_stop({'terminal_stop': getattr(exc, 'terminal_stop', None)})
+        if declared:
+            _TERMINAL_STOP.update(declared)
+            raise
+        if isinstance(exc, UnparseableReply):
+            # A CLI exit failure keeps its historical retry policy without a cap.
+            raise
+        failure = archive_io.ArchiveFailure('Cannot process completed CLI evidence')
+        failure.observed_transcript = result.get('transcript') or ''
+        failure.capture_complete = (result.get('transcript_archive') or {}).get('complete', True)
+        _TERMINAL_STOP.update(failure.terminal_stop)
+        raise failure from exc
 
 
 #: One counter for endpoint call records, so two calls in the same second cannot collide.
@@ -1739,6 +1997,8 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
     # writes them for an improver that carries a `base_url`. Called first, as it was, it
     # refused every CLI run with "a method brings its own credentials": the one layer with no
     # endpoint would have been the only one that could not start without one.
+    if _TERMINAL_STOP:
+        raise stop_status.TerminalStop(dict(_TERMINAL_STOP))
     evidence_root = (_evidence_channel(base, evidence_channel)
                      if base is not None or evidence_channel is not None else None)
     context = evidence_root.parent if evidence_root is not None else None
@@ -1786,6 +2046,7 @@ def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
                 prompt = block + "\n\n" + prompt
     last = ""
     for _ in range(attempts):
+        _meta_admit()
         try:
             resp = client.complete(
                 model=model, temperature=0.0,
@@ -2032,7 +2293,7 @@ def report(req: dict, *, method: str, harness_dir: Path, changed: bool,
     passes 0 is a method that made no model call at all (`echo_base`), which is a fact
     rather than a default.
     """
-    spent_now = spent()
+    spent_now = method_usage()
     if tokens is None:
         tokens = spent_tokens()
     if changed:
@@ -2235,7 +2496,7 @@ def report_many(req: dict, *, method: str, steps: list[dict],
     multiply the method's cost by the batch size, and a cost-aware rule reading a number k
     times too large is worse than reading none.
     """
-    spent_now = spent()
+    spent_now = method_usage()
     if tokens is None:
         tokens = spent_tokens()
     if not steps:
@@ -2348,9 +2609,12 @@ def fail(req: dict, *, method: str, exc: BaseException | str, base: Path,
     """
     why = exc if isinstance(exc, str) else f"{type(exc).__name__}: {str(exc)[:300]}"
     print(f"{method}: {why}", file=sys.stderr)
-    return report(req, method=method, harness_dir=base, changed=False, stop=stop,
+    terminal = stop_status.terminal_stop({'terminal_stop': getattr(exc, 'terminal_stop', None)})
+    terminal = terminal or dict(_TERMINAL_STOP) or None
+    return report(req, method=method, harness_dir=base, changed=False, stop=stop or bool(terminal),
                   hypothesis=why, edit_kind="none",
-                  method_reported={"error": why, **(state or {})},
+                  method_reported={"error": why, **(state or {}),
+                                   **({'terminal_stop': terminal} if terminal else {})},
                   acceptance_rule="not reached -- the method failed before deciding",
                   label="method error")
 

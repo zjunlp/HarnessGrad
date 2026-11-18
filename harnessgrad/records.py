@@ -16,6 +16,7 @@ from eval.ckpt.source_tree import copy_harness, copy_rejected_harness
 
 from pathlib import Path
 import json
+import os
 import shutil
 import subprocess
 import time
@@ -72,6 +73,12 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
                 and not tokens.get("input_tasks_missing") and not tokens.get("output_tasks_missing")):
             harness_tokens = harness_lower_bound
     harness_calls = tokens.get("calls") if not tokens.get("calls_tasks_missing") else None
+    interrupted = (res or {}).get('integrity_status') == 'unknown_interrupted_process'
+    if interrupted:
+        # Retained task reports do not cover possibly interrupted/duplicated
+        # in-flight attempts. Preserve their observed sum as a lower bound.
+        harness_tokens = None
+        harness_calls = None
     env = (res or {}).get("env_usage") or {}
     env_tokens = None
     env_lower_bound = None
@@ -104,7 +111,8 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
         # count, so it is reported beside it rather than added into it.
         "method_cache_read_tokens": claimed.get("method_cache_read_tokens"),
         "harness_tokens": harness_tokens,
-        "harness_usage_scope": (tokens.get("scope", "partial") if "tasks_total" in tokens
+        "harness_usage_scope": ("partial_interrupted_process" if interrupted else
+                                tokens.get("scope", "partial") if "tasks_total" in tokens
                                 else "legacy_reported_coverage_unknown"),
         # Known partial spend remains useful evidence, but is never substituted
         # for a complete total consumed by cost-aware acceptance rules.
@@ -847,29 +855,46 @@ def _write_curve(path: Path, curve: list[dict]) -> None:
                                  "scorer_isolation_comparable": isolation != "unknown"}) + "\n")
 
 def _keep_method_logs(method_ws: Path, run_dir: Path | None, round_no: int) -> None:
-    """Copy a method's own `*.log` files into the record before its scratch dir goes.
+    """Copy private method logs; reject linked or nonregular evidence files.
 
-    The method workspace is temporary by design -- a temp directory, deleted when the
-    round ends -- and that is right for the *candidate harness*, which the platform has
-    already copied out, and wrong for the method's own diagnostics. Measured with the
-    CLI improver: its entire transcript (up to 200 kB: what it read, what
-    it tried, why it changed nothing) went to `<workspace>/improver.log`, and every run
-    that had to answer "why did the improver change nothing?" had thrown that file away
-    with the scratch directory. The question is normally asked after the run.
-
-    The convention is deliberately narrow -- files named `*.log` at the root of the
-    method's workspace -- so it is a rule a method can follow rather than a licence to
-    fill the record, and so the platform does not have to know which method it is.
+    Full CLI streams, display tails and their receipts use unique *.log names.
+    Copy errors are visible to the method loop and cannot trigger another call.
     """
-    if run_dir is None or not method_ws.is_dir():
+    import stat
+    if run_dir is None:
         return
-    logs = sorted(p for p in method_ws.glob("*.log") if p.is_file())
+    if method_ws.is_symlink() or not method_ws.is_dir():
+        raise OSError('method evidence workspace is missing or linked')
+    logs = sorted(method_ws.glob('*.log'))
     if not logs:
         return
-    dest = run_dir / "method_logs" / f"round-{round_no}"
+    dest = run_dir / 'method_logs' / f'round-{round_no}'
     dest.mkdir(parents=True, exist_ok=True)
-    for path in logs:
-        shutil.copy2(path, dest / path.name)
+    if any(p.is_symlink() for p in (dest, *dest.parents)):
+        raise OSError('method archive directory is linked')
+    directory = os.open(method_ws, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for path in logs:
+            source = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                             dir_fd=directory)
+            with os.fdopen(source, 'rb') as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                    raise OSError('method evidence is not a private regular file')
+                target = os.open(dest / path.name,
+                                 os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
+                                 0o600)
+                with os.fdopen(target, 'wb') as output:
+                    info = os.fstat(output.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                        raise OSError('method archive is not a private regular file')
+                    os.fchmod(output.fileno(), 0o600)
+                    output.truncate(0)
+                    shutil.copyfileobj(stream, output)
+                    output.flush()
+                    os.fsync(output.fileno())
+    finally:
+        os.close(directory)
 
 
 def _save_round_diff(run_dir: Path, round_no: int, work: Path,

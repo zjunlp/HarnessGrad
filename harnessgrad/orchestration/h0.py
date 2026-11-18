@@ -110,7 +110,7 @@ def load_h0_donor(run_id: str, runs_root: Path, source_sha: str) -> H0Donor:
 
 
 def admit_h0_donor_records(donor: H0Donor, work: Path, identities: H0Identities,
-                            options: H0Options, *, setups, envs):
+                            options: H0Options, *, setups, envs, selected_ids=None):
     agent = platform_config.current().agent
     problems = h0_identity.agent_problems(donor.directory, donor.point, model=agent.model,
                                          backend=agent.backend, endpoint=agent.base_url)
@@ -118,12 +118,20 @@ def admit_h0_donor_records(donor: H0Donor, work: Path, identities: H0Identities,
         raise H0Refused(f"refusing --h0-from {donor.run_id!r}: " + "; ".join(problems))
     try:
         dataset_runtime_identity.admit(identities.dataset)
+        def require_context(recorded, current, task_ids=None):
+            require_verification_context(recorded, current,
+                selected_ids if selected_ids is not None else task_ids)
+        def require_dataset(recorded, current):
+            if selected_ids is not None:
+                recorded = dataset_runtime_identity.project(recorded, selected_ids)
+                current = dataset_runtime_identity.project(current, selected_ids)
+            dataset_runtime_identity.require_same(recorded, current)
         metadata = json.loads((donor.directory / "run_meta.json").read_text())
-        require_verification_context(metadata.get("verification_context"), identities.verification)
-        require_verification_context(donor.point.get("verification_context"), identities.verification,
+        require_context(metadata.get("verification_context"), identities.verification)
+        require_context(donor.point.get("verification_context"), identities.verification,
             list((donor.point.get("sampling") or {}).get("task_ids") or (donor.point.get("per_task") or {})))
-        dataset_runtime_identity.require_same(metadata.get("dataset_runtime_identity"), identities.dataset)
-        dataset_runtime_identity.require_same(donor.point.get("dataset_runtime_identity"), identities.dataset)
+        require_dataset(metadata.get("dataset_runtime_identity"), identities.dataset)
+        require_dataset(donor.point.get("dataset_runtime_identity"), identities.dataset)
         candidate_runtime.admit(work, identities.initial_actor, envs=envs, setups=setups, sandbox=options.sandbox)
         external_runtime.admit_reuse(work, donor.point)
         if donor.payload is not None:
@@ -132,10 +140,10 @@ def admit_h0_donor_records(donor: H0Donor, work: Path, identities: H0Identities,
         candidate_runtime.require_same(donor.point.get("harness_runtime_identity"), identities.initial_actor)
         scoring_identity.require_same(donor.point.get("scoring_identity"), identities.scoring)
         if donor.payload is not None:
-            require_verification_context(donor.payload.get("verification_context"), identities.verification)
-            require_verification_context((donor.payload.get("base") or {}).get("verification_context"), identities.verification)
-            dataset_runtime_identity.require_same(donor.payload.get("dataset_runtime_identity"), identities.dataset)
-            dataset_runtime_identity.require_same((donor.payload.get("base") or {}).get("dataset_runtime_identity"), identities.dataset)
+            require_context(donor.payload.get("verification_context"), identities.verification)
+            require_context((donor.payload.get("base") or {}).get("verification_context"), identities.verification)
+            require_dataset(donor.payload.get("dataset_runtime_identity"), identities.dataset)
+            require_dataset((donor.payload.get("base") or {}).get("dataset_runtime_identity"), identities.dataset)
             candidate_runtime.require_same(donor.payload.get("harness_runtime_identity"), identities.initial_actor)
             candidate_runtime.require_same((donor.payload.get("base") or {}).get("harness_runtime_identity"), identities.initial_actor)
             scoring_identity.require_same(donor.payload.get("scoring_identity"), identities.scoring)
@@ -194,13 +202,14 @@ def materialize_shared_h0(donor, recipient, source_sha, manifest, attribution, o
 
 def measure_h0(measurement: Callable, work, tasks, scorable, cache, source_sha, options,
                identities, *, run_dir, attribution, run_seed, setups, verifiers, envs,
-               diagnostic_authorization=None):
+               diagnostic_authorization=None, task_budget_context=None):
     return measurement(work, tasks, scorable, cache, harness_sha=source_sha,
         trials=options.trials, jobs=options.jobs, progress_dir=run_dir, sandbox=options.sandbox,
         setups=setups, verifiers=verifiers, **dataset_runtime_identity.fields(identities.dataset),
         **candidate_runtime.fields(identities.current_actor), verification_context=identities.verification,
         envs=envs, run_id=attribution.run_id, run_seed=run_seed, recordings_root=run_dir / "recordings",
-        **({"diagnostic_authorization": diagnostic_authorization} if diagnostic_authorization is not None else {}))
+        **({"diagnostic_authorization": diagnostic_authorization} if diagnostic_authorization is not None else {}),
+        **({"task_budget_context": task_budget_context} if task_budget_context is not None else {}))
 
 
 def write_raw_h0(run_dir, run_id, source_sha, base, identities, reporter):

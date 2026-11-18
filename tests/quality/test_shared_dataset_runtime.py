@@ -98,7 +98,7 @@ Path('verifier/reward.txt').write_text('1')
 def test_missing_record_is_unmeasured_and_cleaned(tmp_path):
     setup = setup_for(tmp_path)
     setup['tool_relay']['program'] = str(relay_program(tmp_path,recording=False))
-    result=runner.run_one(harness(tmp_path,'pass'), {'task_id':'t'}, setup=setup,
+    result=runner.run_one(harness(tmp_path,'pass'), {'task_id':'t','goal':'offline recording fixture'}, setup=setup,
         verifier={'kind':'command','argv':['true']})
     assert result['invalid']['stage']=='tool recording'
     assert result['runtime_services']['tool_relay']['cleanup']['complete']

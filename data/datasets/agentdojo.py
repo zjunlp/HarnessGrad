@@ -218,7 +218,7 @@ def provision_status():
                  "'tasks':validate_prepared(Path(sys.argv[3]))}))")
         proc = subprocess.run([runtime['python'], '-I', '-B', '-c', probe,
                                str(ASSETS), str(_source_root()), root],
-                              check=True, capture_output=True, text=True, timeout=60)
+                              check=True, capture_output=True, text=True, errors='strict', timeout=60)
         checked = json.loads(proc.stdout)
         source_id, count = checked['source_id'], checked['tasks']
         return {'root': root, 'split_dir': root, 'present': True, 'tasks': count,

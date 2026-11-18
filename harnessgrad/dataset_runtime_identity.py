@@ -265,7 +265,7 @@ def resolve_h0(dataset, *, side, task_ids, split="declared", sampling="all", env
         request['managed_exec'] = True
     result = subprocess.run([sys.executable, "-B", "-m", __name__],
                             cwd=Path(__file__).resolve().parents[1], env=env,
-                            input=_canonical(request), capture_output=True, text=True, timeout=120)
+                            input=_canonical(request), capture_output=True, text=True, errors='strict', timeout=120)
     if result.returncode:
         raise ValueError("dataset runtime H0 preflight failed: " + result.stderr[-4000:])
     try:

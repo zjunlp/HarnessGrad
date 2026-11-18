@@ -88,7 +88,7 @@ def _gold(record: dict, workdir: Path) -> list[str]:
             runtime_paths=runtime['runtime_paths'],
             read_paths=[*declaration['read_paths'], str(program)])
         proc = subprocess.run(command, env=python_service.environment(directory, {}),
-                              capture_output=True, text=True, timeout=900)
+                              capture_output=True, text=True, errors='strict', timeout=900)
         if proc.returncode != 0:
             raise RuntimeError('ScienceWorld trusted reference worker failed; control is unmeasured')
         actions = json.loads(proc.stdout)

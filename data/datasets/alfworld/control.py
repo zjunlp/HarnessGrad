@@ -121,7 +121,8 @@ def drive(workdir: Path, actions: list[str], *, budget: int) -> None:
                                cwd=workdir, env=env, check=True, capture_output=True,
                                text=True, errors="replace")
             subprocess.run([sys.executable, "alf", "--budget", str(budget), "done"],
-                           cwd=workdir, env=env, check=True, capture_output=True, text=True)
+                           cwd=workdir, env=env, check=True, capture_output=True, text=True,
+                           errors='replace')
         finally:
             socket_path.unlink(missing_ok=True)
     if server.fault():

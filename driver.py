@@ -110,10 +110,12 @@ from harnessgrad.orchestration.candidate_stage import (
     managed_python_intent as _managed_python_intent,
     refuse_managed_source as _refuse_managed_source,
 )
+from harnessgrad.orchestration import treatment_identity
 from harnessgrad.budget_integration import (
     BudgetBinding,
     BudgetConfigurationError,
     bind_budget,
+    load_profile,
 )
 from harnessgrad.environments import (
     _check_env_kinds, _env_record, _narrow_to_run, _report_harness_failed,
@@ -411,7 +413,26 @@ def _write_end_summary(args, run_dir: Path, curve_path: Path) -> Path | None:
 
 def _main(attempt: dict) -> int:
     with ExitStack() as sources:
+        # Internal callers may invoke _main directly; the public main keeps its
+        # lock through finalization using the outer stack.
+        attempt.setdefault('hold', sources)
         return _main_with_sources(attempt, sources)
+
+
+def _treatment_runtime(args):
+    """Hash inputs to the treatment, excluding continuation/output-only controls."""
+    operational = {'rounds', 'resume', 'resume_across_platforms', 'run_id', 'runs_root',
+                   'work_root', 'show_config', 'check_only', 'prepare_only', 'check_net',
+                   'treatment_manifest', 'no_summary', 'summary', 'show_summary'}
+    arguments = {key: str(value) if isinstance(value, Path) else value
+                 for key, value in args._namespace_args.items() if key not in operational}
+    arguments.pop('method_entrypoint', None)
+    arguments['method_argv'] = shlex.split(args.method_entrypoint or '')
+    profile = load_profile(args.budget_profile) if args.budget_profile else None
+    return {'platform_configuration': platform_config.dump(),
+            'arguments': arguments, 'budget_profile_sha256': profile.digest if profile is not None else None,
+            'method_limits': {key: os.environ.get(key) for key in
+                              ('HG_META_ROUND_TOKEN_LIMIT', 'HG_META_RUN_TOKEN_LIMIT')}}
 
 
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
@@ -549,6 +570,35 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     args._namespace_config = run_namespace.fingerprint(
         args._namespace_args, platform_config.dump(platform_config.load()))
 
+    # External wrapper/dependency bytes are checked before local resolver commands
+    # or optional provider probes; no platform waiver can replace this contract.
+    treatment_start = treatment_record = treatment_saved = None
+    treatment_declared = False
+    treatment_meta = None
+    if args.resume:
+        treatment_mode = 'unified' if args.mode in ('A', 'B') else args.mode
+        treatment_run_id = args.run_id or f"{args.harness}-{args.dataset}-{args.sampling}-m{treatment_mode}"
+        # Corrupt historical JSON is a record error, not a treatment refusal.
+        treatment_meta = resume_planning.read_metadata(Path(args.runs_root) / treatment_run_id)
+    try:
+        if args.resume:
+            treatment_saved = treatment_meta.get(treatment_identity.KEY)
+            treatment_declared = bool(treatment_meta.get('treatment_manifest_declared'))
+        treatment_environment = dict(os.environ)
+        for key, value in improver_readiness.ImproverRequest(
+                args.improver, args.improver_model, args.improver_effort).environment_patch().items():
+            if value is None:
+                treatment_environment.pop(key, None)
+            else:
+                treatment_environment[key] = value
+        treatment_start = treatment_identity.capture(args.treatment_manifest, environment=treatment_environment)
+        if args.resume:
+            treatment_identity.require_same(treatment_saved, treatment_start,
+                                             declared=treatment_declared, early=True)
+    except (OSError, TypeError, ValueError) as exc:
+        print(f'refusing treatment: {exc}', file=sys.stderr)
+        return 2
+
     # Isolation before configuration, and both before a dataset is loaded. Where a run writes
     # is a safety property; whether the method can start is a configuration one. Reversed, a
     # run with its workspace inside the platform reports the method problem and hides the
@@ -624,6 +674,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     run_id = args.run_id or (
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
+    try:
+        attempt['hold'].enter_context(run_namespace.driver_lock(args, run_id))
+    except (OSError, run_namespace.NamespaceRefused) as exc:
+        print(f'refusing run: {exc}', file=sys.stderr)
+        return 2
     run_dir = Path(args.runs_root) / run_id
     if not args.resume:
         try:
@@ -710,11 +765,28 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     budget_arm = args.budget_arm or "agent"
     budget_ledger = args.budget_ledger or str(run_dir / "budget_ledger.json")
     budget_binding: BudgetBinding | None = None
+    args.task_budget_context = None
     if budget_profile_source:
         try:
+            profile = load_profile(budget_profile_source)
+            task_http = profile.data.get('task_http')
+            if task_http is not None:
+                split_identity = 'audit' if args.side == 'eval' else 'train'
+                ledger_path = Path(budget_ledger)
+                if any(ledger_path.stem.endswith('.' + other) for other in ('train', 'audit') if other != split_identity):
+                    raise ValueError('task budget ledger names a different split')
+                if not ledger_path.stem.endswith('.' + split_identity):
+                    ledger_path = ledger_path.with_name(ledger_path.stem + '.' + split_identity + ledger_path.suffix)
+                budget_ledger = str(ledger_path)
+            binding_run_id = run_id if task_http is None else f"{run_id}::task:{split_identity}"
             budget_binding = bind_budget(
-                budget_profile_source, budget_ledger, run_id=run_id, arm_id=budget_arm)
-        except BudgetConfigurationError as exc:
+                profile, budget_ledger, run_id=binding_run_id, arm_id=budget_arm)
+            if task_http is not None:
+                from eval.service.request_budget import task_http_context
+                args.task_budget_context = task_http_context(budget_binding, split_identity)
+                if not callable(args.task_budget_context.tokenizer):
+                    raise ValueError('strict task HTTP budget requires an operator exact tokenizer')
+        except (BudgetConfigurationError, OSError, TypeError, ValueError) as exc:
             print(f"refusing budget profile run: {exc}", file=sys.stderr)
             return 2
         # These counters describe orchestration units.  Provider calls and token
@@ -737,6 +809,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     slots.configure(args.gpu_budget, args.gpu_budget_dir)
 
     resume_state = resume_lease = None
+    treatment_nothing_to_do = None
     if args.resume and args.side == 'train':
         work = (Path(args.work_root) / run_id / "workspace").resolve()
         if not workspace_is_outside_platform(work, PLATFORM_ROOT):
@@ -752,8 +825,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             args.current_harness_runtime_identity = resume_lease.current_binding
             sources.callback(resume_lease.close)
         except ResumeNothingToDo as exc:
-            print(f"--resume: {exc}")
-            return 0
+            if treatment_start is None:
+                print(f"--resume: {exc}")
+                return 0
+            # A completed budget still cannot waive a declared treatment check.
+            treatment_nothing_to_do = exc
         except (ResumeRefused, OSError, ValueError) as exc:
             print(f"refusing --resume: {exc}", file=sys.stderr)
             return 2
@@ -788,10 +864,28 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             os.environ.pop(key, None)
         else:
             os.environ[key] = value
-    improver_ready = improver_readiness.resolve_readiness(
-        improver_request, reporter=console, load_config=load_improvers,
-        resolve_config=resolve_improver, provider_url=_cli_provider_base_url,
-        probe=_probe_tool_calls)
+    def admit_treatment(improver_declaration, provider_url):
+        nonlocal treatment_record
+        treatment_record = treatment_identity.capture(args.treatment_manifest,
+            runtime=_treatment_runtime(args),
+            resolved={'improver': improver_declaration, 'provider_url': provider_url})
+        treatment_identity.require_same(treatment_start, treatment_record, early=True)
+        if args.resume:
+            treatment_identity.require_same(treatment_saved, treatment_record, declared=treatment_declared)
+        if treatment_nothing_to_do is not None:
+            raise treatment_nothing_to_do
+    try:
+        improver_ready = improver_readiness.resolve_readiness(
+            improver_request, reporter=console, load_config=load_improvers,
+            resolve_config=resolve_improver, provider_url=_cli_provider_base_url,
+            probe=_probe_tool_calls,
+            **({'before_probe': admit_treatment} if treatment_start is not None or treatment_declared else {}))
+    except treatment_identity.TreatmentRefused as exc:
+        print(f'refusing treatment: {exc}', file=sys.stderr)
+        return 2
+    except ResumeNothingToDo as exc:
+        print(f"--resume: {exc}")
+        return 0
     if improver_ready.refused:
         return 2
     improver = improver_ready.declaration
@@ -961,6 +1055,42 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         except (OSError, TypeError, ValueError) as exc:
             print(f"refusing run: verification context changed: {exc}", file=sys.stderr)
             return 2
+    supplement_id = getattr(args, 'resume_supplement_run', None)
+    if supplement_id is not None:
+        from harnessgrad.orchestration.interrupted_measurement import (
+            InterruptedMeasurementRefused, make_recovery_loader,
+        )
+        try:
+            if (resume_state is None or os.environ.get('HG_EXPERIMENTAL_ROUND_JOURNAL') != '1'
+                    or not (run_dir / '.pending-method-submissions').is_dir()):
+                raise InterruptedMeasurementRefused('recovery requires a resumed run and private submission journal')
+            supplement = Path(args.runs_root) / supplement_id
+            if supplement.is_symlink() or not supplement.is_dir():
+                raise InterruptedMeasurementRefused('supplement run is missing or unsafe')
+            live_config = platform_config.dump(run=platform_config.run_config(
+                args, run_id, seed=os.environ.get('HARNESSGRAD_SEED'), mode=mode))
+            loader = make_recovery_loader(run_dir, supplement, expected_round=resume_state['last'] + 1,
+                live_config=live_config, expected_context=args.verification_context)
+            loader(run_dir, resume_state['last'] + 1)  # Refuse before publishing the resume lease.
+            args._recovered_measurement_loader = loader
+            batch_loaders = {}
+            for entry in (getattr(args, 'resume_batch_supplement', None) or '').split(','):
+                if not entry:
+                    continue
+                raw_round, _, batch_id = entry.partition('=')
+                batch_round = int(raw_round)
+                if batch_round <= resume_state['last'] + 1 or batch_round > args.rounds:
+                    raise InterruptedMeasurementRefused('batch supplement is outside the future round budget')
+                batch = Path(args.runs_root) / batch_id
+                if batch.is_symlink() or not batch.is_dir():
+                    raise InterruptedMeasurementRefused('batch supplement is missing or unsafe')
+                batch_loaders[batch_round] = make_recovery_loader(run_dir, batch,
+                    expected_round=batch_round, live_config=live_config,
+                    expected_context=args.verification_context)
+            args._batch_recovery_loaders = batch_loaders
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            print(f'refusing interrupted measurement recovery: {exc}', file=sys.stderr)
+            return 2
     if resume_state is not None:
         resume_lease.publish()
     if args.resume or args.side == 'eval':
@@ -999,6 +1129,15 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             metadata_platform, oracle_source, oracle_coverage),
         attribution=run_metadata.AttributionRecord(model["model"], model["backend"], FRAMEWORK_VERSION,
             improver, improver_tool_calls, improver_tool_calls_detail), web_record=web_record)
+    if args.task_budget_context is not None:
+        metadata_fields['task_http_budget'] = {
+            'mode': 'strict', 'split': args.task_budget_context.split,
+            'ledger_path': str(budget_binding.ledger_path), 'profile_hash': budget_binding.profile_hash,
+            'run_id': run_id, 'dispatcher_run_id': budget_binding.dispatcher.run_id,
+            'scope': 'supported_task_model_http_routes'}
+    if treatment_record is not None:
+        metadata_fields['treatment_manifest_declared'] = True
+        metadata_fields[treatment_identity.KEY] = treatment_saved if args.resume else treatment_record
     _write_run_meta(run_dir, fresh=not getattr(args, "resume", False), **metadata_fields)
 
     workspace_ops = WorkspaceOps(stage=stage_workspace, commit=commit_state)
@@ -1088,18 +1227,34 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         try:
             if args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
-                h0_planning.admit_h0_donor_records(donor, work, h0_identities, h0_options, setups=setups, envs=envs)
-                reused = h0_planning.materialize_shared_h0(
-                    donor, run_dir, h0_sha, man, h0_attribution, h0_options, console)
+                if args.h0_subset_view:
+                    from harnessgrad.orchestration.h0_subset import materialize_subset
+                    reused = materialize_subset(donor, work, h0_sha, man, h0_attribution,
+                        h0_options, h0_identities, [task['task_id'] for task in tasks_all],
+                        setups=setups, envs=envs)
+                else:
+                    h0_planning.admit_h0_donor_records(donor, work, h0_identities, h0_options, setups=setups, envs=envs)
+                    reused = h0_planning.materialize_shared_h0(
+                        donor, run_dir, h0_sha, man, h0_attribution, h0_options, console)
                 base, shared_point = reused.base, reused.point
             else:
                 base = h0_planning.measure_h0(evaluate, work, tasks_all, scorable, cache, h0_sha,
                     h0_options, h0_identities, run_dir=run_dir, attribution=h0_attribution,
                     run_seed=os.environ["HARNESSGRAD_SEED"], setups=setups, verifiers=verifiers, envs=envs,
-                    diagnostic_authorization=diagnostic_authorization)
+                    diagnostic_authorization=diagnostic_authorization,
+                    **({'task_budget_context': args.task_budget_context} if args.task_budget_context is not None else {}))
                 h0_planning.write_raw_h0(run_dir, run_id, h0_sha, base, h0_identities, console)
         except h0_planning.H0Refused as exc:
             exc.report(console)
+            return 2
+        if base.get('task_budget_stop'):
+            _save_verdicts(run_dir, 0, base, [task['task_id'] for task in tasks_all])
+            _save_traces(run_dir, 0, base.get('traces') or {}, side_ids, split,
+                         trial_traces=base.get('trial_traces'))
+            _write_run_meta(run_dir, task_budget_stop=base['task_budget_stop'],
+                            task_budget_usage=base.get('task_budget_usage'),
+                            budget=budget_binding.metadata() if budget_binding is not None else None)
+            console.note('refusing H0 curve: task model HTTP budget stopped; incomplete evidence retained', level='error')
             return 2
         if enforcement is not None:
             # Preserve raw execution/scorer facts with their comparison prohibition.
@@ -1174,6 +1329,15 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     if resume_state is not None:
         # The points already on disk are the record; a resumed run appends to them.
         curve = list(resume_state["existing"])
+        previous_cost = curve[-1].get('cumulative')
+        complete_cost = (isinstance(previous_cost, dict) and all(
+            field in previous_cost for field in
+            ('evaluation_trials', 'generation_tokens', 'env_generation_tokens', 'wall_clock_s')))
+        if complete_cost:
+            cumulative = dict(previous_cost)
+        elif callable(getattr(args, '_recovered_measurement_loader', None)):
+            print('refusing interrupted measurement recovery: cumulative cost evidence missing', file=sys.stderr)
+            return 2
     elif shared_point is not None:
         # The donor's point verbatim except for the id: its `identity` describes *how that
         # number was produced* (jobs, budget, model), which is the honest record, and
@@ -1262,16 +1426,18 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 def main() -> int:
     attempt = {}
     detail = "driver interrupted before evaluation completed; see command output"
-    try:
-        result = _main(attempt)
-        detail = f"driver exited {result} before evaluation completed; see command output"
-        return result
-    except BaseException as exc:
-        detail = f"{type(exc).__name__}: {exc}"
-        raise
-    finally:
-        if "finalize" in attempt:
-            attempt["finalize"](detail)
+    with ExitStack() as hold:
+        attempt['hold'] = hold
+        try:
+            result = _main(attempt)
+            detail = f"driver exited {result} before evaluation completed; see command output"
+            return result
+        except BaseException as exc:
+            detail = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            if "finalize" in attempt:
+                attempt["finalize"](detail)
 
 
 if __name__ == "__main__":

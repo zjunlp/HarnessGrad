@@ -146,7 +146,7 @@ with registry.provider_session():
  print(json.dumps(value))
 '''
             result = subprocess.run([sys.executable, "-B", "-c", program, str(staged), json.dumps(selection)],
-                                    cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+                                    cwd=ROOT, env=env, capture_output=True, text=True, errors='strict', timeout=120)
             if result.returncode:
                 raise ValueError("H0 candidate runtime preflight failed: " + result.stderr[-3000:])
             binding = candidate_runtime.validate(json.loads(result.stdout))
@@ -179,7 +179,7 @@ with redirect_stdout(sys.stderr), registry.provider_session():
 print(json.dumps(result))
 """
     result = subprocess.run([sys.executable, '-B', '-c', program, json.dumps(request)],
-                            cwd=ROOT, env=environment, capture_output=True, text=True, timeout=120)
+                            cwd=ROOT, env=environment, capture_output=True, text=True, errors='strict', timeout=120)
     if result.returncode:
         raise ValueError('H0 verification context preflight failed')
     return verification_context.validate(json.loads(result.stdout))

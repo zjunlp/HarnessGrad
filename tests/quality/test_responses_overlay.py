@@ -157,7 +157,7 @@ def test_formal_failure_keeps_capture_after_task_cleanup(tmp_path,monkeypatch,ti
         if timeout: raise subprocess.TimeoutExpired(argv,timeout_s)
         return SimpleNamespace(returncode=1,stderr="provider failure")
     monkeypatch.setattr(runner,"run_process",execute)
-    result=runner.run_one(repo,{"task_id":"offline-failure","prompt":"unused"},sandbox=False,timeout_s=1)
+    result=runner.run_one(repo,{"task_id":"offline-failure","goal":"offline capture fixture"},sandbox=False,timeout_s=1)
     assert seen["env"]["HG_HARNESS_BUN"]==prepared["launcher"]
     assert result["exit_code"]==(-1 if timeout else 1)
     assert not seen["work"].exists()

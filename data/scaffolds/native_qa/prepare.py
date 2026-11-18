@@ -64,7 +64,7 @@ def _convert(name, root, local):
     (root / 'worker-identity.json').write_text(json.dumps(identity, indent=2) + '\n')
     request = {'dataset': name, 'root': str(root), 'local': list(local)}
     proc = subprocess.run([runtime['python'], '-I', str(worker)],
-        input=json.dumps(request), text=True, capture_output=True, env=environment)
+        input=json.dumps(request), text=True, errors='replace', capture_output=True, env=environment)
     if proc.returncode:
         # Worker diagnostics can contain private rows, URLs and credentials.
         raise ValueError('native source conversion worker failed; retained attempt for inspection')

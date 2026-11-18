@@ -246,6 +246,13 @@ def test_adapter_asset_directories_move_beside_their_adapters():
         if path.is_dir() and path.name != "__pycache__":
             adapter = DATASETS / f"{path.name}.py"
             if not adapter.is_file():
+                # Shared execution profiles are not dataset adapters; retain a
+                # narrow allowlist and validate each descriptor rather than
+                # treating every unpaired directory as acceptable.
+                if path.name in {'jobbench_renderer', 'native_harbor', 'native_qa'}:
+                    from harnessgrad.dataset_runtime import execution_descriptor
+                    assert execution_descriptor(path.name) is not None
+                    continue
                 errors.append(f"Orphaned adapter assets: {_relative(path)}/; "
                               f"missing {_relative(adapter)}")
     _check(errors)

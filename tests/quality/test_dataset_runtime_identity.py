@@ -109,6 +109,9 @@ def test_provider_session_freezes_actual_requests_and_resets_afterward(subproces
         assert registry.provider('gsm8k') is first
         assert first.catalog()['runtime'] == selected
         assert registry.provider_runtime('gsm8k') == selected
+        # The second catalog call is cached; issue a real provider request to
+        # verify it re-admits the frozen runtime instead of resolving anew.
+        first._request('resolve', task_ids=['t'])
         admission.assert_called_once_with('gsm8k', selected)
         with registry.provider_session():
             assert registry.provider_runtime('gsm8k') is None
