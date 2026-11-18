@@ -6,7 +6,7 @@
 
 <p align="center"><strong>One project for building better agent harnesses.</strong><br>Run reproducible experiments, customize a harness for your task,<br>and explore a path toward continual improvement.</p>
 
-<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 📖 <a href="#citation">Citation</a></p>
+<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 💬 <a href="https://github.com/Xubqpanda/HarnessGrad-Community">Community</a> · 📖 <a href="#citation">Citation</a></p>
 
 <p align="center"><img src=".github/assets/learning-loop.svg" width="720" alt="Learning loop: tasks lead to feedback, editing the harness and evaluation, which returns to tasks."></p>
 
@@ -21,6 +21,7 @@
   <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/Website-HarnessGrad-285f50?logo=githubpages&amp;logoColor=white" alt="Project website"></a>
   <a href="docs/README.md"><img src="https://img.shields.io/badge/Docs-Explore-385fc4?logo=readthedocs&amp;logoColor=white" alt="Documentation"></a>
   <a href=".github/CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contribute-Get%20involved-bb6346?logo=github&amp;logoColor=white" alt="Contributing guide"></a>
+  <a href="https://github.com/Xubqpanda/HarnessGrad-Community#wechat"><img src="https://img.shields.io/badge/Community-WeChat-07c160?logo=wechat&amp;logoColor=white" alt="Join the WeChat community"></a>
 </p>
 
 <a id="choose-your-path"></a>
@@ -48,6 +49,7 @@
   - [Current capabilities](#customize-current) · [Quick start](#customize-quick-start)
   - [Customization workbench](#customize-workbench)
 - [🌱 Evolve your personal harness](#evolve-personal-harness)
+- [💬 Community](https://github.com/Xubqpanda/HarnessGrad-Community)
 - [📚 Documentation](docs/README.md)
 - [📖 Citation](#citation)
 - [🔗 Related work](#related-work)
