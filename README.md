@@ -43,7 +43,6 @@
   - [Current capabilities](#customize-current) · [Quick start](#customize-quick-start)
   - [Customization workbench](#customize-workbench)
 - [🌱 Evolve your personal harness](#evolve-personal-harness)
-- [🧩 Shared foundation](#shared-foundation)
 - [📚 Documentation](docs/README.md)
 - [📖 Citation](#citation)
 - [🔗 Related work](#related-work)
@@ -254,14 +253,6 @@ The same Console used to inspect experiments also provides a workspace for editi
 Explore the [harness evolution protocol](docs/harness-evolution-protocol.md) and its approach to evaluating candidate improvements.
 
 </details>
-
-<a id="shared-foundation"></a>
-
-## 🧩 Shared foundation
-
-**One workbench for harness experiments and editing.** HarnessGrad provides harness adapters, improvement methods, candidate versions and evidence records. The Console brings experiment inspection and candidate editing together.
-
-**Reusable improvement building blocks.** Shared proposal stages turn selected feedback into skill, memory and instruction candidates. Experiment workflows retain their measurement and selection rules; customization workflows choose their own inputs and review changes. See the [shared foundation](docs/shared-foundation.md) for the interfaces and an offline example.
 
 <a id="citation"></a>
 
