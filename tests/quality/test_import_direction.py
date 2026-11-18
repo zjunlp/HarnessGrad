@@ -20,6 +20,10 @@ SOURCE_DIRS = ("data", "eval", "harnessgrad", "tools", "console")
 # Keep these separate from permissions: extraction must not grant a reverse edge.
 EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/improvement/contracts.py": {"__future__", "dataclasses", "difflib", "typing"},
+    "harnessgrad/improvement/model.py": {"__future__", "json", "typing", "harnessgrad.improvement.contracts", "methods.endpoint_client"},
+    "harnessgrad/personal/profile.py": {"__future__", "dataclasses", "math", "os", "pathlib", "typing", "harnessgrad.config", "harnessgrad.personal.contracts", "methods.endpoint_client"},
+    "harnessgrad/personal/model.py": {"__future__", "contextlib", "os", "threading", "time", "uuid", "fcntl", "msvcrt", "harnessgrad.personal.contracts", "harnessgrad.personal.profile", "harnessgrad.improvement.model", "methods.endpoint_client"},
+    "harnessgrad/personal/model_store.py": {"__future__", "uuid", "harnessgrad.personal.contracts", "harnessgrad.personal.profile"},
     "harnessgrad/improvement/stages.py": {"__future__", "dataclasses", "json", "typing", "harnessgrad.improvement.contracts", "methods.policy_ports.ace_proposal", "methods.policy_ports.skillopt_fast", "methods.policy_ports.skillopt_patch", "methods.policy_ports.evo_harness_proposal", "methods.policy_ports.gepa_proposal", "methods.policy_ports.vendor.ace"},
     "harnessgrad/orchestration/treatment_workflow.py": {"__future__", "pathlib", "shlex", "harnessgrad.orchestration.improver_readiness", "harnessgrad.orchestration.treatment_identity"},
     "harnessgrad/orchestration/execution_policy.py": {"__future__", "json", "pathlib", "sys", "eval.policy.diagnostic_policy"},
@@ -27,7 +31,7 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/customization/patch.py": {"__future__", "contextlib", "os", "pathlib", "re", "typing", "harnessgrad.improvement.contracts", "harnessgrad.customization.review"},
     "harnessgrad/customization/review.py": {"__future__", "dataclasses", "hashlib", "json", "re", "typing", "harnessgrad.customization.inputs", "harnessgrad.improvement.contracts", "harnessgrad.core.harness"},
     "harnessgrad/customization/inputs.py": {"__future__", "contextlib", "json", "os", "pathlib", "stat", "typing", "harnessgrad.improvement.contracts"},
-    "harnessgrad/customization/model.py": {"__future__", "json", "typing", "harnessgrad.improvement.contracts", "methods.endpoint_client"},
+    "harnessgrad/customization/model.py": {"__future__", "harnessgrad.improvement.model"},
     "harnessgrad/entrypoints/customization.py": {"harnessgrad.core.harness", "__future__", "argparse", "dataclasses", "json", "os", "pathlib", "sys", "harnessgrad.customization.model", "harnessgrad.customization.inputs", "harnessgrad.improvement.contracts", "harnessgrad.customization.proposals", "harnessgrad.customization.review", "harnessgrad.customization.patch"},
     "harnessgrad/execution/python_runtime/python_artifacts.py": {"__future__", "contextlib", "fcntl", "hashlib", "json", "os", "pathlib", "shutil", "stat", "tempfile", "time"},
     "harnessgrad/execution/python_runtime/python_harness_runtime.py": {"__future__", "hashlib", "json", "math", "os", "pathlib", "platform", "re", "shutil", "signal", "stat", "subprocess", "sys", "tempfile", "time", "eval.ckpt.source_tree", "harnessgrad.paths", "harnessgrad.execution.bubblewrap", "harnessgrad.execution.python_runtime.python_artifacts"},

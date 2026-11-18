@@ -43,6 +43,8 @@ usage:
   {program} harness install|list ...    install or list base harness versions
   {program} method list|show ...        inspect method declarations
   {program} customize inspect|collect|propose|review|patch  inspect and prepare a candidate
+  {program} personal serve|status|stop|project|import|demo|inspect|desktop  personal read-only setup
+  {program} personal model-config|model-demo  explicit model config and offline budget demo
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
@@ -240,6 +242,9 @@ def main(argv: list[str] | None = None) -> int:
     if command == "customize":
         from harnessgrad.entrypoints.customization import main as customization_main
         return customization_main(rest)
+    if command == 'personal':
+        from harnessgrad.entrypoints.personal import main as personal_main
+        return personal_main(rest)
     if command == "method":
         from harnessgrad.entrypoints.method_catalogue import main as method_main
         return method_main(rest)

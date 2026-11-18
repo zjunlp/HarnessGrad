@@ -120,32 +120,54 @@ def _retry_delay(headers, attempt):
     return delay if delay is not None else min(0.25 * (2 ** (attempt - 1)), MAX_RETRY_DELAY)
 
 
+def validate_config(*, base_url, api_key, timeout=180):
+    """Validate the existing transport configuration without creating a client."""
+    url = _endpoint(base_url)
+    if not isinstance(api_key, str) or not api_key or not api_key.isascii() or any(ord(c) < 32 or ord(c) == 127 for c in api_key):
+        raise EndpointError('invalid method endpoint credential')
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout:
+        raise EndpointError('method endpoint timeout must be finite and positive')
+    return url
+
+
+def _wait_for_retry(delay, deadline, sent):
+    if deadline is not None and time.monotonic() + delay >= deadline:
+        raise EndpointError(f'method endpoint deadline prevents retry after {sent} attempt(s)', attempts=sent) from None
+    time.sleep(delay)
+
+
 class Client:
     def __init__(self, *, base_url, api_key, timeout=180):
-        self.url = _endpoint(base_url)
-        if not isinstance(api_key, str) or not api_key or not api_key.isascii() or any(ord(c) < 32 or ord(c) == 127 for c in api_key):
-            raise EndpointError('invalid method endpoint credential')
-        if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout:
-            raise EndpointError('method endpoint timeout must be finite and positive')
+        self.url = validate_config(base_url=base_url, api_key=api_key, timeout=timeout)
         self.api_key = api_key
         self.timeout = timeout
         self.opener = build_opener(_NoRedirect())
 
-    def complete(self, *, model, temperature, messages):
+    def complete(self, *, model, temperature, messages, deadline=None):
+        if deadline is not None and (isinstance(deadline, bool)
+                or not isinstance(deadline, (int, float)) or not math.isfinite(deadline)):
+            raise EndpointError('method endpoint deadline must be finite')
         payload = json.dumps({'model': model, 'temperature': temperature, 'messages': messages},
                              ensure_ascii=False, allow_nan=False).encode('utf-8')
         sent = 0
         for attempt in range(1, MAX_RETRIES + 2):
+            timeout = self.timeout
+            if deadline is not None:
+                timeout = min(timeout, deadline - time.monotonic())
+                if timeout <= 0:
+                    raise EndpointError(f'method endpoint deadline exceeded after {sent} attempt(s)', attempts=sent)
             try:
                 request = Request(self.url, data=payload, method='POST', headers={
                     'Authorization': 'Bearer ' + self.api_key, 'Content-Type': 'application/json',
                     'Accept': 'application/json'})
-                deadline = time.monotonic() + self.timeout
+                response_deadline = time.monotonic() + timeout
                 sent += 1
-                with self.opener.open(request, timeout=self.timeout) as response:
+                with self.opener.open(request, timeout=timeout) as response:
                     chunks, total = [], 0
                     while True:
-                        remaining = deadline - time.monotonic()
+                        remaining = response_deadline - time.monotonic()
+                        if deadline is not None:
+                            remaining = min(remaining, deadline - time.monotonic())
                         if remaining <= 0:
                             raise TimeoutError
                         # CPython's HTTPResponse carries the socket here; bound each read by
@@ -160,7 +182,11 @@ class Client:
                         total += len(chunk)
                         if total > MAX_RESPONSE_BYTES:
                             raise EndpointError(f'method endpoint response exceeds limit after {attempt} attempt(s)', response_received=True, attempts=sent)
-                return _decode(b''.join(chunks), attempt)
+                result = _decode(b''.join(chunks), attempt)
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise EndpointError(f'method endpoint deadline exceeded after {sent} attempt(s)',
+                                        response_received=True, attempts=sent)
+                return result
             except HTTPError as exc:
                 status = exc.code
                 exc.close()
@@ -171,14 +197,14 @@ class Client:
                     delay = _retry_delay(exc.headers, attempt)
                     if delay > MAX_RETRY_DELAY:
                         raise EndpointError(f'method endpoint HTTP {status}: retry delay exceeds limit after {attempt} attempt(s)', attempts=sent) from None
-                    time.sleep(delay)
+                    _wait_for_retry(delay, deadline, sent)
                     continue
                 raise EndpointError(f'method endpoint HTTP {status} after {attempt} attempt(s)', attempts=sent) from None
             except (ValueError, UnicodeError, OverflowError):
                 raise EndpointError(f'invalid method endpoint request after {attempt} attempt(s)', attempts=sent) from None
             except (URLError, TimeoutError, socket.timeout, OSError, http.client.HTTPException):
                 if attempt <= MAX_RETRIES:
-                    time.sleep(min(0.25 * (2 ** (attempt - 1)), MAX_RETRY_DELAY))
+                    _wait_for_retry(min(0.25 * (2 ** (attempt - 1)), MAX_RETRY_DELAY), deadline, sent)
                     continue
                 raise EndpointError(f'method endpoint transport failed after {attempt} attempt(s)', attempts=sent) from None
         raise AssertionError('unreachable')

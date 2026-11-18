@@ -519,3 +519,7 @@ data/candidates/
 !/docs/improver-artifact-manifest.md
 !/docs/task_http_budget.md
 !/docs/treatment-resume-contract.md
+
+# Personal foundation architecture and scoped validation; working notes remain local.
+!/docs/personal-evolution.md
+!/docs/validation/personal-foundation.md
