@@ -1,4 +1,4 @@
-"""Personal records and transactional model-budget/draft migrations."""
+"""Personal records and transactional model-budget, draft and feedback migrations."""
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -8,8 +8,14 @@ import uuid
 
 from harnessgrad.personal.contracts import MAX_DRAFT_BYTES, SourceEvent, decode, digest, encode, identifier
 from harnessgrad.personal.model_store import MODEL_DDL, ModelStore
+from harnessgrad.personal.evidence import EvidenceStore, INDEX_TABLES, source_text
+from harnessgrad.personal.feedback_store import FEEDBACK_COLUMNS, FEEDBACK_DDL, FeedbackStore
 
-SCHEMA_VERSION = 3
+from harnessgrad.personal.proposal_run_store import (
+    PROPOSAL_EVENT_COLUMNS, PROPOSAL_EVENT_DDL, PROPOSAL_RUN_COLUMNS, PROPOSAL_RUN_DDL, ProposalRunStore,
+)
+
+SCHEMA_VERSION = 6
 DRAFTS_DDL = ('CREATE TABLE drafts (project_id TEXT PRIMARY KEY REFERENCES projects(id), '
               'text TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>0))')
 JOBS_DDL = ('CREATE TABLE jobs (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), '
@@ -31,7 +37,7 @@ DDL = (
     'PRIMARY KEY(job_id,seq))',
     'CREATE TABLE questions (id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id), '
     "prompt TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','answered')), response TEXT)",
-) + MODEL_DDL + (DRAFTS_DDL,)
+) + MODEL_DDL + (DRAFTS_DDL,) + FEEDBACK_DDL + (PROPOSAL_RUN_DDL, PROPOSAL_EVENT_DDL)
 
 V1_COLUMNS = {
     'projects': ('id', 'root'), 'sessions': ('project_id', 'source_instance', 'id'),
@@ -46,6 +52,10 @@ V2_COLUMNS = {**V1_COLUMNS,
     'model_calls': ('job_id', 'seq', 'lease', 'stage', 'input_sha256', 'input_bytes',
                    'status', 'usage', 'failure_kind'),
 }
+V3_COLUMNS = {**V2_COLUMNS, 'drafts': ('project_id', 'text', 'revision')}
+V4_COLUMNS = {**V3_COLUMNS, **FEEDBACK_COLUMNS}
+V5_COLUMNS = {**V4_COLUMNS, 'proposal_runs': PROPOSAL_RUN_COLUMNS[:-1]}
+V6_COLUMNS = {**V4_COLUMNS, 'proposal_runs': PROPOSAL_RUN_COLUMNS, 'proposal_events': PROPOSAL_EVENT_COLUMNS}
 
 
 class DraftConflict(ValueError):
@@ -57,7 +67,7 @@ class EventStore:
         self.path = path
         with self.connection() as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1, 2, SCHEMA_VERSION):
+            if version not in (0, 1, 2, 3, 4, 5, SCHEMA_VERSION):
                 raise ValueError('unsupported personal database version; migration required')
             if version == 0:
                 with self.transaction(db):
@@ -65,25 +75,25 @@ class EventStore:
                         raise ValueError('refusing to migrate an unknown database')
                     for statement in DDL:
                         db.execute(statement)
-                    db.execute('PRAGMA user_version=3')
-            elif version == 1:
-                self.migrate_v1(db)
-            elif version == 2:
-                self.require_schema(db, V2_COLUMNS, version)
-                with self.transaction(db):
-                    db.execute(DRAFTS_DDL)
-                    db.execute('PRAGMA user_version=3')
-            for table in (*V1_COLUMNS, 'model_budgets', 'model_calls', 'drafts'):
+                    db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
+            elif version < SCHEMA_VERSION:
+                self.migrate(db, version)
+            else:
+                self.require_schema(db, V6_COLUMNS, version, extras=INDEX_TABLES)
+            for table in V6_COLUMNS:
                 db.execute(f'SELECT * FROM {table} LIMIT 0')
             if db.execute('PRAGMA foreign_key_check').fetchone():
                 raise ValueError('personal database contains invalid references')
             db.execute('PRAGMA journal_mode=WAL')
         self.models = ModelStore(self)
+        self.feedback = FeedbackStore(self)
+        self.evidence = EvidenceStore(self)
+        self.proposal_runs = ProposalRunStore(self)
 
     @staticmethod
-    def require_schema(db, columns_by_table, version):
+    def require_schema(db, columns_by_table, version, *, extras=()):
         objects = db.execute("SELECT type,name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'").fetchall()
-        if any(row['type'] != 'table' or row['name'] not in columns_by_table for row in objects):
+        if any(row['type'] != 'table' or row['name'] not in {*columns_by_table, *extras} for row in objects):
             raise ValueError(f'unrecognized v{version} schema objects; migration refused')
         for table, columns in columns_by_table.items():
             actual = tuple(row['name'] for row in db.execute(f'PRAGMA table_info({table})'))
@@ -92,22 +102,37 @@ class EventStore:
         if db.execute('PRAGMA foreign_key_check').fetchone():
             raise ValueError(f'invalid v{version} references; migration refused')
 
-    def migrate_v1(self, db):
-        self.require_schema(db, V1_COLUMNS, 1)
+    def migrate(self, db, version):
+        columns = {1: V1_COLUMNS, 2: V2_COLUMNS, 3: V3_COLUMNS, 4: V4_COLUMNS, 5: V5_COLUMNS}[version]
+        self.require_schema(db, columns, version, extras=INDEX_TABLES if version >= 4 else ())
         # Rebuild only the job constraints. Child evidence and event tables stay in place.
-        db.execute('PRAGMA foreign_keys=OFF')
+        if version == 1:
+            db.execute('PRAGMA foreign_keys=OFF')
         try:
             with self.transaction(db):
-                db.execute(JOBS_DDL.replace('CREATE TABLE jobs ', 'CREATE TABLE jobs_v2 ', 1))
-                db.execute('INSERT INTO jobs_v2 SELECT id,project_id,kind,status,input_sha256 FROM jobs')
-                db.execute('DROP TABLE jobs')
-                db.execute('ALTER TABLE jobs_v2 RENAME TO jobs')
-                for statement in MODEL_DDL:
-                    db.execute(statement)
-                db.execute(DRAFTS_DDL)
+                if version == 1:
+                    db.execute(JOBS_DDL.replace('CREATE TABLE jobs ', 'CREATE TABLE jobs_v2 ', 1))
+                    db.execute('INSERT INTO jobs_v2 SELECT id,project_id,kind,status,input_sha256 FROM jobs')
+                    db.execute('DROP TABLE jobs')
+                    db.execute('ALTER TABLE jobs_v2 RENAME TO jobs')
+                    for statement in MODEL_DDL:
+                        db.execute(statement)
+                if version < 3:
+                    db.execute(DRAFTS_DDL)
+                if version < 4:
+                    for statement in FEEDBACK_DDL:
+                        db.execute(statement)
+                if version == 5:
+                    db.execute('ALTER TABLE proposal_runs RENAME TO proposal_runs_v5')
+                db.execute(PROPOSAL_RUN_DDL)
+                db.execute(PROPOSAL_EVENT_DDL)
+                if version == 5:
+                    db.execute('INSERT INTO proposal_runs SELECT *,NULL FROM proposal_runs_v5')
+                    db.execute('INSERT INTO proposal_events SELECT feedback_id,1,status FROM proposal_runs')
+                    db.execute('DROP TABLE proposal_runs_v5')
                 if db.execute('PRAGMA foreign_key_check').fetchone():
-                    raise ValueError('model budget migration changed references')
-                db.execute('PRAGMA user_version=3')
+                    raise ValueError('personal migration changed references')
+                db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
         finally:
             db.execute('PRAGMA foreign_keys=ON')
 
@@ -116,6 +141,7 @@ class EventStore:
         db = sqlite3.connect(self.path, timeout=5, isolation_level=None)
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
+        db.create_function('personal_source_text', 1, source_text, deterministic=True)
         try:
             yield db
         finally:
@@ -138,6 +164,14 @@ class EventStore:
         with self.connection() as db, self.transaction(db):
             db.execute('INSERT OR IGNORE INTO projects VALUES (?,?)', (project_id, str(root)))
         return {'id': project_id, 'root': str(root)}
+
+    def project_root(self, project_id: str) -> Path:
+        identifier(project_id)
+        with self.connection() as db:
+            row = db.execute('SELECT root FROM projects WHERE id=?', (project_id,)).fetchone()
+        if row is None:
+            raise ValueError('project was not selected')
+        return Path(row['root'])
 
     def projects(self) -> list[dict]:
         with self.connection() as db:
@@ -186,9 +220,10 @@ class EventStore:
                     continue
                 db.execute('INSERT OR IGNORE INTO sessions VALUES (?,?,?)',
                            (project_id, event.source_instance, event.session_id))
-                db.execute('INSERT INTO source_events(project_id,source_instance,session_id,event_id,body,sha256) '
+                inserted = db.execute('INSERT INTO source_events(project_id,source_instance,session_id,event_id,body,sha256) '
                            'VALUES (?,?,?,?,?,?)', (project_id, event.source_instance, event.session_id,
                                                    event.event_id, body, fingerprint))
+                self.evidence.index(db, inserted.lastrowid, event.text)
                 added += 1
             result = {'job_id': job_id, 'added': added, 'duplicates': len(events) - added,
                       'source': 'synthetic', 'status': 'completed'}

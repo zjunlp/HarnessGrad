@@ -89,7 +89,7 @@ def test_invalid_draft_does_not_replace_preserved_text(tmp_path, text, revision)
     with pytest.raises(ValueError, match='selected'): store.save_draft('unknown', 'text', 0)
 
 
-@pytest.fixture(params=[1, 2])
+@pytest.fixture(params=[1, 2, 3])
 def legacy(tmp_path, request):
     version = request.param
     path = tmp_path / 'personal.sqlite3'
@@ -101,11 +101,13 @@ def legacy(tmp_path, request):
         db.execute("INSERT INTO jobs VALUES ('j_old','p_one','demo','fixture','original job digest')")
         db.execute("INSERT INTO evolution_events VALUES ('j_old',1,'fixture.event','{}')")
         db.execute("INSERT INTO questions VALUES ('q_old','j_old','Original question','open',NULL)")
-        if version == 2:
+        if version >= 2:
             db.execute("INSERT INTO jobs VALUES ('j_model','p_one','model','paused','model digest')")
             db.execute("INSERT INTO model_budgets(job_id,profile_id,config,limits,calls,fixture) "
                        "VALUES ('j_model','fixture','{}','{}',1,1)")
             db.execute("INSERT INTO model_calls VALUES ('j_model',1,'lease','plan','digest',7,'completed','{}',NULL)")
+        if version == 3:
+            db.execute("INSERT INTO drafts VALUES ('p_one','Preserved draft',7)")
     return path, version
 
 
@@ -116,12 +118,13 @@ def test_migration_preserves_all_evidence_cursors_and_model_ledger(legacy):
                   for (table,) in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     store = EventStore(path)
     with store.connection() as db:
-        assert db.execute('PRAGMA user_version').fetchone()[0] == 3
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 6
         assert not db.execute('PRAGMA foreign_key_check').fetchall()
         for table, rows in before.items():
             assert [tuple(row) for row in db.execute(f'SELECT * FROM {table}')] == rows
-    assert store.models.totals()['jobs'] == version - 1
-    assert store.save_draft('p_one', 'New local draft', 0)['revision'] == 1
+    assert store.models.totals()['jobs'] == (1 if version >= 2 else 0)
+    revision = 7 if version == 3 else 0
+    assert store.save_draft('p_one', 'New local draft', revision)['revision'] == revision + 1
 
 
 @pytest.mark.parametrize('name', ['unrecognized', 'sqlitex_unrecognized'])
@@ -140,7 +143,7 @@ def test_failed_migration_rolls_back_job_rebuild_and_preserves_data(legacy, monk
     path, version = legacy
     with sqlite3.connect(path) as db:
         before = list(db.iterdump())
-    monkeypatch.setattr(module, 'DRAFTS_DDL', 'invalid SQL')
+    monkeypatch.setattr(module, 'FEEDBACK_DDL', ('invalid SQL',))
     with pytest.raises(sqlite3.Error): EventStore(path)
     with sqlite3.connect(path) as db:
         assert db.execute('PRAGMA user_version').fetchone()[0] == version

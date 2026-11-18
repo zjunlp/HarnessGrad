@@ -107,7 +107,8 @@ function page(fetch) {
   }
   const document = {body: node('body'), getElementById: node, querySelector: node,
     addEventListener: (name, handler) => handlers.set(name, handler)};
-  const window = {HGPersonalDraft: {create}, HGPersonalWindow: require('./personal-window.js')};
+  const window = {HGPersonalDraft: {create}, HGPersonalWindow: require('./personal-window.js'),
+    HGPersonalFeedback: require('./personal-feedback.js'), HGPersonalProposal: require('./personal-proposal.js')};
   const storage = {getItem: () => null, removeItem() {}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'personal.js'), 'utf8'), {
     window, document, fetch, sessionStorage: storage, localStorage: storage,
@@ -134,7 +135,7 @@ test('Escape during draft loading cannot replace an existing draft with empty te
       projects: [{id: 'project', root: 'synthetic-project'}]});
     if (url.endsWith('/draft')) return loading.promise;
     if (url.endsWith('/sessions')) return response({sessions: []});
-    return response({events: [], next_after: 0, total: 0});
+    return response({feedback: [], events: [], next_after: 0, total: 0});
   });
   await tick();
   assert.equal(app.node('feedback').disabled, true);
