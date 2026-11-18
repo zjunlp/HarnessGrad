@@ -72,6 +72,19 @@ per-state lock prevents a second shell. Allowlisted window metadata is bounded t
 text, source bodies and connection tokens. Closing a window and stopping its
 service are separate actions.
 
+## Selected Codex surface limits
+
+B5 reads an explicitly selected project instruction and a standalone single-file
+Skill through `CodexAdapter.collect_selected`. Filesystem reads require
+descriptor-relative no-follow access. Platforms missing those primitives,
+including native Windows, report `codex.selected_surface_read=unavailable` and
+refuse collection before opening selected files. Pure candidate rendering remains
+available from a valid snapshot; native resource loading remains unverified.
+
+Standalone Skills reject declared supporting files and explicit local Markdown
+links, reference definitions, images and `file:` destinations. Remote URLs and
+same-document anchors remain allowed. These checks never read linked targets.
+
 ## Reusing model configuration and calls
 
 `ModelSettings` reuses `MethodConfig`, `load(explicit_mapping).method` and
