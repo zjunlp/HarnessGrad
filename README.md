@@ -11,11 +11,16 @@
 <p align="center"><img src=".github/assets/learning-loop.svg" width="720" alt="Learning loop: tasks lead to feedback, editing the harness and evaluation, which returns to tasks."></p>
 
 <p align="center">
-  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/website-live-brightgreen.svg" alt="Website"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.12%2B-blue.svg" alt="Python 3.12 or newer">
-  <img src="https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg" alt="No third-party runtime dependencies">
-  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality gate"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml/badge.svg" alt="Website deployment"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f855a.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776ab.svg?logo=python&amp;logoColor=white" alt="Python 3.12 or newer">
+</p>
+
+<p align="center">
+  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/Website-HarnessGrad-285f50?logo=githubpages&amp;logoColor=white" alt="Project website"></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/Docs-Explore-385fc4?logo=readthedocs&amp;logoColor=white" alt="Documentation"></a>
+  <a href=".github/CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contribute-Get%20involved-bb6346?logo=github&amp;logoColor=white" alt="Contributing guide"></a>
 </p>
 
 <a id="choose-your-path"></a>
@@ -296,13 +301,6 @@ If the platform, the measurement protocol or a curve produced here is useful in 
           <img src="https://avatars.githubusercontent.com/u/236323912?v=4&s=200" width="80" style="border-radius:50%" alt="PenguinHarness"/>
           <br />
           <sub><b>PenguinHarness</b></sub>
-        </a>
-      </td>
-      <td align="center" width="150">
-        <a href="https://github.com/quqxui/RSI-Flow">
-          <img src="https://avatars.githubusercontent.com/u/41822324?v=4&s=200" width="80" style="border-radius:50%" alt="RSI-Flow"/>
-          <br />
-          <sub><b>RSI-Flow</b></sub>
         </a>
       </td>
     </tr>

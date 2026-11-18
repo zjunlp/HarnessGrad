@@ -1,0 +1,52 @@
+name: "🐛 Bug report"
+description: Report behavior that does not match the documentation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Do not include API keys, `.env`
+        files, private task answers, or complete sensitive logs. For a security
+        issue, follow the [security policy](https://github.com/zjunlp/HarnessGrad/blob/main/.github/SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did this happen?
+      options:
+        - Run experiments
+        - Customize a Harness
+        - Personal Harness evolution
+        - Dataset or scoring
+        - Installation or documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe what you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Share a minimal example using public or synthetic inputs when possible.
+    validations:
+      required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the repository revision, operating system, Python version and relevant Harness or dataset.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Include only the necessary redacted lines.
+      render: text
+    validations:
+      required: false
