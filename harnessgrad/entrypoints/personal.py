@@ -52,10 +52,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog='harnessgrad personal', description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('serve', 'status', 'stop', 'project', 'import', 'demo', 'inspect', 'desktop',
-                 'model-config', 'model-demo'):
+                 'model-config', 'model-demo', 'plan-demo'):
         sub = commands.add_parser(name)
         sub.add_argument('--state-root', type=Path, required=name != 'model-config', help='owned directory outside the checkout')
-        if name in ('project', 'demo', 'model-demo'):
+        if name in ('project', 'demo', 'model-demo', 'plan-demo'):
             sub.add_argument('--project', type=Path, required=True, help='explicit existing project; no directory scan')
         if name == 'import':
             sub.add_argument('--project-id', required=True)
@@ -65,6 +65,8 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument('--managed-hooks', action='store_true')
         if name == 'serve':
             sub.add_argument('--background', action='store_true')
+            sub.add_argument('--proposal-env-file', type=Path,
+                             help='opt in to read-only proposals using only this model environment file')
         if name == 'desktop':
             sub.add_argument('--executable', type=Path, required=True, help='built personal desktop shell')
             sub.add_argument('--ordinary', action='store_true', help='OS-managed ordinary window without floating placement')
@@ -97,6 +99,8 @@ def main(argv: list[str] | None = None) -> int:
                 forwarded += ['--codex', str(args.codex.resolve())]
             if args.managed_hooks:
                 forwarded += ['--managed-hooks']
+            if args.proposal_env_file is not None:
+                forwarded += ['--proposal-env-file', str(args.proposal_env_file.absolute())]
             code = 'import sys,runpy;sys.path.insert(0,' + repr(str(REPOSITORY)) + ');runpy.run_module("harnessgrad.cli",run_name="__main__")'
             env = {key: os.environ[key] for key in
                    ('SystemRoot', 'WINDIR', 'PATH', 'HOME', 'USERPROFILE', 'LOCALAPPDATA', 'TEMP', 'TMP')
@@ -127,8 +131,13 @@ def main(argv: list[str] | None = None) -> int:
                 raise
         else:
             from harnessgrad.personal.service import PersonalService, read_import
+            proposal_settings = None
+            if args.command == 'serve' and args.proposal_env_file is not None:
+                from harnessgrad.personal.profile import load_model_settings
+                proposal_settings = load_model_settings({}, env_file=args.proposal_env_file)
             service = PersonalService(args.state_root, codex=getattr(args, 'codex', None),
-                                      managed_hooks=getattr(args, 'managed_hooks', False))
+                                      managed_hooks=getattr(args, 'managed_hooks', False),
+                                      proposal_settings=proposal_settings)
             if args.command == 'serve':
                 from harnessgrad.personal.api import serve
                 serve(service, ready=lambda line: print(line, flush=True))
@@ -142,6 +151,9 @@ def main(argv: list[str] | None = None) -> int:
             elif args.command == 'model-demo':
                 from harnessgrad.personal.fixtures import model_demo
                 result = model_demo(service, args.project)
+            elif args.command == 'plan-demo':
+                from harnessgrad.personal.fixtures import plan_demo
+                result = plan_demo(service, args.project)
             elif args.command == 'import':
                 result = service.import_session(args.project_id, read_import(args.input))
             else:

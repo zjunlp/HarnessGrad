@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, closing, contextmanager
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
@@ -15,6 +15,7 @@ import tempfile
 
 from harnessgrad.core.readiness import Readiness
 from harnessgrad.improvement.contracts import text_diff
+from harnessgrad.personal.adapters import surface_fs
 from harnessgrad.personal.adapters.contracts import (
     PREPARED_SCHEMA,
     SELECTED_SCHEMA,
@@ -338,9 +339,7 @@ def _identity(value: os.stat_result) -> str:
 
 
 def _secure_access_available() -> bool:
-    names = ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK')
-    return (all(hasattr(os, name) for name in names)
-            and os.open in os.supports_dir_fd)
+    return surface_fs.available()
 
 
 def _require_secure_access() -> None:
@@ -352,14 +351,13 @@ def _require_secure_access() -> None:
 @contextmanager
 def _root(binding: HostBinding):
     _require_secure_access()
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     with ExitStack() as stack:
         try:
-            fd = os.open(binding.root_path.anchor, flags)
-            stack.callback(os.close, fd)
+            fd = surface_fs.open_directory(binding.root_path.anchor)
+            stack.callback(surface_fs.close_directory, fd)
             for component in binding.root_path.parts[1:]:
-                child = os.open(component, flags, dir_fd=fd)
-                stack.callback(os.close, child)
+                child = surface_fs.open_directory(component, fd)
+                stack.callback(surface_fs.close_directory, child)
                 fd = child
         except PermissionError:
             raise SurfaceError('refused', 'Permission denied for the selected project root.') from None
@@ -369,7 +367,7 @@ def _root(binding: HostBinding):
             raise SurfaceError(
                 'invalid_binding',
                 'The project root or one of its parents is linked or unsafe.') from None
-        row = os.fstat(fd)
+        row = surface_fs.stat_directory(fd)
         if not stat.S_ISDIR(row.st_mode):
             raise SurfaceError('invalid_binding', 'The selected project root is not a directory.')
         yield fd, _identity(row)
@@ -377,13 +375,11 @@ def _root(binding: HostBinding):
 
 def _open_directory(root_fd: int, parts: tuple[str, ...], stack: ExitStack,
                     resource_id: str) -> int:
-    directory = os.dup(root_fd)
-    stack.callback(os.close, directory)
+    directory = root_fd
     try:
         for component in parts:
-            child = os.open(component, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
-                            dir_fd=directory)
-            stack.callback(os.close, child)
+            child = surface_fs.open_directory(component, directory)
+            stack.callback(surface_fs.close_directory, child)
             directory = child
         return directory
     except PermissionError:
@@ -401,9 +397,9 @@ def _skill_entries(root_fd: int, target: TargetSelection) -> tuple[str, ...]:
         directory = _open_directory(root_fd, parts, stack, target.resource_id)
         entries: list[str] = []
         try:
-            with os.scandir(directory) as rows:
-                for row in rows:
-                    entries.append(row.name)
+            with closing(surface_fs.directory_names(directory)) as names:
+                for name in names:
+                    entries.append(name)
                     if len(entries) >= MAX_DIRECTORY_ENTRIES + 1:
                         raise SurfaceError('input_limit',
                                            'The selected Skill directory exceeds 64 entries.',
@@ -427,10 +423,9 @@ def _read_relative(root_fd: int, surface: SurfaceRef, remaining: int,
     with ExitStack() as stack:
         directory = _open_directory(root_fd, parts[:-1], stack, resource_id)
         try:
-            fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                         dir_fd=directory)
+            fd = surface_fs.open_file(parts[-1], directory)
             stack.callback(os.close, fd)
-            before = os.fstat(fd)
+            before = surface_fs.stat_file(fd)
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
                 raise SurfaceError('invalid_path',
                                    'A selected target is not a regular single-link file.',
@@ -450,7 +445,7 @@ def _read_relative(root_fd: int, surface: SurfaceRef, remaining: int,
             if size > cap:
                 raise SurfaceError('input_limit', 'Selected text exceeds the input limit.',
                                    resource_id)
-            after = os.fstat(fd)
+            after = surface_fs.stat_file(fd)
         except PermissionError:
             raise SurfaceError('refused', 'Permission denied for a selected target.',
                                resource_id) from None

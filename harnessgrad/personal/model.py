@@ -60,6 +60,7 @@ class ModelSession:
     def __init__(self, store, project_id: str, settings: ModelSettings, *,
                  limits: ModelLimits | None = None, profile_id: str = 'default',
                  job_id: str | None = None, fixture: bool = False, client=None,
+                 reservation_guard=None,
                  clock=None, wall_clock=None):
         if client is not None and not fixture:
             raise ValueError('an injected model client requires explicit fixture mode')
@@ -69,6 +70,7 @@ class ModelSession:
         self.job_id = store.models.prepare(project_id, profile_id, settings.identity(), self.limits,
                                            job_id=job_id, fixture=fixture)
         self._fixture_client = client
+        self._reservation_guard = reservation_guard
         self._clock = clock if clock is not None else time.monotonic
         self._wall_clock = wall_clock if wall_clock is not None else time.time
         self._owner = None
@@ -136,13 +138,13 @@ class ModelSession:
         size = len(prompt.encode('utf-8')) + len(system_prompt.encode('utf-8'))
         if size > self.limits.max_input_bytes:
             raise ValueError('model input exceeds the task byte limit')
-        seq = self.store.models.reserve(self.job_id, self._lease, stage,
-                                        digest({'stage': stage, 'system': system_prompt, 'prompt': prompt}),
-                                        size, self._wall_clock())
         callback = self._callback
         callback.system_prompt = system_prompt
         prior = len(callback.observed_usage)
         from methods.endpoint_client import EndpointError
+        seq = self.store.models.reserve(self.job_id, self._lease, stage,
+                                        digest({'stage': stage, 'system': system_prompt, 'prompt': prompt}),
+                                        size, self._wall_clock(), guard=self._reservation_guard)
         try:
             value = callback(prompt)
         except BaseException as exc:
