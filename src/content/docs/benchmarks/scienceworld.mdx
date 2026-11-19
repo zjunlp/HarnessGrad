@@ -1,11 +1,19 @@
 ---
 title: ScienceWorld
-description: Audited ScienceWorld training curves and held-out scores for seven harness improvement methods.
+description: ScienceWorld training, validation, and held-out test scores for seven harness improvement methods.
 ---
 import ScienceWorldReport from '../../../components/ScienceWorldReport.astro';
 
-ScienceWorld measures whether an agent can complete science tasks in a simulated environment. This release records a fixed Qwen3.5-9B task model with Loop and seven harness improvement methods.
+## What it measures
 
-The chart shows measurements on the study tasks. The **dev** split selects each method’s checkpoint, and **test** measures that selected checkpoint on 100 held-out tasks. The published records include scores, harness snapshots, patches and traces.
+ScienceWorld evaluates an agent's ability to complete science tasks in a simulated environment. The score is the mean of the environment's per-task scores.
+
+Each method studies **100** training tasks over **20** rounds. The **100** `dev` tasks are reserved for choosing a checkpoint, using the highest verified dev score and breaking ties in favor of the earlier round. Each chosen checkpoint is evaluated once on **100** held-out `test` tasks.
+
+## Results
 
 <ScienceWorldReport />
+
+## Contribute
+
+For submission format and verification, see **[Contributing](../../contributing/)**.

@@ -19,6 +19,8 @@ import json
 import os
 import pathlib
 
+from benchmark_charts import svg_bar_chart, svg_chart, svg_train_chart
+
 D = pathlib.Path(__file__).resolve().parent
 #: Same two knobs as `export-site.py`: the repository root is the site, and the run receipts
 #: come from `HG_RUNS` (never vendored -- see `scripts/export/README.md`).
@@ -103,7 +105,7 @@ ROUNDS = _round_range()
 
 
 def _load_exporter():
-    """`export-site.py` has a hyphen in its name; load it as a module for `svg_chart`."""
+    """`export-site.py` has a hyphen in its name; load it as a module for the cost tables."""
     spec = importlib.util.spec_from_file_location("export_site", D / "export-site.py")
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -646,68 +648,6 @@ def collect_exam() -> list[dict]:
     return out
 
 
-def svg_bar_chart(rows: list[dict], pool: str | None, title: str, note: str = "") -> str:
-    """One bar per method, sorted, for a pool that is measured once (not per round).
-
-    Why a bar chart here and not the line chart used for train/dev: the eval side is *one* point
-    per method, so a line would be seven isolated dots joined by a line nobody measured. A bar
-    comparison is the honest shape for "which method, on material none of them studied".
-
-    `pool=None` means the combined number; otherwise the bar is that pool's score alone.
-    """
-    cells = []
-    for row in rows:
-        if pool is None:
-            value = row.get("score")
-        else:
-            value = ((row.get("by_split") or {}).get(pool) or {}).get("score")
-        if isinstance(value, (int, float)):
-            cells.append((row["method"], float(value)))
-    if not cells:
-        return ""
-    cells.sort(key=lambda kv: (-kv[1], kv[0]))
-    width, height = 760, 380
-    left, right, top, bottom = 64, 24, 28, 64
-    plot_w, plot_h = width - left - right, height - top - bottom
-    hi = max(0.05, max(v for _, v in cells))
-    hi = min(1.0, hi * 1.15)
-
-    def y(value: float) -> float:
-        return top + plot_h * (1 - value / hi)
-
-    colours = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#8c564b"]
-    slot = plot_w / max(1, len(cells))
-    bar_w = min(64.0, slot * 0.55)
-    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
-             f'viewBox="0 0 {width} {height}" role="img" aria-label="{title}">',
-             f'<rect width="{width}" height="{height}" fill="#ffffff"/>']
-    for step in range(5):
-        value = hi * step / 4
-        yy = y(value)
-        parts.append(f'<line x1="{left}" y1="{yy:.1f}" x2="{left + plot_w}" y2="{yy:.1f}" '
-                     f'stroke="#e5e7eb" stroke-width="1"/>')
-        parts.append(f'<text x="{left - 8}" y="{yy + 4:.1f}" font-size="11" fill="#6b7280" '
-                     f'text-anchor="end">{value:.2f}</text>')
-    for index, (method, value) in enumerate(cells):
-        cx = left + slot * (index + 0.5)
-        yy = y(value)
-        colour = colours[index % len(colours)]
-        # `data-method-bar` so the page's method filter hides the bar with the row, exactly like
-        # `data-method-line` does for the per-round charts.
-        parts.append(f'<g data-method-bar="{method}">')
-        parts.append(f'<rect x="{cx - bar_w / 2:.1f}" y="{yy:.1f}" width="{bar_w:.1f}" '
-                     f'height="{top + plot_h - yy:.1f}" fill="{colour}" rx="2"/>')
-        parts.append(f'<text x="{cx:.1f}" y="{yy - 6:.1f}" font-size="11" fill="#111827" '
-                     f'text-anchor="middle">{value:.3f}</text>')
-        parts.append(f'<text x="{cx:.1f}" y="{top + plot_h + 18}" font-size="11" fill="#374151" '
-                     f'text-anchor="middle">{method}</text>')
-        parts.append("</g>")
-    if note:
-        parts.append(f'<text x="{left}" y="{height - 8}" font-size="10" fill="#6b7280">{note}</text>')
-    parts.append('</svg>')
-    return "\n".join(parts) + "\n"
-
-
 def exam_table(exam: list[dict], methods: list[dict], focus: str | None = None) -> str:
     """One row per method: the dev score that chose the round, then this pool's score.
 
@@ -780,7 +720,6 @@ def main() -> int:
     data["exam"] = collect_exam()
     (folder / "appworld.json").write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
 
-    exporter = _load_exporter()
     charts_dir = SITE / "public" / "results" / "appworld"
     charts_dir.mkdir(parents=True, exist_ok=True)
     written = 0
@@ -788,8 +727,8 @@ def main() -> int:
     # The study curve is `cell["train"]`, not an eval pool, so it comes from `svg_train_chart`
     # -- the same split of responsibilities the ALFWorld page uses (its `train.svg` is made the
     # same way, which is why `POOLS` there does not contain `train`).
-    charts = [("train", exporter.svg_train_chart(data, methods_)),
-              ("dev", exporter.svg_chart(data, "dev", methods_))]
+    charts = [("train", svg_train_chart(data, methods_)),
+              ("dev", svg_chart(data, "dev", methods_))]
     exam_rows = data.get("exam") or []
     measured = len(exam_rows)
     note = (f"{measured} of {len(methods_)} methods measured so far"

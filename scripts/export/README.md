@@ -11,7 +11,8 @@ export-site.py            ALFWorld  -> src/data/results/alfworld.json,
 export-appworld-site.py   AppWorld  -> src/data/results/appworld.json,
                                       public/results/appworld/*.svg,
                                       src/content/docs/benchmarks/appworld.mdx
-export-scienceworld-site.py  ScienceWorld -> src/data/results/scienceworld.json
+export-scienceworld-site.py  ScienceWorld -> src/data/results/scienceworld.json,
+                                          public/results/scienceworld/*.svg
                               (takes a staged family and a complete Hub upload receipt)
 export-methods.py         Methods   -> src/content/docs/methods/*.mdx
                                       (reads the results JSON above, and each method's own

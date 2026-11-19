@@ -1,11 +1,19 @@
 ---
 title: ScienceWorld
-description: 七种 Harness 改进方法的 ScienceWorld 训练曲线与留出测试分数。
+description: 七种 Harness 改进方法在 ScienceWorld 上的训练、验证与留出测试分数。
 ---
 import ScienceWorldReport from '../../../../components/ScienceWorldReport.astro';
 
-ScienceWorld 评估智能体能否在模拟环境中完成科学任务。这一批实验使用固定的 Qwen3.5-9B 任务模型与 Loop，对比七种 Harness 改进方法。
+## 评测内容
 
-曲线显示训练任务的分数。每个方法在 **dev** 上选定轮次，再用该版本测量 **test** 的 100 道留出任务。公开记录包含分数、Harness 快照、改动和轨迹。
+ScienceWorld 评估智能体在模拟环境中完成科学任务的能力。实验分数是环境给出的逐题分数的平均值。
+
+每种方法在 **100** 道 `train` 任务上运行 **20** 轮。另有 **100** 道 `dev` 任务用于选择检查点，取通过核验的最高分，并列时取较早的一轮。选定的检查点再用 **100** 道留出的 `test` 任务评测一次。
+
+## 结果
 
 <ScienceWorldReport lang="zh" />
+
+## 贡献结果
+
+提交格式与核验方式见 **[贡献指南](../../contributing/)**。

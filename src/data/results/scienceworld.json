@@ -1,222 +1,2975 @@
 {
-  "revision": "dffe13f4e2eb585cb521039fe72d841da77d81e5",
-  "baseline": {
-    "train_score": 0.1449,
-    "dev_score": 0.171,
-    "test_score": 0.15960000000000002
-  },
-  "taskAgent": {
-    "model": "Qwen3.5-9B",
-    "harness": "Loop",
-    "version": "0.2.0"
-  },
-  "metaAgent": {
-    "harness": "DeepSeek Harness",
-    "model": "deepseek-v4.1-flash-1017-特价"
-  },
-  "methods": [
+ "slug": "scienceworld",
+ "revision": "dffe13f4e2eb585cb521039fe72d841da77d81e5",
+ "pools": {
+  "train": 100,
+  "dev": 100,
+  "test": 100
+ },
+ "reference": {
+  "train": 0.1449,
+  "dev": 0.171,
+  "test": 0.15960000000000002
+ },
+ "stacks": [
+  {
+   "id": "dsh-deepseek-v4.1-flash-1017",
+   "baseHarness": "loop@0.2.0",
+   "taskModel": "Qwen3.5-9B",
+   "metaHarness": "DeepSeek Harness",
+   "metaModel": "deepseek-v4.1-flash-1017-特价",
+   "methods": [
     {
-      "id": "sica_ci",
-      "devRound": 18,
-      "devScore": 0.7140000000000001,
-      "testScore": 0.6399,
-      "train": [
-        0.1449,
-        0.1501,
-        0.1501,
-        0.16399999999999998,
+     "name": "sica_ci",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
         null,
         null,
-        0.1533,
-        0.1533,
-        0.1533,
-        0.45899999999999996,
-        0.45899999999999996,
-        0.23079999999999998,
-        0.45539999999999997,
-        0.5937,
-        0.6512,
-        0.6965,
-        0.6945,
-        0.6957,
-        0.7082999999999999,
-        0.6862,
-        0.6862
-      ]
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1501,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": [
+        11432204,
+        66030
+       ],
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        501882,
+        1317504,
+        29633
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.1501,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": [
+        11432204,
+        66030
+       ],
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        231292,
+        702208,
+        18392
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 3,
+       "train": 0.16399999999999998,
+       "eval": {
+        "dev": 0.182
+       },
+       "trainCost": [
+        45062282,
+        125390
+       ],
+       "devCost": [
+        43906965,
+        133402
+       ],
+       "improverCost": [
+        452494,
+        3640704,
+        46008
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        568819,
+        3089280,
+        45376
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 5,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        276989,
+        1301248,
+        21435
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.1533,
+       "eval": {
+        "dev": 0.1773
+       },
+       "trainCost": [
+        92721493,
+        195226
+       ],
+       "devCost": [
+        107206684,
+        221135
+       ],
+       "improverCost": [
+        87590,
+        847232,
+        15266
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.1533,
+       "eval": {
+        "dev": 0.1773
+       },
+       "trainCost": [
+        92721493,
+        195226
+       ],
+       "devCost": [
+        107206684,
+        221135
+       ],
+       "improverCost": [
+        282801,
+        761344,
+        14932
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.1533,
+       "eval": {
+        "dev": 0.1773
+       },
+       "trainCost": [
+        92721493,
+        195226
+       ],
+       "devCost": [
+        107206684,
+        221135
+       ],
+       "improverCost": [
+        88126,
+        326656,
+        5353
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 9,
+       "train": 0.45899999999999996,
+       "eval": {
+        "dev": 0.4023
+       },
+       "trainCost": [
+        19831260,
+        104314
+       ],
+       "devCost": [
+        23035475,
+        109248
+       ],
+       "improverCost": [
+        707962,
+        10692608,
+        83422
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.45899999999999996,
+       "eval": {
+        "dev": 0.4023
+       },
+       "trainCost": [
+        19831260,
+        104314
+       ],
+       "devCost": [
+        23035475,
+        109248
+       ],
+       "improverCost": [
+        108850,
+        1131520,
+        22513
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.23079999999999998,
+       "eval": {
+        "dev": 0.2602
+       },
+       "trainCost": [
+        30524051,
+        170680
+       ],
+       "devCost": [
+        34969164,
+        186144
+       ],
+       "improverCost": [
+        13756145,
+        12711874,
+        111865
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.45539999999999997,
+       "eval": {
+        "dev": 0.5074000000000001
+       },
+       "trainCost": [
+        26017407,
+        118282
+       ],
+       "devCost": [
+        30797013,
+        130333
+       ],
+       "improverCost": [
+        4883746,
+        9100682,
+        67296
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 13,
+       "train": 0.5937,
+       "eval": {
+        "dev": 0.5333
+       },
+       "trainCost": [
+        46996148,
+        175632
+       ],
+       "devCost": [
+        51943484,
+        191484
+       ],
+       "improverCost": [
+        4035912,
+        9837588,
+        75863
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 14,
+       "train": 0.6512,
+       "eval": {
+        "dev": 0.6345000000000001
+       },
+       "trainCost": [
+        42472560,
+        156864
+       ],
+       "devCost": [
+        47037362,
+        169220
+       ],
+       "improverCost": [
+        5137175,
+        12097654,
+        68303
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.6965,
+       "eval": {
+        "dev": 0.6051
+       },
+       "trainCost": null,
+       "devCost": [
+        47569459,
+        152348
+       ],
+       "improverCost": [
+        6116204,
+        1352542,
+        54102
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 16,
+       "train": 0.6945,
+       "eval": {
+        "dev": 0.6314
+       },
+       "trainCost": [
+        45053798,
+        172470
+       ],
+       "devCost": [
+        46333268,
+        160996
+       ],
+       "improverCost": [
+        10126035,
+        5885353,
+        96286
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 17,
+       "train": 0.6957,
+       "eval": {
+        "dev": 0.6354
+       },
+       "trainCost": [
+        64418662,
+        201646
+       ],
+       "devCost": [
+        67243283,
+        214922
+       ],
+       "improverCost": [
+        14302346,
+        8359743,
+        83695
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.7082999999999999,
+       "eval": {
+        "dev": 0.7140000000000001
+       },
+       "trainCost": null,
+       "devCost": [
+        62909483,
+        204483
+       ],
+       "improverCost": [
+        5555857,
+        9018754,
+        64609
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.6862,
+       "eval": {
+        "dev": 0.652
+       },
+       "trainCost": [
+        59253553,
+        198484
+       ],
+       "devCost": [
+        67704311,
+        215194
+       ],
+       "improverCost": [
+        3365326,
+        3506065,
+        30160
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 20,
+       "train": 0.6862,
+       "eval": {
+        "dev": 0.652
+       },
+       "trainCost": null,
+       "devCost": [
+        67704311,
+        215194
+       ],
+       "improverCost": [
+        2800776,
+        1982684,
+        60378
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 18,
+     "devScore": 0.7140000000000001,
+     "testScore": 0.6399
     },
     {
-      "id": "dream_rsi",
-      "devRound": 19,
-      "devScore": 0.7437999999999999,
-      "testScore": 0.7056999999999999,
-      "train": [
-        0.1449,
+     "name": "dream_rsi",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
         null,
-        0.3239,
-        0.054900000000000004,
-        0.1885,
-        0.4805,
-        0.4805,
-        0.4805,
-        0.4805,
-        0.4805,
-        0.4805,
-        0.4715,
-        0.5889,
-        0.4458,
-        0.6241,
-        0.7665000000000001,
-        0.7827,
-        0.7768999999999999,
-        0.7827,
-        0.7936,
-        0.7936
-      ]
+        null,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        444621,
+        3318016,
+        57527
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.3239,
+       "eval": {
+        "dev": 0.2638
+       },
+       "trainCost": [
+        9908730,
+        55113
+       ],
+       "devCost": [
+        11529306,
+        60836
+       ],
+       "improverCost": [
+        184269,
+        1109504,
+        26174
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 3,
+       "train": 0.054900000000000004,
+       "eval": {
+        "dev": 0.0821
+       },
+       "trainCost": [
+        42428194,
+        277996
+       ],
+       "devCost": [
+        45361583,
+        305686
+       ],
+       "improverCost": [
+        439782,
+        3807744,
+        58918
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": 0.1885,
+       "eval": {
+        "dev": 0.16440000000000002
+       },
+       "trainCost": [
+        12405547,
+        58747
+       ],
+       "devCost": [
+        13035515,
+        60379
+       ],
+       "improverCost": [
+        1924903,
+        831232,
+        37349
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 5,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": [
+        29687143,
+        89826
+       ],
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        1300633,
+        6813952,
+        61413
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": null,
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        295547,
+        1303552,
+        19800
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": null,
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        661641,
+        2758656,
+        31749
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": null,
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        211264,
+        1002240,
+        18076
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 9,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": null,
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        150515,
+        494336,
+        14277
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.4805,
+       "eval": {
+        "dev": 0.4681
+       },
+       "trainCost": null,
+       "devCost": [
+        38093733,
+        107465
+       ],
+       "improverCost": [
+        52871,
+        576000,
+        4583
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.4715,
+       "eval": {
+        "dev": 0.49729999999999996
+       },
+       "trainCost": [
+        50790239,
+        111355
+       ],
+       "devCost": [
+        48134640,
+        111264
+       ],
+       "improverCost": [
+        9766866,
+        6665793,
+        113613
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.5889,
+       "eval": {
+        "dev": 0.5519
+       },
+       "trainCost": [
+        20044609,
+        64343
+       ],
+       "devCost": [
+        28904376,
+        81888
+       ],
+       "improverCost": [
+        10323174,
+        28541752,
+        195797
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 13,
+       "train": 0.4458,
+       "eval": {
+        "dev": 0.5008
+       },
+       "trainCost": [
+        44723986,
+        96158
+       ],
+       "devCost": [
+        43651949,
+        94124
+       ],
+       "improverCost": [
+        19549427,
+        29813829,
+        119418
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 14,
+       "train": 0.6241,
+       "eval": {
+        "dev": 0.5943
+       },
+       "trainCost": null,
+       "devCost": [
+        29913987,
+        85923
+       ],
+       "improverCost": [
+        8848580,
+        2004466,
+        69514
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.7665000000000001,
+       "eval": {
+        "dev": 0.6983
+       },
+       "trainCost": [
+        32388459,
+        81836
+       ],
+       "devCost": [
+        34488713,
+        86989
+       ],
+       "improverCost": [
+        10083552,
+        5323950,
+        105211
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 16,
+       "train": 0.7827,
+       "eval": {
+        "dev": 0.7434000000000001
+       },
+       "trainCost": [
+        32324627,
+        80781
+       ],
+       "devCost": [
+        30915863,
+        80580
+       ],
+       "improverCost": [
+        17594802,
+        8815214,
+        126372
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 17,
+       "train": 0.7768999999999999,
+       "eval": {
+        "dev": 0.7409
+       },
+       "trainCost": [
+        28289124,
+        74897
+       ],
+       "devCost": [
+        29316955,
+        78743
+       ],
+       "improverCost": [
+        12948061,
+        15235446,
+        140875
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.7827,
+       "eval": {
+        "dev": 0.7434000000000001
+       },
+       "trainCost": null,
+       "devCost": [
+        30915863,
+        80580
+       ],
+       "improverCost": [
+        2351978,
+        2658748,
+        37610
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.7936,
+       "eval": {
+        "dev": 0.7437999999999999
+       },
+       "trainCost": [
+        28965132,
+        76168
+       ],
+       "devCost": [
+        26635912,
+        74647
+       ],
+       "improverCost": [
+        6626332,
+        8931447,
+        54619
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 20,
+       "train": 0.7936,
+       "eval": {
+        "dev": 0.7437999999999999
+       },
+       "trainCost": null,
+       "devCost": [
+        26635912,
+        74647
+       ],
+       "improverCost": [
+        2153050,
+        2421310,
+        55712
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 19,
+     "devScore": 0.7437999999999999,
+     "testScore": 0.7056999999999999
     },
     {
-      "id": "dgm",
-      "devRound": 18,
-      "devScore": 0.5929,
-      "testScore": 0.6204999999999999,
-      "train": [
-        0.1449,
-        0.1449,
-        0.2348,
-        0.2776,
-        0.2798,
-        0.40549999999999997,
-        0.40549999999999997,
-        0.4154,
-        0.3295,
-        0.37929999999999997,
-        0.4758,
-        0.5201,
+     "name": "dgm",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
         null,
-        0.4825,
         null,
-        0.4586,
-        0.49979999999999997,
-        0.6515000000000001,
-        0.649,
-        0.5903,
-        0.5543
-      ]
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        527069,
+        3297280,
+        53752
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.2348,
+       "eval": {
+        "dev": 0.2544
+       },
+       "trainCost": [
+        79568360,
+        199773
+       ],
+       "devCost": [
+        87970452,
+        230473
+       ],
+       "improverCost": [
+        1095396,
+        10461312,
+        129083
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 3,
+       "train": 0.2776,
+       "eval": {
+        "dev": 0.2534
+       },
+       "trainCost": [
+        7970805,
+        47333
+       ],
+       "devCost": [
+        8048268,
+        48330
+       ],
+       "improverCost": [
+        1095396,
+        10461312,
+        129083
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 4,
+       "train": 0.2798,
+       "eval": {
+        "dev": 0.2802
+       },
+       "trainCost": [
+        8069917,
+        55200
+       ],
+       "devCost": [
+        7749994,
+        54199
+       ],
+       "improverCost": [
+        1317738,
+        9372160,
+        156615
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 5,
+       "train": 0.40549999999999997,
+       "eval": {
+        "dev": 0.366
+       },
+       "trainCost": [
+        10274418,
+        56658
+       ],
+       "devCost": [
+        11155509,
+        61619
+       ],
+       "improverCost": [
+        1317738,
+        9372160,
+        156615
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 6,
+       "train": 0.40549999999999997,
+       "eval": {
+        "dev": 0.366
+       },
+       "trainCost": null,
+       "devCost": [
+        11155509,
+        61619
+       ],
+       "improverCost": [
+        704321,
+        1807872,
+        35827
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.4154,
+       "eval": {
+        "dev": 0.401
+       },
+       "trainCost": [
+        15886634,
+        67518
+       ],
+       "devCost": [
+        15973852,
+        71397
+       ],
+       "improverCost": [
+        11620174,
+        27963254,
+        249888
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.3295,
+       "eval": {
+        "dev": 0.2813
+       },
+       "trainCost": [
+        32366817,
+        100159
+       ],
+       "devCost": [
+        32939680,
+        98044
+       ],
+       "improverCost": [
+        11620174,
+        27963254,
+        249888
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 9,
+       "train": 0.37929999999999997,
+       "eval": {
+        "dev": 0.3514
+       },
+       "trainCost": [
+        11627288,
+        61328
+       ],
+       "devCost": [
+        11628522,
+        60521
+       ],
+       "improverCost": [
+        11620174,
+        27963254,
+        249888
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 10,
+       "train": 0.4758,
+       "eval": {
+        "dev": 0.4083
+       },
+       "trainCost": [
+        32697258,
+        122665
+       ],
+       "devCost": [
+        30228522,
+        113490
+       ],
+       "improverCost": [
+        8265118,
+        15901855,
+        131730
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.5201,
+       "eval": {
+        "dev": 0.4179
+       },
+       "trainCost": [
+        32645646,
+        113783
+       ],
+       "devCost": [
+        34293265,
+        117598
+       ],
+       "improverCost": [
+        23955553,
+        19247788,
+        236675
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        23955553,
+        19247788,
+        236675
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 13,
+       "train": 0.4825,
+       "eval": {
+        "dev": 0.4249
+       },
+       "trainCost": [
+        24324152,
+        80791
+       ],
+       "devCost": [
+        29876417,
+        96254
+       ],
+       "improverCost": [
+        23955553,
+        19247788,
+        236675
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 14,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        25289883,
+        29562806,
+        265756
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.4586,
+       "eval": {
+        "dev": 0.419
+       },
+       "trainCost": [
+        15257621,
+        63935
+       ],
+       "devCost": [
+        15705495,
+        67246
+       ],
+       "improverCost": [
+        25289883,
+        29562806,
+        265756
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 16,
+       "train": 0.49979999999999997,
+       "eval": {
+        "dev": 0.4068
+       },
+       "trainCost": [
+        27648985,
+        105801
+       ],
+       "devCost": [
+        32261470,
+        94858
+       ],
+       "improverCost": [
+        25289883,
+        29562806,
+        265756
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 17,
+       "train": 0.6515000000000001,
+       "eval": {
+        "dev": 0.5818
+       },
+       "trainCost": [
+        35550316,
+        109286
+       ],
+       "devCost": [
+        37496531,
+        110429
+       ],
+       "improverCost": [
+        8721312,
+        2114210,
+        91740
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.649,
+       "eval": {
+        "dev": 0.5929
+       },
+       "trainCost": [
+        67175491,
+        152580
+       ],
+       "devCost": [
+        53057422,
+        131754
+       ],
+       "improverCost": [
+        15556256,
+        19996008,
+        213888
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.5903,
+       "eval": {
+        "dev": 0.5367000000000001
+       },
+       "trainCost": [
+        16900470,
+        70376
+       ],
+       "devCost": [
+        19486074,
+        76474
+       ],
+       "improverCost": [
+        15556256,
+        19996008,
+        213888
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 20,
+       "train": 0.5543,
+       "eval": {
+        "dev": 0.48219999999999996
+       },
+       "trainCost": [
+        35885128,
+        123433
+       ],
+       "devCost": [
+        35619258,
+        131146
+       ],
+       "improverCost": [
+        5410726,
+        10505319,
+        147904
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 18,
+     "devScore": 0.5929,
+     "testScore": 0.6204999999999999
     },
     {
-      "id": "harnessx",
-      "devRound": 18,
-      "devScore": 0.7456,
-      "testScore": 0.7629,
-      "train": [
-        0.1449,
-        0.1589,
+     "name": "harnessx",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
         null,
         null,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1589,
+       "eval": {
+        "dev": 0.1978
+       },
+       "trainCost": [
+        14397791,
+        66324
+       ],
+       "devCost": [
+        14737807,
+        68051
+       ],
+       "improverCost": [
+        496075,
+        4036224,
+        48625
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        361875,
+        1095936,
+        25020
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 3,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        250752,
+        958208,
+        23393
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": null,
+       "eval": {},
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        221112,
+        878592,
+        17328
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 5,
+       "train": 0.21660000000000001,
+       "eval": {
+        "dev": 0.2389
+       },
+       "trainCost": [
+        109524307,
+        278031
+       ],
+       "devCost": null,
+       "improverCost": [
+        507868,
+        6366208,
+        66239
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.39649999999999996,
+       "eval": {
+        "dev": 0.397
+       },
+       "trainCost": [
+        29288662,
+        114942
+       ],
+       "devCost": [
+        35515021,
+        118824
+       ],
+       "improverCost": [
+        1076716,
+        11921152,
+        92584
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.42310000000000003,
+       "eval": {
+        "dev": 0.3956
+       },
+       "trainCost": [
+        27568039,
+        100754
+       ],
+       "devCost": [
+        31739906,
+        120915
+       ],
+       "improverCost": [
+        287050,
+        5062400,
+        61598
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.7141,
+       "eval": {
+        "dev": 0.7008
+       },
+       "trainCost": [
+        78303530,
+        186431
+       ],
+       "devCost": [
+        83460971,
+        191513
+       ],
+       "improverCost": [
+        1961278,
+        5987936,
+        67866
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 9,
+       "train": 0.1788,
+       "eval": {
+        "dev": 0.1515
+       },
+       "trainCost": null,
+       "devCost": null,
+       "improverCost": [
+        1519107,
+        2549856,
+        35580
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.7141,
+       "eval": {
+        "dev": 0.7008
+       },
+       "trainCost": null,
+       "devCost": [
+        83460971,
+        191513
+       ],
+       "improverCost": [
         null,
-        0.21660000000000001,
-        0.39649999999999996,
-        0.42310000000000003,
-        0.7141,
-        0.1788,
-        0.7141,
-        0.7141,
-        0.7141,
-        0.6228,
-        0.7141,
-        0.7443000000000001,
-        0.7262000000000001,
-        0.7299,
-        0.6983,
-        0.7443000000000001,
-        0.7443000000000001
-      ]
+        0,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.7141,
+       "eval": {
+        "dev": 0.7008
+       },
+       "trainCost": null,
+       "devCost": [
+        83460971,
+        191513
+       ],
+       "improverCost": [
+        401547,
+        524334,
+        12315
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.7141,
+       "eval": {
+        "dev": 0.7008
+       },
+       "trainCost": null,
+       "devCost": [
+        83460971,
+        191513
+       ],
+       "improverCost": [
+        984502,
+        1431396,
+        36497
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 13,
+       "train": 0.6228,
+       "eval": {
+        "dev": 0.6143
+       },
+       "trainCost": [
+        44364383,
+        195559
+       ],
+       "devCost": [
+        50958185,
+        210955
+       ],
+       "improverCost": [
+        9443060,
+        8777624,
+        100314
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 14,
+       "train": 0.7141,
+       "eval": {
+        "dev": 0.7008
+       },
+       "trainCost": null,
+       "devCost": [
+        83460971,
+        191513
+       ],
+       "improverCost": [
+        null,
+        0,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.7443000000000001,
+       "eval": {
+        "dev": 0.7012
+       },
+       "trainCost": [
+        67747564,
+        173265
+       ],
+       "devCost": [
+        74653181,
+        182541
+       ],
+       "improverCost": [
+        1611492,
+        4419859,
+        49969
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 16,
+       "train": 0.7262000000000001,
+       "eval": {
+        "dev": 0.7182999999999999
+       },
+       "trainCost": [
+        67586612,
+        169239
+       ],
+       "devCost": [
+        75064914,
+        171869
+       ],
+       "improverCost": [
+        12834636,
+        26968028,
+        61302
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 17,
+       "train": 0.7299,
+       "eval": {
+        "dev": 0.6896
+       },
+       "trainCost": [
+        68850653,
+        160252
+       ],
+       "devCost": [
+        74713170,
+        176102
+       ],
+       "improverCost": [
+        2544481,
+        532179,
+        27828
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.6983,
+       "eval": {
+        "dev": 0.7456
+       },
+       "trainCost": [
+        67613932,
+        158912
+       ],
+       "devCost": [
+        68154521,
+        164217
+       ],
+       "improverCost": [
+        8795722,
+        6142276,
+        90380
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.7443000000000001,
+       "eval": {
+        "dev": 0.7012
+       },
+       "trainCost": null,
+       "devCost": [
+        74653181,
+        182541
+       ],
+       "improverCost": [
+        null,
+        0,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 20,
+       "train": 0.7443000000000001,
+       "eval": {
+        "dev": 0.7012
+       },
+       "trainCost": null,
+       "devCost": [
+        74653181,
+        182541
+       ],
+       "improverCost": [
+        1033395,
+        1472866,
+        30964
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 18,
+     "devScore": 0.7456,
+     "testScore": 0.7629
     },
     {
-      "id": "hyperagents",
-      "devRound": 18,
-      "devScore": 0.6787000000000001,
-      "testScore": 0.6112,
-      "train": [
-        0.1449,
-        0.1697,
-        0.2981,
-        0.3494,
-        0.6075,
-        0.5678,
-        0.36089999999999994,
-        0.5677,
-        0.5539999999999999,
-        0.6315999999999999,
-        0.5526,
-        0.5637,
-        0.6618999999999999,
-        0.6648999999999999,
-        0.551,
-        0.6274000000000001,
-        0.6496999999999999,
-        0.6655,
-        0.6739,
-        0.6566,
-        0.6209
-      ]
+     "name": "hyperagents",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        null,
+        null,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1697,
+       "eval": {
+        "dev": 0.2053
+       },
+       "trainCost": [
+        42471198,
+        119410
+       ],
+       "devCost": [
+        41375838,
+        136973
+       ],
+       "improverCost": [
+        1097298,
+        12245632,
+        169578
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.2981,
+       "eval": {
+        "dev": 0.31420000000000003
+       },
+       "trainCost": [
+        12169919,
+        51736
+       ],
+       "devCost": [
+        12010956,
+        52218
+       ],
+       "improverCost": [
+        1097298,
+        12245632,
+        169578
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 3,
+       "train": 0.3494,
+       "eval": {
+        "dev": 0.35450000000000004
+       },
+       "trainCost": [
+        11236416,
+        44136
+       ],
+       "devCost": [
+        11538907,
+        44881
+       ],
+       "improverCost": [
+        1414884,
+        13764480,
+        130165
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": 0.6075,
+       "eval": {
+        "dev": 0.5482
+       },
+       "trainCost": [
+        15713387,
+        62640
+       ],
+       "devCost": [
+        16261606,
+        68851
+       ],
+       "improverCost": [
+        1414884,
+        13764480,
+        130165
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 5,
+       "train": 0.5678,
+       "eval": {
+        "dev": 0.5226
+       },
+       "trainCost": [
+        16019373,
+        61267
+       ],
+       "devCost": [
+        16928713,
+        70542
+       ],
+       "improverCost": [
+        749632,
+        2049408,
+        40659
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.36089999999999994,
+       "eval": {
+        "dev": 0.3998
+       },
+       "trainCost": [
+        10688452,
+        42532
+       ],
+       "devCost": [
+        11940776,
+        46610
+       ],
+       "improverCost": [
+        1279487,
+        2529536,
+        55937
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.5677,
+       "eval": {
+        "dev": 0.6148
+       },
+       "trainCost": [
+        19402398,
+        69542
+       ],
+       "devCost": [
+        20191662,
+        57480
+       ],
+       "improverCost": [
+        3481356,
+        7406208,
+        173784
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.5539999999999999,
+       "eval": {
+        "dev": 0.5233
+       },
+       "trainCost": [
+        16219163,
+        63617
+       ],
+       "devCost": [
+        16224796,
+        71183
+       ],
+       "improverCost": [
+        3481356,
+        7406208,
+        173784
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 9,
+       "train": 0.6315999999999999,
+       "eval": {
+        "dev": 0.5539999999999999
+       },
+       "trainCost": [
+        14870999,
+        55553
+       ],
+       "devCost": [
+        16666105,
+        65553
+       ],
+       "improverCost": [
+        1316537,
+        10258688,
+        131601
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.5526,
+       "eval": {
+        "dev": 0.5323
+       },
+       "trainCost": [
+        19206769,
+        62728
+       ],
+       "devCost": [
+        19443069,
+        60836
+       ],
+       "improverCost": [
+        387852,
+        4801024,
+        62931
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.5637,
+       "eval": {
+        "dev": 0.498
+       },
+       "trainCost": [
+        15565323,
+        75122
+       ],
+       "devCost": [
+        17009917,
+        60094
+       ],
+       "improverCost": [
+        22004097,
+        18238198,
+        234122
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.6618999999999999,
+       "eval": {
+        "dev": 0.662
+       },
+       "trainCost": [
+        13974408,
+        48803
+       ],
+       "devCost": [
+        13890715,
+        48949
+       ],
+       "improverCost": [
+        22004097,
+        18238198,
+        234122
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 13,
+       "train": 0.6648999999999999,
+       "eval": {
+        "dev": 0.6376
+       },
+       "trainCost": [
+        15906883,
+        50158
+       ],
+       "devCost": [
+        17454771,
+        60811
+       ],
+       "improverCost": [
+        22004097,
+        18238198,
+        234122
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 14,
+       "train": 0.551,
+       "eval": {
+        "dev": 0.5543
+       },
+       "trainCost": [
+        21069766,
+        65133
+       ],
+       "devCost": [
+        21609007,
+        56875
+       ],
+       "improverCost": [
+        22656340,
+        25474877,
+        223366
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.6274000000000001,
+       "eval": {
+        "dev": 0.5811
+       },
+       "trainCost": [
+        17723149,
+        86324
+       ],
+       "devCost": [
+        21317271,
+        84279
+       ],
+       "improverCost": [
+        22656340,
+        25474877,
+        223366
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 16,
+       "train": 0.6496999999999999,
+       "eval": {
+        "dev": 0.6262
+       },
+       "trainCost": [
+        15640291,
+        51729
+       ],
+       "devCost": [
+        16954630,
+        51903
+       ],
+       "improverCost": [
+        22656340,
+        25474877,
+        223366
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 17,
+       "train": 0.6655,
+       "eval": {
+        "dev": 0.6441
+       },
+       "trainCost": null,
+       "devCost": [
+        30702913,
+        73242
+       ],
+       "improverCost": [
+        29427129,
+        6907471,
+        205099
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.6739,
+       "eval": {
+        "dev": 0.6787000000000001
+       },
+       "trainCost": null,
+       "devCost": [
+        17552598,
+        56157
+       ],
+       "improverCost": [
+        29427129,
+        6907471,
+        205099
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 19,
+       "train": 0.6566,
+       "eval": {
+        "dev": 0.611
+       },
+       "trainCost": null,
+       "devCost": [
+        17428175,
+        50759
+       ],
+       "improverCost": [
+        29427129,
+        6907471,
+        205099
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 20,
+       "train": 0.6209,
+       "eval": {
+        "dev": 0.6368
+       },
+       "trainCost": [
+        17679027,
+        89627
+       ],
+       "devCost": [
+        19002118,
+        80290
+       ],
+       "improverCost": [
+        27737585,
+        16701739,
+        225116
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 18,
+     "devScore": 0.6787000000000001,
+     "testScore": 0.6112
     },
     {
-      "id": "darwinx",
-      "devRound": 15,
-      "devScore": 0.6587999999999999,
-      "testScore": 0.619,
-      "train": [
-        0.1449,
-        0.1568,
-        0.157,
-        0.1449,
-        0.1449,
-        0.2526,
-        0.1449,
-        0.3357,
-        0.3665,
-        0.4075,
-        0.1449,
-        0.5487,
-        0.5874,
-        0.6412,
-        0.6717,
-        0.6679999999999999,
-        0.6973,
-        0.6973,
-        0.6973,
-        0.1449,
-        0.6973
-      ]
+     "name": "darwinx",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        null,
+        null,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1568,
+       "eval": {
+        "dev": 0.1852
+       },
+       "trainCost": [
+        18391191,
+        85836
+       ],
+       "devCost": [
+        18464748,
+        88298
+       ],
+       "improverCost": [
+        1266210,
+        1337344,
+        41332
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.157,
+       "eval": {
+        "dev": 0.17370000000000002
+       },
+       "trainCost": [
+        12543616,
+        71350
+       ],
+       "devCost": [
+        12208706,
+        71532
+       ],
+       "improverCost": [
+        155076,
+        2885120,
+        38399
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 3,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        75135,
+        982016,
+        10710
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        144388,
+        1031936,
+        9611
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 5,
+       "train": 0.2526,
+       "eval": {
+        "dev": 0.35009999999999997
+       },
+       "trainCost": [
+        72718656,
+        204546
+       ],
+       "devCost": [
+        74680658,
+        210059
+       ],
+       "improverCost": [
+        417217,
+        4129792,
+        62526
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        190540,
+        2292992,
+        28030
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 7,
+       "train": 0.3357,
+       "eval": {
+        "dev": 0.32420000000000004
+       },
+       "trainCost": [
+        74209920,
+        251421
+       ],
+       "devCost": [
+        69140403,
+        246705
+       ],
+       "improverCost": [
+        350408,
+        9210368,
+        116090
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.3665,
+       "eval": {
+        "dev": 0.44179999999999997
+       },
+       "trainCost": [
+        33331864,
+        186412
+       ],
+       "devCost": [
+        42767883,
+        211927
+       ],
+       "improverCost": [
+        1229429,
+        5612672,
+        57929
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 9,
+       "train": 0.4075,
+       "eval": {
+        "dev": 0.4493
+       },
+       "trainCost": [
+        40332761,
+        209784
+       ],
+       "devCost": [
+        43132627,
+        215264
+       ],
+       "improverCost": [
+        1123928,
+        1099053,
+        29529
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        null,
+        0,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 11,
+       "train": 0.5487,
+       "eval": {
+        "dev": 0.5645
+       },
+       "trainCost": [
+        53427763,
+        254895
+       ],
+       "devCost": [
+        50316340,
+        265004
+       ],
+       "improverCost": [
+        6753689,
+        6744067,
+        64368
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.5874,
+       "eval": {
+        "dev": 0.5596
+       },
+       "trainCost": [
+        67928548,
+        289432
+       ],
+       "devCost": [
+        73664256,
+        292317
+       ],
+       "improverCost": [
+        16172356,
+        22534589,
+        255583
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 13,
+       "train": 0.6412,
+       "eval": {
+        "dev": 0.6442999999999999
+       },
+       "trainCost": [
+        85655614,
+        329376
+       ],
+       "devCost": [
+        89223477,
+        322343
+       ],
+       "improverCost": [
+        4445930,
+        6666690,
+        98482
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 14,
+       "train": 0.6717,
+       "eval": {
+        "dev": 0.6520999999999999
+       },
+       "trainCost": null,
+       "devCost": [
+        70395362,
+        306299
+       ],
+       "improverCost": [
+        19395020,
+        4522054,
+        102744
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 15,
+       "train": 0.6679999999999999,
+       "eval": {
+        "dev": 0.6587999999999999
+       },
+       "trainCost": [
+        66194209,
+        297814
+       ],
+       "devCost": [
+        63329416,
+        285897
+       ],
+       "improverCost": [
+        12236718,
+        6691650,
+        112045
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 16,
+       "train": 0.6973,
+       "eval": {
+        "dev": 0.6557
+       },
+       "trainCost": [
+        63642750,
+        239563
+       ],
+       "devCost": [
+        66522797,
+        251247
+       ],
+       "improverCost": [
+        9669157,
+        10675622,
+        105120
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 17,
+       "train": 0.6973,
+       "eval": {
+        "dev": 0.6557
+       },
+       "trainCost": null,
+       "devCost": [
+        66522797,
+        251247
+       ],
+       "improverCost": [
+        539866,
+        969448,
+        19220
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.6973,
+       "eval": {
+        "dev": 0.6557
+       },
+       "trainCost": null,
+       "devCost": [
+        66522797,
+        251247
+       ],
+       "improverCost": [
+        862083,
+        1012895,
+        20281
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        512601,
+        744868,
+        19242
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 20,
+       "train": 0.6973,
+       "eval": {
+        "dev": 0.6557
+       },
+       "trainCost": null,
+       "devCost": [
+        66522797,
+        251247
+       ],
+       "improverCost": [
+        null,
+        0,
+        null
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 15,
+     "devScore": 0.6587999999999999,
+     "testScore": 0.619
     },
     {
-      "id": "ahe",
-      "devRound": 11,
-      "devScore": 0.6476999999999999,
-      "testScore": 0.6439,
-      "train": [
-        0.1449,
-        0.1549,
-        0.162,
-        0.1886,
-        0.3166,
-        0.4028,
-        0.5563,
-        0.5274,
-        0.5153,
-        0.6253,
-        0.6324000000000001,
-        0.6364,
-        0.6435,
-        0.6822,
-        0.6192,
-        0.6254,
-        0.6866,
-        0.6386999999999999,
-        0.6426000000000001,
-        0.6581999999999999,
-        0.675
-      ]
+     "name": "ahe",
+     "rounds": [
+      {
+       "round": 0,
+       "train": 0.1449,
+       "eval": {
+        "dev": 0.171
+       },
+       "trainCost": null,
+       "devCost": [
+        11715145,
+        67764
+       ],
+       "improverCost": [
+        null,
+        null,
+        null
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 1,
+       "train": 0.1549,
+       "eval": {
+        "dev": 0.1955
+       },
+       "trainCost": [
+        32202289,
+        98032
+       ],
+       "devCost": [
+        31039889,
+        98175
+       ],
+       "improverCost": [
+        9108724,
+        14868183,
+        156811
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 2,
+       "train": 0.162,
+       "eval": {
+        "dev": 0.17149999999999999
+       },
+       "trainCost": [
+        57229879,
+        144371
+       ],
+       "devCost": [
+        49967606,
+        130687
+       ],
+       "improverCost": [
+        9108724,
+        14868183,
+        156811
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 3,
+       "train": 0.1886,
+       "eval": {
+        "dev": 0.175
+       },
+       "trainCost": [
+        62609227,
+        149556
+       ],
+       "devCost": [
+        62852451,
+        150303
+       ],
+       "improverCost": [
+        9061384,
+        12718715,
+        160025
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 4,
+       "train": 0.3166,
+       "eval": {
+        "dev": 0.2938
+       },
+       "trainCost": [
+        35925115,
+        89985
+       ],
+       "devCost": [
+        34944094,
+        90915
+       ],
+       "improverCost": [
+        9061384,
+        12718715,
+        160025
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 5,
+       "train": 0.4028,
+       "eval": {
+        "dev": 0.3765
+       },
+       "trainCost": [
+        41475870,
+        99430
+       ],
+       "devCost": [
+        35960641,
+        95253
+       ],
+       "improverCost": [
+        21274454,
+        14720371,
+        211729
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 6,
+       "train": 0.5563,
+       "eval": {
+        "dev": 0.5151
+       },
+       "trainCost": [
+        38482737,
+        99315
+       ],
+       "devCost": [
+        28878139,
+        85110
+       ],
+       "improverCost": [
+        21274454,
+        14720371,
+        211729
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 7,
+       "train": 0.5274,
+       "eval": {
+        "dev": 0.5623
+       },
+       "trainCost": [
+        73538957,
+        155493
+       ],
+       "devCost": [
+        71234220,
+        151212
+       ],
+       "improverCost": [
+        5819854,
+        11884239,
+        131324
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 8,
+       "train": 0.5153,
+       "eval": {
+        "dev": 0.5139
+       },
+       "trainCost": [
+        32161295,
+        90051
+       ],
+       "devCost": [
+        21157361,
+        68189
+       ],
+       "improverCost": [
+        5819854,
+        11884239,
+        131324
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 9,
+       "train": 0.6253,
+       "eval": {
+        "dev": 0.6308
+       },
+       "trainCost": [
+        45461224,
+        113526
+       ],
+       "devCost": [
+        45248508,
+        112864
+       ],
+       "improverCost": [
+        10218736,
+        13771557,
+        132884
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 10,
+       "train": 0.6324000000000001,
+       "eval": {
+        "dev": 0.5979
+       },
+       "trainCost": [
+        50892636,
+        121898
+       ],
+       "devCost": [
+        44602019,
+        111805
+       ],
+       "improverCost": [
+        10218736,
+        13771557,
+        132884
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 11,
+       "train": 0.6364,
+       "eval": {
+        "dev": 0.6476999999999999
+       },
+       "trainCost": null,
+       "devCost": [
+        42865932,
+        109789
+       ],
+       "improverCost": [
+        28526755,
+        6709753,
+        189760
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 12,
+       "train": 0.6435,
+       "eval": {
+        "dev": 0.6093999999999999
+       },
+       "trainCost": null,
+       "devCost": [
+        54018015,
+        134557
+       ],
+       "improverCost": [
+        28526755,
+        6709753,
+        189760
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 13,
+       "train": 0.6822,
+       "eval": {
+        "dev": 0.627
+       },
+       "trainCost": [
+        48590969,
+        117162
+       ],
+       "devCost": [
+        45708504,
+        114829
+       ],
+       "improverCost": [
+        25635186,
+        12367131,
+        222540
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 14,
+       "train": 0.6192,
+       "eval": {
+        "dev": 0.6228
+       },
+       "trainCost": [
+        50346455,
+        122972
+       ],
+       "devCost": [
+        47118440,
+        117537
+       ],
+       "improverCost": [
+        25635186,
+        12367131,
+        222540
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 15,
+       "train": 0.6254,
+       "eval": {
+        "dev": 0.5690999999999999
+       },
+       "trainCost": [
+        50293444,
+        124893
+       ],
+       "devCost": [
+        49555845,
+        123105
+       ],
+       "improverCost": [
+        7859030,
+        8874282,
+        102324
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 16,
+       "train": 0.6866,
+       "eval": {
+        "dev": 0.6185
+       },
+       "trainCost": [
+        51618120,
+        125312
+       ],
+       "devCost": [
+        37677115,
+        103179
+       ],
+       "improverCost": [
+        7859030,
+        8874282,
+        102324
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 17,
+       "train": 0.6386999999999999,
+       "eval": {
+        "dev": 0.5965
+       },
+       "trainCost": [
+        51444671,
+        122034
+       ],
+       "devCost": [
+        48579086,
+        117177
+       ],
+       "improverCost": [
+        11015940,
+        8953425,
+        146427
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 18,
+       "train": 0.6426000000000001,
+       "eval": {
+        "dev": 0.6012
+       },
+       "trainCost": [
+        51901229,
+        125889
+       ],
+       "devCost": [
+        48413399,
+        121296
+       ],
+       "improverCost": [
+        30687146,
+        10007187,
+        221069
+       ],
+       "sharedImproverCost": false
+      },
+      {
+       "round": 19,
+       "train": 0.6581999999999999,
+       "eval": {
+        "dev": 0.6222
+       },
+       "trainCost": [
+        60589409,
+        127812
+       ],
+       "devCost": [
+        52893893,
+        121451
+       ],
+       "improverCost": [
+        30687146,
+        10007187,
+        221069
+       ],
+       "sharedImproverCost": true
+      },
+      {
+       "round": 20,
+       "train": 0.675,
+       "eval": {
+        "dev": 0.6095
+       },
+       "trainCost": [
+        50914111,
+        114285
+       ],
+       "devCost": [
+        49818850,
+        113905
+       ],
+       "improverCost": [
+        8680512,
+        2200873,
+        84350
+       ],
+       "sharedImproverCost": false
+      }
+     ],
+     "selectedRound": 11,
+     "devScore": 0.6476999999999999,
+     "testScore": 0.6439
     }
-  ]
+   ]
+  }
+ ]
 }

@@ -166,7 +166,8 @@ ${splits.map((option) => `[data-hg-active-split="${option.value}"] > section[dat
         row.hidden = method !== "*" && row.dataset.methodRow !== method;
       }
       for (const line of lines) {
-        line.hidden = method !== "*" && line.dataset.methodLine !== method;
+        const name = line.dataset.methodLine ?? line.dataset.methodBar;
+        line.toggleAttribute("hidden", method !== "*" && name !== method);
       }
     };
 
@@ -362,6 +363,9 @@ ${splits.map((option) => `[data-hg-active-split="${option.value}"] > section[dat
   .hg-chart {
     margin: 0.5rem 0 1rem;
     overflow-x: auto;
+  }
+  .hg-chart svg [hidden] {
+    display: none;
   }
   .hg-chart svg {
     max-width: 100%;

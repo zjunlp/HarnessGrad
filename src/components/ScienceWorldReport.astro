@@ -1,70 +1,142 @@
 ---
+import BenchmarkChart from './BenchmarkChart.astro';
+import BenchmarkFilter from './BenchmarkFilter.astro';
 import data from '../data/results/scienceworld.json';
-const zh = Astro.props.lang === 'zh';
-const links = 'https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/' + data.revision + '/Experiments/ScienceWorld/qwen3.5-9b_loop/dsh-deepseek-v4.1-flash-1017';
-const palette = ['#2b8c76','#9c62c4','#2673b6','#d16544','#a38621','#b75085','#526078'];
-const labels: Record<string,string> = {
-  sica_ci: 'SICA-CI', dream_rsi: 'DREAM-RSI', dgm: 'DGM', harnessx: 'HarnessX',
-  hyperagents: 'HyperAgents', darwinx: 'DarwinX', ahe: 'AHE',
+
+const { lang = 'en' } = Astro.props;
+const zh = lang === 'zh';
+const stack = data.stacks[0];
+const { methods } = stack;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const records = `https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/${data.revision}/Experiments/ScienceWorld/qwen3.5-9b_loop/${stack.id}`;
+const existingMethodPages = import.meta.glob('../content/docs/methods/*.mdx');
+const methodLink = (name: string) => `../content/docs/methods/${name}.mdx` in existingMethodPages
+  ? `${base}/methods/${name}/`
+  : `${records}/${name}`;
+const score = (value: number | undefined) => value == null ? '—' : value.toFixed(3);
+const tokens = (value: number | null) => value == null ? '—' : (value / 1e6).toFixed(2);
+const options = (values: string[]) => values.map((value) => ({ value, label: value }));
+const rounds = methods[0].rounds.map(({ round }) => round);
+const studies = [
+  { pool: 'train', description: zh ? '训练集' : 'study split',
+    chart: zh ? '每轮训练分数' : 'Study score by round' },
+  { pool: 'dev', description: zh ? '用于选择轮次的验证集' : 'validation split, the pool a round is chosen on',
+    chart: zh ? '各检查点的验证分数' : 'Score by checkpoint round on dev' },
+] as const;
+const splits = (['train', 'dev', 'test'] as const).map((pool) => ({
+  value: pool, label: pool, count: data.pools[pool], h0: score(data.reference[pool]),
+}));
+const attributes = {
+  'data-base-harness': stack.baseHarness,
+  'data-task-model': stack.taskModel,
+  'data-meta-model': stack.metaModel,
+  'data-meta-harness': stack.metaHarness,
 };
-const score = (v: number) => v.toFixed(3);
-const x = (r: number) => 44 + r * 33;
-const y = (value: number) => 290 - value * 250;
-const rows = data.methods.map((m, i) => {
-  let drawing = false;
-  const path = m.train.map((value, round) => {
-    if (value == null) { drawing = false; return ''; }
-    const command = drawing ? 'L' : 'M';
-    drawing = true;
-    return command + x(round) + ',' + y(value);
-  }).join(' ');
-  return {...m, path, label: labels[m.id] || m.id, color: palette[i]};
-});
+const devPoints = methods.reduce((total, method) => total + method.rounds.filter(
+  ({ round, eval: evaluation }) => round > 0 && evaluation.dev != null,
+).length, 0);
+const testRows = [...methods].sort((a, b) => b.testScore - a.testScore);
 ---
-<section class="sw-summary" aria-label={zh ? '实验条件' : 'Experiment conditions'}>
-  <div><span>{zh ? '任务侧' : 'Task agent'}</span><strong>{data.taskAgent.model} / {data.taskAgent.harness}</strong></div>
-  <div><span>{zh ? '改进侧' : 'Meta agent'}</span><strong>{data.metaAgent.harness}</strong></div>
-  <div><span>{zh ? '测试基线 H₀' : 'Test baseline H₀'}</span><strong>{score(data.baseline.test_score)}</strong></div>
+
+<BenchmarkFilter
+  slug={data.slug}
+  splits={splits}
+  methods={options(methods.map(({ name }) => name))}
+  taskModels={options([stack.taskModel])}
+  baseHarnesses={options([stack.baseHarness])}
+  metaModels={options([stack.metaModel])}
+  metaHarnesses={options([stack.metaHarness])}
+/>
+
+<p>{zh
+  ? `${methods.length} 种方法 · ${devPoints} 个已发布验证轮次（不含 H0）`
+  : `${methods.length} methods · ${devPoints} published validation points (excluding H0)`} · <a href={records}>{zh ? 'Hugging Face 原始记录' : 'Published records on Hugging Face'}</a></p>
+
+{studies.map(({ pool, description, chart }) => (
+  <section data-split={pool} {...attributes}>
+    <h3 id={pool}><code>{pool}</code> · {data.pools[pool]} {zh ? '道任务' : 'tasks'} · H0 {score(data.reference[pool])} · {description}</h3>
+    <BenchmarkChart slug={data.slug} pool={pool} alt={chart} />
+
+    <p><strong>{zh ? '分数' : 'Score'} — <code>{pool}</code></strong></p>
+    <div class="hg-table">
+      <table>
+        <thead><tr><th scope="col">{zh ? '方法' : 'method'}</th>
+          {rounds.map((round) => <th scope="col">{round === 0 ? 'r0 (H0)' : `r${round}`}</th>)}
+        </tr></thead>
+        <tbody>{methods.map((method) => (
+          <tr data-method-row={method.name}>
+            <td><a href={methodLink(method.name)}><code>{method.name}</code></a></td>
+            {method.rounds.map((round) => <td>{score(pool === 'train' ? round.train ?? undefined : round.eval.dev)}</td>)}
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+
+    <p><strong>{zh ? '开销 — 任务智能体的逐轮 token 用量' : 'Cost — task-agent tokens per round'}</strong></p>
+    <div class="hg-table">
+      <table>
+        <caption>{zh ? '单位为百万 token。in 为输入，out 为输出。— 表示没有完整且可核对的用量记录。'
+          : 'Millions of tokens (M). in = input, out = generated tokens. A dash marks missing or incomplete usage.'}</caption>
+        <thead>
+          <tr><th scope="col" rowspan="2">{zh ? '方法' : 'method'}</th>
+            {rounds.slice(pool === 'train' ? 1 : 0).map((round) => <th colspan="2">r{round}</th>)}
+          </tr>
+          <tr>{rounds.slice(pool === 'train' ? 1 : 0).map(() => <><th scope="col">in</th><th scope="col">out</th></>)}</tr>
+        </thead>
+        <tbody>{methods.map((method) => (
+          <tr data-method-row={method.name}>
+            <td><a href={methodLink(method.name)}><code>{method.name}</code></a></td>
+            {method.rounds.slice(pool === 'train' ? 1 : 0).map((round) =>
+              ((pool === 'train' ? round.trainCost : round.devCost) ?? [null, null])
+                .map((value) => <td>{tokens(value)}</td>))}
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+
+    <p><strong>{zh ? '开销 — 生成检查点的逐轮改进 token 用量' : 'Cost — improver tokens per checkpoint round'}</strong></p>
+    <div class="hg-table">
+      <table>
+        <caption>{zh ? '单位为百万 token。in 为输入，cache 为缓存读取，out 为输出。↳ 表示用量已计入同批的首个候选。'
+          : 'Millions of tokens (M). in = input, cache = cache reads, out = generated tokens. ↳ shares the spend of the first candidate in the submission.'}</caption>
+        <thead>
+          <tr><th scope="col" rowspan="2">{zh ? '方法' : 'method'}</th>
+            {rounds.slice(1).map((round) => <th colspan="3">r{round}</th>)}
+          </tr>
+          <tr>{rounds.slice(1).map(() => <><th scope="col">in</th><th scope="col">cache</th><th scope="col">out</th></>)}</tr>
+        </thead>
+        <tbody>{methods.map((method) => (
+          <tr data-method-row={method.name}>
+            <td><a href={methodLink(method.name)}><code>{method.name}</code></a></td>
+            {method.rounds.slice(1).map((round) => round.improverCost.map(
+              (value) => <td>{round.sharedImproverCost ? '↳' : tokens(value)}</td>))}
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+
+    <p>{zh ? 'r0 是共享的 H0。分数表中的 — 表示该轮没有通过发布核验的分数。'
+      : 'Round 0 is shared H0. A dash in the score table marks a round without a verified score in this release.'}</p>
+  </section>
+))}
+
+<section data-split="test" {...attributes}>
+  <h3 id="test"><code>test</code> · {data.pools.test} {zh ? '道任务' : 'tasks'}</h3>
+  <BenchmarkChart slug={data.slug} pool="test" alt={zh ? '各方法的测试分数' : 'Test score per method'} />
+  <div class="hg-table">
+    <table>
+      <thead><tr>
+        <th scope="col">{zh ? '方法' : 'method'}</th>
+        <th scope="col">{zh ? 'dev 选定轮次' : 'chosen on dev'}</th>
+        <th scope="col">dev ({data.pools.dev})</th>
+        <th scope="col">test ({data.pools.test})</th>
+      </tr></thead>
+      <tbody>{testRows.map((method) => (
+        <tr data-method-row={method.name}>
+          <td><a href={methodLink(method.name)}><code>{method.name}</code></a></td>
+          <td>r{method.selectedRound}</td><td>{score(method.devScore)}</td><td><strong>{score(method.testScore)}</strong></td>
+        </tr>
+      ))}</tbody>
+    </table>
+  </div>
 </section>
-<figure class="sw-chart">
-  <svg viewBox="0 0 724 322" role="img" aria-labelledby="sw-title sw-desc">
-    <title id="sw-title">{zh ? 'ScienceWorld 训练分数' : 'ScienceWorld training scores'}</title>
-    <desc id="sw-desc">{zh ? '七种方法从第 0 到第 20 轮的训练分数。未通过核验的测量留空。' : 'Scores for seven methods across rounds 0 through 20. Excluded measurements appear as gaps.'}</desc>
-    {[0,0.25,0.5,0.75,1].map(v => <g>
-      <line x1="44" x2="704" y1={y(v)} y2={y(v)} class="sw-grid"/>
-      <text x="35" y={y(v)+4} text-anchor="end">{v.toFixed(2)}</text>
-    </g>)}
-    {[0,5,10,15,20].map(r => <text x={x(r)} y="309" text-anchor="middle">{r}</text>)}
-    {rows.map(row => <path d={row.path} fill="none" stroke={row.color} stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />)}
-  </svg>
-  <ul class="sw-key">
-    {rows.map(row => <li><span style={'background:' + row.color}></span>{row.label}</li>)}
-  </ul>
-  <figcaption>{zh ? '横轴为轮次。未完成的测量留空，不计为零。' : 'Horizontal axis: round. Incomplete measurements remain gaps.'}</figcaption>
-</figure>
-<div class="sw-table">
-<table>
-  <thead><tr><th scope="col">{zh ? '方法' : 'Method'}</th><th scope="col">{zh ? '按 dev 选定轮次' : 'Dev-selected round'}</th><th scope="col">dev</th><th scope="col">test</th></tr></thead>
-  <tbody>
-    <tr><th scope="row">H₀</th><td>0</td><td>{score(data.baseline.dev_score)}</td><td>{score(data.baseline.test_score)}</td></tr>
-    {rows.map(row => <tr><th scope="row"><a href={links + '/' + row.id}>{row.label}</a></th><td>{row.devRound}</td><td>{score(row.devScore)}</td><td>{score(row.testScore)}</td></tr>)}
-  </tbody>
-</table>
-</div>
-<p><a href={links}>{zh ? '打开该版本的完整运行记录 →' : 'Open the complete records at this revision →'}</a></p>
-<style>
-.sw-summary { display:grid; grid-template-columns: repeat(auto-fit,minmax(125px,1fr)); gap:12px; margin:1.6rem 0; }
-.sw-summary > div { margin-top:0; display:grid; gap:3px; padding:12px 16px; border:1px solid var(--sl-color-gray-5); border-radius:12px; }
-.sw-summary > div > * { margin:0; }
-.sw-summary span, .sw-chart figcaption { font-size:.82rem; color:var(--sl-color-gray-2); }
-.sw-chart { margin:0 0 1.8rem; padding:.8rem 1rem; border:1px solid var(--sl-color-gray-5); border-radius:14px; min-width:0; }
-.sw-chart svg { width:100%; display:block; }
-.sw-chart text { fill:var(--sl-color-gray-2); font-size:12px; }
-.sw-grid { stroke:var(--sl-color-gray-5); stroke-width:1; }
-.sw-key { display:flex; gap:6px 14px; flex-wrap:wrap; list-style:none; padding-left:0; margin:.4rem 0; font-size:.8rem; }
-.sw-key li { display:flex; align-items:center; gap:6px; margin:0; }
-.sw-key span { display:block; width:12px; height:3px; border-radius:4px; flex:none; }
-.sw-table { overflow:auto; }
-.sw-table table { display:table; width:100%; }
-.sw-table td { text-align:right; font-variant-numeric:tabular-nums; }
-</style>
