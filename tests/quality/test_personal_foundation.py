@@ -125,7 +125,7 @@ def test_failed_initial_migration_is_atomic(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize('version,status', [('codex-cli 0.154.0', 'ready'), ('codex-cli 0.100.0', 'unavailable')])
 def test_probe_does_not_infer_protocol_or_writes_from_version(version, status):
-    result = CodexAdapter().probe(Path(sys.executable), read_version=lambda _: version)
+    result = CodexAdapter().probe(Path(sys.executable).resolve(), read_version=lambda _: version)
     checks = {row.scope: row.status for row in result.checks}
     assert checks['codex.executable_version'] == status
     assert checks['codex.existing_session_observation'] == 'unchecked'
@@ -135,7 +135,7 @@ def test_probe_does_not_infer_protocol_or_writes_from_version(version, status):
 def test_probe_missing_permission_and_managed_policy(tmp_path):
     assert CodexAdapter().probe(tmp_path/'missing').checks[0].status == 'unavailable'
     def denied(_): raise PermissionError('private path is not disclosed')
-    value = CodexAdapter().probe(Path(sys.executable), managed_hooks=True, read_version=denied).as_dict()
+    value = CodexAdapter().probe(Path(sys.executable).resolve(), managed_hooks=True, read_version=denied).as_dict()
     assert value['checks'][0]['status'] == 'refused'
     assert next(row for row in value['checks'] if row['scope'] == 'codex.hooks')['status'] == 'refused'
     assert 'private path' not in json.dumps(value)
