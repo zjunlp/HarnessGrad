@@ -5,10 +5,12 @@ experiment finished, and graceful method stopping is different from a failure.
 """
 from __future__ import annotations
 
+from harnessgrad.provenance.h0_identity import has_content_admission
+
 
 def describe(curve, *, requested_rounds, failed_steps=(), method_stopped=False):
     requested = max(0, int(requested_rounds))
-    valid = [p for p in curve if p.get('measured_by_platform') is True
+    valid = [p for p in curve if (p.get('measured_by_platform') is True or has_content_admission(p))
              and p.get('score') is not None and not p.get('unmeasured')
              and p.get('n_scored', 1) != 0]
     completed_ids = {p['round'] for p in valid if isinstance(p.get('round'), int) and p['round'] > 0}

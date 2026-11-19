@@ -178,6 +178,44 @@ def admit(value):
         raise ValueError(f"dataset_runtime_identity artifact unavailable: {exc}") from exc
 
 
+def content_key(value, *, binding_keys=None):
+    """Resolve local v1 bindings into content evidence without changing their schema."""
+    if value is None:
+        return None
+    from harnessgrad.provenance.runtime_content import artifact, digest
+    value = validate(value)
+    admit(value)
+    bindings = {} if binding_keys is None else binding_keys
+
+    def describe(record, profile):
+        runtime_id = record["runtime_id"]
+        key = (profile, runtime_id)
+        if key not in bindings:
+            content = artifact(record, artifact_canonical=dataset_runtime._canonical)
+            required = ("descriptor_sha256", "requirements_sha256")
+            if any(not re.fullmatch(r"[0-9a-f]{64}", content.get(name, "")) for name in required):
+                raise ValueError("dataset runtime lacks descriptor or requirements content identity")
+            if any(name in record and record[name] != content[name] for name in required):
+                raise ValueError("dataset runtime content contradicts its binding")
+            bindings[key] = {**content, "profile": profile, "dataset": record["dataset"]}
+        return bindings[key]
+
+    provider = value["provider"]
+    artifacts, tasks = {}, {}
+    for tid, roles in _expand(value).items():
+        tasks[tid] = {}
+        for role, binding in roles.items():
+            content = describe(binding, "execution")
+            key = digest(content)
+            artifacts[key] = content
+            tasks[tid][role] = key
+    return {
+        "provider": None if provider is None else describe(provider, "provider"),
+        "artifacts": artifacts,
+        "tasks": tasks,
+    }
+
+
 def _bindings(task_ids, setups, verifiers, envs=None):
     selected = {}
     for tid in task_ids:

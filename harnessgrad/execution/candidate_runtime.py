@@ -66,6 +66,35 @@ def require_same(reference, current):
         raise RuntimeUnavailable("; ".join(errors))
 
 
+def content_key(binding):
+    """Project a locally admitted candidate binding by source and execution bytes."""
+    if binding is None:
+        return None
+    from harnessgrad.provenance.runtime_content import artifact
+    from harnessgrad.execution.python_runtime.python_artifacts import canonical
+    value = validate(binding)
+    native = value.get("native", value)
+    result = {k: value[k] for k in ("version", "kind", "source_sha256", "declaration_sha256")}
+    result["native"] = artifact(native["artifact"], artifact_canonical=canonical)
+    if "images" in value:
+        result["images"] = {}
+        for image, record in value["images"].items():
+            image_key = image.rsplit("@", 1)[-1]
+            base = record["base"]
+            image_content = result["native"] if base is None else artifact(
+                record["artifact"], artifact_canonical=canonical)
+            item = {"base": None if base is None else
+                    {k: v for k, v in base.items() if k not in {"executable", "base_prefix"}},
+                    "artifact": image_content}
+            # The digest is the image identity; a registry alias is deployment.
+            if "image" in item["artifact"]:
+                item["artifact"]["image"] = image_key
+            if image_key in result["images"] and result["images"][image_key] != item:
+                raise ValueError("conflicting Python runtime placements for the same image")
+            result["images"][image_key] = item
+    return result
+
+
 def _routes(envs, setups, sandbox, *, allow_exec=False):
     if not sandbox:
         raise RuntimeUnavailable("Managed Python candidates require the native actor sandbox")

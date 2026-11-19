@@ -170,6 +170,13 @@ def build_parser() -> argparse.ArgumentParser:
                          "trace set, which is the one thing a comparison cannot absorb. The "
                          "reused point records `shared_from` naming the run it came from. "
                          "Refused unless both runs share the base harness sha")
+    ap.add_argument("--h0-comparability", choices=("strict", "content"), default="strict",
+                    help="opt into content-attested H0 reuse rather than deployment equality")
+    ap.add_argument("--h0-attestation-sha256", metavar="SHA256",
+                    help="trusted digest of the original donor's h0-content-attestation.json")
+    ap.add_argument("--h0-agent-content", type=Path, metavar="FILE",
+                    help="reviewed serving receipt for the configured agent; on fresh measurements "
+                         "capture a portable H0 attestation")
     ap.add_argument("--h0-subset-view", action="store_true",
                     help="derive a verified proper subset of an original --h0-from donor; "
                          "requires --sampling all and explicit current --tasks")
@@ -298,6 +305,14 @@ def parse_run_args(
     for field, default in scenario_defaults.items():
         if not hasattr(args, field):
             setattr(args, field, default)
+    if args.h0_comparability == "content":
+        if (not args.h0_from or args.resume or args.side != "train" or args.h0_subset_view
+                or not args.h0_agent_content or not args.h0_attestation_sha256):
+            ap.error("--h0-comparability content requires a train-side --h0-from, "
+                     "--h0-agent-content and --h0-attestation-sha256")
+    elif args.h0_attestation_sha256 or (args.h0_agent_content and
+            (args.h0_from or args.resume or args.side != "train")):
+        ap.error("H0 content options require explicit content reuse or a fresh train-side capture")
     if args.h0_subset_view and (not args.h0_from or args.resume or args.sampling != "all"
                                 or not args.tasks or args.side != "train"):
         ap.error("--h0-subset-view requires --h0-from, --sampling all, explicit --tasks, --side train, and no --resume")

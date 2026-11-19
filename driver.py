@@ -976,7 +976,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             restored=resume_state is not None, ops=workspace_ops, journal=preparation_journal)
         if not args.resume:
             prepared = prepare_committed_candidate(work, PreparationOptions(
-                args.side, args.from_run, args.h0_from, Path(args.runs_root),
+                args.side, args.from_run, None if args.h0_comparability == "content" else args.h0_from,
+                Path(args.runs_root),
                 args.harness_runtime_binding, args.sandbox), envs=envs, setups=setups,
                 eval_from=eval_from, ops=workspace_ops, journal=preparation_journal)
             if prepared.preparation is not None:
@@ -1047,12 +1048,22 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity,
         args.measurement_components)
     h0_attribution = h0_planning.RunAttribution(run_id, mode, improver)
+    content_capture = None
     if resume_state is None:
         h0_sha = h0_planning.commit_h0_source(work, commit_state)
         t0 = time.time()
         shared_point = None
         try:
-            if args.h0_from:
+            if args.h0_agent_content:
+                content_capture = h0_planning.capture_content(work, h0_sha, h0_identities, h0_options,
+                    agent_path=args.h0_agent_content, tasks=tasks_all, scorable=scorable, setups=setups,
+                    verifiers=verifiers, envs=envs)
+            if args.h0_comparability == "content":
+                reused = h0_planning.materialize_content_h0(
+                    args.h0_from, Path(args.runs_root), args.h0_attestation_sha256, content_capture,
+                    h0_sha, man, h0_attribution, h0_options, h0_identities, console)
+                base, shared_point = reused.base, reused.point
+            elif args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
                 if args.h0_subset_view:
                     from harnessgrad.orchestration.h0_subset import materialize_subset
@@ -1127,6 +1138,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             return 2
         task_ids, train_ids = h0_selection.task_ids, h0_selection.train_ids
         tasks, sampling = h0_selection.tasks, h0_selection.sampling
+        if args.h0_comparability == "content" and set(task_ids) != set(shared_point["per_task"]):
+            console.note("refusing content H0 reuse: recipient sampling changes the attested task cohort",
+                         level="error")
+            return 2
     else:
         base = resume_state["base"]
         h0_sha = resume_state["h0_sha"]
@@ -1184,7 +1199,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # The base harness is always evaluated by the platform, so its point is a
     # platform measurement like any other. Leaving the field unset made the
     # exported record claim the score was the method's -- the opposite of true.
-    curve[0]["measured_by_platform"] = True
+    if not h0_identity.has_content_admission(curve[0]):
+        curve[0]["measured_by_platform"] = True
     # The verifier's *kind*, never its spec. This point is written into the method's
     # channel, so an argv or an expected answer here would hand a method the grade it
     # is being measured against -- the same leak the eval traces are withheld for.
@@ -1198,6 +1214,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     _save_verdicts(run_dir, 0, base, [t["task_id"] for t in tasks])
     _save_traces(run_dir, 0, base.get("traces") or {}, train_ids, split,
                  trial_traces=base.get("trial_traces"))
+    if content_capture is not None and shared_point is None:
+        try:
+            h0_planning.write_content_attestation(run_dir, run_id, content_capture, base, console)
+        except h0_planning.H0Refused as exc:
+            exc.report(console)
+            return 2
 
     # 在分派之前挡住相对的入口路径。放在 main 里,因为 `_run_mode_a/b` 返回的是
     # 曲线,不是退出码 —— 第一次把检查放进 mode 函数时,`return 2` 让 main 拿一个

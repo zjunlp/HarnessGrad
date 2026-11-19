@@ -25,6 +25,8 @@ import json
 import sys
 from pathlib import Path
 
+from harnessgrad.provenance.h0_identity import has_content_admission
+
 #: label column in the header / artifact blocks. 10, not 9: `workspace` is
 #: exactly 9 characters and its value ran into the label with no space between.
 PAD = 10
@@ -163,7 +165,8 @@ class Console:
         watching it happen; the table at the end is the record, this is the
         progress.
         """
-        measured = point is not None and point.get("measured_by_platform", True)
+        measured = point is not None and (
+            point.get("measured_by_platform", True) or has_content_admission(point))
         scores = ""
         if point is not None and measured:
             # Named by `score_kind`, like the table. This line said "eval" on every run
@@ -231,11 +234,12 @@ class Console:
 
         rows = [f"  {title}", head]
         for p in curve:
-            measured = p.get("measured_by_platform", True)
+            imported = has_content_admission(p)
+            measured = p.get("measured_by_platform", True) or imported
             if measured:
-                lo, hi = p["score_ci95"]
-                ci = f"[{lo:.2f}, {hi:.2f}]" if lo == lo else "n/a"
-                score, by = num(p["score"]), "platform"
+                lo, hi = p.get("score_ci95") or (None, None)
+                ci = f"[{lo:.2f}, {hi:.2f}]" if lo is not None and hi is not None and lo == lo else "n/a"
+                score, by = num(p["score"]), "donor" if imported else "platform"
             else:
                 claimed = (p.get("method_reported") or {}).get("score")
                 score = num(claimed) if isinstance(claimed, (int, float)) else "n/a"

@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import stat
 from pathlib import Path
 
 from harnessgrad.paths import main_checkout
@@ -38,7 +39,7 @@ def _summary(kind, record, cacheable):
             'complete': bool(cacheable), 'cacheable': bool(cacheable)}
 
 
-def identities(repo, env=None):
+def identities(repo, env=None, *, content=False):
     """Re-admit current installations without running candidate code or building."""
     if repo is None:
         return {}
@@ -76,6 +77,8 @@ def identities(repo, env=None):
                 values[kind] = _summary(kind, record, complete)
                 if kind == 'opencode':
                     values[kind]['wire'] = helper.execution_wire(environment)
+                if content and complete:
+                    values[kind]['content_sha256'] = _content_digest(kind, record)
             elif manifest.get('name') == name and (manifest.get('runtime') or {}).get('kind') != 'python':
                 values[kind] = {'kind': kind, 'complete': False, 'cacheable': False}
         if (not values and (manifest.get('runtime') or {}).get('kind') != 'python'
@@ -84,6 +87,70 @@ def identities(repo, env=None):
         return values
     except (OSError, ValueError, TypeError, KeyError, RuntimeError) as exc:
         raise RuntimeUnavailable(f'External actor runtime admission failed: {exc}') from exc
+
+
+def _content_digest(kind, record):
+    """Fingerprint the admitted command, closure and relative layout."""
+    from harnessgrad.provenance.runtime_content import digest
+    if kind == 'opencode':
+        return digest({k: v for k, v in record.items() if k not in {'argv', 'runtime_paths'}})
+
+    roots = list(dict.fromkeys(Path(path) for path in record['runtime_paths']))
+
+    def location(path):
+        for index, root in sorted(enumerate(roots), key=lambda item: -len(item[1].parts)):
+            if path.is_relative_to(root):
+                return [index, path.relative_to(root).as_posix()]
+        raise ValueError('external executable or link is outside the admitted paths')
+
+    def entry(path):
+        mode = path.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            target = path.resolve(strict=True)
+            identified = location(target)
+            link = os.readlink(path)
+            payload = ['link', identified, None if Path(link).is_absolute() else link]
+        elif stat.S_ISDIR(mode):
+            payload = ['directory']
+        elif stat.S_ISREG(mode):
+            with path.open('rb') as stream:
+                payload = ['file', hashlib.file_digest(stream, 'sha256').hexdigest()]
+        else:
+            raise ValueError('unsupported file in external runtime closure')
+        return [location(path), stat.S_IMODE(mode), payload]
+
+    def fail(error):
+        raise error
+
+    rows = []
+    for root in roots:
+        rows.append(entry(root))
+        if root.is_dir() and not root.is_symlink():
+            for directory, dirs, files in os.walk(root, followlinks=False, onerror=fail):
+                dirs[:] = sorted(name for name in dirs if name != '.git')
+                rows.extend(entry(Path(directory) / name) for name in sorted([*dirs, *files]))
+    preserved = {k: v for k, v in record.items() if k not in {
+        'argv', 'runtime_paths', 'root', 'node', 'cli', 'path', 'files', 'inventory',
+        'content_inventory', 'farm_targets'}}
+    argv = [location(Path(arg)) if Path(arg).is_absolute() else arg for arg in record['argv']]
+    farm = [[name, location(Path(path))] for name, path in record.get('farm_targets', [])]
+    return digest({'metadata': preserved, 'entries': sorted(rows, key=lambda row: row[0]),
+                   'argv': argv, 'farm': farm})
+
+
+def content_key(current):
+    """Require complete evidence for all external actor runtimes."""
+    if not cacheable(current):
+        raise RuntimeUnavailable('External actor runtime is incomplete or noncacheable')
+    projected = {}
+    for kind, record in current.items():
+        if kind == 'bun':
+            projected[kind] = record  # The managed Bun store identity already seals relative contents.
+        else:
+            if 'content_sha256' not in record:
+                raise RuntimeUnavailable('External actor runtime lacks comparable content evidence')
+            projected[kind] = {k: v for k, v in record.items() if k != 'installation_sha256'}
+    return projected
 
 
 def cacheable(current):

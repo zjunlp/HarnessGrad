@@ -75,7 +75,7 @@ def _stamp(path):
     return (s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
 
 
-def _source(path, memo):
+def _source(path, memo, *, portable=False):
     source = Path(path)
     if not source.is_absolute():
         source = ROOT / source
@@ -97,7 +97,10 @@ def _source(path, memo):
             target = p.resolve(strict=True)
             if not target.is_relative_to(boundary):
                 raise ValueError('verification source symlink escapes its source root')
-            result = {'link': os.readlink(p), 'target': walk(target)}
+            link = os.readlink(p)
+            if portable and Path(link).is_absolute():
+                link = {'source_relative': target.relative_to(boundary).as_posix()}
+            result = {'link': link, 'target': walk(target)}
         elif stat.S_ISREG(mode):
             with p.open('rb') as stream:
                 digest = hashlib.sha256()
@@ -125,17 +128,37 @@ def _source(path, memo):
     return result
 
 
-def _sources(value, memo, *, relay=False):
+def _sources(value, memo, *, relay=False, runtimes=None):
     if isinstance(value, list):
-        return [_sources(v, memo) for v in value]
+        return [_sources(v, memo, runtimes=runtimes) for v in value]
     if not isinstance(value, dict):
         return value
-    result = {k: _sources(v, memo, relay=(k == 'tool_relay')) for k, v in value.items()}
+    portable = runtimes is not None
+    result = {k: _sources(v, memo, relay=(k == 'tool_relay'), runtimes=runtimes)
+              for k, v in value.items()}
+    if portable and 'python_runtime' in value:
+        from harnessgrad.datasets.runtime import validate_binding
+        binding = value['python_runtime']
+        if not isinstance(binding, dict):
+            raise ValueError('invalid verification runtime binding')
+        binding = validate_binding(binding, binding.get('role'))
+        artifact = runtimes.get(('execution', binding['runtime_id']))
+        if artifact is None:
+            raise ValueError('verification runtime lacks descriptor and requirements content evidence')
+        result['python_runtime'] = {'role': binding['role'], 'content': artifact}
+        if value.get('python') == binding['python']:
+            result['python'] = {'runtime_executable': 'bin/python'}
+        if isinstance(value.get('argv'), list) and value['argv'] and value['argv'][0] == binding['python']:
+            result['argv'][0] = {'runtime_executable': 'bin/python'}
+        if value.get('runtime_paths') == binding['runtime_paths']:
+            result['runtime_paths'] = {'bound_runtime_prefixes': len(binding['runtime_paths'])}
     if ('from' in value and ('path' in value or 'dst' in value)
             and value.get('content') is None):
         if not isinstance(value['from'], str):
             raise ValueError('invalid verification source declaration')
-        result['__source_content_sha256'] = _source(value['from'], memo)
+        result['__source_content_sha256'] = _source(value['from'], memo, portable=portable)
+        if portable and Path(value['from']).is_absolute():
+            del result['from']
     if 'read_paths' in value:
         if not isinstance(value['read_paths'], list) or any(not isinstance(x, str) for x in value['read_paths']):
             raise ValueError('invalid verification read paths')
@@ -151,18 +174,39 @@ def _sources(value, memo, *, relay=False):
             path = Path(raw)
             if venv is not None and (path == venv or path.is_relative_to(venv)):
                 # Admission inventories the venv; base-prefix contents are not sealed.
-                commitments.append({'bound_runtime': binding['runtime_id']})
+                if portable:
+                    commitments.append({'runtime_relative': path.relative_to(venv).as_posix()})
+                else:
+                    commitments.append({'bound_runtime': binding['runtime_id']})
             else:
                 if any(path == root or path.is_relative_to(root) for root in system):
                     raise ValueError('unbound system read path cannot be committed as source')
-                commitments.append({'source_sha256': _source(raw, memo)})
+                commitment = {'source_sha256': _source(raw, memo, portable=portable)}
+                if portable:
+                    commitment['name'] = path.name if path.is_absolute() else raw
+                commitments.append(commitment)
         result['__read_path_sha256'] = commitments
+        if portable:
+            del result['read_paths']
     if relay and isinstance(value.get('program'), str):
-        result['__program_sha256'] = _source(value['program'], memo)
+        program = Path(value['program'])
+        result['__program_sha256'] = _source(program, memo, portable=portable)
+        if portable and program.is_absolute():
+            result['program'] = {'name': program.name}
     return result
 
 
 def capture(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=True):
+    return _capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox, runtimes=None)
+
+
+def capture_content(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=True, runtimes=None):
+    """Commit to known measurement inputs while normalizing verified host paths."""
+    return _capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox,
+                    runtimes={} if runtimes is None else runtimes)
+
+
+def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
     if not isinstance(tasks, list) or not isinstance(scorable, dict):
         raise ValueError('invalid verification context inputs')
     if type(sandbox) is not bool:
@@ -183,9 +227,11 @@ def capture(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=
             value = {'measurement_protocol': MEASUREMENT_PROTOCOL,
                      'execution_policy': policy,
                      'task': task, 'scorable_present': tid in scorable, 'scorable': scorable.get(tid),
-                     'setup': _sources(mappings[0].get(tid), memo),
-                     'verifier': _sources(mappings[1].get(tid), memo),
-                     'env': _sources(mappings[2].get(tid), memo)}
+                     'setup': _sources(mappings[0].get(tid), memo, runtimes=runtimes),
+                     'verifier': _sources(mappings[1].get(tid), memo, runtimes=runtimes),
+                     'env': _sources(mappings[2].get(tid), memo, runtimes=runtimes)}
+            if runtimes is not None:
+                value['projection'] = 'harnessgrad.verification-content.v1'
             result[tid] = _digest(value)
         except (OSError, TypeError, ValueError, RuntimeError) as exc:
             raise ValueError(f'verification context unavailable for task {tid}: {type(exc).__name__}') from exc
