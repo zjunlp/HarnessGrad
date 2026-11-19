@@ -107,6 +107,10 @@
        "round": 4,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 3,
+        "sourceRound": 3
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -120,6 +124,10 @@
        "round": 5,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 4,
+        "sourceRound": 3
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -465,6 +473,10 @@
        "round": 1,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 0,
+        "sourceRound": 0
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -1104,6 +1116,10 @@
        "round": 12,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 10,
+        "sourceRound": 10
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -1138,6 +1154,10 @@
        "round": 14,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 12,
+        "sourceRound": 10
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -1324,6 +1344,10 @@
        "round": 2,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 1,
+        "sourceRound": 1
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -1337,6 +1361,10 @@
        "round": 3,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 2,
+        "sourceRound": 1
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [
@@ -1350,6 +1378,10 @@
        "round": 4,
        "train": null,
        "eval": {},
+       "inherited": {
+        "parentRound": 3,
+        "sourceRound": 1
+       },
        "trainCost": null,
        "devCost": null,
        "improverCost": [

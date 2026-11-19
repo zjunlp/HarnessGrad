@@ -88,7 +88,17 @@ def svg_chart(data: dict, pool: str, methods: list[dict], *, show_gap_note: bool
         parts.append(f'<g data-method-line="{method["name"]}">')
         for subpath in subpaths:
             parts.append(f'<path d="{subpath}" fill="none" stroke="{colour}" stroke-width="2"/>')
+        inherited = {cell["round"]: cell["inherited"] for cell in method["rounds"]
+                     if cell.get("inherited")}
         for r, v in points:
+            if r in inherited:
+                parent = inherited[r]["parentRound"]
+                source = inherited[r]["sourceRound"]
+                label = f'r{r}: Harness failed, inherits r{parent} (score from r{source})'
+                parts.append(f'<rect x="{x(r) - 3.5:.1f}" y="{y(v) - 3.5:.1f}" width="7" height="7" '
+                             f'fill="#fff" stroke="{colour}" stroke-width="1.5" '
+                             f'data-inherited-round="{r}"><title>{label}</title></rect>')
+                continue
             parts.append(f'<circle cx="{x(r):.1f}" cy="{y(v):.1f}" r="2.8" fill="{colour}"/>')
         legend_y = top + 14 + index * 18
         parts.append(f'<line x1="{left + plot_w + 16}" y1="{legend_y}" '
@@ -115,7 +125,7 @@ def svg_train_chart(data: dict, methods: list[dict], *, show_gap_note: bool = Tr
     if not rows_:
         return ""
     shaped = [{"name": method["name"],
-               "rounds": [{"round": c["round"], "train": c["train"]} for c in method["rounds"]
+               "rounds": [{**c} for c in method["rounds"]
                           if c.get("train") is not None]} for method in methods
               if any(c.get("train") is not None for c in method["rounds"])]
     # Reuse the eval chart by presenting the study score under a synthetic pool key.

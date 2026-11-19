@@ -34,13 +34,14 @@
 <line x1="56" y1="283.9" x2="570" y2="283.9" stroke="#111827" stroke-width="1.2" stroke-dasharray="5 4"/>
 <text x="566" y="278.9" font-size="11" fill="#111827" text-anchor="end">H0 (round 0) 0.145</text>
 <g data-method-line="sica_ci">
-<path d="M56.0,283.9 L56.0,283.9 L81.7,282.0 L107.4,282.0 L133.1,277.0" fill="none" stroke="#1f77b4" stroke-width="2"/>
-<path d="M210.2,280.9 L235.9,280.9 L261.6,280.9 L287.3,170.9 L313.0,170.9 L338.7,253.0 L364.4,172.2 L390.1,122.5 L415.8,101.8 L441.5,85.5 L467.2,86.2 L492.9,85.8 L518.6,81.2 L544.3,89.2 L570.0,89.2" fill="none" stroke="#1f77b4" stroke-width="2"/>
+<path d="M56.0,283.9 L56.0,283.9 L81.7,282.0 L107.4,282.0 L133.1,277.0 L158.8,277.0 L184.5,277.0 L210.2,280.9 L235.9,280.9 L261.6,280.9 L287.3,170.9 L313.0,170.9 L338.7,253.0 L364.4,172.2 L390.1,122.5 L415.8,101.8 L441.5,85.5 L467.2,86.2 L492.9,85.8 L518.6,81.2 L544.3,89.2 L570.0,89.2" fill="none" stroke="#1f77b4" stroke-width="2"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#1f77b4"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#1f77b4"/>
 <circle cx="81.7" cy="282.0" r="2.8" fill="#1f77b4"/>
 <circle cx="107.4" cy="282.0" r="2.8" fill="#1f77b4"/>
 <circle cx="133.1" cy="277.0" r="2.8" fill="#1f77b4"/>
+<rect x="155.3" y="273.5" width="7" height="7" fill="#fff" stroke="#1f77b4" stroke-width="1.5" data-inherited-round="4"><title>r4: Harness failed, inherits r3 (score from r3)</title></rect>
+<rect x="181.0" y="273.5" width="7" height="7" fill="#fff" stroke="#1f77b4" stroke-width="1.5" data-inherited-round="5"><title>r5: Harness failed, inherits r4 (score from r3)</title></rect>
 <circle cx="210.2" cy="280.9" r="2.8" fill="#1f77b4"/>
 <circle cx="235.9" cy="280.9" r="2.8" fill="#1f77b4"/>
 <circle cx="261.6" cy="280.9" r="2.8" fill="#1f77b4"/>
@@ -60,10 +61,10 @@
 <text x="614" y="42" font-size="11" fill="#111827">sica_ci</text>
 </g>
 <g data-method-line="dream_rsi">
-<path d="M56.0,283.9 L56.0,283.9" fill="none" stroke="#d62728" stroke-width="2"/>
-<path d="M107.4,219.5 L133.1,316.3 L158.8,268.2 L184.5,163.2 L210.2,163.2 L235.9,163.2 L261.6,163.2 L287.3,163.2 L313.0,163.2 L338.7,166.4 L364.4,124.2 L390.1,175.7 L415.8,111.5 L441.5,60.3 L467.2,54.5 L492.9,56.6 L518.6,54.5 L544.3,50.6 L570.0,50.6" fill="none" stroke="#d62728" stroke-width="2"/>
+<path d="M56.0,283.9 L56.0,283.9 L81.7,283.9 L107.4,219.5 L133.1,316.3 L158.8,268.2 L184.5,163.2 L210.2,163.2 L235.9,163.2 L261.6,163.2 L287.3,163.2 L313.0,163.2 L338.7,166.4 L364.4,124.2 L390.1,175.7 L415.8,111.5 L441.5,60.3 L467.2,54.5 L492.9,56.6 L518.6,54.5 L544.3,50.6 L570.0,50.6" fill="none" stroke="#d62728" stroke-width="2"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#d62728"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#d62728"/>
+<rect x="78.2" y="280.4" width="7" height="7" fill="#fff" stroke="#d62728" stroke-width="1.5" data-inherited-round="1"><title>r1: Harness failed, inherits r0 (score from r0)</title></rect>
 <circle cx="107.4" cy="219.5" r="2.8" fill="#d62728"/>
 <circle cx="133.1" cy="316.3" r="2.8" fill="#d62728"/>
 <circle cx="158.8" cy="268.2" r="2.8" fill="#d62728"/>
@@ -87,9 +88,7 @@
 <text x="614" y="60" font-size="11" fill="#111827">dream_rsi</text>
 </g>
 <g data-method-line="dgm">
-<path d="M56.0,283.9 L56.0,283.9 L81.7,283.9 L107.4,251.6 L133.1,236.2 L158.8,235.4 L184.5,190.2 L210.2,190.2 L235.9,186.6 L261.6,217.5 L287.3,199.6 L313.0,164.9 L338.7,148.9" fill="none" stroke="#2ca02c" stroke-width="2"/>
-<path d="M390.1,162.5" fill="none" stroke="#2ca02c" stroke-width="2"/>
-<path d="M441.5,171.1 L467.2,156.2 L492.9,101.7 L518.6,102.6 L544.3,123.7 L570.0,136.6" fill="none" stroke="#2ca02c" stroke-width="2"/>
+<path d="M56.0,283.9 L56.0,283.9 L81.7,283.9 L107.4,251.6 L133.1,236.2 L158.8,235.4 L184.5,190.2 L210.2,190.2 L235.9,186.6 L261.6,217.5 L287.3,199.6 L313.0,164.9 L338.7,148.9 L364.4,164.9 L390.1,162.5 L415.8,164.9 L441.5,171.1 L467.2,156.2 L492.9,101.7 L518.6,102.6 L544.3,123.7 L570.0,136.6" fill="none" stroke="#2ca02c" stroke-width="2"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#2ca02c"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#2ca02c"/>
 <circle cx="81.7" cy="283.9" r="2.8" fill="#2ca02c"/>
@@ -103,7 +102,9 @@
 <circle cx="287.3" cy="199.6" r="2.8" fill="#2ca02c"/>
 <circle cx="313.0" cy="164.9" r="2.8" fill="#2ca02c"/>
 <circle cx="338.7" cy="148.9" r="2.8" fill="#2ca02c"/>
+<rect x="360.9" y="161.4" width="7" height="7" fill="#fff" stroke="#2ca02c" stroke-width="1.5" data-inherited-round="12"><title>r12: Harness failed, inherits r10 (score from r10)</title></rect>
 <circle cx="390.1" cy="162.5" r="2.8" fill="#2ca02c"/>
+<rect x="412.3" y="161.4" width="7" height="7" fill="#fff" stroke="#2ca02c" stroke-width="1.5" data-inherited-round="14"><title>r14: Harness failed, inherits r12 (score from r10)</title></rect>
 <circle cx="441.5" cy="171.1" r="2.8" fill="#2ca02c"/>
 <circle cx="467.2" cy="156.2" r="2.8" fill="#2ca02c"/>
 <circle cx="492.9" cy="101.7" r="2.8" fill="#2ca02c"/>
@@ -114,11 +115,13 @@
 <text x="614" y="78" font-size="11" fill="#111827">dgm</text>
 </g>
 <g data-method-line="harnessx">
-<path d="M56.0,283.9 L56.0,283.9 L81.7,278.8" fill="none" stroke="#9467bd" stroke-width="2"/>
-<path d="M184.5,258.1 L210.2,193.4 L235.9,183.8 L261.6,79.2 L287.3,271.7 L313.0,79.2 L338.7,79.2 L364.4,79.2 L390.1,112.0 L415.8,79.2 L441.5,68.3 L467.2,74.8 L492.9,73.5 L518.6,84.8 L544.3,68.3 L570.0,68.3" fill="none" stroke="#9467bd" stroke-width="2"/>
+<path d="M56.0,283.9 L56.0,283.9 L81.7,278.8 L107.4,278.8 L133.1,278.8 L158.8,278.8 L184.5,258.1 L210.2,193.4 L235.9,183.8 L261.6,79.2 L287.3,271.7 L313.0,79.2 L338.7,79.2 L364.4,79.2 L390.1,112.0 L415.8,79.2 L441.5,68.3 L467.2,74.8 L492.9,73.5 L518.6,84.8 L544.3,68.3 L570.0,68.3" fill="none" stroke="#9467bd" stroke-width="2"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#9467bd"/>
 <circle cx="56.0" cy="283.9" r="2.8" fill="#9467bd"/>
 <circle cx="81.7" cy="278.8" r="2.8" fill="#9467bd"/>
+<rect x="103.9" y="275.3" width="7" height="7" fill="#fff" stroke="#9467bd" stroke-width="1.5" data-inherited-round="2"><title>r2: Harness failed, inherits r1 (score from r1)</title></rect>
+<rect x="129.6" y="275.3" width="7" height="7" fill="#fff" stroke="#9467bd" stroke-width="1.5" data-inherited-round="3"><title>r3: Harness failed, inherits r2 (score from r1)</title></rect>
+<rect x="155.3" y="275.3" width="7" height="7" fill="#fff" stroke="#9467bd" stroke-width="1.5" data-inherited-round="4"><title>r4: Harness failed, inherits r3 (score from r1)</title></rect>
 <circle cx="184.5" cy="258.1" r="2.8" fill="#9467bd"/>
 <circle cx="210.2" cy="193.4" r="2.8" fill="#9467bd"/>
 <circle cx="235.9" cy="183.8" r="2.8" fill="#9467bd"/>

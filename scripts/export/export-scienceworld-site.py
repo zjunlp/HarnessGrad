@@ -68,6 +68,21 @@ def same_score(left, right):
     return math.isclose(left, right, rel_tol=0, abs_tol=1e-12)
 
 
+def recorded_parent(train, round_no):
+    report = train[round_no].get("method_reported") or {}
+    improver = report.get("improver_run") or {}
+    parent = improver.get("selected_parent_round")
+    if parent is None and report.get("valid_parent"):
+        # DGM records the sampled parent on each child, including siblings in a batch.
+        parent = report.get("dgm_parent")
+    if type(parent) is not int or not 0 <= parent < round_no:
+        raise ValueError(f"r{round_no}: missing or invalid parent for failed checkpoint")
+    expected_sha = improver.get("selected_parent_sha")
+    if expected_sha and expected_sha != train[parent]["identity"]["harness_sha"]:
+        raise ValueError(f"r{round_no}: parent SHA differs from the curve")
+    return parent
+
+
 def project(family_dir, revision):
     family = read(family_dir / "family.json")
     coverage = read(family_dir / "coverage.json")
@@ -123,10 +138,20 @@ def project(family_dir, revision):
                     or len(row["per_task"]) != POOLS["train"]
                     or not same_score(row["score"], math.fsum(row["per_task"].values()) / POOLS["train"])):
                 raise ValueError(f"{method} r{number}: incomplete or inconsistent train score")
+            inherited = None
+            if number in excluded and (row.get("n_harness_failed") or row.get("startup_failure")):
+                parent = recorded_parent(train, number)
+                parent_inheritance = rounds[parent].get("inherited")
+                source = parent_inheritance["sourceRound"] if parent_inheritance else parent
+                if rounds[source]["train"] is None:
+                    raise ValueError(f"{method} r{number}: parent has no verified train score")
+                inherited = {"parentRound": parent, "sourceRound": source}
+
             rounds.append({
                 "round": number,
                 "train": None if number in excluded else row["score"],
                 "eval": {"dev": point["score"]} if point else {},
+                **({"inherited": inherited} if inherited else {}),
                 "trainCost": task_cost(folder / "tasks" / f"round-{number}.tar.gz", usage) if number else None,
                 "devCost": task_cost(family_dir / point["traces"], point["usage"]) if point else None,
                 "improverCost": [usage.get(key) for key in
@@ -177,9 +202,19 @@ def main():
     data = project(args.family_dir, match[1])
     methods = data["stacks"][0]["methods"]
     test_rows = [{"method": method["name"], "score": method["testScore"]} for method in methods]
+    chart_methods = []
+    for method in methods:
+        rounds = method["rounds"]
+        display_rounds = []
+        for row in rounds:
+            if inherited := row.get("inherited"):
+                source = rounds[inherited["sourceRound"]]
+                row = {**row, "train": source["train"], "eval": source["eval"]}
+            display_rounds.append(row)
+        chart_methods.append({**method, "rounds": display_rounds})
     charts = {
-        "train": svg_train_chart(data, methods, show_gap_note=False),
-        "dev": svg_chart(data, "dev", methods, show_gap_note=False),
+        "train": svg_train_chart(data, chart_methods, show_gap_note=False),
+        "dev": svg_chart(data, "dev", chart_methods, show_gap_note=False),
         "test": svg_bar_chart(test_rows, None, "ScienceWorld test score per method"),
     }
     results = args.site / "src" / "data" / "results"
