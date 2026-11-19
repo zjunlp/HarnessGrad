@@ -36,6 +36,25 @@
   });
   const native = action => windowController.action(action);
   const showMode = (next, focus = false) => windowController.show(next, focus);
+  function selectWorkspace(view) {
+    receiptSelection++;
+    document.body.dataset.view = view;
+    $('records-page').hidden = view !== 'records';
+    $('proposal-page').hidden = view !== 'proposal';
+  }
+  function openWorkspace(view) {
+    selectWorkspace(view);
+    const opened = showMode('details');
+    $('workspace').scrollTop = 0;
+    if (!desktop) window.scrollTo(0, 0);
+    $(view === 'proposal' ? 'proposal-heading' : 'records-title').focus({preventScroll: true});
+    return opened;
+  }
+  function collapseWindow() {
+    receiptSelection++;
+    $('bubble').hidden = true;
+    return showMode('bar');
+  }
   function compactWindowSize() {
     const mode = windowController.mode();
     if (ordinary || mode === 'details') return;
@@ -77,7 +96,7 @@
       signal,
       ...(value === undefined ? {} : {body: JSON.stringify(value)})
     });
-    if (response.status === 401) { $('pair').hidden = false; showMode('details'); throw Error('请连接自己的本地服务。'); }
+    if (response.status === 401) { $('pair').hidden = false; openWorkspace('records'); throw Error('请连接自己的本地服务。'); }
     if (response.status === 409) {
       const detail = await response.json();
       if (detail.code?.startsWith('proposal_')) throw Object.assign(Error('提案暂时无法生成。'), {code: detail.code});
@@ -107,20 +126,32 @@
     updates: (id, feedback, after, signal) => api(proposalRoute(id, feedback) + '/events', undefined, {after, signal}),
     render: state => {
       $('proposal-card').hidden = !state;
+      $('return-proposal').hidden = !state;
       const feedback = state?.feedback || '';
       if (viewedFeedback !== feedback) {
         viewedFeedback = feedback;
         updateHistorySelection();
       }
       if (!state) return;
-      const {message, detail, path, diff, fixture, question, cancellable} = window.HGPersonalProposal.describe(state.proposal);
+      const {message, detail = '', path = '', diff = '', fixture, question, cancellable} = window.HGPersonalProposal.describe(state.proposal);
       $('proposal-status').textContent = state.loading ? '正在查看提案状态…' : (state.error || message);
       const badge = $('proposal-badge');
       badge.hidden = !fixture && !diff;
       badge.textContent = fixture ? '合成验收 · 只读' : '只读';
-      for (const [id, text] of [['proposal-detail', detail], ['proposal-path', path], ['proposal-diff', diff]]) {
-        $(id).textContent = text; $(id).hidden = !text;
-      }
+      $('proposal-detail').textContent = detail || '';
+      $('proposal-detail').hidden = !detail;
+      $('proposal-path').textContent = path;
+      $('proposal-target').hidden = !path;
+      $('proposal-diff').textContent = diff;
+      $('proposal-changes').hidden = !diff;
+      $('proposal-approval').hidden = state.proposal?.status !== 'ready' || !diff;
+      const additions = window.HGPersonalProposal.summarizeDiff(diff);
+      $('proposal-summary').replaceChildren(...additions.map(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        return item;
+      }));
+      $('proposal-summary').hidden = !additions.length;
       $('proposal-start').hidden = state.loading || Boolean(state.proposal) || proposalCapability.status !== 'ready';
       $('proposal-start').onclick = () => proposals.show(state.project, state.feedback, true);
       $('proposal-refresh').hidden = !state.error;
@@ -279,19 +310,11 @@
     }
   }
   function showFeedbackProposal(projectId, receipt, generate = false) {
+    $('bubble').hidden = true;
+    $('proposal-changes').open = false;
     renderProposalFeedback(receipt);
     void proposals.show(projectId, receipt.id, generate);
-  }
-  function revealProposal() {
-    const card = $('proposal-card'), workspace = $('workspace');
-    if (card.hidden || workspace.hidden) return;
-    if (!desktop) {
-      card.scrollIntoView({block: 'nearest'});
-      return;
-    }
-    const inset = parseFloat(getComputedStyle(workspace).paddingTop);
-    workspace.scrollTop += card.getBoundingClientRect().top - workspace.getBoundingClientRect().top
-      - workspace.clientTop - inset;
+    return openWorkspace('proposal');
   }
   function updateHistorySelection() {
     for (const [id, button] of historyButtons) {
@@ -312,26 +335,34 @@
       historyButtons.set(row.id, button);
       button.onclick = guarded(async () => {
         const current = ++receiptSelection;
-        const receipt = await api(`projects/${id}/feedback/${row.id}`);
-        if (id !== project || generation !== selection || current !== receiptSelection) return;
-        showFeedbackProposal(id, receipt);
-        revealProposal();
+        const stillSelected = () => id === project && generation === selection && current === receiptSelection;
+        let receipt;
+        try {
+          receipt = await api(`projects/${id}/feedback/${row.id}`);
+        } catch (error) {
+          if (stillSelected()) throw error;
+          return;
+        }
+        if (stillSelected()) await showFeedbackProposal(id, receipt);
       });
       item.append(text, button); $('feedback-history').append(item);
     }
     updateHistorySelection();
   }
   // Hover may already have expanded the panel: clicking must focus, not toggle it shut.
-  $('expand').onclick = () => windowController.open();
-  $('details').onclick = () => showMode('details');
-  $('collapse').onclick = () => { $('bubble').hidden = true; showMode('bar'); };
+  $('expand').onclick = () => { selectWorkspace('records'); return windowController.open(); };
+  $('details').onclick = () => openWorkspace('records');
+  $('proposal-records').onclick = () => openWorkspace('records');
+  $('return-proposal').onclick = () => openWorkspace('proposal');
+  $('collapse').onclick = collapseWindow;
   $('minimize').onclick = () => native('minimize');
   $('drag').onmousedown = () => native('drag');
   $('pin').onclick = () => native('pin');
   $('ordinary').onclick = async () => { if (await native('ordinary')) showMode('details'); };
   $('close-window').onclick = guarded(async () => {
+    receiptSelection++;
     await drafts.flushAll();
-    if (desktop) await native('close'); else showMode('bar');
+    if (desktop) await native('close'); else await collapseWindow();
   });
   $('expand').onmouseenter = () => { clearTimeout(collapseTimer); if (!ordinary) windowController.hover(); };
   document.querySelector('.widget').onmouseleave = () => {
@@ -363,23 +394,21 @@
       const result = await feedbackRequests.send({project_id: id, kind, text, evidence, draft_revision: revision});
       const message = `反馈已记录：${result.id}\n关联 ${result.evidence_count} 段证据。`;
       if (id === project && generation === selection) {
-        notify(message);
-        if (generate) {
-          receiptSelection++;
-          $('feedback-archive').open = false;
-          showFeedbackProposal(id, result, true);
-          await showMode('details');
-          if (id === project && generation === selection) revealProposal();
-        }
+        const opened = showFeedbackProposal(id, result, generate);
+        const current = receiptSelection;
+        await opened;
         try { await loadHistory(id, generation); }
-        catch (_) { notify(message + '\n列表暂未刷新，可稍后重开查看，无需重复提交。'); }
+        catch (_) {
+          if (id === project && generation === selection && current === receiptSelection)
+            notify(message + '\n列表暂未刷新，可稍后重开查看，无需重复提交。');
+        }
       }
     } finally { if (id === project && generation === selection) $('submit-feedback').disabled = false; }
   });
   document.addEventListener('keydown', event => {
     if (window.HGPersonalWindow.shouldCollapse(event, composing)) {
       if (project && !$('feedback').disabled) saveDraft();
-      $('bubble').hidden = true; showMode('bar');
+      collapseWindow();
     }
   });
   $('projects').onchange = guarded(selectProject);

@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const {create, describe} = require('./personal-proposal');
+const {create, describe, summarizeDiff} = require('./personal-proposal');
 
 test('watches the selected feedback until its real Diff is ready', async () => {
   const seen = [];
@@ -84,4 +84,16 @@ test('reset aborts the current event stream and prevents a late update', async (
   await old;
   assert.equal(signal.aborted, true);
   assert.equal(rendered.at(-1), null);
+});
+
+test('summarizes persisted additions without treating unified diff headers as rules', () => {
+  const diff = [
+    '--- a/rules.md', '+++ b/rules.md', '@@ -1,2 +1,4 @@',
+    ' # Rules', '-Retired rule', '+- Run the selected tests', '+',
+    '+Report the results',
+    '--- a/skill.md', '+++ b/skill.md', '@@ -1 +1,2 @@',
+    ' # Skill', '+++ This is content', '@@ -5,0 +7 @@', '+Show the full Diff for the rest',
+  ].join('\r\n');
+  assert.deepEqual(summarizeDiff(diff), ['Run the selected tests', 'Report the results', '++ This is content']);
+  assert.deepEqual(summarizeDiff('--- a/old\n+++ b/old\n@@ -1 +0,0 @@\n-Retired rule\n'), []);
 });

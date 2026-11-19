@@ -41,8 +41,8 @@ test('a different project stays independent; edits cannot replace a running requ
   assert.deepEqual(calls.map(call => call.project_id), ['one', 'two']);
 });
 
-async function page({failedHistory = false} = {}) {
-  const nodes = new Map(), submitted = []; let generated = 0;
+async function page({failedHistory = false, readReceipt} = {}) {
+  const nodes = new Map(), submitted = [], proposals = []; let generated = 0;
   function node(id) {
     if (!nodes.has(id)) nodes.set(id, {
       value: id === 'feedback-kind' ? 'explicit_request' : '', disabled: false, dataset: {}, children: [], options: [],
@@ -65,19 +65,30 @@ async function page({failedHistory = false} = {}) {
     if (url.endsWith('/feedback') && options.method === 'POST') {
       submitted.push(JSON.parse(options.body)); return response({id:'recorded-id',evidence_count:submitted[0].evidence.length});
     }
-    if (url.endsWith('/feedback')) {if (submitted.length && failedHistory) throw Error('list unavailable'); return response({feedback:[]});}
+    if (url.endsWith('/feedback')) {
+      if (submitted.length && failedHistory) throw Error('list unavailable');
+      return response({feedback: submitted.map(row => ({...row, id: 'recorded-id'}))});
+    }
+    if (url.endsWith('/feedback/recorded-id')) {
+      const receipt = {...submitted[0], id: 'recorded-id'};
+      return response(readReceipt ? await readReceipt(receipt) : receipt);
+    }
+    if (url.endsWith('/feedback/recorded-id/proposal')) {
+      proposals.push(options.method);
+      return response({proposal: null});
+    }
     return response({revision:1});
   };
   const storage = {getItem: () => null, removeItem() {}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'personal.js'),'utf8'), {
     document, fetch, window: {HGPersonalDraft: require('./personal-draft.js'), HGPersonalWindow: require('./personal-window.js'),
       HGPersonalFeedback:{create}, HGPersonalProposal: require('./personal-proposal.js'),
-      crypto:{randomUUID:()=> 'fixture-key'}},
+      crypto:{randomUUID:()=> 'fixture-key'}, scrollTo() {}},
     localStorage:storage,sessionStorage:storage,setTimeout,clearTimeout,URLSearchParams,
     Option: function(text,value) {this.textContent=text;this.value=value;}
   });
   for (let i=0;i<3;i++) await new Promise(resolve => setImmediate(resolve));
-  return {node,submitted};
+  return {node,submitted,proposals};
 }
 
 test('the page converts selected UTF-16 offsets to Unicode source offsets before submission', async () => {
@@ -98,3 +109,41 @@ test('an acknowledged feedback remains visibly recorded when refreshing its hist
   assert.match(ui.node('bubble').textContent,/recorded-id/); assert.match(ui.node('bubble').textContent,/无需重复提交/);
   assert.equal(ui.node('submit-feedback').disabled,false);
 });
+
+test('submission and history open the same proposal without creating a second task', async () => {
+  const ui = await page();
+  ui.node('feedback').value = 'A saved request';
+  await ui.node('submit-feedback').onclick();
+  assert.equal(ui.node('proposal-page').hidden, false);
+  assert.equal(ui.node('records-page').hidden, true);
+  assert.match(ui.node('proposal-status').textContent, /反馈已保存/);
+  await ui.node('proposal-records').onclick();
+  assert.equal(ui.node('records-page').hidden, false);
+  const [, reopen] = ui.node('feedback-history').children[0].children;
+  await reopen.onclick();
+  assert.equal(ui.node('proposal-page').hidden, false);
+  assert.match(ui.node('proposal-feedback').textContent, /A saved request/);
+  assert.deepEqual(ui.proposals, ['GET', 'GET']);
+  assert.equal(ui.submitted.length, 1);
+});
+
+for (const failed of [false, true]) {
+  test(`collapsing ignores a late history ${failed ? 'error' : 'receipt'}`, async () => {
+    let finishRead;
+    const ui = await page({readReceipt: receipt => new Promise((resolve, reject) => {
+      finishRead = () => failed ? reject(Error('history unavailable')) : resolve(receipt);
+    })});
+    ui.node('feedback').value = 'A saved request';
+    await ui.node('submit-feedback').onclick();
+    await ui.node('proposal-records').onclick();
+    const [, reopen] = ui.node('feedback-history').children[0].children;
+    const opening = reopen.onclick();
+    ui.node('collapse').onclick();
+    finishRead();
+    await opening;
+    assert.equal(ui.node('body').dataset.mode, 'bar');
+    assert.equal(ui.node('proposal-page').hidden, true);
+    assert.equal(ui.node('bubble').hidden, true);
+    assert.deepEqual(ui.proposals, ['GET']);
+  });
+}

@@ -87,6 +87,25 @@
       question, cancellable: active.has(status) || waiting};
   }
 
-  if (typeof module !== 'undefined' && module.exports) module.exports = {create, describe, lastEventId};
-  else root.HGPersonalProposal = {create, describe};
+  function summarizeDiff(diff) {
+    const summary = [];
+    let remaining = 0;
+    for (const line of diff.split(/\r?\n/)) {
+      const hunk = /^@@ -\d+(?:,\d+)? \+\d+(?:,(\d+))? @@/.exec(line);
+      if (hunk) {
+        remaining = Number(hunk[1] ?? 1);
+      } else if (remaining && (line[0] === ' ' || line[0] === '+')) {
+        remaining--;
+        const text = line.slice(1).trim();
+        if (line[0] === '+' && text) {
+          summary.push(text.replace(/^[-*+]\s+/, ''));
+          if (summary.length === 3) break;
+        }
+      }
+    }
+    return summary;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = {create, describe, lastEventId, summarizeDiff};
+  else root.HGPersonalProposal = {create, describe, summarizeDiff};
 })(typeof window === 'undefined' ? globalThis : window);

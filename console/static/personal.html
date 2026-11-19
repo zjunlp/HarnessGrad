@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HarnessGrad · 个人持续进化</title><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2036%2036%22%20fill%3D%22none%22%20aria-hidden%3D%22true%22%20focusable%3D%22false%22%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M8.5%2015%209.8%208.5l5%203.1a15%2015%200%200%201%206.4%200l5-3.1%201.3%206.5c1.1%201.5%201.6%203.4%201.4%205.2-.4%205.3-4.5%208-10.9%208S7.5%2025.5%207%2020.2c-.2-1.9.4-3.7%201.5-5.2Z%22%20fill%3D%22%23F9FFFB%22%20stroke%3D%22%2381B996%22%20stroke-width%3D%221.3%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2214%22%20cy%3D%2218.5%22%20r%3D%221.15%22%20fill%3D%22%234A7760%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2222%22%20cy%3D%2218.5%22%20r%3D%221.15%22%20fill%3D%22%234A7760%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cpath%20d%3D%22M16.5%2021c.9%201%202.1%201%203%200%22%20stroke%3D%22%236F9D7E%22%20stroke-width%3D%221.2%22%20stroke-linecap%3D%22round%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2211.5%22%20cy%3D%2221.5%22%20r%3D%221.2%22%20fill%3D%22%23F4CECC%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2224.5%22%20cy%3D%2221.5%22%20r%3D%221.2%22%20fill%3D%22%23F4CECC%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%3C%2Fsvg%3E"><link rel="stylesheet" href="/tokens.css"><link rel="stylesheet" href="/personal.css"><script defer src="/personal-window.js"></script><script defer src="/personal-draft.js"></script><script defer src="/personal-feedback.js"></script><script defer src="/personal-proposal.js"></script><script defer src="/personal.js"></script></head>
-<body data-mode="bar"><main class="shell">
+<body data-mode="bar" data-view="records"><main class="shell">
   <section class="widget" aria-label="HarnessGrad 个人持续进化">
     <div class="bar" id="bar">
       <button class="avatar" id="drag" type="button" aria-label="拖动 HarnessGrad 悬浮窗" title="按住标识拖动悬浮窗">
@@ -31,7 +31,11 @@
   </section>
   <section class="bubble" id="bubble" role="status" aria-live="polite" hidden></section>
   <section class="workspace" id="workspace" hidden>
-    <header class="heading"><span class="eyebrow">HARNESSGRAD / PERSONAL</span><h1>个人持续进化</h1><p>记录你的反馈，让每次改进有迹可循。</p></header>
+    <section id="records-page" aria-labelledby="records-title">
+    <header class="heading page-heading">
+      <div><span class="eyebrow">HARNESSGRAD / PERSONAL</span><h1 id="records-title" tabindex="-1">记录与设置</h1></div>
+      <button class="soft" id="return-proposal" type="button" hidden>返回提案</button>
+    </header>
     <p class="notice" id="connection-state">正在连接本地服务…</p>
     <p class="muted proposal-path" id="proposal-model" hidden></p>
     <form id="pair" hidden><label for="token">本地连接令牌</label><div class="row"><input id="token" type="password" autocomplete="off" placeholder="从自己的 connection.json 复制"><button>连接</button></div><label class="soft file-label">选择本服务连接文件<input id="connection-file" type="file" accept="application/json,.json"></label><p class="muted">桌面壳自动连接；浏览器可选择自己的 connection.json，令牌不会进入地址栏。</p></form>
@@ -49,23 +53,6 @@
       <ol id="events" class="events"></ol><button class="soft" id="more" hidden>读取更早的选定证据</button>
     </section>
     <section class="card"><div class="section-head"><h2>本次选定证据</h2><span class="badge" id="selection-count">0 / 32 段</span></div><ol id="selected-evidence" class="events"></ol></section>
-    <section class="card proposal" id="proposal-card" aria-labelledby="proposal-title" hidden>
-      <div class="section-head"><h2 id="proposal-title">改动提案</h2><span class="badge" id="proposal-badge">只读</span></div>
-      <p id="proposal-status" role="status"></p><p class="muted" id="proposal-detail" hidden></p>
-      <p class="proposal-feedback" id="proposal-feedback" tabindex="0" hidden></p>
-      <details id="proposal-evidence" hidden>
-        <summary id="proposal-evidence-title">关联证据</summary>
-        <ol class="events" id="proposal-evidence-list"></ol>
-      </details>
-      <p class="proposal-path" id="proposal-path" hidden></p>
-      <pre class="proposal-diff" id="proposal-diff" aria-label="文件改动 Diff" tabindex="0" hidden></pre>
-      <button class="soft" id="proposal-start" type="button" hidden>生成提案</button>
-      <form id="proposal-reply" hidden><div class="row"><input id="proposal-answer" aria-label="补充回复" placeholder="补充小绿需要的信息" required><button>回复并继续</button></div></form>
-      <div class="row" id="proposal-actions" hidden>
-        <button class="soft" id="proposal-refresh" type="button" hidden>重新查看状态</button>
-        <button class="soft" id="proposal-cancel" type="button" hidden>取消任务</button>
-      </div>
-    </section>
     <details class="card" id="feedback-archive" hidden>
       <summary>反馈历史</summary>
       <ol id="feedback-history" class="events"></ol>
@@ -73,5 +60,52 @@
     <section class="card"><div class="section-head"><h2>接入状态</h2><button class="soft" id="probe">检查已选 Codex</button></div><div id="capabilities" class="capabilities"></div></section>
     <section class="card"><div class="section-head"><h2>交互状态预览</h2><span class="badge amber">全部为示例</span></div><p class="muted">以下状态用于预览界面，不会启动学习或修改 Harness。</p><div id="previews" class="previews"><button data-state="idle">待命</button><button data-state="input">输入</button><button data-state="working">后台工作</button><button data-state="question">需要补充</button><button data-state="done">记录完成</button><button data-state="failed">未解决</button></div></section>
     <footer><button class="soft" id="pin">切换置顶</button><button class="soft" id="ordinary">普通窗口</button><button class="soft danger" id="stop-service">停止本服务</button><span>本地草稿 · 暂不应用修改</span></footer>
+    </section>
+    <section id="proposal-page" aria-labelledby="proposal-heading" hidden>
+      <header class="heading page-heading">
+        <div>
+          <span class="eyebrow">HARNESSGRAD / PERSONAL</span>
+          <h1 id="proposal-heading" tabindex="-1">把这次反馈，变成下次的习惯</h1>
+        </div>
+        <button class="soft" id="proposal-records" type="button">记录与设置 ↗</button>
+      </header>
+      <ol class="proposal-journey" aria-label="改进进度">
+        <li><span aria-hidden="true">1</span>告诉小绿</li>
+        <li aria-current="step"><span aria-hidden="true">2</span>看看改进</li>
+        <li><span aria-hidden="true">3</span>记住习惯</li>
+      </ol>
+      <section id="proposal-card" class="proposal" aria-labelledby="proposal-title" hidden>
+        <div class="notice proposal-notice">
+          <p id="proposal-status" role="status"></p>
+          <p id="proposal-detail" hidden></p>
+        </div>
+        <section class="proposal-target" id="proposal-target" aria-labelledby="proposal-target-title" hidden>
+          <div><h2 id="proposal-target-title">目标文件</h2><p class="proposal-path" id="proposal-path"></p></div>
+        </section>
+        <section class="card proposal-review" aria-labelledby="proposal-title">
+          <div class="section-head"><h2 id="proposal-title">改动提案</h2><span class="badge" id="proposal-badge" hidden>只读</span></div>
+          <p class="proposal-feedback" id="proposal-feedback" tabindex="0" hidden></p>
+          <details id="proposal-evidence" hidden>
+            <summary id="proposal-evidence-title">关联证据</summary>
+            <ol class="events" id="proposal-evidence-list"></ol>
+          </details>
+          <ul class="proposal-summary" id="proposal-summary" aria-label="提案中的新增内容" hidden></ul>
+          <details class="proposal-changes" id="proposal-changes" hidden>
+            <summary>查看修改前后的差异</summary>
+            <pre class="proposal-diff" id="proposal-diff" aria-label="文件改动 Diff" tabindex="0"></pre>
+          </details>
+          <button class="soft" id="proposal-start" type="button" hidden>生成提案</button>
+          <form id="proposal-reply" hidden><div class="row"><input id="proposal-answer" aria-label="补充回复" placeholder="补充小绿需要的信息" required><button>回复并继续</button></div></form>
+          <div class="row" id="proposal-actions" hidden>
+            <button class="soft" id="proposal-refresh" type="button" hidden>重新查看状态</button>
+            <button class="soft" id="proposal-cancel" type="button" hidden>取消任务</button>
+          </div>
+          <div class="proposal-approval" id="proposal-approval" hidden>
+            <button type="button" disabled aria-describedby="proposal-approval-note">确认，记住这个习惯</button>
+            <p class="muted" id="proposal-approval-note">当前可查看差异，应用需等待授权流程接入。</p>
+          </div>
+        </section>
+      </section>
+    </section>
   </section>
 </main></body></html>
