@@ -7,11 +7,102 @@ import hashlib
 import json
 import re
 
-from harnessgrad.improvement.contracts import reject_json_constant, unique_json_object
+from harnessgrad.improvement.contracts import (
+    is_relative_path,
+    reject_json_constant,
+    unique_json_object,
+)
 
 MAX_BYTES = 1024 * 1024
 MAX_EVENTS = 200
 MAX_DRAFT_BYTES = 16 * 1024
+
+
+@dataclass(frozen=True)
+class SurfaceRef:
+    """One file or directory below a caller-authorized project root."""
+
+    root_id: str
+    path: str
+
+    def __post_init__(self):
+        identifier(self.root_id)
+        if not is_relative_path(self.path):
+            raise ValueError('surface path must be a relative POSIX path')
+
+    def as_dict(self) -> dict:
+        return {'root_id': self.root_id, 'path': self.path}
+
+    @classmethod
+    def from_dict(cls, value: dict) -> 'SurfaceRef':
+        if not isinstance(value, dict) or set(value) != {'root_id', 'path'}:
+            raise ValueError('surface reference must contain exactly root_id and path')
+        try:
+            return cls(**value)
+        except TypeError:
+            raise ValueError('invalid surface reference') from None
+
+
+@dataclass(frozen=True)
+class FileChange:
+    """A rendered candidate change; applying it is deliberately out of scope."""
+
+    surface: SurfaceRef
+    resource_ids: tuple[str, ...]
+    before_sha256: str | None
+    after_text: str | None
+    before_mode: int | None
+    after_mode: int | None
+
+    def __post_init__(self):
+        if not isinstance(self.surface, SurfaceRef):
+            raise ValueError('file change surface must be a SurfaceRef')
+        if (not isinstance(self.resource_ids, tuple) or not self.resource_ids
+                or any(not isinstance(value, str) for value in self.resource_ids)):
+            raise ValueError('file change needs resource ids')
+        normalized = tuple(sorted(self.resource_ids))
+        if len(set(normalized)) != len(normalized):
+            raise ValueError('file change resource ids must be unique')
+        for value in normalized:
+            identifier(value)
+        object.__setattr__(self, 'resource_ids', normalized)
+        if self.before_sha256 is not None and not re.fullmatch(r'[0-9a-f]{64}', self.before_sha256):
+            raise ValueError('invalid before digest')
+        if self.after_text is not None and not isinstance(self.after_text, str):
+            raise ValueError('after text must be text or null')
+        for value in (self.before_mode, self.after_mode):
+            if value is not None and (type(value) is not int or not 0 <= value <= 0o7777):
+                raise ValueError('file mode must be an integer permission mode or null')
+
+    def as_dict(self) -> dict:
+        return {
+            'surface': self.surface.as_dict(),
+            'resource_ids': list(self.resource_ids),
+            'before_sha256': self.before_sha256,
+            'after_text': self.after_text,
+            'before_mode': self.before_mode,
+            'after_mode': self.after_mode,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict) -> 'FileChange':
+        fields = {'surface', 'resource_ids', 'before_sha256', 'after_text',
+                  'before_mode', 'after_mode'}
+        if not isinstance(value, dict) or set(value) != fields:
+            raise ValueError('file change contains unknown or missing fields')
+        if not isinstance(value['resource_ids'], list):
+            raise ValueError('file change resource_ids must be a list')
+        try:
+            return cls(
+                surface=SurfaceRef.from_dict(value['surface']),
+                resource_ids=tuple(value['resource_ids']),
+                before_sha256=value['before_sha256'],
+                after_text=value['after_text'],
+                before_mode=value['before_mode'],
+                after_mode=value['after_mode'],
+            )
+        except TypeError:
+            raise ValueError('invalid file change') from None
 
 
 def decode(raw: bytes | str) -> dict:
