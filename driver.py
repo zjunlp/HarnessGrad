@@ -1217,25 +1217,24 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # request carries the pristine tree as well as the incumbent. So the flag is read as
     # *nothing*: a B-flavoured method is simply one that submits its whole sequence in one
     # call, which the loop already allows.
+    # Record the admitted attempt before the loop, which may stop before
+    # publishing another measurement.
+    if resume_state is not None:
+        previous_resumes = resume_planning.read_metadata(run_dir).get("resumed") or []
+        _write_run_meta(run_dir, resumed=[*previous_resumes, {
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "from_round": resume_state["last"],
+            "requested_rounds": args.rounds,
+            "recorded_sha": resume_state["recorded_sha"],
+            "staged_sha": resume_state["staged_sha"],
+            "platform_content_sha": _platform_content_sha(),
+        }])
     curve = _run_mode_a(args, work, man, run_id, mode, curve, h0_sha,
                         base, tasks, task_ids, scorable, sampling, cache,
                         cumulative, train_ids, split, setups, verifiers,
                         verifier_kinds, envs, improver=improver,
                         start_steps=(resume_state["last"] if resume_state else 0),
                         resumed_from=(resume_state["last"] if resume_state else None))
-
-    # **A resumed curve says how it was stitched.** `from_round` and the two content
-    # addresses are the whole claim: the state re-staged from the record reproduced the
-    # address the earlier points already named, and the platform content matched, so no
-    # second platform version entered this curve.
-    if resume_state is not None:
-        _write_run_meta(run_dir, resumed=[{
-            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "from_round": resume_state["last"],
-            "recorded_sha": resume_state["recorded_sha"],
-            "staged_sha": resume_state["staged_sha"],
-            "platform_content_sha": _platform_content_sha(),
-        }])
 
     if budget_binding is not None:
         _write_run_meta(run_dir, budget=budget_binding.metadata())

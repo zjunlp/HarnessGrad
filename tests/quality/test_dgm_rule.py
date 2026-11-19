@@ -189,6 +189,32 @@ def test_a_batch_with_nothing_usable_is_reported_not_raised(tmp_path, monkeypatc
     assert written["steps"][0]["method_reported"]["dgm"], written
 
 
+@pytest.mark.parametrize('kept', [['round-0'], []])
+def test_missing_staged_parent_is_not_reported_as_model_no_change(tmp_path, monkeypatch, kept):
+    mod = _load()
+    history = _history()
+    base = _base(tmp_path, history)
+    round_index = 3
+    selected, _ = mod.select_parent(history, round_index)
+    assert selected['round'] == 1
+    index_path = base / '_harnessgrad/states/index.json'
+    entries = json.loads(index_path.read_text())
+    index_path.write_text(json.dumps({'kept': kept, **{name: entries[name] for name in kept}}))
+    trajectory = tmp_path / 'traj.json'
+    reply, calls = _run(mod, _request(base, tmp_path / 'ws', trajectory, round_index=round_index),
+                        monkeypatch, children=1)
+    steps = json.loads(trajectory.read_text())['steps']
+    report = steps[0]['method_reported']
+    if kept:
+        assert len(calls) == 1
+        assert reply['changed'] is True and report['dgm_parent'] == 0
+        assert report['dgm']['unstaged_rounds'] == [1]
+    else:
+        assert not calls
+        assert report['error'] == 'RuntimeError: no eligible DGM parent state was staged'
+        assert report['dgm'][0]['unstaged_rounds'] == [0, 1]
+
+
 def test_a_batch_becomes_one_curve_point_per_child(tmp_path):
     """端到端:一批 k 个子代 → 曲线上 k 个点,每个点都带 `steps_in_submission = k`。
 
