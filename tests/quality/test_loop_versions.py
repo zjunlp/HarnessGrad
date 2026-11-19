@@ -20,23 +20,32 @@ def tree_sha(root):
     return hashlib.sha1(b'tree ' + str(len(content)).encode() + b'\0' + content).hexdigest()
 
 
-def test_list_includes_both_loop_versions_without_node_claim(capsys):
+def test_list_includes_numbered_loop_versions_and_the_study_source(capsys):
     assert main(['harness','list']) == 0
     rows = [x for x in capsys.readouterr().out.splitlines() if x.startswith('loop ')]
-    assert len(rows) == 2 and rows[0].startswith('loop 0.2.0') and rows[1].startswith('loop 0.3.0')
+    assert [row.split()[1] for row in rows] == ['0.2.0', '0.2.0-study', '0.3.0']
     assert all('Node.js' not in row for row in rows)
 
 
-@pytest.mark.parametrize('version', ['0.2.0','0.3.0'])
+@pytest.mark.parametrize('version', ['0.2.0', '0.2.0-study', '0.3.0'])
 def test_install_preserves_selected_source_and_reuses_identical_copy(tmp_path,monkeypatch,capsys,version):
     monkeypatch.setattr(install_harness,'_toolchain',Mock(side_effect=AssertionError('Loop requested Node')))
     store = tmp_path / 'store'
     assert main(['harness','install','loop','--version',version,'--install-root',str(store)]) == 0
     output = capsys.readouterr(); harness = Path(output.out.strip())
-    assert json.loads((harness / 'harness.json').read_text())['version'] == version
+    assert json.loads((harness / 'harness.json').read_text())['version'] == version.removesuffix('-study')
     if version == '0.2.0':
         assert {p.name for p in harness.iterdir()} == loop.LEGACY_FILES
         assert tree_sha(harness) == loop.LEGACY_TREE
+    elif version == '0.2.0-study':
+        from eval.ckpt.git_state import commit_state, stage_workspace
+
+        assert {p.name for p in harness.iterdir()} == loop.STUDY_FILES
+        measured_tree = '7a40f6ddd0cef5c7210c1be3dc6529cc19c03775'
+        assert tree_sha(harness) == measured_tree
+        work = tmp_path / 'measurement'
+        stage_workspace(harness, work)
+        assert commit_state(work, 'H0') == measured_tree
     else:
         assert (harness / 'requirements.lock').is_file()
         assert json.loads((harness / 'harness.json').read_text())['runtime']['kind'] == 'python'
@@ -51,6 +60,19 @@ def test_default_is_current_loop_version(tmp_path,capsys):
     output = capsys.readouterr()
     assert json.loads((Path(output.out.strip()) / 'harness.json').read_text())['version'] == '0.3.0'
     assert 'version 0.3.0' in output.err
+
+
+def test_study_source_export_excludes_pip_bytecode(tmp_path, monkeypatch):
+    from shutil import copytree
+
+    bundled = tmp_path / 'bundled'
+    copytree(loop.STUDY_SOURCE, bundled)
+    cache = bundled / '__pycache__'
+    cache.mkdir()
+    (cache / 'agent.cpython-312.pyc').write_bytes(b'packaging state')
+    monkeypatch.setattr(loop, 'STUDY_SOURCE', bundled)
+    source = loop.install('0.2.0-study', tmp_path / 'store')
+    assert tree_sha(source) == '7a40f6ddd0cef5c7210c1be3dc6529cc19c03775'
 
 
 @pytest.mark.parametrize('version', ['latest','0.1.0','../0.2.0','0.2.0/other'])

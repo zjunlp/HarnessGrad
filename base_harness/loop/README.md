@@ -10,7 +10,7 @@ LOOP_DIR=$(harnessgrad harness install loop --version 0.2.0)
 harnessgrad run --harness-path "$LOOP_DIR" --dataset demo --improver none --rounds 0
 ```
 
-`harnessgrad harness list` lists both 0.2.0 and 0.3.0. Omit `--version` to export
+`harnessgrad harness list` lists both numbered releases and the study source below. Omit `--version` to export
 0.3.0. `--install-root` selects the external source store. This command exports
 source only: no Node, Git checkout, dependency installation or downloads are needed.
 Prepare dependencies separately when required by the selected version.
@@ -26,6 +26,22 @@ Historical runs can have different source despite sharing the 0.2.0 label. Exact
 score reuse still requires matching source, model, task, scorer and runtime
 identities. Use a retained run checkpoint when its source differs from this release;
 selecting a version never bypasses those checks or guarantees identical dependencies.
+
+## Reproduce the published ALFWorld study source
+
+```bash
+LOOP_DIR=$(harnessgrad harness install loop --version 0.2.0-study)
+```
+
+This exports the four exact files in the public ALFWorld H₀ harness, including its
+workspace `.gitignore`. The manifest still says `0.2.0`. The study files are
+[checked into the repository](../../tools/assets/loop-study-0.2.0/) and pinned
+to the [published source revision](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/dffe13f4e2eb585cb521039fe72d841da77d81e5/Experiments/ALFWorld/qwen3.5-9b_loop/h0/harness).
+Staging them yields the full measured Git tree
+`7a40f6ddd0cef5c7210c1be3dc6529cc19c03775`. The ordinary `0.2.0` selector
+exports a different source tree. This selector only exports source files; scorer,
+task selection, model and installed dependency identities must still be pinned
+for any comparison or verified H₀ reuse.
 
 ## Current runtime
 
