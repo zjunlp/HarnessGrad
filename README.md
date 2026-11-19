@@ -6,14 +6,20 @@
 
 <p align="center"><strong>Build agent harnesses that improve with feedback.</strong><br>Run reproducible experiments, build for a new domain, or turn corrections into changes to your own harness.</p>
 
-<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 📖 <a href="#citation">Citation</a></p>
+<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 💬 <a href="https://github.com/Xubqpanda/HarnessGrad-Community">Community</a> · 📖 <a href="#citation">Citation</a></p>
 
 <p align="center">
-  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/website-live-brightgreen.svg" alt="Website"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.12%2B-blue.svg" alt="Python 3.12 or newer">
-  <img src="https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg" alt="No third-party runtime dependencies">
-  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality gate"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml/badge.svg" alt="Website deployment"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f855a.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776ab.svg?logo=python&amp;logoColor=white" alt="Python 3.12 or newer">
+</p>
+
+<p align="center">
+  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/Website-HarnessGrad-285f50?logo=githubpages&amp;logoColor=white" alt="Project website"></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/Docs-Explore-385fc4?logo=readthedocs&amp;logoColor=white" alt="Documentation"></a>
+  <a href=".github/CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contribute-Get%20involved-bb6346?logo=github&amp;logoColor=white" alt="Contributing guide"></a>
+  <a href="https://github.com/Xubqpanda/HarnessGrad-Community#wechat"><img src="https://img.shields.io/badge/Community-WeChat-07c160?logo=wechat&amp;logoColor=white" alt="Join the WeChat community"></a>
 </p>
 
 <a id="choose-your-path"></a>
@@ -55,8 +61,9 @@
 - [🛠️ Customize a harness](#customize-harness)
   - [Installation](#customize-installation) · [Quick start](#customize-quick-start)
   - [Customization workbench](#customize-workbench)
-- [🌱 Evolve your harness](#evolve-personal-harness)
+- [🌱 Evolve your personal harness](#evolve-personal-harness)
   - [Installation](#personal-installation) · [Quick start](#personal-quick-start)
+- [💬 Community](https://github.com/Xubqpanda/HarnessGrad-Community)
 - [📚 Documentation](docs/README.md)
 - [📖 Citation](#citation)
 - [🔗 Related work](#related-work)

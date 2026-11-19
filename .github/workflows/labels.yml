@@ -1,0 +1,36 @@
+# A maintainer explicitly dispatches this after the workflow reaches the default
+# branch. Preserve all existing label names, colors and descriptions.
+name: Create workflow area labels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  labels:
+    name: Create missing area labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create missing labels without changing existing ones
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          existing=$(gh label list --repo "$GITHUB_REPOSITORY" --limit 1000 --json name --jq '.[].name')
+          create_if_missing() {
+            name="$1"
+            color="$2"
+            description="$3"
+            if printf '%s\n' "$existing" | grep -Fxq -- "$name"; then
+              printf 'Keeping existing label: %s\n' "$name"
+            else
+              gh label create "$name" --repo "$GITHUB_REPOSITORY" --color "$color" --description "$description"
+            fi
+          }
+          create_if_missing 'area: experiments' '1D76DB' 'Experiment execution, methods and results'
+          create_if_missing 'area: customization' 'D4A017' 'Task and domain Harness customization'
+          create_if_missing 'area: personal' '7A4FC6' 'Personal Harness evolution'
+          create_if_missing 'area: datasets' '228B6E' 'Dataset adapters and scoring'
+          create_if_missing 'area: documentation' '0075CA' 'Documentation and onboarding'

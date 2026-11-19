@@ -1,0 +1,40 @@
+name: "✨ Feature request"
+description: Suggest a way to improve HarnessGrad.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Please search existing issues for a similar idea before opening a new one.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which workflow is this for?
+      options:
+        - Run experiments
+        - Customize a Harness
+        - Personal Harness evolution
+        - Shared infrastructure
+        - Documentation or community
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation and why the current experience is difficult.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Describe the desired behavior or an example user journey.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or additional context
+    validations:
+      required: false
