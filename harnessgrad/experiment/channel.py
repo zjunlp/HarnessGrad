@@ -577,20 +577,23 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
     points = [p for p in (history or [])
               if (p.get("identity") or {}).get("harness_sha")]
     kept = points if STATES_KEPT is None else points[-STATES_KEPT:]
-    index: dict = {"kept": [], "window": STATES_KEPT, "available": len(points)}
+    index: dict = {"kept": [], "missing": {}, "window": STATES_KEPT, "available": len(points)}
     for past in kept:
         name = f"round-{past.get('round', 0)}"
         sha = past["identity"]["harness_sha"]
+        dest = hg / "states" / name
         try:
-            count = materialize(work, sha, hg / "states" / name)
+            count = materialize(work, sha, dest)
         except (subprocess.CalledProcessError, OSError, ValueError):
             # A resumed workspace may not contain historical git objects. Its
             # original run snapshot can still supply the exact selected parent.
             round_no = past.get('round')
             if run_dir is None or type(round_no) is not int or round_no < 0:
+                if dest.exists():
+                    shutil.rmtree(dest)
+                index["missing"][name] = {"sha": sha, "reason": "git_tree_unavailable"}
                 continue
             artifact = Path(run_dir) / 'snapshots' / f'round-{round_no}.json'
-            dest = hg / 'states' / name
             try:
                 if artifact.is_symlink():
                     raise ValueError('unsafe snapshot')
@@ -603,9 +606,10 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
                 snapshots.check_out(artifact, dest)
                 snapshots.verify(artifact, dest)
                 count = len(record['files'])
-            except (OSError, ValueError, KeyError, snapshots.SnapshotInvalid):
+            except (OSError, ValueError, KeyError, snapshots.SnapshotError):
                 if dest.exists():
                     shutil.rmtree(dest)
+                index["missing"][name] = {"sha": sha, "reason": "checkpoint_snapshot_unusable"}
                 continue
         index["kept"].append(name)
         index[name] = {"sha": sha, "files": count,

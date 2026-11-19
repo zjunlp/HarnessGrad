@@ -78,7 +78,10 @@ def test_resume_stages_missing_git_parent_from_verified_run_snapshot(tmp_path):
     artifact.unlink()
     snapshot.write(run, 1, source, run_id='run-a', harness_sha='different')
     _stage_for_method(work, history[-1], {}, history=history, run_dir=run)
-    assert 'round-1' not in json.loads((states / 'index.json').read_text())['kept']
+    index = json.loads((states / 'index.json').read_text())
+    assert 'round-1' not in index['kept']
+    assert index['missing']['round-1'] == {
+        'sha': shas[1], 'reason': 'checkpoint_snapshot_unusable'}
 
 
 def test_history_stages_nested_train_traces_but_excludes_other_tasks(tmp_path):
@@ -148,6 +151,7 @@ def test_a_state_that_cannot_be_materialized_is_absent_from_the_index(tmp_path):
     index = json.loads((states / "index.json").read_text())
     assert "round-2" not in index["kept"]
     assert "round-2" not in index
+    assert index["missing"]["round-2"] == {"sha": "0" * 40, "reason": "git_tree_unavailable"}
     assert not (states / "round-2").exists()
 
 

@@ -59,7 +59,8 @@ ROOT = Path(__file__).resolve().parents[2]
 # checked, and OpenClaw version/admission output is explicitly strict UTF-8.
 # Reviewed against original main, the LightRSI fix and the refactor tree; see
 # docs/validation/decoding-inventory.md for the complete comparison.
-EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 14, "tools": 42}
+# The pinned Loop study actor adds one tools call with explicit errors="replace".
+EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 14, "tools": 43}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.

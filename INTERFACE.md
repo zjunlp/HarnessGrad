@@ -2661,6 +2661,13 @@ rule it published. The cap is **off by default**. `HG_METHOD_HISTORY_ROUNDS=N` r
 bound for a run that needs one, and the value is recorded (`round.json`'s `history_rounds`,
 `states/index.json`'s `window`) so a reader knows what the method could see.
 
+On train resume, retained intermediate checkpoints are restored into the new Git
+object store and checked against the curve's tree addresses before the workspace is
+published. The last checkpoint remains the incumbent. `states/index.json` lists
+usable states in `kept` and materialization failures inside the window in
+`missing` (tree address and reason). DGM samples only from eligible states that
+were staged. An eligible archive with no usable parent is a method error.
+
 The reason the cap existed was *cost*, and the cost was real: each round's **archived
 snapshot** (`runs/<id>/method_channel/round<N>/`) carried every earlier round's traces as a
 fresh copy, so the record grew quadratically -- measured at ~2.1 MB of traces per round
