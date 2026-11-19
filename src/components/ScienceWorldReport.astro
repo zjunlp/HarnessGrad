@@ -1,0 +1,70 @@
+---
+import data from '../data/results/scienceworld.json';
+const zh = Astro.props.lang === 'zh';
+const links = 'https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/' + data.revision + '/Experiments/ScienceWorld/qwen3.5-9b_loop/dsh-deepseek-v4.1-flash-1017';
+const palette = ['#2b8c76','#9c62c4','#2673b6','#d16544','#a38621','#b75085','#526078'];
+const labels: Record<string,string> = {
+  sica_ci: 'SICA-CI', dream_rsi: 'DREAM-RSI', dgm: 'DGM', harnessx: 'HarnessX',
+  hyperagents: 'HyperAgents', darwinx: 'DarwinX', ahe: 'AHE',
+};
+const score = (v: number) => v.toFixed(3);
+const x = (r: number) => 44 + r * 33;
+const y = (value: number) => 290 - value * 250;
+const rows = data.methods.map((m, i) => {
+  let drawing = false;
+  const path = m.train.map((value, round) => {
+    if (value == null) { drawing = false; return ''; }
+    const command = drawing ? 'L' : 'M';
+    drawing = true;
+    return command + x(round) + ',' + y(value);
+  }).join(' ');
+  return {...m, path, label: labels[m.id] || m.id, color: palette[i]};
+});
+---
+<section class="sw-summary" aria-label={zh ? '实验条件' : 'Experiment conditions'}>
+  <div><span>{zh ? '任务侧' : 'Task agent'}</span><strong>{data.taskAgent.model} / {data.taskAgent.harness}</strong></div>
+  <div><span>{zh ? '改进侧' : 'Meta agent'}</span><strong>{data.metaAgent.harness}</strong></div>
+  <div><span>{zh ? '测试基线 H₀' : 'Test baseline H₀'}</span><strong>{score(data.baseline.test_score)}</strong></div>
+</section>
+<figure class="sw-chart">
+  <svg viewBox="0 0 724 322" role="img" aria-labelledby="sw-title sw-desc">
+    <title id="sw-title">{zh ? 'ScienceWorld 训练分数' : 'ScienceWorld training scores'}</title>
+    <desc id="sw-desc">{zh ? '七种方法从第 0 到第 20 轮的训练分数。未通过核验的测量留空。' : 'Scores for seven methods across rounds 0 through 20. Excluded measurements appear as gaps.'}</desc>
+    {[0,0.25,0.5,0.75,1].map(v => <g>
+      <line x1="44" x2="704" y1={y(v)} y2={y(v)} class="sw-grid"/>
+      <text x="35" y={y(v)+4} text-anchor="end">{v.toFixed(2)}</text>
+    </g>)}
+    {[0,5,10,15,20].map(r => <text x={x(r)} y="309" text-anchor="middle">{r}</text>)}
+    {rows.map(row => <path d={row.path} fill="none" stroke={row.color} stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />)}
+  </svg>
+  <ul class="sw-key">
+    {rows.map(row => <li><span style={'background:' + row.color}></span>{row.label}</li>)}
+  </ul>
+  <figcaption>{zh ? '横轴为轮次。未完成的测量留空，不计为零。' : 'Horizontal axis: round. Incomplete measurements remain gaps.'}</figcaption>
+</figure>
+<div class="sw-table">
+<table>
+  <thead><tr><th scope="col">{zh ? '方法' : 'Method'}</th><th scope="col">{zh ? '按 dev 选定轮次' : 'Dev-selected round'}</th><th scope="col">dev</th><th scope="col">test</th></tr></thead>
+  <tbody>
+    <tr><th scope="row">H₀</th><td>0</td><td>{score(data.baseline.dev_score)}</td><td>{score(data.baseline.test_score)}</td></tr>
+    {rows.map(row => <tr><th scope="row"><a href={links + '/' + row.id}>{row.label}</a></th><td>{row.devRound}</td><td>{score(row.devScore)}</td><td>{score(row.testScore)}</td></tr>)}
+  </tbody>
+</table>
+</div>
+<p><a href={links}>{zh ? '打开该版本的完整运行记录 →' : 'Open the complete records at this revision →'}</a></p>
+<style>
+.sw-summary { display:grid; grid-template-columns: repeat(auto-fit,minmax(125px,1fr)); gap:12px; margin:1.6rem 0; }
+.sw-summary > div { margin-top:0; display:grid; gap:3px; padding:12px 16px; border:1px solid var(--sl-color-gray-5); border-radius:12px; }
+.sw-summary > div > * { margin:0; }
+.sw-summary span, .sw-chart figcaption { font-size:.82rem; color:var(--sl-color-gray-2); }
+.sw-chart { margin:0 0 1.8rem; padding:.8rem 1rem; border:1px solid var(--sl-color-gray-5); border-radius:14px; min-width:0; }
+.sw-chart svg { width:100%; display:block; }
+.sw-chart text { fill:var(--sl-color-gray-2); font-size:12px; }
+.sw-grid { stroke:var(--sl-color-gray-5); stroke-width:1; }
+.sw-key { display:flex; gap:6px 14px; flex-wrap:wrap; list-style:none; padding-left:0; margin:.4rem 0; font-size:.8rem; }
+.sw-key li { display:flex; align-items:center; gap:6px; margin:0; }
+.sw-key span { display:block; width:12px; height:3px; border-radius:4px; flex:none; }
+.sw-table { overflow:auto; }
+.sw-table table { display:table; width:100%; }
+.sw-table td { text-align:right; font-variant-numeric:tabular-nums; }
+</style>

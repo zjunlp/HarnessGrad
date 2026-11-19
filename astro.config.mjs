@@ -21,9 +21,9 @@ export default defineConfig({
 				PageTitle: './src/components/ContentTitle.astro',
 			},
 			routeMiddleware: './src/contentRoute.ts',
-			// Describe current capabilities plainly; continual learning is a research ambition.
+			// Describe the three workflows available from the site.
 			description:
-				'Optimize the code around a fixed model using environment feedback. HarnessGrad runs and measures harness-improvement experiments.',
+				'Run harness experiments, build a domain harness, and improve your personal harness with feedback.',
 			favicon: '/favicon.svg',
 			logo: { src: './src/assets/mark.svg', alt: '' },
 			customCss: ['./src/styles/custom.css'],
@@ -91,22 +91,26 @@ export default defineConfig({
 			],
 			sidebar: [
 				{
-					label: 'Start here', translations: { zh: '开始使用' },
-					items: [{ label: 'Getting started', translations: { zh: '快速入门' }, slug: 'getting-started' }],
+					label: 'Start here', translations: { 'zh-CN': '开始使用' },
+					items: [
+                    { label: 'Run experiments', translations: { 'zh-CN': '运行实验' }, slug: 'getting-started' },
+                    { label: 'Customize a harness', translations: { 'zh-CN': '领域定制' }, slug: 'customize' },
+                    { label: 'Evolve your harness', translations: { 'zh-CN': '个人进化' }, slug: 'personal-evolution' },
+                ],
 				},
 				{
-					label: 'Benchmarks', translations: { zh: '基准测试' },
+					label: 'Benchmarks', translations: { 'zh-CN': '基准测试' },
 					items: [{ autogenerate: { directory: 'benchmarks' } }],
 				},
 				{
-					label: 'Methods', translations: { zh: '方法' },
+					label: 'Methods', translations: { 'zh-CN': '方法' },
 					items: [{ autogenerate: { directory: 'methods' } }],
 				},
 				{
-					label: 'Contribute', translations: { zh: '参与贡献' },
+					label: 'Contribute', translations: { 'zh-CN': '参与贡献' },
 					items: [
-						{ label: 'Submit a harness', translations: { zh: '提交 harness' }, slug: 'contributing' },
-						{ label: '5-minute upload', translations: { zh: '五分钟上传' }, slug: 'submit-harness' },
+						{ label: 'Submit a harness', translations: { 'zh-CN': '提交 harness' }, slug: 'contributing' },
+						{ label: '5-minute upload', translations: { 'zh-CN': '五分钟上传' }, slug: 'submit-harness' },
 					],
 				},
 			],

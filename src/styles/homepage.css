@@ -754,3 +754,6 @@ h2,.section-copy h2,.evidence h2 {
     scroll-behavior:auto!important;
   }
 }
+
+/* Let the three workflow previews follow a compact introduction. */
+@media (min-width:761px) { .hero { padding-block:38px 44px; } .hero .agent-scene svg { max-height:270px; margin-inline:auto; } }

@@ -1,0 +1,63 @@
+---
+const zh = Astro.props.lang === 'zh';
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const local = base + (zh ? '/zh/' : '/');
+const repo = 'https://github.com/zjunlp/HarnessGrad';
+const cards = [
+  {
+    title: zh ? '运行实验' : 'Run experiments',
+    description: zh ? '固定起点，记录每轮改动、任务轨迹和分数。' : 'Track rounds, traces and scores from a declared starting point.',
+    photo: 'experiments-preview', alt: zh ? 'ScienceWorld 多组实验曲线' : 'ScienceWorld learning curves',
+    href: local + 'getting-started/', action: zh ? '开始实验' : 'Start an experiment',
+    example: local + 'benchmarks/scienceworld/', exampleName: 'ScienceWorld',
+  },
+  {
+    title: zh ? '领域定制' : 'Customize a harness',
+    description: zh ? '组装知识、工具和流程，用领域任务验收候选。' : 'Assemble domain knowledge, tools and workflows. Validate the candidate on domain tasks.',
+    photo: 'ocean-preview', alt: zh ? 'Ocean Harness 的证据界面' : 'Evidence in the Ocean Harness interface',
+    href: local + 'customize/', action: zh ? '开始定制' : 'Start customizing',
+    example: repo + '#customize-harness', exampleName: 'Ocean Harness',
+  },
+  {
+    title: zh ? '个人进化' : 'Evolve your harness',
+    description: zh ? '让一次会话纠正变成可审阅的 Harness 改动。' : 'Turn a correction from a session into a change you can review.',
+    photo: 'xiaolv-preview', alt: zh ? '小绿显示会话反馈' : 'Xiao Lü showing session feedback',
+    href: local + 'personal-evolution/', action: zh ? '启动个人工作台' : 'Open the personal guide',
+    example: repo + '#evolve-personal-harness', exampleName: zh ? '小绿' : 'Xiao Lü',
+  }
+];
+---
+<section id="workflows" class="workflow-section" aria-labelledby="workflow-title">
+  <h2 id="workflow-title">{zh ? '你想做什么？' : 'What would you like to do?'}</h2>
+  <div class="workflow-grid">
+    {cards.map(card => (
+      <article class="workflow-card">
+        <a href={card.example} class="workflow-preview">
+          <img src={base + '/workflows/' + card.photo + '.png'} width="540" height="350" alt={card.alt} />
+          <span>{card.exampleName} <span aria-hidden="true">↗</span></span>
+        </a>
+        <div class="workflow-content">
+          <h3>{card.title}</h3>
+          <p>{card.description}</p>
+          <a href={card.href} class="workflow-link">{card.action} <span aria-hidden="true">→</span></a>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+<style>
+.workflow-section { padding: 12px 0 94px; scroll-margin: 24px; }
+.workflow-section h2 { font-size: clamp(26px, 3.5vw, 40px); margin-bottom: 24px; }
+.workflow-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
+.workflow-card { display:flex; flex-direction:column; border:1px solid var(--line); border-radius:20px; overflow:hidden; background:var(--paper); }
+.workflow-preview { display:block; position:relative; background:#f3f6f4; }
+.workflow-preview img { display:block; width:100%; height:auto; aspect-ratio: 1.67; object-fit:cover; object-position:top; }
+.workflow-preview > span { position:absolute; right:10px; bottom:10px; border-radius:8px; background:rgba(249,252,250,.96); padding:6px 9px; font-size:12px; color:#194537; }
+.workflow-content { display:flex; flex-direction:column; gap:12px; flex:1; padding:22px; }
+.workflow-content h3 { font-size:22px; line-height:1.15; }
+.workflow-content p { color:var(--muted); line-height:1.55; flex:1; }
+.workflow-link { color:var(--accent); min-height:38px; display:flex; align-items:center; gap:7px; font-weight:650; text-decoration:none; width:fit-content; }
+.workflow-link:hover { text-decoration:underline; }
+.workflow-preview:focus-visible { outline-offset:-4px; }
+@media(max-width:760px) { .workflow-grid { grid-template-columns:1fr; } .workflow-section { padding-bottom:64px; } }
+</style>

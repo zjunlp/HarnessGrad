@@ -1,4 +1,5 @@
 ---
+import WorkflowCards from './WorkflowCards.astro';
 import LearningCycle from './LearningCycle.astro';
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const zh = Astro.props.lang === 'zh';
@@ -18,11 +19,10 @@ const modes = zh ? [
 ---
 <section class="hero split" aria-labelledby="brand-heading">
   <div>
-    <h1 id="brand-heading"><span class="brand-line">HarnessGrad:</span> Harness as A Continual Learner</h1>
-    {zh && <p>让 Harness 持续学习</p>}
-    <p class="lead">{zh ? '固定模型，让 Harness 持续演进。' : 'Keep the model fixed. Let the harness evolve.'}</p>
-    <p>{zh ? '工具、上下文和控制流程决定了智能体能做什么。HarnessGrad 将环境反馈转化为针对这些可编辑代码的实验。' : 'Tools, context, and control flow shape what an agent can do. HarnessGrad turns environment feedback into experiments on that editable code.'}</p>
-    <a class="button" href={`${base}/${zh ? 'zh/' : ''}getting-started/`}>{zh ? '开始实验' : 'Start an experiment'} <span aria-hidden="true">↗</span></a>
+    <h1 id="brand-heading">HarnessGrad</h1>
+    <p class="lead">{zh ? '让 Harness 从反馈中持续学习。' : 'Harness as a continual learner.'}</p>
+    <p>{zh ? '把反馈变成可检查的 Harness 改动。运行实验、为领域定制，或让个人 Harness 持续学习。' : 'Turn feedback into harness changes you can inspect. Run experiments, build for a domain, or improve your own harness.'}</p>
+    <a class="button" href="#workflows">{zh ? '选择工作流' : 'Choose a workflow'} <span aria-hidden="true">↗</span></a>
   </div>
   <figure class="agent-scene">
     <svg viewBox="0 0 500 410" role="img" aria-labelledby="scene-title scene-desc">
@@ -51,6 +51,9 @@ const modes = zh ? [
     <figcaption><span>{zh ? '智能体' : 'Agent'} = <strong>Harness</strong> + {zh ? '模型' : 'Model'}</span><span>{zh ? '模型固定，工作方式可变。' : 'A fixed model. A changeable way of working.'}</span></figcaption>
   </figure>
 </section>
+
+<WorkflowCards lang={zh ? 'zh' : 'en'} />
+
 
 <section class="split learning" aria-labelledby="learning-heading">
   <div class="section-copy">
@@ -92,6 +95,7 @@ const modes = zh ? [
 <section class="evidence" aria-labelledby="evidence-heading">
   <div><h2 id="evidence-heading">{zh ? '让证据说话。' : 'Let the evidence speak.'}</h2><p>{zh ? '探索已记录的运行及其条件，或亲自开始一个小实验。' : 'Explore recorded runs and their conditions, or start a small experiment of your own.'}</p></div>
   <nav aria-label={zh ? '结果与后续步骤' : 'Results and next steps'} class="evidence-actions">
+    <a href={base + (zh ? '/zh/' : '/') + 'benchmarks/scienceworld/'}>ScienceWorld <span aria-hidden="true">↗</span></a>
     <a href={`${base}/${zh ? 'zh/' : ''}benchmarks/appworld/`}>{zh ? 'AppWorld 结果' : 'AppWorld results'} <span aria-hidden="true">↗</span></a>
     <a href={`${base}/${zh ? 'zh/' : ''}benchmarks/alfworld/`}>{zh ? 'ALFWorld 结果' : 'ALFWorld results'} <span aria-hidden="true">↗</span></a>
     <a class="button" href={`${base}/${zh ? 'zh/' : ''}getting-started/`}>{zh ? '开始使用' : 'Get started'} <span aria-hidden="true">↗</span></a>
