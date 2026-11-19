@@ -111,6 +111,9 @@ def _matching_verification_context(point, current):
     """Compare only the current task set; absent or malformed evidence is not reusable."""
     # A rejected attempt may retain its planned input identity, but has no
     # measurement to reuse even if a record also claims a score.
+    if (point.get("shared_from") or {}).get("comparability") == "published":
+        # Subsequent candidates use the current model and scoring deployment.
+        return False
     if point.get("unmeasured") or point.get("measured_by_platform") is False:
         return False
     if current is None or point.get("verification_context") is None:

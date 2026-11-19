@@ -61,7 +61,8 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 # Namespace discovery alone only includes Python modules, not these resources.
 [tool.setuptools.package-data]
 "tools" = [
-    "assets/loop-0.2.0.zip", "assets/loop-study-0.2.0.provenance.json",
+    "assets/alfworld-loop-study-h0/curve.jsonl", "assets/alfworld-loop-study-h0/round-0.tar.gz",
+    "assets/alfworld-loop-study-h0/train100.csv", "assets/loop-0.2.0.zip", "assets/loop-study-0.2.0.provenance.json",
     "assets/loop-study-0.2.0/.gitignore", "assets/loop-study-0.2.0/agent.py",
     "assets/loop-study-0.2.0/harness.json", "assets/loop-study-0.2.0/requirements.txt",
 ]

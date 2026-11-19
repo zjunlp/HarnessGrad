@@ -163,7 +163,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--from-round", type=int, default=None,
                     help="--side eval: which round of that run (default: its last)")
     ap.add_argument("--h0-from", default=None, metavar="RUN_ID",
-                    help="reuse another run's round-0 measurement instead of measuring one. "
+                    help="reuse another run's round-0 measurement, or select the official "
+                         "published:alfworld-loop-study baseline (53/100). "
                          "Same base tree, same study tasks, so every method must be offered "
                          "the *same* first score: re-measuring it per method lets batching "
                          "non-determinism hand one method a different number and a different "

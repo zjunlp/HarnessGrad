@@ -68,7 +68,7 @@ import eval.service.web_gateway as web_gateway_mod
 # visible in the import line rather than flattened through the entrypoint.
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
-from harnessgrad.provenance import h0_identity
+from harnessgrad.provenance import h0_identity, published_h0
 from harnessgrad.entrypoints.experiment_config import (
     config_help as _config_help, expand_experiment_argv as _expand_experiment_argv,
 )
@@ -342,6 +342,17 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     except (OSError, ValueError) as exc:
         print(f'refusing --scenario: {exc}', file=sys.stderr)
         return 2
+
+    published = args.h0_from == published_h0.SELECTOR
+    if published:
+        try:
+            cohort_file = published_h0.configure(args, explicit, scenario=scenario_spec is not None)
+        except (OSError, ValueError) as exc:
+            print(f"refusing published H0: {exc}", file=sys.stderr)
+            return 2
+        if not os.environ.get("HG_ALFWORLD_STUDY_IDS"):
+            os.environ["HG_ALFWORLD_STUDY_IDS"] = cohort_file
+            sources.callback(os.environ.pop, "HG_ALFWORLD_STUDY_IDS", None)
 
     if args.expected_harness_sha256 is not None:
         value = args.expected_harness_sha256
@@ -976,7 +987,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             restored=resume_state is not None, ops=workspace_ops, journal=preparation_journal)
         if not args.resume:
             prepared = prepare_committed_candidate(work, PreparationOptions(
-                args.side, args.from_run, None if args.h0_comparability == "content" else args.h0_from,
+                args.side, args.from_run, None if published or args.h0_comparability == "content" else args.h0_from,
                 Path(args.runs_root),
                 args.harness_runtime_binding, args.sandbox), envs=envs, setups=setups,
                 eval_from=eval_from, ops=workspace_ops, journal=preparation_journal)
@@ -1063,6 +1074,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                     args.h0_from, Path(args.runs_root), args.h0_attestation_sha256, content_capture,
                     h0_sha, man, h0_attribution, h0_options, h0_identities, console)
                 base, shared_point = reused.base, reused.point
+            elif published:
+                reused = h0_planning.materialize_published_h0(
+                    h0_sha, man, h0_attribution, h0_options, h0_identities, tasks_all, verifiers)
+                base, shared_point = reused.base, reused.point
+                console.note("using published ALFWorld H0: 53/100, with the original 100 task traces",
+                             level="info")
             elif args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
                 if args.h0_subset_view:

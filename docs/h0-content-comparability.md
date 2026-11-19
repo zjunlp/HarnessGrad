@@ -1,5 +1,22 @@
 # Content-attested H0 reuse
 
+To start an ALFWorld experiment at the official 53/100 baseline, use the published
+study selector. It selects Loop `0.2.0-study`, the 100 training tasks and their
+original traces. Configure the normal HarnessGrad ALFWorld dataset and execution
+runtime, then run:
+
+```bash
+harnessgrad run --h0-from published:alfworld-loop-study --rounds 0 --improver none
+```
+
+For improvement rounds, supply your usual method and round budget. The bundled
+release files are checked against their published hashes offline. The run records
+the original model, score and Hub revision, and labels the baseline as historical.
+This mode permits a different serving deployment. Later candidate measurements use
+the recipient's configured solver. [Original release](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/dffe13f4e2eb585cb521039fe72d841da77d81e5/Experiments/ALFWorld/qwen3.5-9b_loop/h0)
+
+## Content-attested donors
+
 `--h0-from RUN` uses strict matching by default. For an original round-zero
 measurement published with reviewed evidence, select portable admission explicitly.
 
@@ -82,8 +99,6 @@ python -m tools.prepare_h0_content "$STAGED_H0_DIRECTORY" \
   --reviewed-evidence-sha256 "$TRUSTED_REVIEWED_EVIDENCE_SHA256"
 ```
 
-For the published ALFWorld 53/100 H0, the pinned Loop tree and the 100 task scores
-can be checked. The public mirror lacks the original measurement-time content
-attestation. Current local fingerprints cannot prove what the original endpoint,
-verifier and runtime executed. Obtain the original evidence or measure one fresh
-H0 on `0.2.0-study` with the fixed cohort and share that run between the arms.
+The historical ALFWorld publication supports the built-in published selector above.
+Content-attested comparisons additionally require the original weights, decoding
+and measurement-time runtime evidence.

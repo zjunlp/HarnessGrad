@@ -240,6 +240,8 @@ class Console:
                 lo, hi = p.get("score_ci95") or (None, None)
                 ci = f"[{lo:.2f}, {hi:.2f}]" if lo is not None and hi is not None and lo == lo else "n/a"
                 score, by = num(p["score"]), "donor" if imported else "platform"
+                if (p.get("shared_from") or {}).get("comparability") == "published":
+                    by = "published"
             else:
                 claimed = (p.get("method_reported") or {}).get("score")
                 score = num(claimed) if isinstance(claimed, (int, float)) else "n/a"

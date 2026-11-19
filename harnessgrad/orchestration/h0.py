@@ -223,6 +223,69 @@ def capture_content(work, source_sha, identities, options, *, agent_path, tasks,
         raise H0Refused(f"H0 content evidence unavailable: {exc}") from exc
 
 
+def _bind_recipient_context(point, base, original, selected, identities, exact_external):
+    # Runtime fields describe the recipient context for continuation and resume.
+    # shared_from binds the imported point to the historical donor evidence.
+    current = {
+        "verification_context": verification_context.project(identities.verification, selected),
+        "dataset_runtime_identity": identities.dataset,
+        "scoring_identity": identities.scoring,
+        "measurement_components": identities.measurement,
+        "harness_runtime_identity": identities.initial_actor,
+    }
+    for key, value in current.items():
+        base.pop(key, None)
+        point.pop(key, None)
+        if value is not None:
+            base[key] = value
+            point[key] = value
+    old_routes = external_runtime.records(original)
+    updated = [{**{k: v for k, v in row.items() if k not in external_runtime.KINDS}, **exact_external}
+               for row in old_routes] or ([exact_external] if exact_external else [])
+    point["env"] = {**(original.get("env") or {}), "harness_runtime": updated}
+    base["harness_runtime"] = updated
+
+
+def materialize_published_h0(source_sha, manifest, attribution, options, identities, tasks, verifiers):
+    """Import the platform release under its historical measurement attribution."""
+    from harnessgrad.provenance import published_h0
+    try:
+        original = published_h0.point()
+        selected = original["sampling"]["task_ids"]
+        requested = [task["task_id"] for task in tasks]
+        if options.dataset != "alfworld" or source_sha != original["identity"]["harness_sha"]:
+            raise ValueError("the published H0 requires ALFWorld and its measured Loop base tree")
+        if len(requested) != len(selected) or set(requested) != set(selected):
+            raise ValueError("the recipient task set differs from the published 100-task cohort")
+        if any((verifiers[tid].get("native_runtime") or {}).get("profile") != "public-native-local-v1"
+               or (verifiers[tid].get("native_runtime") or {}).get("dataset") != options.dataset
+               for tid in selected):
+            raise ValueError("the published H0 requires HarnessGrad's ALFWorld scoring environment")
+        # The ordinary driver has already captured and admitted these task runtimes.
+        bindings = dataset_runtime_identity.validate(identities.dataset)
+        for tid in selected:
+            service = bindings["artifacts"][bindings["tasks"][tid]["service"]]
+            if service["dataset"] != options.dataset or service["profile"] != "execution":
+                raise ValueError("the recipient requires the HarnessGrad ALFWorld execution runtime")
+        base = base_from_point(original)
+        traces = published_h0.traces(selected)
+        base["traces"] = traces
+        base["trial_traces"] = {tid: [body] for tid, body in traces.items()}
+        donor = H0Donor(original["run_id"], published_h0.RELEASE, None, original)
+        point = build_shared_point(donor, source_sha, manifest, attribution, options)
+        _bind_recipient_context(point, base, original, selected, identities, {})
+        point["shared_from"].update({
+            "path": published_h0.SOURCE, "comparability": "published",
+            "measurement_origin": "HarnessGrad published study",
+            "revision": published_h0.REVISION, "curve_sha256": published_h0.CURVE_SHA256,
+            "trace_archive_sha256": published_h0.TRACES_SHA256,
+            "runtime_identity_scope": "recipient environment",
+        })
+        return SharedH0(base, point)
+    except (OSError, KeyError, ValueError, TypeError) as exc:
+        raise H0Refused(f"refusing published H0: {exc}") from exc
+
+
 def materialize_content_h0(run_id, runs_root, pin, capture, source_sha, manifest,
                            attribution, options, identities, reporter):
     from harnessgrad.provenance import h0_content
@@ -253,26 +316,7 @@ def materialize_content_h0(run_id, runs_root, pin, capture, source_sha, manifest
         point = build_shared_point(H0Donor(run_id, directory, None, original),
                                    source_sha, manifest, attribution, options)
 
-        # These fields identify the equivalent recipient context used for resume
-        # and later reuse. The original point remains bound by the attestation.
-        current = {
-            "verification_context": verification_context.project(identities.verification, selected),
-            "dataset_runtime_identity": identities.dataset,
-            "scoring_identity": identities.scoring,
-            "measurement_components": identities.measurement,
-            "harness_runtime_identity": identities.initial_actor,
-        }
-        for key, value in current.items():
-            base.pop(key, None)
-            point.pop(key, None)
-            if value is not None:
-                base[key] = value
-                point[key] = value
-        old_routes = external_runtime.records(original)
-        updated = [{**{k: v for k, v in row.items() if k not in external_runtime.KINDS}, **exact_external}
-                   for row in old_routes] or ([exact_external] if exact_external else [])
-        point["env"] = {**(original.get("env") or {}), "harness_runtime": updated}
-        base["harness_runtime"] = updated
+        _bind_recipient_context(point, base, original, selected, identities, exact_external)
         evidence = attestation["measurement_evidence"]
         point["shared_from"].update({
             "comparability": "content",
