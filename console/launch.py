@@ -19,10 +19,8 @@ from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urlparse
 if __package__:
-    from .record_reader import read_json
     from .settings import display_base_url
 else:
-    from record_reader import read_json
     from settings import display_base_url
 
 
@@ -106,10 +104,9 @@ def live_drivers_by_run() -> dict[str, dict]:
 def describe(catalogue, *, load_settings, pools) -> dict:
     """选择器的取值全部来自平台自己，不写死。"""
     names = catalogue.adapters()
-    improver_rows = catalogue.improvers()
+    improver_rows = [row for row in catalogue.improvers() if row.get("kind") == "cli"]
     settings = load_settings()
     task = settings["task"]
-    meta = settings["meta"]
     try:
         from harnessgrad.config import current
         agent = current().agent
@@ -137,10 +134,7 @@ def describe(catalogue, *, load_settings, pools) -> dict:
                          "task_base_url_redacted": bool(task_url and not display_base_url(task_url)),
                          "task_base_url_reenter": bool(task_url and not display_base_url(task_url) and not task.get("base_url")),
                          "task_api_key_set": task_key_set,
-                         # Legacy meta settings are retained on disk, not silently applied
-                         # to a CLI improver that owns its own provider configuration.
-                         "meta_base_url": "", "improver_model": "",
-                         "meta_api_key_set": bool(meta.get("api_key")),
+                         "improver": improver_rows[0]["name"] if improver_rows else "",
                          "rounds": 10, "jobs": 12, "trials": 1, "sampling": "all"}}
 
 
@@ -218,7 +212,7 @@ def build_argv(form: dict, run_id: str, *, paths, budget_capacity) -> list[str]:
               if str(form.get("method") or "").strip() not in ("", "none")
               and not (single and str(form.get('method') or '').startswith('custom:')) else []),
             "--improver", improver,
-            *(["--improver-model", improver_model] if improver_model and not single else []),
+            *(["--improver-model", improver_model] if improver_model and improver != "none" else []),
             "--run-id", run_id,
             "--runs-root", str(paths.runs),
             *(["--work-root", str(paths.state_root / "work")] if paths.external_state else []),
@@ -229,7 +223,7 @@ def build_argv(form: dict, run_id: str, *, paths, budget_capacity) -> list[str]:
 def build_environment(form: dict, *, load_settings) -> dict:
     """Build explicit solver/method overrides for the child driver environment."""
     settings = load_settings()
-    task, meta = settings["task"], settings["meta"]
+    task = settings["task"]
     backend = str(form.get("task_backend") or ("mock" if form.get("task_model") == "mock" else "openai"))
     env = {"HG_AGENT_BACKEND": backend,
            "HG_AGENT_MODEL": str(form.get("task_model") or ""),
@@ -238,13 +232,6 @@ def build_environment(form: dict, *, load_settings) -> dict:
         env["HG_AGENT_BASE_URL"] = str(form.get("task_base_url") or task.get("base_url") or "")
         env["HG_AGENT_API_KEY"] = str(form.get("task_api_key") or
             (task.get("api_key") if env["HG_AGENT_BASE_URL"] == str(task.get("base_url") or "") else "") or "")
-    # Method-owned editor clients consume HG_METHOD_*. Endpoint-backed improvers use
-    # a per-launch registry override; CLI improvers retain their own transport.
-    if not _single_measurement(form) and form.get('meta_base_url'):
-        env['HG_METHOD_BASE_URL'] = str(form['meta_base_url'])
-        env['HG_METHOD_MODEL'] = str(form.get('improver_model') or '')
-        env['HG_METHOD_API_KEY'] = str(form.get('meta_api_key') or
-            (meta.get('api_key') if env['HG_METHOD_BASE_URL'] == str(meta.get('base_url') or '') else '') or '')
     return env
 
 
@@ -346,17 +333,16 @@ def _catalogue_selection(form, catalogue, paths):
 def _solver_credentials(form, env, backend, model, preview_key_pending):
     if backend == "openai" and not env["HG_AGENT_BASE_URL"]:
         return 400, {"error": "no-task-url", "detail": "实时 task 模型需要填写 endpoint URL"}
-    for field in ("task_base_url", "meta_base_url"):
-        value = str((env["HG_AGENT_BASE_URL"] if field == "task_base_url" and backend == "openai" else form.get(field)) or "")
-        if value:
-            try:
-                if any(ord(c) < 32 or ord(c) == 127 for c in value):
-                    raise ValueError('unsafe endpoint')
-                parsed = urlparse(value)
-                if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-                    raise ValueError('unsafe endpoint')
-            except ValueError:
-                return 400, {"error": "bad-endpoint", "detail": f"{field} 必须是无凭据、无查询参数的 HTTP(S) endpoint URL"}
+    value = str(env["HG_AGENT_BASE_URL"] or "") if backend == "openai" else ""
+    if value:
+        try:
+            if any(ord(c) < 32 or ord(c) == 127 for c in value):
+                raise ValueError('unsafe endpoint')
+            parsed = urlparse(value)
+            if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                raise ValueError('unsafe endpoint')
+        except ValueError:
+            return 400, {"error": "bad-endpoint", "detail": "task_base_url 必须是无凭据、无查询参数的 HTTP(S) endpoint URL"}
     if any(ord(c) < 32 or ord(c) == 127 for c in model):
         return 400, {"error": "bad-task-model", "detail": "task-model 不能包含控制字符"}
     if backend == "openai" and not env["HG_AGENT_API_KEY"] and not preview_key_pending:
@@ -364,25 +350,22 @@ def _solver_credentials(form, env, backend, model, preview_key_pending):
     return None
 
 
-def _editor_credentials(form, catalogue, env, preview_meta_key_pending):
+def _editor_selection(form, catalogue, preview_meta_key_pending):
     if _single_measurement(form):
         return None
-    if str(form.get('method') or '').startswith('custom:') and form.get('improver') == 'none':
-        return None
-    if not form.get("improver"):
-        return 400, {"error": "no-improver", "detail": "train 侧必须指定 meta-harness（改进器）"}
-    selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
-    if not selected:
-        return 400, {"error": "unknown-improver", "detail": "请选择可用的 meta-harness"}
-    if (form.get('meta_api_key') or preview_meta_key_pending) and not form.get('meta_base_url'):
-        return 400, {"error": "no-meta-url", "detail": "填写 meta API key 时也必须填写 endpoint URL"}
-    if form.get('meta_base_url'):
-        if not env.get('HG_METHOD_MODEL'):
-            return 400, {"error": "incomplete-meta-endpoint", "detail": "覆盖 meta endpoint 时必须填写模型名"}
-        if not env.get('HG_METHOD_API_KEY') and not preview_meta_key_pending:
-            return 400, {"error": "no-meta-key", "detail": "覆盖 meta endpoint 时必须填写 API key"}
-    # Model names are supplied by the operator; the registry is a suggestion, not an
-    # exhaustive list. Endpoint credentials are checked again on POST, never in a URL.
+    if form.get("meta_base_url") or form.get("meta_api_key") or preview_meta_key_pending:
+        return 400, {"error": "editor-endpoint-removed",
+                     "detail": "Configure the provider with the selected CLI Meta-Harness."}
+    chosen = form.get("improver")
+    method = str(form.get("method") or "")
+    if chosen == "none":
+        if method.startswith("custom:") or any(row["name"] == method and row.get("self_contained")
+                                               for row in catalogue.method_catalogue()):
+            return None
+    if not any(row["name"] == chosen and row.get("kind") == "cli"
+               for row in catalogue.improvers()) or chosen in {"none", "noop", "null"}:
+        return 400, {"error": "unknown-improver",
+                     "detail": "Choose a declared CLI Meta-Harness for model-driven experiment rounds."}
     if any(ord(c) < 32 or ord(c) == 127 for c in str(form.get("improver_model") or "")):
         return 400, {"error": "bad-meta-model", "detail": "meta-model 不能包含控制字符"}
     return None
@@ -439,26 +422,10 @@ def validate_launch_request(form: dict, *, paths, catalogue, python_supported, s
     problem = _solver_credentials(form, env, backend, model, preview_key_pending)
     if problem:
         return problem
-    problem = _editor_credentials(form, catalogue, env, preview_meta_key_pending)
+    problem = _editor_selection(form, catalogue, preview_meta_key_pending)
     if problem:
         return problem
     return 200, {}
-
-
-def _write_improver_override(paths, selected, form, environment, run_id):
-    if selected and selected.get('kind') != 'cli' and form.get('meta_base_url'):
-        # Preserve registry identity while making the selected endpoint authoritative.
-        # No key enters this file; the selected entry points to the child's environment.
-        registry = read_json(paths.platform / 'harnessgrad/improvers/improvers.json')
-        spec = registry['improvers'][selected['name']]
-        spec.update(base_url=environment['HG_METHOD_BASE_URL'], model=environment['HG_METHOD_MODEL'],
-                    api_key_env='HG_METHOD_API_KEY')
-        paths.launch_dir.mkdir(parents=True, exist_ok=True)
-        registry_path = paths.launch_dir / f'{run_id}.improvers.json'
-        with registry_path.open('x', encoding='utf-8') as stream:
-            json.dump(registry, stream, ensure_ascii=False)
-        registry_path.chmod(0o600)
-        environment['HG_IMPROVER_CONFIG'] = str(registry_path.resolve())
 
 
 def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_environment) -> tuple[int, dict]:
@@ -511,9 +478,6 @@ def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_enviro
                 os.close(root_fd)
         except (OSError, ValueError):
             return 400, {'error': 'custom-method-unavailable', 'detail': '方法版本不可读取或发生变化；请重新预览。'}
-    if not _single_measurement(form):
-        selected = next((row for row in catalogue.improvers() if row['name'] == form.get('improver')), None)
-        _write_improver_override(paths, selected, form, environment, run_id)
     paths.launch_dir.mkdir(parents=True, exist_ok=True)
     log_path = paths.launch_dir / f"{run_id}.log"
     worker = pathlib.Path(__file__).with_name('launch_worker.py')
@@ -536,10 +500,11 @@ def start(form: dict, *, paths, catalogue, plan, make_run_id, spawn, base_enviro
 def scope_preview(form: dict, effective_env: dict, *, catalogue) -> dict:
     """Describe requested scope without loading datasets or contacting model endpoints."""
     single = _single_measurement(form)
-    selected = {} if single else next((row for row in catalogue.improvers() if row.get('name') == form.get('improver')), {})
-    kind = selected.get('kind') or None
-    model = None if single else (effective_env.get('HG_METHOD_MODEL') or form.get('improver_model')
-                                 or selected.get('model') or None)
+    editor_name = "none" if single else form.get("improver")
+    selected = next((row for row in catalogue.improvers()
+                     if row.get("name") == editor_name and row.get("kind") == "cli"), {})
+    kind = selected.get("kind")
+    model = (form.get("improver_model") or selected.get("model") or None) if selected else None
     return {
         "dataset": form.get("dataset"), "side": "train", "split": "declared",
         "sampling": form.get("sampling") or "all", "task_count": None,
@@ -547,9 +512,9 @@ def scope_preview(form: dict, effective_env: dict, *, catalogue) -> dict:
         "jobs": form.get("jobs"),
         "solver": {"backend": effective_env.get("HG_AGENT_BACKEND"),
                    "model": effective_env.get("HG_AGENT_MODEL") or None},
-        "editor": {"method": form.get("method") or "none", "improver": "none" if single else form.get("improver"),
+        "editor": {"method": form.get("method") or "none", "improver": editor_name,
                    "model": model, "kind": kind,
-                   "active": False if single else None},
+                   "active": False if editor_name == "none" else None},
         # Dataset-specific model use and CLI improver connections are resolved at runtime.
         "environment": None, "judge": None,
     }

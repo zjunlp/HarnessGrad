@@ -97,13 +97,13 @@ Track how a harness performs as an improvement method edits it over successive r
 
 ### 🚀 Quick start
 
-**How does one round of DGM change Loop’s performance on math word problems?** The GSM8K preset scores the starting harness on five training questions, then asks DGM to edit it and scores the candidate on the same questions. Before your first run, [prepare Loop and GSM8K](docs/getting-started.md#prepare-the-components-you-will-use) and [configure the solver and editor endpoints](docs/rsi-experiments.md#1-configure-the-solver-and-the-editor-separately).
+**How does one round of DGM change Loop’s performance on math word problems?** The task agent uses **Loop 0.2.0 (study source) with Qwen3.5-9B** to solve five GSM8K training questions. DGM uses **DeepSeek Harness (headless) with DeepSeek-V4.1-Flash** to edit Loop, then HarnessGrad scores the candidate on the same questions. [Set up the two agents and GSM8K](docs/getting-started.md#run-the-readme-experiment).
 
 ```bash
-harnessgrad run --preset method-dgm --improver none --fail-on-incomplete
+harnessgrad run --preset gsm8k-dgm-study
 ```
 
-DGM calls the configured editor directly (`--improver none`). Open `runs/dgm-quickstart/end-summary.md` to compare the two rounds. For a repeat run, add `--run-id` with a new name.
+Open `runs/gsm8k-dgm-study/end-summary.md` to compare the two rounds. For a repeat run, add `--run-id` with a new name.
 
 ### 🔬 From a question to an experiment
 

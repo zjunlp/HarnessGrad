@@ -152,7 +152,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 
 # Reviewed built-in recipes and offline runtime/scorer assets.
 "experiments" = [
-    "eval-from-round.json", "method-ace.json", "method-adas.json", "method-ahe.json",
+    "eval-from-round.json", "gsm8k-dgm-study.json", "method-ace.json", "method-adas.json", "method-ahe.json",
     "method-arbor.json", "method-darwinx.json", "method-dgm.json", "method-dream_rsi.json",
     "method-evo_harness.json", "method-evoprompt.json", "method-gepa.json",
     "method-harnessx.json", "method-hyperagents.json", "method-meta_harness.json",

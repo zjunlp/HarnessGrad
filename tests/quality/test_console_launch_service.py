@@ -11,7 +11,7 @@ from console import catalogue, custom_methods, launch, server, settings
 
 def form(**overrides):
     return {'dataset': 'demo', 'harness': 'loop', 'task_model': 'mock', 'rounds': 2,
-            'jobs': 1, 'trials': 1, 'sampling': 'all', 'improver': 'noop',
+            'jobs': 1, 'trials': 1, 'sampling': 'all', 'improver': 'authored-cli',
             'improver_model': '', **overrides}
 
 
@@ -25,7 +25,7 @@ def ready(tmp_path):
     paths = launch.LaunchPaths(driver, platform, platform / 'methods', runs, state,
                               state / '.launch', state / '.launch-log.jsonl', budget, True, platform)
     catalog = catalogue.LaunchCatalogue(lambda: [{'name': 'demo'}], lambda: ['loop'],
-        lambda: [{'name': 'noop', 'kind': 'cli', 'model': ''},
+        lambda: [{'name': 'authored-cli', 'kind': 'cli', 'model': ''},
                  {'name': 'endpoint', 'kind': 'openai', 'model': 'suggested'}],
         lambda: ['mock'], lambda: [])
     store = settings.SettingsStore(tmp_path / 'settings.json', tmp_path / 'legacy.json', {})
@@ -208,30 +208,53 @@ def test_preview_and_budget_preflight_are_read_only_and_do_not_probe(ready, monk
     assert list(ready.paths.runs.iterdir()) == []
 
 
-def test_endpoint_override_is_private_and_spawn_owns_only_the_open_log(ready):
-    registry = ready.paths.platform / 'harnessgrad/improvers/improvers.json'
-    registry.parent.mkdir(parents=True)
-    registry.write_text('{"improvers":{"endpoint":{"kind":"openai","model":"old"}}}')
+def test_catalogue_projects_only_declared_cli_and_prioritizes_its_default(ready):
+    registry = ready.paths.state_root / "registry.json"
+    registry.write_text(json.dumps({"default": "dsh", "improvers": {
+        "custom-cli": {"kind": "cli"}, "direct": {"kind": "openai"},
+        "dsh": {"kind": "cli", "model": "deepseek-flash"}}}))
+    rows = catalogue.improvers(ready.paths.platform, registry_path=registry)
+    assert [row["name"] for row in rows] == ["dsh", "custom-cli"]
+    assert rows[0]["model"] == "deepseek-flash"
+
+
+def test_none_is_limited_to_self_contained_methods_and_measurements(ready):
+    for name, kind in (("dgm", "published"), ("noop", "control")):
+        path = ready.paths.methods_root / name
+        path.mkdir(parents=True)
+        (path / "run.py").write_text("pass")
+        (path / "method.json").write_text(json.dumps({"kind": kind}))
+    actual = replace(ready.catalogue, method_catalogue=lambda: catalogue.method_catalogue(ready.paths.platform))
+    options = dict(paths=ready.paths, catalogue=actual, python_supported=lambda: True,
+                   sandbox_supported=lambda: SimpleNamespace(ok=True), budget_capacity=lambda: 1,
+                   launch_env=ready.plan.environment)
+    assert launch.validate_launch_request(form(method="dgm", improver="none"), **options)[0] == 400
+    assert launch.validate_launch_request(form(method="noop", improver="none"), **options) == (200, {})
+
+
+def test_endpoint_selection_cannot_spawn_or_create_override(ready):
+    code, error = launch.start(form(improver="endpoint"), paths=ready.paths,
+        catalogue=ready.catalogue, plan=ready.plan, make_run_id=lambda data: "bad",
+        spawn=lambda *args, **kw: pytest.fail("endpoint editor must not spawn"), base_environment={})
+    assert code == 400 and error["error"] == "unknown-improver"
+    assert not ready.paths.launch_dir.exists()
+
+
+def test_declared_cli_and_model_reach_spawn(ready):
     calls = []
     def spawn(argv, **kwargs):
         assert not kwargs['stdout'].closed and kwargs['start_new_session'] is True
         calls.append((argv, kwargs))
         return SimpleNamespace(pid=123)
-    code, result = launch.start(form(improver='endpoint', improver_model='chosen',
-        meta_base_url='http://editor.invalid/v1', meta_api_key='synthetic-secret'),
+    code, result = launch.start(form(improver="authored-cli", improver_model="chosen"),
         paths=ready.paths, catalogue=ready.catalogue, plan=ready.plan,
-        make_run_id=lambda data: 'authored', spawn=spawn, base_environment={'PATH': '/usr/bin:/bin'})
+        make_run_id=lambda data: "authored", spawn=spawn, base_environment={"PATH": "/usr/bin:/bin"})
     assert code == 202 and len(calls) == 1
     argv, options = calls[0]
-    assert options['stdout'].closed
-    assert options['env']['HG_METHOD_API_KEY'] == 'synthetic-secret'
-    override = Path(options['env']['HG_IMPROVER_CONFIG'])
-    assert override.stat().st_mode & 0o777 == 0o600
-    document = json.loads(override.read_text())['improvers']['endpoint']
-    assert document['api_key_env'] == 'HG_METHOD_API_KEY' and document['model'] == 'chosen'
-    for path in ready.paths.state_root.rglob('*'):
-        if path.is_file():
-            assert 'synthetic-secret' not in path.read_text()
+    assert options["stdout"].closed
+    assert argv[argv.index("--improver") + 1] == "authored-cli"
+    assert argv[argv.index("--improver-model") + 1] == "chosen"
+    assert "HG_METHOD_API_KEY" not in options["env"] and "HG_IMPROVER_CONFIG" not in options["env"]
     assert json.loads(ready.paths.launch_log.read_text())['argv'] == result['argv']
     assert argv[argv.index('--') + 1:] == result['argv']
 

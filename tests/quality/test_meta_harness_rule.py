@@ -200,7 +200,7 @@ def _invoke(mod, request: dict, monkeypatch, reply: dict) -> dict:
 
     captured: dict = {}
 
-    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False):
+    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, structured_cli=False):
         captured["prompt"] = prompt
         return reply
 
@@ -390,7 +390,7 @@ def test_batch_implements_different_designed_mechanisms_from_the_same_base(tmp_p
     assert len(designs) == 1, "design the whole batch in one editor.ask"
     assert "2" in designs[0][0] and "mechanism" in designs[0][0]
     assert "failed" in designs[0][0] and "successful" in designs[0][0]
-    assert designs[0][1]["endpoint_only"] is True
+    assert designs[0][1]["structured_cli"] is True
     assert designs[0][1]["base"] == base and designs[0][1]["parent"] == base
     for call, candidate, step in zip(calls, DESIGNS, steps):
         assert call["base"] == base and call["parent"] == base

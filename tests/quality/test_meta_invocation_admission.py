@@ -2,7 +2,6 @@
 import json
 from pathlib import Path
 import sys
-from types import SimpleNamespace
 
 import pytest
 
@@ -93,20 +92,33 @@ def phase_editor(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize('raw_total,code', [(6,'budget_exhausted'), (None,'budget_usage_unknown')])
-def test_endpoint_parse_retry_cannot_dispatch_at_cap(phase_editor, monkeypatch,raw_total,code):
+def test_structured_role_retry_cannot_start_another_session_at_cap(
+        phase_editor, tmp_path, monkeypatch, raw_total, code):
+    import cli_improver
+
+    base = tmp_path / 'base'
+    channel = base / '_harnessgrad'
+    channel.mkdir(parents=True)
+    declaration = {'kind': 'cli', 'name': 'authored', 'path': str(tmp_path / 'authored-cli')}
+    (channel / 'round.json').write_text(json.dumps({'identity': {'improver': declaration}}))
+    monkeypatch.delenv('HG_IMPROVER', raising=False)
     calls = []
-    def complete(**kwargs):
-        calls.append(1)
-        return SimpleNamespace(model='fake', usage=SimpleNamespace(
-            prompt_tokens=4,completion_tokens=2,total_tokens=raw_total),
-            choices=[SimpleNamespace(message=SimpleNamespace(content='unparseable'))])
-    monkeypatch.setattr(editor, 'model_settings', lambda: ('http://127.0.0.1:1','fake','fake'))
-    monkeypatch.setattr(editor.endpoint_client, 'Client', lambda **k: SimpleNamespace(complete=complete))
-    monkeypatch.setenv('HG_METHOD_PARSE_RETRIES','3')
-    monkeypatch.setattr(editor, '_record_endpoint_call', lambda *a: None)
+
+    def propose(request, parent, **kwargs):
+        calls.append(request['improver']['name'])
+        assert request['structured_role']
+        (Path(request['workspace']) / 'artifacts' / 'role-result.json').write_text('invalid JSON')
+        usage = {'input_tokens': 4, 'output_tokens': 2, 'cache_read_tokens': 0}
+        if raw_total is not None:
+            usage['total_tokens'] = raw_total
+        return {'files': [], 'candidate': request['candidate'], 'reported': {}, 'exit_code': 0,
+                'transcript': 'dsh-usage ' + json.dumps(usage)}
+
+    monkeypatch.setattr(cli_improver, 'propose', propose)
     with pytest.raises(RuntimeError, match=code):
-        editor.ask('offline',endpoint_only=True,evidence_channel=False)
-    assert calls == [1]
+        editor.ask_for_json(lambda problems: 'return a JSON verdict',
+                            system='authored critic', base=base, structured_cli=True, attempts=3)
+    assert calls == ['authored']
     assert editor.method_usage()['total_tokens'] == raw_total
 
 

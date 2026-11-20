@@ -320,6 +320,16 @@ def _treatment_runtime(args):
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     sources.enter_context(datasets.provider_session())
     ap, args, explicit = parse_run_args(sys.argv[1:], _SCENARIO_ARG_DEFAULTS)
+    # The embedded task harness reads its route from the environment. Apply
+    # explicit run flags to both driver and actor for the lifetime of this run.
+    for key, value in (("HG_AGENT_BACKEND", getattr(args, "agent_backend", None)),
+                       ("HG_AGENT_MODEL", getattr(args, "agent_model", None))):
+        if value is not None:
+            if key in os.environ:
+                sources.callback(os.environ.__setitem__, key, os.environ[key])
+            else:
+                sources.callback(os.environ.pop, key, None)
+            os.environ[key] = value
     scenario_spec = scenario_receipt = None
 
     if (args.run_id or "").startswith("task25-") and not args.budget_profile:
@@ -683,17 +693,15 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # pinned above: a run that discovers its tooling is missing three rounds in has
     # already spent the rounds.
     #
-    # A refusal is only for a run that *needs* an improver and cannot find one. The
-    # reference methods carry their own (`methods/editor.py` calls `HG_METHOD_*` directly),
-    # so an unresolvable improver is a warning plus an empty identity field, not a stop --
-    # and `improver` stays empty so no curve point can claim an improver it did not use.
+    # Self-contained controls can run without a model. Built-in model-driven
+    # methods require an identified CLI editor before the initial measurement.
     #
     # Held in a local and handed to the loops that write points. It used to be a module
     # global here that `_identity` read from the other side of the call stack: a curve
     # point's improver field then depended on a mutable global, and "what does this point
     # claim" could not be answered without running the program that produced it.
     improver_request = improver_readiness.ImproverRequest(
-        args.improver, args.improver_model, args.improver_effort)
+        args.improver or platform_config.current().improver.name, args.improver_model, args.improver_effort)
     # Outputs inherited by method subprocesses intentionally persist after this run.
     for key, value in improver_request.environment_patch().items():
         if value is None:
@@ -725,6 +733,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     if improver_ready.refused:
         return 2
     improver = improver_ready.declaration
+    if readiness.needs_cli_editor(args) and (not improver.get("ok") or improver.get("kind") != "cli"):
+        console.note("refusing before H0: experiment edits require a resolved CLI Meta-Harness", level="error")
+        return 2
     improver_tool_calls = improver_ready.tool_calls
     improver_tool_calls_detail = improver_ready.detail
 

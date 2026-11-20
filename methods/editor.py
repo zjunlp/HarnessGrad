@@ -29,7 +29,6 @@ Two defects are fixed structurally here rather than in each method
 """
 from __future__ import annotations
 
-import itertools
 import json
 import os
 import re
@@ -37,7 +36,6 @@ import shutil
 import stat
 import sys
 import tempfile
-import time
 from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,7 +53,6 @@ require_api = protocol.require_api                           # noqa: E402
 # 'eval'`) while passing every test that calls the editor directly. Measured, in a real
 # run. The platform keeps its own copy in `eval/candidate.py`, and that one is the judge.
 candidate = _siblings.load("apply")
-endpoint_client = _siblings.load("endpoint_client")
 archive_io = _siblings.load("improver_archive")
 stop_status = _siblings.load("stop_status")
 usage_observation = _siblings.load("usage_evidence")
@@ -567,17 +564,6 @@ Rules:
 """
 
 
-def model_settings() -> tuple[str, str, str]:
-    base_url = os.environ.get("HG_METHOD_BASE_URL")
-    api_key = os.environ.get("HG_METHOD_API_KEY")
-    model = os.environ.get("HG_METHOD_MODEL")
-    if not (base_url and api_key and model):
-        raise SystemExit(
-            "a method needs HG_METHOD_BASE_URL / HG_METHOD_API_KEY / HG_METHOD_MODEL. "
-            "A method brings its own credentials; the platform does not supply them.")
-    return base_url, api_key, model
-
-
 class UnparseableReply(RuntimeError):
     """The model answered, but not in a form this platform could read.
 
@@ -893,35 +879,6 @@ def hypothesis_of(reply: dict) -> str:
                 text = entry["hypothesis"]
                 break
     return str(text or "")[:300]
-
-
-#: Preferred reply format, appended to whatever system prompt a method supplies.
-#:
-#: A whole file inside a JSON string is where nearly every parse failure came from:
-#: the model must escape every quote, newline and backslash in an 8 KB program, and
-#: a 9B model does not. Measured across this host: missing closers, extra closers,
-#: mismatched bracket types, raw control characters, invalid `\\d` escapes and
-#: unescaped quotes -- all of them, in the end, are one problem, which is that the
-#: file's own quoting has to survive a second encoding.
-#:
-#: A fenced block has no second encoding. The file is written verbatim, and JSON is
-#: still accepted as a fallback, so nothing that worked before breaks.
-FORMAT_HINT = """
-
-## How to reply
-Prefer a fenced block per file -- it needs no escaping, so it cannot be mangled:
-
-```file:<relative path>
-<the complete new file contents, written verbatim>
-```
-
-HYPOTHESIS: <one sentence: what you changed and why>
-
-If the evidence supports no change, reply exactly `NO_CHANGE: <reason>`.
-JSON (`{"files": [{"path": ..., "content": ...}], "hypothesis": ...}`) is also
-accepted if you prefer it, but every quote and newline in the file must then be
-escaped. One of these two, and nothing else on stdout.
-"""
 
 
 def parse_reply(text: str) -> dict:
@@ -1382,24 +1339,7 @@ def skill_block(base: Path | None) -> str:
 
 
 def cli_improver_identity(base: Path | None) -> dict | None:
-    """The CLI improver this run resolved, if it is one.
-
-    Read from the staged `round.json`, which is the same resolution the curve point names --
-    so a method cannot drive a different improver than the record says. `HG_IMPROVER` is the
-    operator's override and wins, because "run *this* tool" is a deliberate act.
-
-    **Two shapes of evidence, because one of them was missing.** This asked only for
-    `kind == "cli"`, and `kind` was not among the fields the platform copied into
-    `round.json` (`harnessgrad/identity.py:IMPROVER_IDENTITY_FIELDS`), so the answer was
-    always `None` and every method silently used the chat endpoint instead of the CLI it had
-    resolved. The rule `cli_improver.applies` states, and has always stated, is the one that
-    survives a record written by an older platform: a CLI carries a `path` and no `base_url`,
-    while an endpoint resolution sets **both** to its base URL
-    (`tools/improver.py:resolve`). Reading either keeps the dispatch and the record in
-    agreement, and `kind` is checked first because it is the field that means it.
-    """
-    if os.environ.get("HG_IMPROVER"):
-        return {"name": os.environ["HG_IMPROVER"], "kind": "cli", "path": ""}
+    """Read the run's recorded editor, including historical CLI path-only records."""
     if base is None:
         return None
     summary = None
@@ -1414,15 +1354,8 @@ def cli_improver_identity(base: Path | None) -> dict | None:
     if summary is None:
         return None
     improver = (summary.get("identity") or {}).get("improver") or {}
-    if improver.get("kind") == "cli":
-        return improver
-    # The fallback for a record written before `kind` was recorded: a CLI carries a `path`
-    # and **no `base_url`**, while an endpoint carries both, with `path` set to the URL
-    # itself (`tools/improver.py:resolve`). This only works because `base_url` is now one of
-    # the fields the platform copies onto the record -- without it, `path` alone made every
-    # endpoint look like a command, and `--improver deepseek` died in the sandbox trying to
-    # `Path()` a URL. Measured: `ds-dgm` round 1.
-    if improver.get("path") and not improver.get("base_url"):
+    import cli_improver
+    if cli_improver.applies({"improver": improver}):
         return improver
     return None
 
@@ -1662,8 +1595,9 @@ def _read_cli_artifacts(workspace: Path) -> dict[str, str]:
             descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
                                  dir_fd=directory)
             with os.fdopen(descriptor, "rb") as stream:
-                if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
-                    raise UnparseableReply(f"artifact is not a regular file: {rel!r}")
+                opened = os.fstat(stream.fileno())
+                if not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1:
+                    raise UnparseableReply(f"artifact must be an owned regular file: {rel!r}")
                 remaining = CLI_ARTIFACT_TOTAL_LIMIT - total
                 data = stream.read(min(CLI_ARTIFACT_FILE_LIMIT, remaining) + 1)
             if len(data) > CLI_ARTIFACT_FILE_LIMIT:
@@ -1726,27 +1660,30 @@ def _editor_audit_identity(parent: Path, evidence_root: Path | None) -> dict:
     return result
 
 
-def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
-             evidence_channel=None) -> dict:
-    """Propose through a **CLI** improver and return the result as an edit sequence.
+def _unique_role_keys(pairs):
+    value = dict(pairs)
+    if len(value) != len(pairs):
+        raise ValueError("duplicate role result key")
+    return value
 
-    The two improver layers have different shapes: an endpoint returns edits that the method
-    applies, a CLI edits a tree it was given. This bridges them in one place, so a rule
-    written against `ask` -- RRSI's band, DGM's archive, TTHE's gate -- runs on either
-    without knowing which: the CLI is given the **parent tree**, and the difference between
-    what it produced and that parent comes back as `content` edits, which the rule's own
-    `apply_edits` then reproduces onto its candidate path.
+
+def _invalid_role_constant(value):
+    raise ValueError("invalid JSON constant in role result")
+
+
+def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
+             evidence_channel=None, structured_cli=False) -> dict:
+    """Run the Meta-Harness and return its candidate edits or structured role result.
+
+    For an edit, the difference between the resulting tree and its parent is
+    transported as a content edit sequence. A structured role has an empty
+    source and returns its JSON artifact directly.
 
     Giving it the parent (not the incumbent) is what keeps a parent-selection rule real: DGM
     choosing round 3 must have the improver edit round 3's tree.
     """
     _meta_admit()
     import cli_improver                                            # noqa: PLC0415
-    # **The same facts the endpoint path gets.** `ask` prepends `run_facts` before it
-    # dispatches, and the CLI branch returns before that line -- so a CLI improver was handed
-    # a bare task and had to open `evidence/round.json` itself to learn the backend, the
-    # model, the score, and what the harness did on each task. The numbers are one line per
-    # task and they are what a hypothesis is made of (`loop_facts_block`).
     evidence_root = _evidence_channel(base, evidence_channel)
     context = evidence_root.parent if evidence_root is not None else None
     facts = ("\n\n".join(b for b in (run_facts(context), loop_facts_block(context)) if b)
@@ -1757,18 +1694,23 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
     workspace = Path(tempfile.mkdtemp(prefix="hg-cli-ask-"))
     artifact_dir = workspace / "artifacts"
     artifact_dir.mkdir()
-    prompt += (
-        "\n\n## Method artifacts\n"
-        f"If this method requests artifacts/<path>, write it under `{artifact_dir}` "
-        "(relative to your harness working directory: `../artifacts/<path>`). "
-        "Artifacts are separate from harness edits. Only UTF-8 files in that directory "
-        f"are returned, unchanged, with relative keys; limits: {CLI_ARTIFACT_FILE_LIMIT} "
-        f"bytes per file, {CLI_ARTIFACT_TOTAL_LIMIT} bytes total. "
-        "Absolute artifact keys, parent traversal and symlinks are forbidden.\n")
+    if structured_cli:
+        prompt += ("\n\nWrite the requested JSON object to ../artifacts/role-result.json "
+                   "as UTF-8. Leave the working directory empty.")
+    else:
+        prompt += (
+            "\n\n## Method artifacts\n"
+            f"If this method requests artifacts/<path>, write it under `{artifact_dir}` "
+            "(relative to your harness working directory: `../artifacts/<path>`). "
+            "Artifacts are separate from harness edits. Only UTF-8 files in that directory "
+            f"are returned, unchanged, with relative keys; limits: {CLI_ARTIFACT_FILE_LIMIT} "
+            f"bytes per file, {CLI_ARTIFACT_TOTAL_LIMIT} bytes total. "
+            "Absolute artifact keys, parent traversal and symlinks are forbidden.\n")
     req = {"platform_api_version": "0.1.0", "workspace": str(workspace),
            "base_harness": str(parent), "candidate": str(workspace / "candidate"),
            "improver": improver, "channel": str(evidence_root) if evidence_root else "",
-           "trajectory_out": "", "task_ids": [], "train_task_ids": []}
+           "trajectory_out": "", "task_ids": [], "train_task_ids": [],
+           "structured_role": structured_cli}
     runtime_receipt = (context or base) / ".state/bun-runtime.json"
     if runtime_receipt.is_file():
         # Trusted preparation is staged on the incumbent. Archive parents may
@@ -1840,6 +1782,19 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
             if status:
                 _TERMINAL_STOP.update(status)
             raise
+        if structured_cli:
+            if result["exit_code"] != 0:
+                raise UnparseableReply(f"structured Meta-Harness role exited {result['exit_code']}")
+            if result["files"] or set(artifacts) != {"role-result.json"}:
+                raise UnparseableReply("structured role must produce only artifacts/role-result.json")
+            try:
+                value = json.loads(artifacts["role-result.json"], object_pairs_hook=_unique_role_keys,
+                                   parse_constant=_invalid_role_constant)
+            except (ValueError, RecursionError) as exc:
+                raise UnparseableReply("structured role must return a valid JSON object") from exc
+            if not isinstance(value, dict):
+                raise UnparseableReply("structured role must return a JSON object")
+            return value
         edits: list[dict] = []
         for rel in result["files"]:
             path = Path(result["candidate"]) / rel
@@ -1894,200 +1849,33 @@ def _ask_cli(prompt: str, base: Path, parent: Path, improver: dict, *,
         raise failure from exc
 
 
-#: One counter for endpoint call records, so two calls in the same second cannot collide.
-_CALL_SEQ = itertools.count(1)
-
-
-def _record_endpoint_call(prompt: str, system: str, reply: str, model: str,
-                          resp: object) -> None:
-    """Keep one endpoint conversation on disk, in the run's own `method_logs` tree.
-
-    **The CLI transcript already keeps its reasoning; this is the other half.** When a
-    method's proposal goes through the chat endpoint instead of the CLI improver -- an
-    `endpoint_only=True` design call, or a run with no CLI improver at all -- the prompt
-    and the reply existed only in memory. Measured on 2026-10-17: `meta_harness`'s design
-    step and six of `dream_rsi`'s nine rounds were endpoint calls, so the only surviving
-    evidence of *why* those harnesses were proposed was the parsed edit itself.
-
-    The directory comes from `HG_CALL_LOG_DIR`, which the driver sets per round. Without
-    it (a method invoked by hand) nothing is written: guessing a path would scatter files
-    somewhere nobody looks.
-
-    Never raises. A record that fails must not turn a measured call into a failed one.
-    """
-    directory = os.environ.get("HG_CALL_LOG_DIR")
-    if not directory:
-        return
-    usage = getattr(resp, "usage", None)
-    try:
-        dest = Path(directory) / "endpoint"
-        dest.mkdir(parents=True, exist_ok=True)
-        record = {
-            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "model": model,
-            "system": system,
-            "prompt": prompt,
-            "reply": reply,
-            "prompt_chars": len(prompt),
-            "reply_chars": len(reply),
-            "transport_attempts": getattr(resp, "transport_attempts", None),
-            "usage": None if usage is None else {
-                "input": getattr(usage, "prompt_tokens", None),
-                "output": getattr(usage, "completion_tokens", None),
-                "cached": ((getattr(usage, "prompt_tokens_details", None) or None)
-                           and getattr(usage.prompt_tokens_details, "cached_tokens", None)),
-            },
-        }
-        name = (f"{time.strftime('%H%M%S', time.gmtime())}-{os.getpid()}-"
-                f"{next(_CALL_SEQ):04d}.json")
-        (dest / name).write_text(json.dumps(record, ensure_ascii=False, indent=1))
-    except (OSError, TypeError, ValueError):
-        return
-
-
 def ask(prompt: str, system: str = DEFAULT_SYSTEM, base: Path | None = None,
         skill: bool = True, parent: Path | None = None,
-        endpoint_only: bool = False, evidence_channel=None) -> dict:
-    """One model call, with a bounded retry when the reply cannot be read.
+        endpoint_only: bool = False, evidence_channel=None,
+        structured_cli: bool = False) -> dict:
+    """Dispatch an experiment model role through the run's recorded CLI Meta-Harness.
 
-    `base` adds the run's configuration block ahead of the method's own prompt. It is
-    passed explicitly rather than inferred, because the prompt a method builds is its
-    own business and silently rewriting it would make every method's prompt
-    unreproducible from its source. The same `base` also supplies the platform's **skill**
-    (`skill_block`), injected by default because it is staged for every method and named on
-    every point; `skill=False` is how a method says it wants none.
-
-    `evidence_channel` explicitly names the platform-staged `_harnessgrad` directory,
-    independently of `base`/`parent` source selection. Missing or invalid channels
-    fail before dispatch; `False` explicitly requests no run evidence. Otherwise
-    compatibility inference accepts the current tree or a direct existing staged
-    `states/round-N` tree. The platform remains responsible for staging public
-    evidence; this reader validates directory boundaries and rejects exam records.
-
-    **One dispatch point for the improver layer.** When the run resolved a *CLI* improver
-    (codex), this call drives it instead of a chat endpoint -- on the tree named by `parent`
-    (the one the rule chose to build on) -- and returns its edit as an ordinary edit
-    sequence. A rule therefore runs on either layer without knowing which it got, which is
-    what makes "the RSI rule is the rule; codex is the shell" true rather than aspirational.
-    `parent=None` means "build on base", which may itself be a selected archive state.
-
-    **`endpoint_only=True` refuses that dispatch.** The caller that needs it is the one
-    asking a *schema* question rather than for an edit: a CLI improver answers by editing a
-    tree and printing a paragraph, so it cannot return `{"verdict": ...}`. Measured
-    (`v4-rrsi`, 2026-10-05): RRSI's leakage critic was routed to codex, codex replied by
-    editing `.gitignore` and quoting the intended verdict inside its prose, the critic's
-    `accept()` predicate found no top-level `verdict`, and the critic rejected **every**
-    candidate in all three rounds -- the A-shaped arm measured no candidate at all, and the
-    reason read on the curve like a weak proposer rather than a mis-routed call.
-
-    Retries because a small model's malformed JSON is intermittent, so a second
-    sample usually parses -- but only a bounded number of times, and then it is
-    reported. Silently returning `no_change` on a parse failure is the one thing
-    that must not happen: it turns a broken call into a method decision.
+    Editing roles receive the selected parent tree and staged public evidence.
+    Structured roles receive only the supplied instructions and return a JSON
+    object in a dedicated artifact. The old endpoint_only keyword selects the
+    structured role for compatibility with existing methods.
     """
-    # **One dispatch point for the improver layer.** When this run resolved a *CLI* improver
-    # (codex), drive it rather than a chat endpoint -- on the tree the rule chose to build on
-    # (`parent`, defaulting to the incumbent) -- and hand the result back as an ordinary edit
-    # sequence. A rule thus runs on either layer without knowing which it got, which is what
-    # makes "the RSI rule is the rule; codex is the shell" true rather than aspirational.
-    #
-    # **The CLI needs no endpoint, so it must not be made to require one.** `model_settings()`
-    # below demands `HG_METHOD_BASE_URL / _API_KEY / _MODEL` and raises when any is missing,
-    # and a run whose improver is a CLI injects none of them -- `harnessgrad/methods.py` only
-    # writes them for an improver that carries a `base_url`. Called first, as it was, it
-    # refused every CLI run with "a method brings its own credentials": the one layer with no
-    # endpoint would have been the only one that could not start without one.
     if _TERMINAL_STOP:
         raise stop_status.TerminalStop(dict(_TERMINAL_STOP))
     evidence_root = (_evidence_channel(base, evidence_channel)
                      if base is not None or evidence_channel is not None else None)
-    context = evidence_root.parent if evidence_root is not None else None
-    # Opting out of task evidence must not switch a resolved CLI to an endpoint.
-    # The base's identity lookup reads configuration only; it stages no task data.
-    cli = None if endpoint_only else cli_improver_identity(context if context is not None else base)
-    if cli is not None:
-        tree = Path(parent) if parent is not None else Path(base)
-        return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli,
-                        evidence_channel=evidence_root if evidence_root is not None else False)
-
-    base_url, api_key, model = model_settings()
-    try:
-        timeout = float(os.environ.get("HG_METHOD_TIMEOUT_S", "180"))
-    except (ValueError, OverflowError):
-        raise endpoint_client.EndpointError("invalid method endpoint timeout") from None
-    client = endpoint_client.Client(base_url=base_url, api_key=api_key, timeout=timeout)
-    attempts = max(1, int(os.environ.get("HG_METHOD_PARSE_RETRIES", "2")))
-    system = system + FORMAT_HINT
-    if base is not None:
-        # The endpoint layer cannot read `evidence/`, so it gets the content inlined; and it
-        # never received the platform's ask or its hard rules before this -- those lived only
-        # in `cli_improver`, which this branch does not go through.
-        import cli_improver                                          # noqa: PLC0415
-        # **The evidence is about the tree the edits land on.** A CLI improver is driven on
-        # `parent` (above), so a chat endpoint shown the *incumbent's* sources would be
-        # answering a question about a different tree than the one its answer is applied
-        # to. Latent while every caller passes the incumbent as `parent`; wrong the moment
-        # one selects an older state, which is the case the parameter exists for.
-        source = Path(parent) if parent is not None else Path(base)
-        # **Strict when this call will produce edits.** The endpoint layer is reading the
-        # sources so the model can write them back; if the tree does not fit, there is no honest
-        # version of that request, so it fails here instead of letting the model rebuild a file
-        # from the part it was shown (findings §117).
-        facts = "\n\n".join(
-            b for b in (run_facts(context) if context else "",
-                        loop_facts_block(context) if context else "",
-                        evidence_content(source, strict=True, evidence_base=context,
-                                         include_evidence=context is not None)) if b)
-        prompt = "\n\n".join(
-            x for x in (cli_improver.CHANGE_REQUEST, cli_improver.HARD_RULES, facts, prompt) if x)
-        if skill:
-            block = skill_block(context) if context else ""
-            if block:
-                prompt = block + "\n\n" + prompt
-    last = ""
-    for _ in range(attempts):
-        _meta_admit()
-        try:
-            resp = client.complete(
-                model=model, temperature=0.0,
-                messages=[{"role": "system", "content": system},
-                          {"role": "user", "content": prompt}],
-            )
-        except endpoint_client.EndpointError as exc:
-            if exc.attempts:
-                _SPENT["unknown_endpoint_usage"] = True
-                _SPENT["unknown_transport_attempts"] += exc.attempts
-                _SPENT["source"] = "endpoint_unreported"
-                _SPENT["model"] = model or _SPENT["model"]
-                if exc.response_received:
-                    _record_usage(None, model)
-            raise
-        unknown_attempts = getattr(resp, "unknown_transport_attempts", 0)
-        if unknown_attempts:
-            _SPENT["unknown_endpoint_usage"] = True
-            _SPENT["unknown_transport_attempts"] += unknown_attempts
-        last = resp.choices[0].message.content or ""
-        # Counted before the reply is judged. A retry that produced unparseable JSON is
-        # still a call the method paid for, and a parse failure is exactly when someone
-        # asks what the round cost.
-        _record_usage(getattr(resp, "usage", None), getattr(resp, "model", None) or model)
-        _record_endpoint_call(prompt, system, last, getattr(resp, "model", None) or model, resp)
-        # Debug affordance: `HG_METHOD_DUMP=<path>` writes the raw reply out. A model
-        # reply that will not parse is the hardest failure to diagnose from the
-        # outside -- the platform only ever sees "unparseable" and 200 characters of
-        # tail -- so the raw text has to be obtainable without editing the method.
-        dump = os.environ.get("HG_METHOD_DUMP")
-        if dump:
-            try:
-                Path(dump).write_text(last)
-            except OSError:
-                pass
-        parsed = parse_reply(last)
-        if parsed:
-            return parsed
-    raise UnparseableReply(
-        f"the model replied {len(last)} chars but no attempt parsed as JSON; "
-        f"tail: {last[-200:]!r}")
+    cli = cli_improver_identity(evidence_root.parent if evidence_root is not None else base)
+    if cli is None:
+        raise RuntimeError("experiment model calls require a resolved CLI Meta-Harness; "
+                           "select an installed editor with --improver")
+    if structured_cli or endpoint_only:
+        # Give the role no implicit source tree, selected skill or run history.
+        with tempfile.TemporaryDirectory(prefix="hg-role-source-") as empty:
+            return _ask_cli(f"{system}\n\n{prompt}", Path(empty), Path(empty), cli,
+                            evidence_channel=False, structured_cli=True)
+    tree = Path(parent) if parent is not None else Path(base)
+    return _ask_cli(prompt, Path(base) if base is not None else tree, tree, cli,
+                    evidence_channel=evidence_root if evidence_root is not None else False)
 
 
 # ------------------------------------------------------------- the candidate ---
@@ -2187,7 +1975,7 @@ EDIT_EXPECT = ("Return the complete corrected edit sequence as JSON, with the co
 def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
                  parent=None, endpoint_only: bool = False,
                  accept=None, what: str = "a JSON reply",
-                 skill: bool = True, evidence_channel=None) -> tuple[dict, str]:
+                 skill: bool = True, evidence_channel=None, structured_cli: bool = False) -> tuple[dict, str]:
     """Retry a JSON-producing model call with the failure fed back to the model.
 
     `accept(reply)` returns an empty string when the reply is usable, or the text that
@@ -2200,9 +1988,8 @@ def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
     drove the improver on `base` -- the *channel* -- instead of the tree the rule chose.
     Passed through now.
 
-    `endpoint_only` goes with it and says the other half of the same thing: a CLI improver
-    is an editor, so a call that must come back as `{"verdict": ...}` cannot be served by
-    one (`ask` documents the measured case).
+    Structured roles return a file-backed JSON object through the same
+    Meta-Harness that produces edits.
     """
     problems = ""
     reply: dict = {}
@@ -2214,7 +2001,9 @@ def ask_for_json(prompt_for, *, system, base=None, attempts: int = 3,
             # question into a `TypeError` in the test that was asking it.
             if evidence_channel is not None:
                 call["evidence_channel"] = evidence_channel
-            if endpoint_only:
+            if structured_cli:
+                call["structured_cli"] = True
+            elif endpoint_only:
                 call["endpoint_only"] = True
             reply = ask(prompt_for(problems), **call)
         except UnparseableReply as exc:

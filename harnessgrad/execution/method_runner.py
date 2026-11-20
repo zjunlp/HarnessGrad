@@ -175,17 +175,14 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     read `HG_AGENT_API_KEY` can spend the agent's quota, and -- worse for this
     platform -- can answer the eval tasks itself.
 
-    When the run resolved an improver that *is* an endpoint (`--improver deepseek`),
-    the endpoint and the model are written in here. A method reaches a chat model through
-    `HG_METHOD_BASE_URL` / `HG_METHOD_MODEL` (`methods/editor.py`), so a named improver
-    that only lived in the registry would leave the record saying `deepseek` while the
-    method called whatever `.env` happened to hold. That is the same failure as a harness
-    misreporting its model, and it is fixed the same way: the platform states the fact
-    where the consumer reads it.
+    A CLI may itself use a configured remote provider. Forward the selected
+    CLI's connection settings only to that method's environment.
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith("HG_AGENT_")}
     endpoint = (improver or {}).get("base_url")
     if endpoint:
+        if improver.get("kind") != "cli":
+            raise ValueError("experiment editing requires a CLI Meta-Harness")
         env["HG_METHOD_BASE_URL"] = str(endpoint)
         if (improver or {}).get("model"):
             env["HG_METHOD_MODEL"] = str(improver["model"])
@@ -199,6 +196,8 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     # exported by the tool environment, inherited by the driver and by every method, and it
     # decided which settings file the improver read -- measured, the operator's, complete
     # with `llm-pi-ai` providers nobody chose for it.
+    if (improver or {}).get("kind") == "cli" and improver.get("model"):
+        env["HG_IMPROVER_MODEL"] = str(improver["model"])
     if (improver or {}).get("home"):
         env["HG_IMPROVER_DSH_HOME"] = str(improver["home"])
     if (improver or {}).get("argv_style") == "dsh":

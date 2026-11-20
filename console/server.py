@@ -415,7 +415,8 @@ def meta_harnesses() -> list[dict]:
 
 
 def improvers() -> list[dict]:
-    return catalogue.improvers(PLATFORM)
+    registry = os.environ.get("HG_IMPROVER_CONFIG")
+    return catalogue.improvers(PLATFORM, registry_path=PLATFORM / pathlib.Path(registry).expanduser() if registry else None)
 
 
 def procfs_readable() -> bool:

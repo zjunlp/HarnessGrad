@@ -26,28 +26,19 @@ supports 2.1 does not upgrade this adapter's task release.
 
 ## 1. Configure the solver and the editor separately
 
-Use the Linux installation and zero-cost demo in the README first. Activate the
-same Python environment for preparation, checking and running. Set model names
-to names your own endpoint actually serves:
+Prepare the solver endpoint and the DSH Meta-Harness once, then launch the study with its experiment configuration. Set the solver model to the name served by your own endpoint. The DSH launcher uses a built DeepSeek Harness checkout, its dedicated home with the headless profile and the official DeepSeek provider. The registry selects the editor model `deepseek-flash`. [DSH setup](getting-started.md#run-the-readme-experiment)
 
 ```bash
 export HG_AGENT_BACKEND=openai
 export HG_AGENT_BASE_URL=http://127.0.0.1:8001/v1
 export HG_AGENT_MODEL=YOUR_SOLVER_MODEL
-export HG_AGENT_API_KEY=local
-export HG_METHOD_BASE_URL=http://127.0.0.1:8001/v1
-export HG_METHOD_MODEL=YOUR_EDITOR_MODEL
-export HG_METHOD_API_KEY=local
+export HG_AGENT_API_KEY=YOUR_SOLVER_KEY
+export HG_DSH_ROOT=/absolute/path/to/built/deepseek-harness
+export HG_IMPROVER_DSH_HOME=/absolute/path/to/prepared/dsh-home
+export DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY
 ```
 
-The endpoint above must already exist. This does not start or download a model.
-The editor may use the same served model, but its calls and credentials are a
-separate configuration. Run preflight checks the selected ordinary judge and
-environment model declarations before H0; `--check-net` also probes their
-required endpoints with GET requests. Custom dual-provider/native-container
-scorers keep their separately documented readiness requirements.
-`HG_AGENT_BACKEND=mock` affects the solver only; do not
-leave it exported when you intend to measure a real model.
+The DGM study recipes below use DSH for candidate edits. The paired eval commands select a saved checkpoint for held-out scoring. For other RSI methods, the selected Meta-Harness also handles structured roles, including RRSI’s critic verdict and the Meta-Harness method’s design response. Datasets with environment models or judges still require the corresponding dataset configuration.
 
 Prepare the reference harness dependencies once in an overlay, outside its
 candidate source tree:
@@ -89,8 +80,8 @@ ID hashes; the loader recomputes that receipt before filtering. Default `error`
 still refuses duplicate questions, and keeping an arbitrary answer is not offered.
 
 ```bash
-harnessgrad run --config experiments/rsi-bbeh.json --improver none --check-only --check-net
-harnessgrad run --config experiments/rsi-bbeh.json --improver none
+harnessgrad run --config experiments/rsi-bbeh.json --improver dsh --check-only --check-net
+harnessgrad run --config experiments/rsi-bbeh.json --improver dsh
 harnessgrad run --config experiments/rsi-bbeh-eval.json --improver none
 python3 tools/analysis/run_summary.py runs/bbeh-dgm-study
 python3 tools/analysis/run_summary.py runs/bbeh-dgm-heldout
@@ -152,8 +143,8 @@ Raw judge gold and the source `answer_type` are not inference inputs.
 ```bash
 harnessgrad split create --dataset deepsearchqa --source official-eval \
   --train-ratio 0.2 --seed 42 --output splits/deepsearchqa.json
-harnessgrad run --config experiments/rsi-deepsearchqa.json --improver none --check-only --check-net
-harnessgrad run --config experiments/rsi-deepsearchqa.json --improver none
+harnessgrad run --config experiments/rsi-deepsearchqa.json --improver dsh --check-only --check-net
+harnessgrad run --config experiments/rsi-deepsearchqa.json --improver dsh
 harnessgrad run --config experiments/rsi-deepsearchqa-eval.json --improver none
 python3 tools/analysis/run_summary.py runs/deepsearchqa-dgm-heldout
 ```
@@ -199,8 +190,8 @@ subprocess.run([sys.executable, 'tools/configure_harness.py', '--harness',
                 'base_harness/loop', '--dataset', 'terminal_bench'],
                env={**os.environ, 'HG_TB_TASKS': ','.join(ids)}, check=True)
 PY
-harnessgrad run --config experiments/rsi-terminal-bench2.json --improver none --check-only --check-net
-harnessgrad run --config experiments/rsi-terminal-bench2.json --improver none
+harnessgrad run --config experiments/rsi-terminal-bench2.json --improver dsh --check-only --check-net
+harnessgrad run --config experiments/rsi-terminal-bench2.json --improver dsh
 harnessgrad run --config experiments/rsi-terminal-bench2-eval.json --improver none
 python3 tools/analysis/run_summary.py runs/terminal-bench2-dgm-heldout
 ```
@@ -256,8 +247,8 @@ can still report the rest as unprovisioned. Source download alone does not suppl
 any selected task images or scorer dependencies.
 
 ```bash
-harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver none --check-only --check-net
-harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver none
+harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver dsh --check-only --check-net
+harnessgrad run --config experiments/rsi-swe-bench-pro-v2.json --improver dsh
 harnessgrad run --config experiments/rsi-swe-bench-pro-v2-eval.json --improver none
 python3 tools/analysis/run_summary.py runs/swe-bench-pro-v2-dgm-heldout
 ```

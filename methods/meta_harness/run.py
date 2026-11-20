@@ -469,11 +469,13 @@ def main() -> int:
             "Do not implement anything or return an edit envelope in this stage.")
         design_record["mode"] = "designed"
         try:
-            # This is a schema question. A CLI editor returns file edits instead;
-            # use the shared editor's endpoint route, with the incumbent's channel
-            # and the selected edit base's source evidence.
+            # Collect structured designs using the same Meta-Harness as the editor.
+            design_evidence = editor.evidence_content(edit_base, evidence_base=incumbent)
+            design_prompt = "\n\n".join(filter(None, (
+                editor.skill_block(incumbent), editor.run_facts(incumbent),
+                editor.loop_facts_block(incumbent), design_evidence, design_prompt)))
             reply = editor.ask(design_prompt, system=META_HARNESS_DESIGN_SYSTEM,
-                               base=incumbent, parent=edit_base, endpoint_only=True)
+                               base=incumbent, parent=edit_base, structured_cli=True)
             designs = parse_candidates(reply, candidates)
         except editor.UnparseableReply as exc:
             design_record["fallback_reason"] = f"unparseable design: {exc}"

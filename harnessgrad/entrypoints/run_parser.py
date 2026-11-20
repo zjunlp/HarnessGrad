@@ -88,6 +88,9 @@ def build_parser() -> argparse.ArgumentParser:
     # 改进器"的方法时,它们决定谁来做那一步 —— 而解析出来的
     # 版本和哈希会进每个曲线点(INTERFACE.md §4.49)。放在命令行而不是只读配置:
     # 一次实验"用哪个改进器"正是最该被显式记录、最不该靠环境变量碰运气的东西。
+    ap.add_argument("--agent-backend", choices=("openai", "mock"), default=argparse.SUPPRESS,
+                    help="task-agent backend for this invocation (overrides HG_AGENT_BACKEND)")
+    ap.add_argument("--agent-model", default=argparse.SUPPRESS, help="served task-agent model ID for this invocation (overrides HG_AGENT_MODEL)")
     ap.add_argument("--improver", default=None,
                     help="harnessgrad/improvers/improvers.json 里的名字,或一个可执行文件的路径")
     ap.add_argument("--improver-model", default=None, help="覆盖改进器自己的模型")

@@ -15,7 +15,7 @@
    "direction": "neutral"
   },
   {
-   "what": "CLI proposal cards use workspace/artifacts/proposal_card.json; endpoint proposal_card remains supported and takes precedence when present.",
+   "what": "The CLI Meta-Harness writes its proposal card to workspace/artifacts/proposal_card.json.",
    "why": "Upstream text_to_sql/proposer.py:150-164,372-388 writes and reads a disk card containing controller identities and four lists. The port transports the four lists through editor artifacts and fills identities itself before the unchanged valid_proposal_card check. Artifact transport accepts only UTF-8 regular files, rejects symlinks and unsafe paths, and fails rather than truncating above 256 KiB per file or 1 MiB total. Artifact files alone do not count as harness edits.",
    "direction": "neutral"
   }

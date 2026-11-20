@@ -62,12 +62,12 @@ def test_preview_rejects_malformed_field_types(ready, http_console, field, value
         assert status == 400 and result['error'] == 'bad-value'
 
 
-def test_preview_pending_meta_key_requires_url(ready, http_console):
+def test_preview_and_launch_refuse_raw_editor_credentials(ready, http_console):
     server, _ = http_console
     launch = form(meta_key_present=True)
     status, result = post(server, '/api/launch/preview', launch)
-    assert status == 200 and result['preflight']['error'] == 'no-meta-url'
-    assert ready.guard_launch(form(meta_api_key='synthetic'))[1]['error'] == 'no-meta-url'
+    assert status == 200 and result['preflight']['error'] == 'editor-endpoint-removed'
+    assert ready.guard_launch(form(meta_api_key='synthetic'))[1]['error'] == 'editor-endpoint-removed'
 
 
 @pytest.mark.parametrize('value', [True, 1.9, float('inf'), '1.9', '1e999'])

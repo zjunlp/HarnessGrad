@@ -271,3 +271,36 @@ def test_the_argv_names_the_method_script_that_exists(path: Path) -> None:
     assert script.is_absolute(), f"{path.name}: {script} is not absolute"
     assert script == METHODS / name / "run.py", f"{path.name}: {script} names another method"
     assert script.is_file(), f"{path.name}: {script} does not exist"
+
+
+def test_readme_study_preset_resolves_both_agents(tmp_path, monkeypatch):
+    import driver
+    from harnessgrad.cli import _expand_preset
+    from harnessgrad.entrypoints.run_parser import parse_run_args
+    from harnessgrad.orchestration.readiness import _method_plan
+
+    monkeypatch.chdir(tmp_path)
+    argv = _expand_preset(["--preset", "gsm8k-dgm-study"])
+    _, args, _ = parse_run_args(argv, driver._SCENARIO_ARG_DEFAULTS)
+    assert (args.agent_backend, args.agent_model) == ("openai", "qwen3.5-9b-local")
+    assert Path(args.harness_path) == ROOT / "tools/assets/loop-study-0.2.0"
+    assert (args.improver, args.improver_model) == ("dsh", "deepseek-flash")
+    plan = _method_plan(args)
+    assert plan["name"] == "dgm" and plan["needs_editor"]
+    assert (args.dataset, args.rounds, args.sampling) == ("gsm8k", 1, "random_5")
+    assert args.fail_on_incomplete
+
+
+def test_study_model_overrides_are_scoped_to_the_invocation(monkeypatch, capsys):
+    import driver
+    from harnessgrad import config
+    from harnessgrad.cli import _expand_preset
+
+    monkeypatch.setenv("HG_REVIEWED_ENVIRONMENT_ONLY", "1")
+    monkeypatch.setenv("HG_AGENT_BACKEND", "mock")
+    monkeypatch.setenv("HG_AGENT_MODEL", "prior-solver")
+    monkeypatch.setattr(sys, "argv", ["driver.py", *_expand_preset(["--preset", "gsm8k-dgm-study", "--show-config"])])
+    assert driver.main() == 0
+    agent = json.loads(capsys.readouterr().out)["agent"]
+    assert (agent["backend"], agent["model"]) == ("openai", "qwen3.5-9b-local")
+    assert (config.current().agent.backend, config.current().agent.model) == ("mock", "prior-solver")

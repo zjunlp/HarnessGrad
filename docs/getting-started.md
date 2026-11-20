@@ -97,6 +97,28 @@ declares managed `files`. Container routes need their local task images and
 image-specific preparation. See the selected Harness's README before using an
 `exec` dataset. No model quality or benchmark result follows from preparation.
 
+## Run the README experiment
+
+The [GSM8K recipe](../experiments/gsm8k-dgm-study.json) uses the two agent roles from the published ALFWorld DGM study on five GSM8K training questions for one improvement round. The task agent runs the bundled Loop study source (Git tree `7a40f6ddd0cef5c7210c1be3dc6529cc19c03775`). Serve Qwen3.5-9B through an OpenAI-compatible endpoint under the model ID `qwen3.5-9b-local`. Install the study source’s Python client into the active Python environment and prepare the GSM8K data and provider as described above.
+
+```bash
+uv pip install -r tools/assets/loop-study-0.2.0/requirements.txt
+```
+
+For the editor, build DeepSeek Harness at revision `c291e7961a515f6d7af9304e7fd1d257929aef26` outside the HarnessGrad checkout. Use Node and pnpm as specified by that revision, then run `pnpm install` and `pnpm run build` there. Prepare a dedicated DSH home with the headless profile and the official DeepSeek provider enabled. Its model ID for DeepSeek-V4.1-Flash is `deepseek-flash`, which the preset explicitly selects. [DeepSeek Harness at the study revision](https://github.com/deepseek-ai/deepseek-harness/tree/c291e7961a515f6d7af9304e7fd1d257929aef26)
+
+Use the shipped improver registry and leave the custom `HG_IMPROVER` command unset. Set the following connection details in your environment or local HarnessGrad `.env`. The published Loop configuration used 32 steps, 2,048 maximum output tokens and a 60,000-character context budget, the defaults of the pinned study source.
+
+```dotenv
+HG_AGENT_BASE_URL=http://127.0.0.1:8002/v1
+HG_AGENT_API_KEY=YOUR_QWEN_ENDPOINT_KEY
+HG_DSH_ROOT=/absolute/path/to/built/deepseek-harness
+HG_IMPROVER_DSH_HOME=/absolute/path/to/prepared/dsh-home
+DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY
+```
+
+To inspect the local setup, run `harnessgrad run --preset gsm8k-dgm-study --check-only`. To launch the experiment, run `harnessgrad run --preset gsm8k-dgm-study`. The run records task and improver identities in `curve.jsonl` and writes a summary under `runs/gsm8k-dgm-study/`.
+
 ## Verify the installation without model calls
 
 After preparing Loop, run the embedded control from the checkout:
@@ -140,7 +162,7 @@ inherit the session settings.
 | Role | Configuration | Purpose |
 | --- | --- | --- |
 | Solver | `HG_AGENT_BACKEND`, `HG_AGENT_BASE_URL`, `HG_AGENT_MODEL`, `HG_AGENT_API_KEY` | Performs tasks with the candidate Harness |
-| Editor | `HG_METHOD_BASE_URL`, `HG_METHOD_MODEL`, `HG_METHOD_API_KEY`, or the selected CLI improver's configuration | Proposes Harness changes |
+| Meta-Harness | `--improver dsh` (default) or `--improver codex`, with the selected CLI's provider configuration | Edits candidate workspaces and answers structured method requests, including critic verdicts and design decisions |
 | Environment model | `HG_ENV_BASE_URL`, `HG_ENV_MODEL`, `HG_ENV_API_KEY` when required | Drives a declared simulated environment or user |
 | Judge | `HG_JUDGE_BASE_URL`, `HG_JUDGE_MODEL`, `HG_JUDGE_API_KEY` or dataset-specific settings when required | Scores tasks that use a model-based judge |
 

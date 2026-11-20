@@ -392,82 +392,38 @@ print(json.dumps({{
             shutil.rmtree(safe)
 
 
-def test_a_named_endpoint_improver_declares_its_own_url_model_and_key(monkeypatch):
-    """`--improver deepseek` 不能在记录里写 deepseek,而方法实际打的是 `.env` 里的本地端点。
-
-    这条和 harness 误报自己模型是同一类 bug,修法也一样:平台把事实写在消费者读的地方。
-    注册项声明端点/模型/钥匙变量,`.env` 只是通用兜底 —— 一个**具名**的改进器被 `.env`
-    悄悄改道,正是"记录说 A、实际跑 B"的形态。
-    """
-    # `.env` 会被 driver 提前塞进 os.environ,所以在真实运行里这两个变量**是**设着的 ——
-    # 第一版测试把它们删掉才通过,于是漏掉了实测到的那次错误:具名改进器的端点被 .env
-    # 覆盖,记录写 deepseek、方法实际打本地 vLLM。
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:8001/v1")
-    monkeypatch.setenv("HG_METHOD_MODEL", "qwen3.5-9b-local")
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "k" * 12)
-    cfg = {"default": "deepseek", "improvers": {"deepseek": {
-        "name": "deepseek", "kind": "openai-compatible", "model": "deepseek-v4-pro",
-        "base_url": "https://api.deepseek.com/v1", "api_key_env": "DEEPSEEK_API_KEY"}}}
-    got = improver.resolve(cfg, requested="deepseek")
-    assert got["ok"], got
-    assert got["path"] == "https://api.deepseek.com/v1"
-    assert got["model"] == "deepseek-v4-pro"
-    assert got["api_key_env"] == "DEEPSEEK_API_KEY"
+@pytest.mark.parametrize("with_key", [False, True])
+def test_endpoint_entries_cannot_be_resolved_as_experiment_editors(monkeypatch, with_key):
+    if with_key:
+        monkeypatch.setenv("HG_METHOD_API_KEY", "authored-key")
+    cfg = {"default": "old", "improvers": {"old": {
+        "kind": "openai-compatible", "base_url": "https://authored.invalid/v1", "model": "demo"}}}
+    for requested in ("", "old"):
+        result = improver.resolve(cfg, requested=requested)
+        assert not result["ok"] and "CLI Meta-Harness" in result["reason"]
 
 
-def test_an_endpoint_improver_without_its_credential_is_refused_by_name(monkeypatch):
-    """没有钥匙要在**门口**拒绝,而不是花掉一轮之后在方法里报一个像方法坏了的错。"""
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:8001/v1")
-    monkeypatch.setenv("HG_METHOD_MODEL", "qwen3.5-9b-local")
-    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
-    cfg = {"default": "deepseek", "improvers": {"deepseek": {
-        "name": "deepseek", "kind": "openai-compatible", "model": "deepseek-v4-pro",
-        "base_url": "https://api.deepseek.com/v1", "api_key_env": "DEEPSEEK_API_KEY"}}}
-    got = improver.resolve(cfg, requested="deepseek")
-    assert not got["ok"] and "DEEPSEEK_API_KEY" in got["reason"], got
+def test_method_env_refuses_endpoint_without_rebinding_secrets(tmp_path):
+    from harnessgrad.execution.method_runner import _method_env
+    with pytest.raises(ValueError, match="CLI Meta-Harness"):
+        _method_env(tmp_path, {"kind": "openai-compatible", "base_url": "https://authored.invalid"})
 
 
-def test_the_method_environment_is_pointed_at_the_resolved_endpoint(monkeypatch):
-    """方法侧的客户端读 `HG_METHOD_*`,所以平台必须把解析出来的端点写进去。
+def test_a_registry_can_refuse_a_cli_model_by_name():
+    cfg = {"default": "dsh", "_forbidden_models": {"restricted-model": "local policy"},
+           "improvers": {"dsh": {"name": "dsh", "kind": "cli", "model": "restricted-model"}}}
+    result = improver.resolve(cfg, requested="dsh")
+    assert not result["ok"] and "not allowed" in result["reason"]
 
-    少了这一步,`HG_METHOD_*` 会来自 `.env`,而曲线点上是注册表里的名字 —— 记录和实际
-    调用的端点就不是同一个东西了。钥匙从注册表点名的变量复制,不进记录。
-    """
-    from harnessgrad.execution import method_runner as methods
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "secret-value")
-    env = methods._method_env(Path("/tmp"), {
-        "name": "deepseek", "base_url": "https://api.deepseek.com/v1",
-        "model": "deepseek-v4-pro", "api_key_env": "DEEPSEEK_API_KEY"})
-    assert env["HG_METHOD_BASE_URL"] == "https://api.deepseek.com/v1"
-    assert env["HG_METHOD_MODEL"] == "deepseek-v4-pro"
-    assert env["HG_METHOD_API_KEY"] == "secret-value"
-    # 没有端点(例如 codex 这种 CLI 改进器)时不能改动方法自己的配置
-    plain = methods._method_env(Path("/tmp"), {"name": "codex", "path": "/usr/bin/codex"})
-    assert "HG_METHOD_BASE_URL" not in plain or \
-        plain["HG_METHOD_BASE_URL"] == os.environ.get("HG_METHOD_BASE_URL")
-
-
-def test_a_registry_can_refuse_a_model_by_name(monkeypatch):
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "k" * 12)
-    cfg = {"default": "deepseek", "_forbidden_models": {"restricted-model": "local policy"},
-           "improvers": {"deepseek": {"name": "deepseek", "kind": "openai-compatible",
-                                      "model": "deepseek-flash",
-                                      "base_url": "https://api.deepseek.com/v1",
-                                      "api_key_env": "DEEPSEEK_API_KEY"}}}
-    got = improver.resolve(cfg, requested="deepseek", model_override="restricted-model")
-    assert not got["ok"] and "not allowed" in got["reason"], got
-    ok = improver.resolve(cfg, requested="deepseek")
-    assert ok["ok"] and ok["model"] == "deepseek-flash", ok
-
-
-def test_builtin_deepseek_defaults_to_flash_and_accepts_pro(monkeypatch):
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "fixture-key")
+def test_builtin_editors_are_cli_and_default_to_dsh_headless_flash():
     cfg = improver.load_config(improver.DEFAULT_CONFIG)
-    default = improver.resolve(cfg, requested="deepseek")
-    assert default["ok"] and default["model"] == "deepseek-flash"
-    pro = improver.resolve(cfg, requested="deepseek", model_override="deepseek-v4-pro")
-    assert pro["ok"] and pro["model"] == "deepseek-v4-pro"
-    assert pro["base_url"] == default["base_url"]
+    assert cfg["default"] == "dsh"
+    assert "codex" in cfg["improvers"]
+    assert all(entry["kind"] == "cli" for entry in cfg["improvers"].values())
+    selected = cfg["improvers"][cfg["default"]]
+    assert (selected["profile"], selected["provider"], selected["model"]) == (
+        "headless", "deepseek-official", "deepseek-flash")
+    assert selected["api_key_env"] == "DEEPSEEK_API_KEY"
 
 
 def test_a_resolved_improver_reports_its_own_model_not_the_default_s(tmp_path, monkeypatch):
@@ -509,8 +465,7 @@ def test_a_resolved_improver_reports_its_own_model_not_the_default_s(tmp_path, m
     assert got["model"] == "probe-strong-model", (
         "codex 的模型被记成了默认改进器的模型:" + str(got["model"]))
 
-    # 反向的一半:端点改进器自己的 `model` 仍然优先,而且默认条目照旧可用
-    assert improver.resolve(config, version="", requested="deepseek")["model"] == "deepseek-flash"
+    assert not improver.resolve(config, requested="deepseek")["ok"]
     assert improver.declared_model(config) == "deepseek-flash"
 
 

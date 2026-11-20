@@ -25,11 +25,9 @@ def args(*tail, rounds=2):
 
 @pytest.fixture(autouse=True)
 def offline(monkeypatch):
-    monkeypatch.setattr(readiness, 'current', lambda: SimpleNamespace(
-        agent=SimpleNamespace(backend='mock'),
-        method=SimpleNamespace(base_url='', model='', api_key='')))
-    monkeypatch.setattr(readiness, '_editor_plan', lambda *a: {
-        'kind':'openai-compatible', 'base_url':'', 'model':'', 'key':''})
+    monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    monkeypatch.delenv('HG_IMPROVER_CONFIG', raising=False)
     monkeypatch.delenv('HG_POLICY_CONFIG', raising=False)
 
 

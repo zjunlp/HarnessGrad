@@ -89,24 +89,21 @@ class AgentConfig:
 
 @dataclass(frozen=True)
 class MethodConfig:
-    """The improver-facing model and its budget.
+    """Standalone model-client settings and experiment evidence limits.
 
-    The *method's* model is deliberately separate from the agent's (`.env.example`):
-    the agent's score is the measurement, the method's quality shapes only what gets
-    proposed. Read by `methods/editor.py`, `harnessgrad/channel.py`,
-    `harnessgrad/methods.py` and `tools/improver.py`.
+    Built-in experiments select their editing CLI using ImproverConfig.
+    The customization and personal workflows can use independent model clients.
     """
 
     model: str | None = _var(
         "HG_METHOD_MODEL", None,
-        "The model the method thinks with; never the agent's, and never injected into "
-        "the harness.", kind="opt")
+        "Model for an independently configured proposal client.", kind="opt")
     base_url: str | None = _var(
         "HG_METHOD_BASE_URL", None,
-        "Base URL of the endpoint the method's client calls.", kind="opt")
+        "Endpoint URL for an independently configured proposal client.", kind="opt")
     api_key: str | None = _var(
         "HG_METHOD_API_KEY", None,
-        "Credential for the method's endpoint; recorded only as present or absent.",
+        "Standalone proposal-client credential; recorded only as present or absent.",
         kind="opt", secret=True)
     timeout_s: int = _var(
         "HG_METHOD_TIMEOUT_S", 180,
@@ -161,7 +158,7 @@ class ImproverConfig:
         kind="opt_raw")
     selection: str | None = _var(
         "HG_IMPROVER", None,
-        "Name or path of the improver a method should drive, as its subprocess sees it.",
+        "Legacy executable override; experiment editing requires it to match the selected CLI Meta-Harness.",
         kind="opt")
     name: str | None = _var(
         "HG_IMPROVER_NAME", None,

@@ -224,34 +224,50 @@ def test_a_batch_becomes_one_curve_point_per_child(tmp_path):
     import os
     import subprocess
 
+    launcher = tmp_path / "batch-editor"
+    launcher.write_text("""#!/usr/bin/env python3
+from pathlib import Path
+import sys
+if sys.argv[1:] == ['--version']:
+    print('batch-editor 1.0.0')
+else:
+    calls = Path(__file__).with_name('batch-editor-count')
+    child = 1 + int(calls.read_text()) if calls.exists() else 1
+    calls.write_text(str(child))
+    with Path('agent.py').open('a') as agent:
+        agent.write(f'\\n# authored proposal {child}\\n')
+    print(f'authored proposal {child}')
+""")
+    launcher.chmod(0o755)
+    registry = tmp_path / "improvers.json"
+    registry.write_text(json.dumps({"default": "batch-editor", "improvers": {"batch-editor": {
+        "name": "batch-editor", "kind": "cli", "argv_style": "dsh", "launcher": str(launcher),
+        "model": "authored", "provider": "fixture", "profile": "headless"}}}))
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith(("HG_METHOD_", "HG_AGENT_", "HG_IMPROVER", "HG_DSH_"))}
+    env.update(HG_AGENT_BACKEND="mock", HG_IMPROVER_CONFIG=str(registry),
+               DSH_HOME=str(tmp_path / "empty-dsh-home"), HG_DGM_CHILDREN="3",
+               HG_REVIEWED_ENVIRONMENT_ONLY="1")
     runs = tmp_path / "runs"
     proc = subprocess.run(
         [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "B",
-         "--rounds", "6", "--run-id", "dgm-batch", "--dataset", "demo",
-         "--sampling", "all", "--side", "train", "--no-sandbox",
+         "--rounds", "3", "--run-id", "dgm-batch", "--dataset", "demo", "--tasks", "t01",
+         "--sampling", "all", "--side", "train", "--no-sandbox", "--fail-on-incomplete",
          "--runs-root", str(runs), "--work-root", str(tmp_path / "work"),
+         "--improver", "batch-editor",
          "--method-entrypoint", f"{sys.executable} {ROOT / 'methods/dgm/run.py'}"],
-        cwd=ROOT, capture_output=True, text=True, timeout=900,
-        # **A dead endpoint, and told to give up fast.** This test is about the *shape* of
-        # a batch in the record, not about a model answering; with the default retry budget
-        # (3 children x retries x backoff) it spent 900 s and hit the subprocess timeout --
-        # a test that hangs is worse than one that fails, because it hides the next failure
-        # behind it.
-        env={**os.environ, "HG_AGENT_BACKEND": "mock", "HG_METHOD_MODEL": "stub",
-             "HG_METHOD_BASE_URL": "http://127.0.0.1:9/v1", "HG_METHOD_API_KEY": "x",
-             "HG_METHOD_PARSE_RETRIES": "1", "HG_METHOD_TIMEOUT_S": "2",
-             "HG_DGM_CHILDREN": "3"})
+        cwd=ROOT, capture_output=True, text=True, timeout=180, env=env)
     out = proc.stdout + proc.stderr
     assert proc.returncode == 0, (
         f"driver exited {proc.returncode}; argv={proc.args!r}\n"
         f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}")
     points = [json.loads(l) for l in
               (runs / "dgm-batch" / "curve.jsonl").read_text().splitlines() if l.strip()]
-    # 没有可用的方法模型时,dgm 抽到的每个子代都会失败,于是它交回"没有改动"并继续 ——
-    # 这条测试要的是**形状**:每个被测量的状态都记着它属于一次几提交。
-    assert [p["round"] for p in points] == sorted(p["round"] for p in points), points
+    assert [point["round"] for point in points] == [0, 1, 2, 3]
+    assert (tmp_path / "batch-editor-count").read_text() == "3"
     for point in points[1:]:
-        assert point.get("steps_in_submission", 1) >= 1, point
+        assert point["steps_in_submission"] == 3
+        assert point["identity"]["improver"]["name"] == "batch-editor"
         # **The attribution field is wired onto a real curve point**, which is the half unit
         # tests cannot reach (`test_components.py` covers the reading itself). The harness here
         # is `loop_plain`, which declares no `components` map, so every touched path must come
@@ -267,7 +283,4 @@ def test_a_batch_becomes_one_curve_point_per_child(tmp_path):
     # `run_meta` 的字段是 `mode`(点上的是 `identity.run_mode`)
     assert meta.get("mode") == "unified", meta.get("mode")
     assert "steps_measured" in meta, sorted(meta)
-    # The dead endpoint produced no usable child; H0 is the only measured state.
-    # A missing field, null, and a positive count all misdescribe this run.
-    assert meta["steps_measured"] == 0, meta
-    assert [p["round"] for p in points] == [0], points
+    assert meta["steps_measured"] == 3, meta

@@ -772,16 +772,10 @@ def _critic_review(diff: str, summary: str, components: list[str],
     # was dropped for a transport shape rather than for leakage. Feed the failure back
     # through the method's own prompt, exactly as `propose_and_apply` does.
     #
-    # **`endpoint_only=True`, and the reason is a measurement.** This call must come back
-    # as `{"verdict": ...}`, and a CLI improver (codex) cannot answer that: it answers by
-    # editing a tree and printing a paragraph. Left on the default dispatch, the critic was
-    # sent to codex, codex edited `.gitignore` and put the verdict JSON in its prose, and
-    # `accept` rejected every candidate in all three rounds -- an arm that measured nothing
-    # while the curve blamed the proposer. The critic is a review, not an edit: it belongs
-    # on the chat endpoint whatever the run resolved for the editing layer.
+    # The critic returns a structured verdict through the selected Meta-Harness.
     out, problems = editor.ask_for_json(
         lambda failure: payload + editor.repair_block(failure, expect=expect),
-        system=CRITIC_SYSTEM, base=base, attempts=attempts, endpoint_only=True,
+        system=CRITIC_SYSTEM, base=base, attempts=attempts, structured_cli=True,
         accept=accept, what="a critic verdict")
     if problems:
         return {"verdict": "reject", "model_used": True,

@@ -1,0 +1,17 @@
+{
+  "dataset": "gsm8k",
+  "harness_path": "tools/assets/loop-study-0.2.0",
+  "agent_backend": "openai",
+  "agent_model": "qwen3.5-9b-local",
+  "method": "dgm",
+  "improver": "dsh",
+  "improver_model": "deepseek-flash",
+  "side": "train",
+  "sampling": "random_5",
+  "rounds": 1,
+  "jobs": 1,
+  "trials": 1,
+  "seed": 0,
+  "run_id": "gsm8k-dgm-study",
+  "fail_on_incomplete": true
+}

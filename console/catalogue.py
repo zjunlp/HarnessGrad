@@ -75,32 +75,28 @@ def task_models(platform, *, load_settings) -> list[str]:
     return list(dict.fromkeys(names))
 
 
-def improvers(platform) -> list[dict]:
+def improvers(platform, *, registry_path=None) -> list[dict]:
     """Project the launchable editor harnesses from the full improver registry.
 
     Keep registry IDs for driver/record identity and separate display labels. Older
     checkouts without a launchable declaration retain the registry fallback.
     """
-    data = read_json(platform / "harnessgrad" / "improvers" / "improvers.json")
+    root = platform / "harnessgrad" / "improvers"
+    data = read_json(registry_path or root / "improvers.json")
     wanted = data.get("improvers") if isinstance(data.get("improvers"), dict) else {}
-    declared = read_json(platform / "harnessgrad" / "improvers" / "launchable.json").get("improvers")
-    out = []
-    if isinstance(declared, list) and declared:
-        for row in declared:
-            name = str(row.get("name") or "") if isinstance(row, dict) else str(row or "")
-            spec = wanted.get(name) if isinstance(wanted.get(name), dict) else {}
-            if not name or not spec:
-                continue
-            out.append({"name": name,
-                        "label": str((row or {}).get("label") or name) if isinstance(row, dict) else name,
-                        "model": spec.get("model") or "", "kind": spec.get("kind") or ""})
-        return out
-    for name, spec in sorted(wanted.items()):
-        if not isinstance(spec, dict):
+    labels = {row["name"]: row.get("label") or row["name"]
+              for row in read_json(root / "launchable.json").get("improvers", [])
+              if isinstance(row, dict) and row.get("name")}
+    names = wanted if registry_path or not labels else labels
+    rows = []
+    for name in names:
+        spec = wanted.get(name) or {}
+        if not isinstance(spec, dict) or spec.get("kind") != "cli" or name in {"none", "noop", "null"}:
             continue
-        out.append({"name": name, "label": name, "model": spec.get("model") or "",
-                    "kind": spec.get("kind") or ""})
-    return out
+        rows.append({"name": name, "label": labels.get(name, name),
+                     "model": spec.get("model") or "", "kind": "cli"})
+    return sorted(rows, key=lambda row: row["name"] != data.get("default"))
+
 
 
 def method_catalogue(platform_root) -> list[dict]:
@@ -114,5 +110,7 @@ def method_catalogue(platform_root) -> list[dict]:
         if name.startswith(("_", ".")):
             continue
         rows.append({"name": name, "title": str(entry.get("title") or name),
-                     "kind": str(entry.get("kind") or "method")})
+                     "kind": str(entry.get("kind") or "method"),
+                     "self_contained": entry.get("kind") in {"control", "reference"}
+                         and not (entry.get("requires") or {}).get("editor_model")})
     return rows

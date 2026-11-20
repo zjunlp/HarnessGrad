@@ -55,21 +55,33 @@ def test_live_agent_configuration_is_checked_locally_and_redacted(monkeypatch):
     assert 'PRIVATE_CONTROL_KEY' not in readiness.render(readiness.configuration_checks(args()))
 
 
-def test_known_published_method_requires_editor_before_h0():
-    rows = readiness.configuration_checks(args('dgm'))
+def test_known_published_method_requires_cli_editor_even_with_endpoint_credentials(monkeypatch):
+    endpoint_env(monkeypatch, 'HG_METHOD_', 'http://127.0.0.1:1/v1')
+    rows = readiness.configuration_checks(args('dgm', improver='none'))
     by_name = {row.name: row for row in rows}
     assert set(by_name) == {'editor', 'method'}
     assert by_name['editor'].required and not by_name['editor'].ok
-    assert 'HG_METHOD_' in by_name['editor'].detail
+    assert 'CLI Meta-Harness' in by_name['editor'].detail
     assert by_name['method'].ok
     assert 'checked separately' in by_name['method'].detail
 
 
-def test_local_configuration_check_never_connects(monkeypatch):
-    endpoint_env(monkeypatch,'HG_METHOD_','http://127.0.0.1:1/v1')
+@pytest.fixture
+def declared_cli(monkeypatch, tmp_path):
+    registry = tmp_path / 'improvers.json'
+    registry.write_text(json.dumps({
+        'default': 'release-test-cli',
+        'improvers': {'release-test-cli': {'name': 'release-test-cli', 'kind': 'cli',
+            'launcher': sys.executable, 'provider': 'release-fixture', 'model': 'scripted'}},
+    }))
+    monkeypatch.setenv('HG_IMPROVER_CONFIG', str(registry))
+    return 'release-test-cli'
+
+
+def test_local_configuration_check_never_connects(monkeypatch, declared_cli):
     def forbidden(*_args,**_kwargs): raise AssertionError('local preflight contacted a provider')
     monkeypatch.setattr(readiness.urllib.request,'urlopen',forbidden)
-    assert readiness.configuration_checks(args('dgm'))[-1].ok
+    assert readiness.all_required_ok(readiness.configuration_checks(args('dgm', improver=declared_cli)))
 
 
 @pytest.mark.parametrize('name', ['noop','echo_base'])
@@ -81,8 +93,7 @@ def test_model_free_and_external_methods_are_not_assumed_to_need_editor(name,tmp
     assert readiness.configuration_checks(args('dgm',rounds=0))==[]
 
 
-def test_instruction_module_and_trial_requirements_are_local(monkeypatch):
-    endpoint_env(monkeypatch,'HG_METHOD_','http://127.0.0.1:1/v1')
+def test_instruction_module_and_trial_requirements_are_local(monkeypatch, declared_cli):
     rows=readiness.configuration_checks(args('opro'))
     assert not rows[-1].ok and 'instruction_path' in rows[-1].detail
     assert readiness.configuration_checks(args('opro',harness='miniagent',
@@ -113,16 +124,18 @@ def server(status=200):
     finally:http.shutdown();http.server_close();thread.join()
 
 
-def test_requested_network_checks_each_needed_channel_and_never_generate(monkeypatch):
-    with server() as (agent,calls_a),server(503) as (method,calls_m):
-        monkeypatch.setenv('HG_AGENT_BACKEND','openai')
-        endpoint_env(monkeypatch,'HG_AGENT_',agent);endpoint_env(monkeypatch,'HG_METHOD_',method)
-        rows=readiness.endpoint_checks(args('dgm'))
-        assert [r.name for r in rows]==['agent-endpoint','method-endpoint']
-        assert rows[0].ok and not rows[1].ok and all(r.required for r in rows)
-        assert calls_a==calls_m==[('GET','/v1/models')]
+@pytest.mark.parametrize('method_name', ['dgm', 'rrsi', 'meta_harness'])
+def test_requested_network_checks_only_needed_channels_without_generation(monkeypatch, declared_cli,
+                                                                         method_name):
+    with server() as (agent, calls_a), server(503) as (role, calls_r):
+        monkeypatch.setenv('HG_AGENT_BACKEND', 'openai')
+        endpoint_env(monkeypatch, 'HG_AGENT_', agent)
+        endpoint_env(monkeypatch, 'HG_METHOD_', role)
+        rows = readiness.endpoint_checks(args(method_name, improver=declared_cli, rounds=2))
+        assert rows[0].name == 'agent-endpoint' and rows[0].ok
+        assert calls_a == [('GET', '/v1/models')]
+        assert len(rows) == 1 and not calls_r
         assert 'PRIVATE_CONTROL_KEY' not in readiness.render(rows)
-        assert not readiness.all_required_ok(rows)
 
 
 def test_malformed_endpoint_url_never_echoes_private_value(monkeypatch,tmp_path):
@@ -258,8 +271,7 @@ def test_published_missing_editor_refuses_before_any_paid_baseline(tmp_path):
     assert result.returncode==2,result.stdout+result.stderr
     # The earlier method_checks gate refuses even before task loading, so it need
     # not use the later gate's specific wording. Its action and timing are the contract.
-    assert 'refusing editor:' in result.stderr
-    assert 'HG_METHOD_BASE_URL' in result.stderr
+    assert 'refusing editor:' in result.stderr and 'CLI Meta-Harness' in result.stderr
     assert not (tmp_path/'runs').exists()
     assert not (tmp_path/'work').exists()
 
@@ -267,6 +279,7 @@ def test_published_missing_editor_refuses_before_any_paid_baseline(tmp_path):
 def test_editor_gate_precedes_task_loading_and_paid_calls(tmp_path, monkeypatch):
     import driver as entry
     monkeypatch.setattr(entry, 'load_env', lambda *_: {})
+    endpoint_env(monkeypatch, 'HG_METHOD_', 'http://127.0.0.1:1/v1')
     monkeypatch.setattr(entry.datasets, 'load_split',
                         lambda *_: pytest.fail('dataset must not load before editor refusal'))
     monkeypatch.setattr(entry, '_probe_tool_calls',

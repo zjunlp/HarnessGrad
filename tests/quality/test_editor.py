@@ -107,14 +107,14 @@ def test_the_editor_is_given_the_traces_the_contract_promises(tmp_path, monkeypa
     prompt = got["prompt"]
 
     # **新契约:内容不再编译进 prompt。** 平台把通道 stage 成 `evidence/`,CLI 层拿到的是
-    # **路径**(codex 自己读),聊天端点层(没有文件系统)才拿内容。以前两边都靠把渲染好的
+    # **路径**(codex 自己读)。以前靠把渲染好的
     # 轨迹和源码塞进 prompt —— 实测 58,160 字符里 89.7% 是证据,按真实规模(51 题)约 230 KB,
     # 而整条指令是一个 argv 参数,Linux 上限 128 KB,工具根本起不来。
     import editor
     assert "ran: ls -a" not in prompt, "轨迹又被编译进方法的 prompt 了"
     assert "## Current harness sources" not in prompt, "源码又被编译进方法的 prompt 了"
 
-    # 端点层拿内容(它没有文件系统)
+    # 渲染证据时保留动作与回复
     content = editor.evidence_content(base)
     assert "ran: ls -a" in content and "said: I cannot do that" in content, content[:300]
 
@@ -349,59 +349,17 @@ def test_the_parser_only_adds_what_the_structure_says_is_missing():
     assert editor.loads_tolerant('{"a": ') is None
 
 
-def test_an_unreadable_reply_raises_instead_of_reporting_no_change(monkeypatch):
-    """**这条是重点。** 读不懂不能变成"方法决定不改"。
-
-    两者是完全不同的事件,把第二个折进第一个,等于在曲线上放了一个没人做过的决定。
-    现在它抛 `UnparseableReply`,调用方的 `except Exception` 会走 `editor.fail`,
-    记录成一次方法错误,原因留在 trajectory 里。
-    """
+def test_an_unreadable_role_artifact_raises_instead_of_reporting_no_change(recording_cli):
     import editor
 
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "x")
-    monkeypatch.setenv("HG_METHOD_MODEL", "m")
-    monkeypatch.setenv("HG_METHOD_PARSE_RETRIES", "1")
-
-    class _Msg:
-        content = "I refuse to answer in JSON."
-
-    class _Choice:
-        message = _Msg()
-
-    class _Resp:
-        choices = [_Choice()]
-
-    class _Completions:
-        def create(self, **kw):
-            return _Resp()
-
-    class _Client:
-        def __init__(self, **kw):
-            self.chat = type("C", (), {"completions": _Completions()})()
-
-    import editor
-    def endpoint_client(**kwargs):
-        client = _Client(**kwargs)
-        client.complete = client.chat.completions.create
-        return client
-    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
-    with pytest.raises(editor.UnparseableReply) as exc:
-        editor.ask("prompt")
-    assert "refuse" in str(exc.value), exc.value
+    root, observations = recording_cli
+    with pytest.raises(editor.UnparseableReply, match="JSON object"):
+        editor.ask("MALFORMED_RESULT", base=root, system="Design reviewer", structured_cli=True)
+    assert len(observations()) == 1
 
 
 def _cli_harness(tmp_path: Path, monkeypatch) -> Path:
-    """A harness whose `round.json` resolved a CLI improver, so `ask` dispatches to it.
-
-    **No `HG_METHOD_*` is set, and that is the point of this helper now.** It used to set all
-    three, because `ask` called `model_settings()` *before* it dispatched
-    (`methods/editor.py:1069`), so a CLI improver was asked for endpoint credentials it does
-    not use -- the same conflation of the two improver layers that the `no_change` collapse
-    below is. The call moved below the dispatch, so the CLI branch no longer touches an
-    endpoint; leaving the variables unset is what keeps that true, and every test using this
-    helper fails with `SystemExit: a method needs HG_METHOD_BASE_URL ...` if it comes back.
-    """
+    """Stage a CLI identity and clear raw endpoint credentials for offline editor tests."""
     import editor
     # Direct unit calls do not have the driver's isolated method working directory.
     monkeypatch.setattr(editor, "_method_workspace", lambda: tmp_path)
@@ -426,9 +384,7 @@ def _stub_cli(monkeypatch, *, exit_code: int, note: str, files: list | None = No
 
 
 def test_a_crashed_cli_improver_raises_instead_of_reporting_no_change(tmp_path, monkeypatch):
-    """**CLI 那条路漏了同一条规则,而上面那条测试只守住了 endpoint 那条。**
-
-    `UnparseableReply` 的 docstring 自己写着两者的区别:*"collapsing the second into the
+    """`UnparseableReply` 的 docstring 自己写着两者的区别:*"collapsing the second into the
     first puts a decision in the curve that nobody made."* `_ask_cli` 正是那个 collapse:
     improver 退出码非 0、一个文件没改,它却把 `result["note"]`(improver 打印的一段 prose)
     包成 `{"no_change": <prose>}` 返回。
@@ -687,108 +643,72 @@ def test_the_prompt_carries_why_each_task_failed(tmp_path):
     assert "Connection error" in prompt
 
 
-def _capture_messages(monkeypatch, reply='{"no_change": "stub"}'):
-    """装一个假的 openai client,把**真正发出去的 messages** 抓下来。"""
-    sent: list[list[dict]] = []
-
-    class _Msg:
-        content = reply
-
-    class _Choice:
-        message = _Msg()
-
-    class _Resp:
-        choices = [_Choice()]
-        model = "stub"
-        usage = None
-
-    class _Completions:
-        def create(self, **kw):
-            sent.append(kw.get("messages") or [])
-            return _Resp()
-
-    class _Client:
-        def __init__(self, **kw):
-            self.chat = type("C", (), {"completions": _Completions()})()
-
-    import editor
-    def endpoint_client(**kwargs):
-        client = _Client(**kwargs)
-        client.complete = client.chat.completions.create
-        return client
-    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
-    return sent
-
-
-#: The header `editor.skill_block` puts in front of whatever the skill says. Counted rather
-#: than the phrase "How to improve a harness", because a skill's own first line is often
-#: exactly that phrase and then a correct injection looks like a double injection.
-SKILL_HEADER = "## How to improve a harness (the platform's skill)"
-
-
-def _staged_skill(tmp_path) -> Path:
-    root = _write_harness(tmp_path / "base")
-    (root / "_harnessgrad" / "SKILL.md").write_text("# XYZ skill\nBODY-MARKER\n")
-    return root
-
-
-def test_the_editor_injects_the_platform_skill_by_default(tmp_path, monkeypatch):
-    """**默认继承,而不是每个方法自己记得读。**
-
-    skill 由平台放进通道(`harnessgrad/channel.py`),而曲线点上的 `identity.skill_sha`
-    说的是"这次给了方法哪份说明书"。在这条路修好之前,12 个方法里只有 4 个真的把它读进
-    prompt —— 于是那个字段在另外 8 个方法上是在替一份**没有被用到的** skill 打包票。
-    现在注入发生在 `editor.ask` 里,一次,所有方法都继承。
-    """
+@pytest.fixture
+def recording_cli(tmp_path, monkeypatch):
+    """A declared CLI exposes what its working directory and arguments contained."""
     import editor
 
-    root = _staged_skill(tmp_path)
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "x")
-    monkeypatch.setenv("HG_METHOD_MODEL", "m")
-    sent = _capture_messages(monkeypatch)
+    base = _cli_harness(tmp_path, monkeypatch)
+    log = tmp_path / "observations.jsonl"
+    launcher = tmp_path / "recording-cli"
+    launcher.write_text(f"#!{sys.executable}\n" + "from pathlib import Path\n"
+                        + f"log = Path({str(log)!r})\n" + r'''
+import json
+import sys
 
-    editor.ask("do the thing", base=root)
-    blob = "\n".join(m["content"] for m in sent[-1])
-    assert SKILL_HEADER in blob and "BODY-MARKER" in blob
-    assert "do the thing" in blob
+prompt = sys.argv[-1]
+skill = Path("evidence/SKILL.md")
+first_attempt = not log.exists()
+observed = {"prompt": prompt, "skill": skill.read_text() if skill.exists() else None}
+with log.open("a") as output:
+    print(json.dumps(observed), file=output)
+if "role-result.json" in prompt:
+    reply = "malformed" if ("MALFORMED_RESULT" in prompt or
+                            ("RETRY_ONCE" in prompt and first_attempt)) else '{"verdict":"accept"}'
+    Path("../artifacts/role-result.json").write_text(reply)
+print('dsh-usage {"input_tokens":900,"output_tokens":100,"cache_read_tokens":0,"total_tokens":1000}')
+''')
+    launcher.chmod(0o700)
+    channel = base / "_harnessgrad"
+    (channel / "round.json").write_text(json.dumps({"identity": {"improver": {
+        "name": "recording-cli", "kind": "cli", "argv_style": "dsh", "path": str(launcher),
+        "provider": "fixture-provider", "model": "fixture-model", "profile": "headless",
+    }}}))
+    (channel / "SKILL.md").write_text("# XYZ skill\nBODY-MARKER\n")
+    monkeypatch.delenv("HG_IMPROVER", raising=False)
+    monkeypatch.delenv("HG_IMPROVER_ARGS", raising=False)
+    monkeypatch.setenv("HG_IMPROVER_DSH_HOME", str(tmp_path / "empty-home"))
+    monkeypatch.setattr(editor, "_INVOCATION_TOKEN_LIMIT", None)
+    monkeypatch.setattr(editor, "_TERMINAL_STOP", {})
+    monkeypatch.setattr(editor.tempfile, "tempdir", str(tmp_path))
+    editor.reset_spent()
+    yield base, lambda: [json.loads(line) for line in log.read_text().splitlines()]
+    editor.reset_spent()
 
 
-def test_the_skill_is_injected_once_even_though_methods_compose_prompts(tmp_path,
-                                                                       monkeypatch):
-    """方法自己**不该**再贴一份:两份会让 prompt 和点上的 `skill_sha` 互相打脸。"""
+def test_ordinary_edit_cli_receives_the_staged_skill(recording_cli):
     import editor
 
-    mod = _load("llm_improver")
-    root = _staged_skill(tmp_path)
-    own_prompt = mod.build_prompt(root, {"round_index": 2, "incumbent_score": 0.0})
-    assert SKILL_HEADER not in own_prompt, "方法又把 skill 贴回来了"
-    assert "BODY-MARKER" not in own_prompt, "方法又把 skill 正文贴回来了"
-
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "x")
-    monkeypatch.setenv("HG_METHOD_MODEL", "m")
-    sent = _capture_messages(monkeypatch)
-    editor.ask(own_prompt, base=root)
-    blob = "\n".join(m["content"] for m in sent[-1])
-    assert blob.count(SKILL_HEADER) == 1, blob.count(SKILL_HEADER)
-    assert blob.count("BODY-MARKER") == 1, blob.count("BODY-MARKER")
+    root, observations = recording_cli
+    prompt = _load("llm_improver").build_prompt(root, {"round_index": 2, "incumbent_score": 0.0})
+    editor.ask(prompt, base=root)
+    observed, = observations()
+    assert observed["skill"] == (root / "_harnessgrad/SKILL.md").read_text()
+    assert prompt in observed["prompt"]
+    assert "BODY-MARKER" not in observed["prompt"]
 
 
-def test_a_method_can_decline_the_skill_explicitly(tmp_path, monkeypatch):
-    """不读要**显式声明** —— 这是这次改动的另一半:默认继承,退出是一个写出来的参数。"""
+def test_structured_role_cli_receives_only_its_supplied_prompt(recording_cli):
     import editor
 
-    root = _staged_skill(tmp_path)
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "x")
-    monkeypatch.setenv("HG_METHOD_MODEL", "m")
-    sent = _capture_messages(monkeypatch)
-
-    editor.ask("do the thing", base=root, skill=False)
-    blob = "\n".join(m["content"] for m in sent[-1])
-    assert SKILL_HEADER not in blob and "BODY-MARKER" not in blob
-    assert "do the thing" in blob
+    root, observations = recording_cli
+    assert editor.ask("Judge this hypothesis", base=root, system="Role instructions",
+                      structured_cli=True, skill=False) == {"verdict": "accept"}
+    observed, = observations()
+    assert observed["skill"] is None
+    assert "BODY-MARKER" not in observed["prompt"]
+    assert "Role instructions" in observed["prompt"]
+    assert "Judge this hypothesis" in observed["prompt"]
 
 
 def test_no_staged_skill_means_no_block(tmp_path):
@@ -837,58 +757,23 @@ def test_a_prompt_without_pages_still_builds(tmp_path):
 
 # --------------------------------------------- 方法自己的 token 进 cost ---
 
-def test_the_methods_own_tokens_reach_the_cost_record(tmp_path, monkeypatch):
-    """**实测过的 0。** 方法自己调模型的 token 以前永远是 0。
-
-    平台早就有 `cost.method_generation_tokens` 这个字段,README 里也写着成本是三个账本
-    (harness / method / env)。但它一直是 0 —— 不是"方法没花钱",而是**没人把数传下来**:
-    `editor.ask` 拿到的 `usage` 在函数返回时就没了,`report(tokens=)` 默认 0,而每个方法
-    都得自己记得传。一个读常数的成本规则允许一切,所以这不是美化字段,是修一条规则。
-
-    这条测试同时钉住"观测"和"声明"两件事:重试那次失败的调用也要算钱。
-    """
+def test_the_methods_own_tokens_reach_the_cost_record(recording_cli, tmp_path, monkeypatch):
+    """Both the rejected response and its repair consume a model call."""
     import editor
 
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "x")
-    monkeypatch.setenv("HG_METHOD_MODEL", "m")
-    monkeypatch.setenv("HG_METHOD_PARSE_RETRIES", "2")
-
-    class _Usage:
-        prompt_tokens, completion_tokens, model = 900, 100, "m-real"
-        prompt_tokens_details = {"cached_tokens": 0}
-
-    class _Resp:
-        model = "m-real"
-        usage = _Usage()
-
-        def __init__(self, text):
-            self.choices = [type("C", (), {"message": type("M", (), {"content": text})()})()]
-
-    # 第一次读不懂,第二次成功 —— 两次都花了钱。
-    replies = ["嗯…这个", '{"no_change": "算了"}']
-
-    class _Completions:
-        def create(self, **kw):
-            return _Resp(replies.pop(0))
-
-    class _Client:
-        def __init__(self, **kw):
-            self.chat = type("C", (), {"completions": _Completions()})()
-
-    import editor
-    def endpoint_client(**kwargs):
-        client = _Client(**kwargs)
-        client.complete = client.chat.completions.create
-        return client
-    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
-
-    editor.reset_spent()
-    reply = editor.ask("prompt")
-    assert reply == {"no_change": "算了"}
-    assert replies == [], "第二次调用必须真的发生,否则这条测试没在测重试"
-    assert editor.spent() == {"input": 1800, "output": 200, "calls": 2,
-                              "model": "m-real"}
+    root, observations = recording_cli
+    reply, problems = editor.ask_for_json(
+        lambda problem: "RETRY_ONCE " + problem, system="Review the change", base=root,
+        structured_cli=True, attempts=2, what="a verdict",
+    )
+    assert not problems
+    assert reply == {"verdict": "accept"}
+    attempts = observations()
+    assert len(attempts) == 2
+    assert "could not be read as a verdict" not in attempts[0]["prompt"]
+    assert "could not be read as a verdict" in attempts[1]["prompt"]
+    assert editor.spent()["input"] == 1800 and editor.spent()["output"] == 200
+    assert editor.spent()["calls"] == 2
 
     emitted = []
     monkeypatch.setattr(editor, "emit", emitted.append)
@@ -902,7 +787,8 @@ def test_the_methods_own_tokens_reach_the_cost_record(tmp_path, monkeypatch):
     assert claimed["generation_tokens"] == 2000
     assert (claimed["method_input_tokens"], claimed["method_output_tokens"]) == (1800, 200)
     assert claimed["method_model_calls"] == 2
-    assert claimed["method_model"] == "m-real"
+    assert claimed["method_spend_source"] == "cli_reported"
+    assert traj["steps"][0]["method_reported"]["improver_run"]["dsh_identity"]["model"] == "fixture-model"
 
 
 def test_a_method_that_made_no_call_reports_a_real_zero(tmp_path, monkeypatch):

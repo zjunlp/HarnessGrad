@@ -15,8 +15,7 @@ to select on yet. That absence is the shape, and the platform records it
 (`steps_in_submission > 1`).
 
 Everything else -- staging from a chosen parent, dispatch to the resolved
-improver (a CLI gets paths, a chat endpoint gets inlined content, decided in
-`editor.ask`), apply-and-validate with one repair, reporting, and error handling
+CLI Meta-Harness through `editor.ask`, apply-and-validate with one repair, reporting, and error handling
 -- is `methods/base.py`.
 
 The platform protocol is `methods/protocol.py` and `INTERFACE.md` §4: one JSON

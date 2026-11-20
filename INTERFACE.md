@@ -2050,36 +2050,11 @@ Fields this adds:
 `--mode` still selects the loop, but the two loops now share this budget arithmetic and
 report the same two run-level fields, so their curves can be read on one axis.
 
-### 4.49.1 Open decision: which improver is the *default*, and what a method owes it
+### 4.49.1 The Meta-Harness that edits a candidate
 
-`harnessgrad/improvers/improvers.json` names **codex -- a CLI -- as the default**, so an ordinary run
-resolves a CLI improver, records it in `identity.improver`, and binds its runtime trees.
+The shipped improver registry selects `dsh`, the DeepSeek Harness CLI, for model-driven candidate edits. DSH receives the chosen parent workspace, reads the available study evidence and edits the candidate using its tools. The registry pins the headless profile, the `deepseek-official` provider and the `deepseek-flash` editor model. Select `--improver codex` for a Codex CLI editor. Configure the selected Meta-Harness before running the study. [Setup](docs/getting-started.md#run-the-readme-experiment)
 
-Meanwhile every method in `methods/` carries its own editor: the seven ports and
-`llm_improver` call `editor.ask`, which is a chat endpoint. Two consequences, both measured:
-
-* With the default, the record **names a tool that composed nothing**. `HG_METHOD_BASE_URL`
-  is only injected when the resolved improver *is* an endpoint, so a method under the default
-  falls back to `.env` and calls whatever is there while the point says `codex`.
-* Driving the CLI is possible -- `methods/cli_improver.py` is that implementation, extracted
-  when `methods/codex` was deleted for not being a paper's rule -- and wiring it into the
-  reference method for one afternoon silently changed what a *default* run does (it started a
-  real codex session). That is why it is not wired in.
-
-Two coherent fixes, and no third:
-
-1. **Make the default an endpoint** (`deepseek`), so the default is a tool that works
-   unattended and the record is true; `--improver codex` then means "drive the CLI", and the
-   method that wants it calls `methods/cli_improver.py`. Cost: a hosted endpoint becomes the
-   default path for every run, which needs its key in the environment.
-2. **Require every method to drive the resolved improver**, refusing loudly when it cannot
-   (`editor.model_settings` is the single place that can say so). Cost: a method can no
-   longer carry its own editor without saying why, which is most of what the ports are.
-
-**Decided 2026-10-04: option 1.** `harnessgrad/improvers/improvers.json` now names `deepseek` as the
-default, so an ordinary run resolves an endpoint, `_method_env` injects its base URL, model
-and credential into the method, and the record and the run agree by construction -- every
-method in `methods/` reaches a model through `editor.ask`, which reads `HG_METHOD_*`.
+The RSI method still selects its evidence and parent, constructs its role-specific prompts, inspects the candidate and decides what to submit. Model-driven roles run through the selected Meta-Harness. For a structured role the method requests a JSON response, such as RRSI’s critic verdict or Meta-Harness’s design decision. The method consumes that response according to its own protocol. Model-free controls and checkpoint evaluations can explicitly select `--improver none`.
 
 The editor keeps the source tree (`base` / `parent`) separate from run evidence.
 `ask`, `ask_for_json`, and `propose_and_apply` accept `evidence_channel=Path(...)`
@@ -2093,18 +2068,7 @@ refuses exam records; the platform still owns public-evidence staging. The CLI
 edits the selected parent while reading this run channel as `evidence/`; this
 does not change a method's parent-selection or acceptance rule.
 
-What that fixes, measured: with `codex` as the default, `identity.improver` on every point
-named a tool that composed nothing, and the method called whatever `.env` happened to hold.
-The same defect the `deepseek` entry was written to prevent (`tools/improver.py:resolve`,
-"a record that names one endpoint and a method that calls another").
-
-What it costs: the default path now needs `DEEPSEEK_API_KEY` in the environment (`.env` or
-the real environment; `.env.example` carries the name). Without it `resolve` returns
-`ok=False`, the driver warns at the door, and the run carries **no** improver identity rather
-than a wrong one -- which is the correct failure.
-
-`--improver codex` still resolves the CLI, and a method that wants to drive it calls
-`methods/cli_improver.py`; none does today, and that is stated there rather than hidden.
+A historical curve can name an endpoint that produced a candidate in an earlier run. New experiments migrating from the former `local` or `deepseek` editor entries select DSH or Codex. Each curve records its own resolved improver identity.
 
 ### 4.50 Choosing the improver is part of the experiment
 
@@ -2128,9 +2092,7 @@ Three properties, each of which is a refusal rather than a convenience:
   so a platform-side `HG_METHOD_MODEL` says nothing about it; `--improver-model` is the
   supported way to point it at a different model, and it is recorded as the model used.
 
-Select `deepseek-v4-pro` for the task agent with `HG_AGENT_MODEL` or for the endpoint
-improver with `--improver deepseek --improver-model deepseek-v4-pro`. The built-in
-`deepseek` improver defaults to `deepseek-flash`.
+Choose a task-model deployment with `HG_AGENT_MODEL`. To override the DSH editor model, supply `--improver dsh --improver-model MODEL` with a model ID supported by the selected provider. The shipped DSH declaration selects `deepseek-flash`.
 
 The interface follows the same split as the record: the form has one control for the
 **method** (the rule) and a separate one for the **improver** (the tool), because they are

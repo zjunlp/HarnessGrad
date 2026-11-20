@@ -34,7 +34,6 @@ is launched, not in one front end's form validation.
 from __future__ import annotations
 
 import json
-import importlib.util
 import os
 import re
 import shlex
@@ -211,48 +210,42 @@ def _method_plan(args):
             raise ValueError('base method requires must be an object')
         name = path.parent.name
         return {'name': name, 'requires': base_requires, 'wrapper': True,
-                'needs_editor': bool(base_requires.get('editor_model')),
-                'endpoint_only': bool(base_requires.get('editor_model')) or name == 'rrsi'
-                    or (name == 'meta_harness' and rounds > 1)}
+                'needs_editor': bool(base_requires.get('editor_model'))}
     manifest = json.loads((method / 'method.json').read_text())
-    if manifest.get('kind') not in ('published', 'improver'):
+    requires = manifest.get('requires') or {}
+    if manifest.get('kind') not in ('published', 'improver') and not requires.get('editor_model'):
         return {'custom': True}
-    return {'name': method.name, 'requires': manifest.get('requires') or {},
-            'endpoint_only': bool(manifest.get('requires', {}).get('editor_model'))
-                or method.name == 'rrsi' or (method.name == 'meta_harness' and rounds > 1)}
+    return {'name': method.name, 'requires': requires, 'needs_editor': True}
 
 
-def _editor_plan(args, method):
+def needs_cli_editor(args):
+    """Does the selected experiment actually ask a model to improve the harness?"""
+    return bool((_method_plan(args) or {}).get('needs_editor'))
+
+
+def _editor_check(args):
+    from harnessgrad.improvers.resolver import declared_editor_binding, load_config
+
     cfg = current()
-    direct = {'kind': 'openai-compatible', 'base_url': cfg.method.base_url,
-              'model': cfg.method.model, 'key': cfg.method.api_key}
-    requested = getattr(args, 'improver', None)
-    if requested in ('none', 'noop', 'null'):
-        return direct
-    path = Path(cfg.improver.registry) if cfg.improver.registry else PLATFORM_ROOT/'harnessgrad/improvers/improvers.json'
-    registry = json.loads(path.read_text())
-    chosen = requested or registry.get('default')
-    entry = (registry.get('improvers') or {}).get(chosen)
-    if entry is None:
-        if requested and (Path(requested).is_file() or shutil.which(requested)):
-            return {'kind': 'cli', 'path': requested}
-        return {'error': 'selected improver is not declared or executable; configure --improver local or HG_METHOD_*'}
-    if entry.get('kind') == 'cli':
-        executable = entry.get('path') or shutil.which(chosen)
-        launcher = entry.get('launcher')
-        if launcher:
-            executable = str(PLATFORM_ROOT / launcher)
-        return {'kind':'cli', 'path': executable}
-    key = os.environ.get(entry['api_key_env']) if entry.get('api_key_env') else cfg.method.api_key
-    selected = {'kind': 'openai-compatible', 'base_url': entry.get('base_url') or cfg.method.base_url,
-            'model': getattr(args, 'improver_model', None) or entry.get('model') or cfg.method.model,
-            'key': key}
-    # Match the driver: an unavailable default improver does not override a
-    # fully configured method-owned endpoint. An explicit named selection does.
-    if requested is None and not all(selected.get(k) for k in ('base_url','model','key')):
-        if all(direct.get(k) for k in ('base_url','model','key')):
-            return direct
-    return selected
+    registry = load_config()
+    chosen = getattr(args, 'improver', None) or cfg.improver.name or registry.get('default') or ''
+    remedy = 'experiment edits require a CLI Meta-Harness; select --improver dsh or another declared CLI'
+    if chosen.lower() in ('none', 'noop', 'null') or not chosen:
+        return Check('editor', True, False, remedy)
+    if Path(chosen).is_absolute():
+        binding = {'ok': os.access(chosen, os.X_OK) and Path(chosen).is_file(), 'path': chosen}
+    else:
+        binding = declared_editor_binding(chosen, config=registry,
+            model_override=getattr(args, 'improver_model', None) or '')
+    if not binding['ok']:
+        return Check('editor', True, False, f"{remedy}. {binding.get('reason') or 'CLI executable unavailable'}")
+    if cfg.improver.selection:
+        command = shlex.split(cfg.improver.selection)
+        found = shutil.which(command[0]) if len(command) == 1 else None
+        if not found or Path(found).resolve() != Path(binding['path']).resolve():
+            return Check('editor', True, False, 'HG_IMPROVER conflicts with the selected CLI Meta-Harness')
+    identity = ' / '.join(str(binding[key]) for key in ('profile', 'provider', 'model') if binding.get(key))
+    return Check('editor', True, True, f"CLI Meta-Harness: {chosen}" + (f" / {identity}" if identity else ""))
 
 
 def _resource(root, relative):
@@ -271,7 +264,7 @@ def configuration_checks(args):
         missing = [label for label, value in [('HG_AGENT_MODEL',agent.model),
             ('HG_AGENT_BASE_URL',agent.base_url),('HG_AGENT_API_KEY',agent.api_key)] if not value]
         checks.append(Check('agent', True, not missing,
-            'configure ' + ', '.join(missing) if missing else f'{agent.backend}: model configured; credential present'))
+            'configure ' + ', '.join(missing) if missing else f'{agent.backend}: {agent.model}; credential present'))
     try:
         method = _method_plan(args)
         if method is None or method.get('custom'):
@@ -282,25 +275,11 @@ def configuration_checks(args):
         # differently: `editor` is "the model that proposes edits is not configured",
         # `method` is "this method cannot run this experiment". Collapsing them made a
         # missing HG_METHOD_* look like a property of the method.
-        if method.get('needs_editor', True):
-            editor = _editor_plan(args, method)
-            editor_error = editor.get('error')
-            if editor.get('kind') == 'cli':
-                path = editor.get('path')
-                if not path or not (Path(path).is_file() or shutil.which(path)):
-                    editor_error = 'selected CLI improver executable is missing'
-                if method['endpoint_only']:
-                    direct = current().method
-                    if not all((direct.base_url, direct.model, direct.api_key)):
-                        editor_error = 'this method has structured roles requiring HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY as well as its CLI editor'
-            elif not editor_error:
-                missing = [label for label in ('base_url','model','key') if not editor.get(label)]
-                if missing:
-                    editor_error = 'method editor needs HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY (or an explicitly configured improver)'
-            if editor_error:
-                if method.get('wrapper'):
-                    editor_error = f"LightRSI base {method['name']} may run unless the incumbent is saturated: {editor_error}"
-                checks.append(Check('editor', True, False, editor_error))
+        if method.get('needs_editor'):
+            editor = _editor_check(args)
+            if not editor.ok and method.get('wrapper'):
+                editor = Check('editor', True, False, f"LightRSI base {method['name']}: {editor.detail}")
+            checks.append(editor)
         error = None
         requires = method['requires']
         minimum = requires.get('min_trials', 1)
@@ -355,14 +334,6 @@ def endpoint_checks(args):
     agent = current().agent
     if agent.backend != 'mock':
         checks.append(_probe_endpoint('agent-endpoint', agent.base_url, agent.api_key))
-    method = _method_plan(args)
-    if method and not method.get('custom') and not method.get('error') and method.get('needs_editor', True):
-        editor = _editor_plan(args, method)
-        if editor.get('kind') == 'openai-compatible':
-            checks.append(_probe_endpoint('method-endpoint', editor.get('base_url'), editor.get('key')))
-        elif method.get('endpoint_only'):
-            cfg = current().method
-            checks.append(_probe_endpoint('method-endpoint', cfg.base_url, cfg.api_key))
     if not checks:
         checks.append(Check('endpoint', False, True, 'no live HTTP model channel selected; no network probe needed'))
     return checks
@@ -468,42 +439,6 @@ def method_checks(args) -> list[Check]:
         return checks
     except Exception as exc:                                  # noqa: BLE001 - a check reports failures
         return [Check("method", True, False, f"invalid method configuration: {exc}")]
-
-
-def _editor_check(args) -> Check:
-    """Use the existing improver resolver; external/self-contained methods opt out."""
-    from harnessgrad.improvers.resolver import load_config, resolve
-
-    config = current()
-    if config.improver.selection:
-        # methods.cli_improver gives the explicit command priority over registry names.
-        command = shlex.split(config.improver.selection)
-        if not command or shutil.which(command[0]) is None:
-            executable = command[0] if command else "<empty>"
-            return Check("editor", True, False, f"CLI improver is not executable: {executable}")
-        return Check("editor", True, True, f"CLI improver: {command[0]}")
-    requested = getattr(args, "improver", None) or config.improver.name or ""
-    disabled = requested.strip().lower() in ("none", "noop", "null")
-    direct = all((config.method.base_url, config.method.model, config.method.api_key))
-    resolved = {} if disabled else resolve(
-        load_config(), requested=requested,
-        model_override=getattr(args, "improver_model", None) or "")
-    if resolved.get("ok") and resolved.get("kind") == "cli":
-        return Check("editor", True, True, f"CLI improver: {resolved.get('name')}")
-    if requested and not disabled and not resolved.get("ok"):
-        return Check("editor", True, False, resolved.get("reason") or "improver unavailable")
-    if resolved.get("ok"):
-        key_env = resolved.get("api_key_env")
-        key = os.environ.get(key_env) if key_env else config.method.api_key
-        configured = bool(resolved.get("base_url") and resolved.get("model") and key)
-    else:
-        configured = direct
-    if not configured:
-        return Check("editor", True, False,
-                     "configure an improver or HG_METHOD_BASE_URL / HG_METHOD_MODEL / HG_METHOD_API_KEY")
-    if importlib.util.find_spec("openai") is None:
-        return Check("editor", True, False, "the method endpoint needs the openai package")
-    return Check("editor", True, True, "endpoint configured; authentication is not probed")
 
 
 def render(checks) -> str:

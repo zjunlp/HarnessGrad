@@ -117,3 +117,31 @@ def test_a_candidate_that_deletes_most_of_the_tree_fails_to_apply(tmp_path: Path
     edits = [{"path": "agent.py", "content": "a" * 1_900}]
     changed, _paths, problems = editor.apply_edits(base, same, edits)
     assert changed and not problems
+
+
+@pytest.mark.parametrize('declared', [None, {'kind': 'endpoint', 'path': 'https://editor.invalid/v1'},
+                                      {'kind': 'cli'}, {'kind': 'openai-compatible', 'path': '/tmp/cli'}])
+def test_ordinary_edit_requires_staged_meta_harness_before_transport(tmp_path, monkeypatch, declared):
+    base = _harness(tmp_path / 'run')
+    _channel(base, declared or {})
+    monkeypatch.setenv('HG_IMPROVER', '/unrecorded/executable')
+    import socket
+    monkeypatch.setattr(socket, 'create_connection', lambda *a, **kw: pytest.fail('tried endpoint'))
+    monkeypatch.setattr(editor, '_ask_cli', lambda *a, **kw: pytest.fail('tried ambient CLI'))
+    with pytest.raises(RuntimeError, match='resolved CLI Meta-Harness'):
+        editor.ask('edit the candidate', base=base)
+
+
+def test_ambient_command_cannot_replace_selected_editor(tmp_path, monkeypatch):
+    import cli_improver
+
+    selected = tmp_path / 'dsh'
+    selected.write_text('#!/bin/sh\nexit 0\n')
+    selected.chmod(0o755)
+    req = {'improver': {'kind': 'cli', 'path': str(selected), 'name': 'dsh'}}
+    monkeypatch.setenv('HG_IMPROVER', str(selected))
+    assert cli_improver._improver_command(req) == [str(selected)]
+    for override in (sys.executable, str(selected) + ' --extra'):
+        monkeypatch.setenv('HG_IMPROVER', override)
+        with pytest.raises(ValueError, match='conflicts with the resolved CLI'):
+            cli_improver._improver_command(req)

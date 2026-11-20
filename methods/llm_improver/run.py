@@ -115,13 +115,6 @@ def main() -> int:
     editor.require_api(req)
     base = Path(req["base_harness"])
 
-    # **This method does not drive a CLI improver, and that is a decision left open.**
-    # `methods/cli_improver.py` is where driving one lives (extracted from the deleted
-    # `methods/codex`); this method could call it when `cli_improver.applies(req)`, and for
-    # one afternoon it did -- which silently changed what a *default* run does, because the
-    # registry's default improver is codex, a CLI. The trade-off is recorded as an open
-    # decision in `INTERFACE.md` §4.49 rather than settled here.
-
     try:
         reply = editor.ask(build_prompt(base, req), base=base)
     except SystemExit:

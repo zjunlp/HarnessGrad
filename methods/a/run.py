@@ -13,8 +13,7 @@ it decides whether another candidate is worth spending. A perfect score leaves
 nothing to win, so the search stops there.
 
 Everything else -- staging from a chosen parent, dispatch to the resolved
-improver (a CLI gets paths, a chat endpoint gets inlined content, decided in
-`editor.ask`), apply-and-validate with one repair, reporting, and error handling
+CLI Meta-Harness through `editor.ask`, apply-and-validate with one repair, reporting, and error handling
 -- is `methods/base.py`. This file is deliberately only the rule.
 
 The platform protocol is `methods/protocol.py` and `INTERFACE.md` §4: one JSON
