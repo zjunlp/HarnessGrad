@@ -1,0 +1,64 @@
+---
+import example from '../data/alfworld-h0-example.json';
+const zh = Astro.url.pathname.split('/').includes('zh');
+const command = 'harnessgrad run --h0-from published:alfworld-loop-study --rounds 0 --improver none';
+const source = `https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/${example.revision}/Experiments/ALFWorld/qwen3.5-9b_loop/h0`;
+---
+<aside id="shared-h0" aria-labelledby="shared-h0-title">
+  <h4 id="shared-h0-title">{zh ? '复用这条曲线的起点' : 'Start a run from this baseline'}</h4>
+  <p>{zh
+    ? `Loop 0.2.0-study 在 100 道训练任务中完成了 ${example.passed} 道。准备好 ALFWorld 数据和运行环境后，可以将这次公开测量和全部 ${example.total} 条轨迹导入自己的 run，新增求解 token 为 0。`
+    : `Loop 0.2.0-study solved ${example.passed} of ${example.total} training tasks. With ALFWorld prepared, import this published measurement and all ${example.total} traces into your run for zero new solver tokens.`}</p>
+  <div class="command">
+    <code data-h0-command>{command}</code>
+    <button type="button" data-h0-copy data-done={zh ? '已复制' : 'Copied'} data-manual={zh ? '命令已选中，请复制' : 'Command selected. Copy to continue.'} hidden>{zh ? '复制命令' : 'Copy command'}</button>
+  </div>
+  <span role="status" aria-live="polite" data-h0-status></span>
+  <details class="trace">
+    <summary>{zh ? '查看一条成功轨迹 · 在台灯下查看书本' : 'Inspect a solved task · Examine the book with the desklamp'}</summary>
+    <p>{zh ? '单题得分' : 'Task score'} <strong>{example.taskScore}/1</strong> · <a href={source}>{zh ? '原始发布记录' : 'Original release'}</a></p>
+    <code class="task-id">{example.task}</code>
+    <ol>{example.actions.map(action => <li>
+      <details>
+        <summary><code>{action.command}</code></summary>
+        <pre>{action.output.trimEnd()}</pre>
+      </details>
+    </li>)}</ol>
+    <p>{zh ? '最后一步提交了任务。展开任一命令可查看环境当时返回的原文。' : 'The final step submitted the task. Expand any command to read the recorded environment response.'}</p>
+  </details>
+  <a href="https://github.com/zjunlp/HarnessGrad/blob/main/docs/public-native-scoring.md">{zh ? '准备 ALFWorld 环境' : 'Prepare ALFWorld'}</a>
+</aside>
+<script>
+  const panel = document.getElementById('shared-h0');
+  const button = panel?.querySelector<HTMLButtonElement>('[data-h0-copy]');
+  const code = panel?.querySelector('code[data-h0-command]');
+  const status = panel?.querySelector('[data-h0-status]');
+  if (button && code && status) {
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(code.textContent ?? '');
+        status.textContent = button.dataset.done ?? '';
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        status.textContent = button.dataset.manual ?? '';
+      }
+    });
+  }
+</script>
+<style>
+  aside { border-inline-start: 3px solid var(--sl-color-accent); padding: .25rem 1rem .75rem; margin-block: 1.25rem; scroll-margin-top: 7rem; }
+  aside h4 { margin: 0; }
+  .command { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .65rem; background: var(--sl-color-gray-6); border-radius: .35rem; }
+  .command code { flex: 1 1 26rem; overflow-wrap: anywhere; }
+  button { cursor: pointer; color: var(--sl-color-text-accent); background: var(--sl-color-bg); border: 1px solid var(--sl-color-gray-4); border-radius: .3rem; padding: .3rem .65rem; font: inherit; font-size: .85rem; }
+  .trace { margin-block: .8rem; }
+  summary { cursor: pointer; }
+  .task-id, summary code { overflow-wrap: anywhere; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; }
+  [role=status] { font-size: .85rem; }
+</style>

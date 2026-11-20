@@ -1,0 +1,35 @@
+{
+  "revision": "dffe13f4e2eb585cb521039fe72d841da77d81e5",
+  "task": "look_at_obj_in_light-Book-None-DeskLamp-328__trial_T20190908_062929_997479",
+  "passed": 53,
+  "total": 100,
+  "taskScore": 1.0,
+  "actions": [
+    {
+      "step": 0,
+      "command": "python3 alf look",
+      "output": "-= Welcome to TextWorld, ALFRED! =-\n\nYou are in the middle of a room. Looking quickly around you, you see a bed 1, a desk 1, a drawer 2, a drawer 1, a garbagecan 1, a shelf 1, and a sidetable 1.\n\nYour task is to: examine the book with the desklamp.\n\nAdmissible actions:\n  go to bed 1\n  go to desk 1\n  go to drawer 1\n  go to drawer 2\n  go to garbagecan 1\n  go to shelf 1\n  go to sidetable 1\n  help\n  inventory\n  look\n\n[alf] step 0/50; in progress\n"
+    },
+    {
+      "step": 1,
+      "command": "python3 alf do \"go to desk 1\"",
+      "output": "You arrive at desk 1. On the desk 1, you see a book 1, a cd 1, a cellphone 1, a creditcard 1, a desklamp 1, a keychain 2, a keychain 1, a mug 1, a pen 1, a pencil 1, and a tissuebox 2.\n\nAdmissible actions:\n  examine desk 1\n  go to bed 1\n  go to drawer 1\n  go to drawer 2\n  go to garbagecan 1\n  go to shelf 1\n  go to sidetable 1\n  help\n  inventory\n  look\n  take book 1 from desk 1\n  take cd 1 from desk 1\n  take cellphone 1 from desk 1\n  take creditcard 1 from desk 1\n  take keychain 1 from desk 1\n  take keychain 2 from desk 1\n  take mug 1 from desk 1\n  take pen 1 from desk 1\n  take pencil 1 from desk 1\n  take tissuebox 2 from desk 1\n  use desklamp 1\n\n[alf] step 1/50; in progress\n"
+    },
+    {
+      "step": 2,
+      "command": "python3 alf do \"use desklamp 1\"",
+      "output": "You turn on the desklamp 1.\n\nAdmissible actions:\n  examine desk 1\n  go to bed 1\n  go to drawer 1\n  go to drawer 2\n  go to garbagecan 1\n  go to shelf 1\n  go to sidetable 1\n  help\n  inventory\n  look\n  take book 1 from desk 1\n  take cd 1 from desk 1\n  take cellphone 1 from desk 1\n  take creditcard 1 from desk 1\n  take keychain 1 from desk 1\n  take keychain 2 from desk 1\n  take mug 1 from desk 1\n  take pen 1 from desk 1\n  take pencil 1 from desk 1\n  take tissuebox 2 from desk 1\n  use desklamp 1\n\n[alf] step 2/50; in progress\n"
+    },
+    {
+      "step": 3,
+      "command": "python3 alf do \"take book 1 from desk 1\"",
+      "output": "You pick up the book 1 from the desk 1.\n\nAdmissible actions:\n  examine book 1\n  examine desk 1\n  go to bed 1\n  go to drawer 1\n  go to drawer 2\n  go to garbagecan 1\n  go to shelf 1\n  go to sidetable 1\n  help\n  inventory\n  look\n  move book 1 to desk 1\n  use desklamp 1\n\n[alf] step 3/50; SOLVED\n"
+    },
+    {
+      "step": 4,
+      "command": "python3 alf done",
+      "output": "Noted. The episode is marked done.\n"
+    }
+  ],
+  "submittedStep": 5
+}
