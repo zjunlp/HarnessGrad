@@ -13,9 +13,13 @@ disappears when the file runs alone is an isolation defect in the test, not a
 regression in the platform. Running such a file at concurrency 1 is the only
 correct way to run it, and it still overlaps everything else.
 
-`tools/testing/run_tests.py`'s `EXCLUSIVE` tuple names those files. This document records
-the **signals** an entry must show, the **method** used to derive them, the
-**per-file lane table**, and the **experiments** that moved a file between lanes.
+The runner's `EXCLUSIVE` tuple defines the current lane assignments. The
+[CI guard](../tests/quality/test_test_lanes.py) checks file existence,
+duplicates and the effect of `--fast` on `SLOW`/`EXCLUSIVE` overlaps.
+See the [test guide](test-suite.md) for current runner usage.
+
+The historical derivation below describes the original October 2026 guard
+and the follow-up 2026-11-03 measurement.
 
 ## The signals
 
@@ -216,9 +220,9 @@ local images), not contention — but both keep the lane on signals (c)/(d).
 ### Smokes
 
 * `python3 -m pytest -q -p no:cacheprovider --basetemp=… tests/quality/test_test_lanes.py` → **8 passed**.
-  (Historical: that file was deleted 2026-10-27 with the slim, so the command now exits `4`
-  with `file or directory not found`. It is kept as the record of the run that held then; no
-  guard replaces it today.)
+  This result describes the original signal-based guard. That guard was deleted
+  on 2026-10-27. The restored test at the same path checks the current lane
+  invariants listed above.
 * Falsification of the guard: a bogus `EXCLUSIVE` entry with no signal, a stale
   name, a duplicate, and an undocumented `SLOW`/`EXCLUSIVE` overlap were each
   injected and each was rejected.

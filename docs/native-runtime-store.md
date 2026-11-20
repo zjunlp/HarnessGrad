@@ -1,5 +1,10 @@
 # Preparing pinned native scorer packages on Linux
 
+> **Historical archive procedure (Linux delivery, `4046429f`).** Use these
+> commands to reproduce runs bound to the original exact-byte packages.
+> New evaluations for these five adapters use
+> [public native scoring](public-native-scoring.md) by default.
+
 The five reviewed manifests are inventories, not runtime distributions. A fresh
 checkout does not include their interpreter, standard library, shared libraries,
 launcher, SDKs or other blobs. `verify` checks an installed package; it does not
@@ -47,12 +52,11 @@ partial packages are not published. Existing packages and output archives are
 never replaced. Repair of an existing corrupt package is an explicit operator
 action. Assembly does not turn an arbitrary source release into a pinned binary.
 
-The current five pins share a 31,028,464-byte Python interpreter with SHA256
+The five reviewed historical pins share a 31,028,464-byte Python interpreter with SHA256
 `23bc148d2b48964b621c5561ff2b81c1d9c7b717967a7491efbf12f4304882b5`.
 The older schema 1 ledger before the portable migration identifies a different
-30,652,904-byte interpreter. It cannot establish current runtime readiness.
+30,652,904-byte interpreter. It identifies the older recorded runtime.
 No public download URL or verified redistribution license bundle is registered
-by this preparation tool. Do not describe a clean external install as ready
-until exact bytes are available and both verification and probing succeed.
+by this preparation tool. Exact reproduction requires those bytes and successful verification and probing.
 Synthetic package tests exercise the mechanics; they are not recovery evidence
 for any of the five reviewed closures.

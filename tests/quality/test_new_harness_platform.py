@@ -23,6 +23,7 @@ from tools.validation.check_trace_contract import inspect as inspect_trace
 from tools.validate_harness import source_identity
 from harnessgrad.execution import candidate_runtime
 from test_miniagent_harness import managed_miniagent, miniagent_store  # noqa: F401
+from test_openclaw_harness import prepared_harness as prepared_openclaw  # noqa: F401
 
 
 @pytest.mark.parametrize('name,answer', [
@@ -33,9 +34,11 @@ def test_edited_candidate_runs_readonly_and_is_scored_after_private_inputs_arriv
     """A score must describe the edited tree that actually executed in the sandbox."""
     if name == 'miniagent':
         request.getfixturevalue('managed_miniagent')
+        template = ROOT / 'base_harness' / name
+    else:
+        template = request.getfixturevalue('prepared_openclaw')
     source = tmp_path / 'submitted'
-    shutil.copytree(ROOT / 'base_harness' / name, source,
-                    ignore=shutil.ignore_patterns('__pycache__'))
+    shutil.copytree(template, source, ignore=shutil.ignore_patterns('__pycache__'))
     submitted_before = source_identity(source)
     work_root = tmp_path / 'work'
     repo = work_root / 'acceptance' / 'workspace'

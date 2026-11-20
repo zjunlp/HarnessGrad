@@ -370,10 +370,11 @@ Paths are outside the platform tree on purpose: the workspace is
 `/tmp/harnessgrad_work/<run-id>/workspace`, which is why the harness cannot read `driver.py`
 or `.env` from it.
 
-`--run-id` is not a lock. Running the same id twice **overwrites** `runs/<run-id>/` — measured:
-a second identical invocation exited `0` and left a fresh point with a new `timestamp_utc`, and
-nothing warned. Use a new id per run; an old run directory is evidence, and this page's own
-runs are only scratch.
+Use a fresh `--run-id` for each new run. The driver checks the run namespace
+and refuses an occupied ID. To continue a compatible interrupted run, follow
+the [resume guide](resume-design.md). The older transcript for this guide
+precedes namespace protection: a second identical invocation exited `0` and
+replaced the point's `timestamp_utc`.
 
 ### 3.1 What `--harness-path` refuses, and what it does not
 

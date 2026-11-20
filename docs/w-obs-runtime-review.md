@@ -1,5 +1,12 @@
 # Runtime observation aggregation review - w-obs
 
+> **Historical review (2026-10-15, based on `bd25f5a`).** The guard and
+> experiments below refer to that review. The
+> [current isolation contract](../eval/verification/isolation.py) permits
+> recording a uniform `unknown` class and refuses unknown comparisons and
+> mixed classes. The [follow-up review](w-fix-unknown-isolation-records.md)
+> records that change and its controls.
+
 Correction: [w-fix](w-fix-unknown-isolation-records.md) supersedes this review's
 unknown-only write-path refusal. Preserve complete explicitly noncomparable
 records; keep unknown comparison and mixed-class refusals. The implementation
