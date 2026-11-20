@@ -90,7 +90,13 @@
   </tr>
 </table>
 
-These curves come from experiments run with HarnessGrad. Click any panel to inspect the original chart.
+**Start from the published ALFWorld baseline.** With the [ALFWorld dataset](DOWNLOADS.md#alfworld) and [runtime](docs/public-native-scoring.md#prepare-a-local-scoring-environment) prepared, this command creates a local run at **53/100** on Loop `0.2.0-study`. It restores the 100 original training traces with **zero new solver tokens**.
+
+```bash
+harnessgrad run --h0-from published:alfworld-loop-study --rounds 0 --improver none
+```
+
+[Inspect a task trace beside the training curve](https://zjunlp.github.io/HarnessGrad/benchmarks/alfworld/?split=train#shared-h0) · [Use this H0 in an improvement run](docs/h0-content-comparability.md)
 
 ### 🔬 From a question to an experiment
 
