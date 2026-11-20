@@ -54,9 +54,10 @@
 ## 🧭 Table of Contents
 
 - [🧪 Run experiments](#run-experiments)
+  - [Quick start](#quick-start)
   - [Experiment integrations](#what-you-can-run) · [Where to start](#where-to-start)
   - [Execution and comparison](#why-one-command-is-enough) · [Installation](#installation)
-  - [Dataset storage](#dataset-storage) · [Quick start](#quick-start)
+  - [Dataset storage](#dataset-storage)
   - [Experiment workbench](#the-workbench) · [Contributors](#contributors)
 - [🛠️ Customize a harness](#customize-harness)
   - [Installation](#customize-installation) · [Quick start](#customize-quick-start)
@@ -77,6 +78,8 @@
 
 <a id="run-experiments"></a>
 
+Track how a harness performs as an improvement method edits it over successive rounds. The charts below show runs on three benchmarks.
+
 <table>
   <tr>
     <th>ALFWorld</th>
@@ -90,13 +93,17 @@
   </tr>
 </table>
 
-**Start from the published ALFWorld baseline.** With the [ALFWorld dataset](DOWNLOADS.md#alfworld) and [runtime](docs/public-native-scoring.md#prepare-a-local-scoring-environment) prepared, this command creates a local run at **53/100** on Loop `0.2.0-study`. It restores the 100 original training traces with **zero new solver tokens**.
+<a id="quick-start"></a>
+
+### 🚀 Quick start
+
+**How does one round of DGM change Loop’s performance on math word problems?** The GSM8K preset scores the starting harness on five training questions, then asks DGM to edit it and scores the candidate on the same questions. Before your first run, [prepare Loop and GSM8K](docs/getting-started.md#prepare-the-components-you-will-use) and [configure the solver and editor endpoints](docs/rsi-experiments.md#1-configure-the-solver-and-the-editor-separately).
 
 ```bash
-harnessgrad run --h0-from published:alfworld-loop-study --rounds 0 --improver none
+harnessgrad run --preset method-dgm --improver none --fail-on-incomplete
 ```
 
-[Inspect a task trace beside the training curve](https://zjunlp.github.io/HarnessGrad/benchmarks/alfworld/?split=train#shared-h0) · [Use this H0 in an improvement run](docs/h0-content-comparability.md)
+DGM calls the configured editor directly (`--improver none`). Open `runs/dgm-quickstart/end-summary.md` to compare the two rounds. For a repeat run, add `--run-id` with a new name.
 
 ### 🔬 From a question to an experiment
 
@@ -178,31 +185,6 @@ See [downloads](DOWNLOADS.md) for preparation and locations, and [datasets](DATA
 
 > [!TIP]
 > New to HarnessGrad? The [first-use guide](docs/getting-started.md) includes an installation control that does not need a model call or dataset download.
-
-<a id="quick-start"></a>
-
-### 🚀 Quick start
-
-Prepare Loop and GSM8K, then configure your OpenAI-compatible solver and editor endpoints. Replace the placeholders below and use a fresh run ID for each experiment. See the [experiment guide](docs/rsi-experiments.md) for details.
-
-```bash
-# The provided configuration uses GSM8K.
-python tools/configure_harness.py --harness base_harness/loop --fetch
-python tools/datasets.py --fetch --dataset gsm8k
-python tools/prepare_dataset.py --dataset gsm8k
-python tools/datasets.py --check --dataset gsm8k
-export HG_AGENT_BACKEND=openai
-export HG_AGENT_BASE_URL='YOUR_SOLVER_ENDPOINT_URL'
-export HG_AGENT_MODEL='YOUR_SOLVER_MODEL_NAME'
-export HG_AGENT_API_KEY='YOUR_SOLVER_API_KEY'
-export HG_METHOD_BASE_URL='YOUR_EDITOR_ENDPOINT_URL'
-export HG_METHOD_MODEL='YOUR_EDITOR_MODEL_NAME'
-export HG_METHOD_API_KEY='YOUR_EDITOR_API_KEY'
-HG_QUICKSTART_ID="dgm-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
-harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --check-only --check-net
-harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --fail-on-incomplete
-python tools/analysis/run_summary.py "runs/$HG_QUICKSTART_ID"
-```
 
 <a id="the-workbench"></a>
 
