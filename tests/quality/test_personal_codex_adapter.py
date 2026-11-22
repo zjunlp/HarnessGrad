@@ -193,6 +193,7 @@ def test_instruction_bytes_round_trip_and_diff_is_native(raw, project):
     assert 'project-root/AGENTS.md' in prepared.diff
 
 
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX symlink and FIFO coverage; Windows has separate controls')
 def test_links_hardlinks_special_files_and_root_links_are_refused(project, tmp_path):
     outside = tmp_path / 'outside.md'
     outside.write_text('private outside text')
@@ -269,10 +270,18 @@ def test_replacement_during_read_does_not_return_a_snapshot(project, monkeypatch
         result = original_read(fd, size)
         if result and not changed:
             changed = True
-            instruction.write_bytes(b'y' * 70000)
+            if os.name == 'nt':
+                with pytest.raises(PermissionError):
+                    instruction.open('r+b').close()
+            else:
+                instruction.write_bytes(b'y' * 70000)
         return result
 
     monkeypatch.setattr(codex_module.os, 'read', racing_read)
+    if os.name == 'nt':
+        selected = CodexAdapter().collect_selected(binding(project), targets()[:1])
+        assert changed and selected.files[0].text == 'x' * 70000
+        return
     with pytest.raises(SurfaceError) as exc:
         CodexAdapter().collect_selected(binding(project), targets()[:1])
     assert error_code(exc) == 'unavailable'
@@ -300,7 +309,8 @@ def test_verify_detects_selected_read_set_drift(project, drift):
     if drift == 'text':
         instruction.write_text('changed')
     elif drift == 'mode':
-        instruction.chmod(stat.S_IMODE(instruction.stat().st_mode) ^ stat.S_IXUSR)
+        instruction.chmod(stat.S_IMODE(instruction.stat().st_mode) ^
+                          (stat.S_IWUSR if os.name == 'nt' else stat.S_IXUSR))
     elif drift == 'identity':
         replacement = project / 'replacement'
         replacement.write_bytes(instruction.read_bytes())
@@ -430,3 +440,32 @@ def test_standalone_skill_rejects_local_markdown_dependencies(reference, local):
         assert error_code(exc) == 'unsupported_surface'
     else:
         codex_module._standalone_skill(text, 'verify-skill')
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Windows filesystem controls')
+def test_windows_refuses_junction_hardlink_and_stream(project, tmp_path):
+    import subprocess
+
+    adapter = CodexAdapter()
+    selected = targets()[:1]
+    alias = tmp_path / 'project-junction'
+    # mklink only creates a junction in the owned test directory; it needs no symlink privilege.
+    subprocess.run(['cmd.exe', '/d', '/c', 'mklink', '/J', str(alias), str(project)],
+                   check=True, capture_output=True)
+    try:
+        with pytest.raises(SurfaceError) as exc:
+            adapter.collect_selected(binding(alias), selected)
+        assert error_code(exc) == 'invalid_binding'
+    finally:
+        alias.rmdir()
+    instruction = project / 'AGENTS.md'
+    hardlink = tmp_path / 'hardlink.md'
+    os.link(instruction, hardlink)
+    with pytest.raises(SurfaceError) as exc:
+        adapter.collect_selected(binding(project), selected)
+    assert error_code(exc) == 'invalid_path'
+    hardlink.unlink()
+    from harnessgrad.personal.adapters import windows_fs
+    for component in ('NAME:stream', 'CON.md', 'AGENTS.md.', 'file '):
+        with pytest.raises(OSError, match='unsafe Windows path component'):
+            windows_fs._component(component)

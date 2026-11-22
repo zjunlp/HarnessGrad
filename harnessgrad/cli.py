@@ -45,6 +45,7 @@ usage:
   {program} customize inspect|collect|propose|review|patch  inspect and prepare a candidate
   {program} personal serve|status|stop|project|import|demo|inspect|desktop  personal read-only setup
   {program} personal model-config|model-demo  explicit model config and offline budget demo
+  {program} personal plan-demo              offline feedback-to-plan demo
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 

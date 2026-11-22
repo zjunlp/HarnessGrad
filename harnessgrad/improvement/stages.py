@@ -21,6 +21,90 @@ class Proposal:
     feedback_ids: tuple[str, ...]
 
 
+TEXT_EDIT_STAGE = 'text-edit-v1'
+MAX_TEXT_EDIT_BYTES = 16 * 1024
+MAX_CANDIDATE_FILE_BYTES = 256 * 1024
+
+
+def _line_ending(text: str) -> str | None:
+    lf = text.count('\n')
+    crlf = text.count('\r\n')
+    if crlf == lf and text.count('\r') == crlf and crlf:
+        return '\r\n'
+    if '\r' not in text:
+        return '\n'
+    return None  # Keep the model's exact spelling in a mixed or legacy file.
+
+
+def text_candidate(files: Mapping[str, str], targets: tuple[str, ...],
+                   updated: Mapping[str, str], feedback_id: str) -> Proposal:
+    """Validate a complete candidate over existing virtual files."""
+    before, after = dict(files), dict(updated)
+    allowed = set(targets)
+    if (not allowed or not allowed <= before.keys() or before.keys() != after.keys()
+            or not all(is_relative_path(path) and isinstance(body, str)
+                       for path, body in before.items())
+            or not all(isinstance(body, str) for body in after.values())):
+        raise ValueError('candidate must keep the selected virtual file set')
+    changed = {path for path in before if after[path] != before[path]}
+    if not changed or not changed <= allowed:
+        raise ValueError('candidate must change only planned targets')
+    for path in changed:
+        body = after[path]
+        if not body.strip() or '\x00' in body or len(body.encode('utf-8')) > MAX_CANDIDATE_FILE_BYTES:
+            raise ValueError('candidate text is empty, invalid or exceeds 256 KiB')
+    return Proposal(TEXT_EDIT_STAGE, after, text_diff(before, after), (feedback_id,))
+
+
+def text_edit_proposal(files: Mapping[str, str], targets: tuple[str, ...],
+                       feedback_id: str, *, prompt: str, ask: Callable[[str], dict]) -> Proposal:
+    """Apply up to four exact replacements or additions from a JSON callback."""
+    before = dict(files)
+    if (not targets or not set(targets) <= before.keys()
+            or not all(is_relative_path(path) and isinstance(body, str) for path, body in before.items())):
+        raise ValueError('text edits require existing targets')
+    reply = ask(prompt)
+    if not isinstance(reply, dict) or set(reply) != {'edits'}:
+        raise ValueError('text edit reply must contain exactly edits')
+    edits = reply['edits']
+    if not isinstance(edits, list) or not 1 <= len(edits) <= 4:
+        raise ValueError('text proposal requires one to four edits')
+
+    updated = before.copy()
+    for edit in edits:
+        if not isinstance(edit, dict) or set(edit) != {'path', 'old', 'new'}:
+            raise ValueError('each text edit requires path, old and new')
+        path, old, new = edit['path'], edit['old'], edit['new']
+        if not isinstance(path, str) or path not in targets:
+            raise ValueError('text edit targets a file outside the plan')
+        if (not all(isinstance(part, str) and '\x00' not in part
+                    and len(part.encode('utf-8')) <= MAX_TEXT_EDIT_BYTES for part in (old, new))
+                or not new.strip() or old == new):
+            raise ValueError('text edit needs distinct bounded text and a nonempty replacement')
+        current = updated[path]
+        newline = _line_ending(current)
+        if newline is not None:
+            new = new.replace('\r\n', '\n').replace('\r', '\n').replace('\n', newline)
+        if not old:
+            newline = newline or '\n'
+            suffix = new.strip('\r\n')
+            if suffix in current:
+                raise ValueError('appended text is already present')
+            separator = '' if not current else newline if current.endswith(newline) else newline * 2
+            updated[path] = current + separator + suffix + newline
+            continue
+        if new == old:
+            raise ValueError('replacement does not change the existing text')
+        position = current.find(old)
+        if position < 0 or current.find(old, position + 1) >= 0:
+            raise ValueError('replacement text must occur exactly once')
+        end = position + len(old)
+        if current[position - 1:position + 1] == '\r\n' or current[end - 1:end + 1] == '\r\n':
+            raise ValueError('replacement cannot split a CRLF line ending')
+        updated[path] = current[:position] + new + current[end:]
+    return text_candidate(before, targets, updated, feedback_id)
+
+
 def skillopt_proposal(files: Mapping[str, str], feedback: list[Feedback], *,
                       ask: Callable[[str], dict], edit_budget: int = 4,
                       batch_size: int = 8, merge_batch_size: int = 8,
