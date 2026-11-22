@@ -468,6 +468,7 @@ def test_learning_schema_upgrade_preserves_d1_state(tmp_path):
     fixture = setup(tmp_path)
     prior = fixture.store.read_receipts(SCOPE)
     with closing(fixture.store.connection()) as db, db:
+        db.execute('DROP TABLE learning_trials')
         db.execute('DROP TABLE learning_operations')
         db.execute('DROP TABLE maintenance_decisions')
         db.execute('DROP TABLE learning_revisions')
@@ -478,7 +479,7 @@ def test_learning_schema_upgrade_preserves_d1_state(tmp_path):
     assert reopened.read_receipts(SCOPE) == prior
     assert reopened.read_learning_policy(SCOPE).source_ids == (SOURCE,)
     with closing(reopened.connection()) as db:
-        assert db.execute("SELECT name FROM sqlite_master WHERE name='learning_trials'").fetchone() is None
+        assert db.execute('SELECT count(*) FROM learning_trials').fetchone()[0] == 0
     assert fixture.service(reopen=True).submit(fixture.request()).job is not None
 
 
@@ -500,21 +501,19 @@ def test_v4_upgrade_preserves_receipts_and_does_not_retry_an_ambiguous_claim(tmp
     assert len(fixture.prompts) == len(fixture.c.submissions) == 1
 
 
-def test_v5_core_upgrade_preserves_previous_trial_records(tmp_path):
+@pytest.mark.parametrize('version', [5, 6])
+def test_upgrade_preserves_previous_trial_records(tmp_path, version):
     fixture = setup(tmp_path)
     request = fixture.request()
     receipt = fixture.service().submit(request)
     with closing(fixture.store.connection()) as db, db:
-        db.execute('CREATE TABLE learning_trials (profile_id TEXT NOT NULL, project_id TEXT NOT NULL, '
-                   'id TEXT NOT NULL, request_key TEXT NOT NULL, request_sha256 TEXT NOT NULL, body TEXT NOT NULL, '
-                   'PRIMARY KEY(profile_id,project_id,id), UNIQUE(profile_id,project_id,request_key))')
         db.execute('INSERT INTO learning_trials VALUES (?, ?, ?, ?, ?, ?)',
                    (*SCOPE.key(), 'prior-trial', 'trial-request', digest('trial-request'), '{"fixture":true}'))
-        db.execute('PRAGMA user_version=5')
+        db.execute(f'PRAGMA user_version={version}')
 
     reopened = fixture.service(reopen=True)
     assert reopened.submit(request) == receipt
     with closing(reopened.store.connection()) as db:
-        assert db.execute('PRAGMA user_version').fetchone()[0] == 6
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 7
         saved = db.execute('SELECT body FROM learning_trials WHERE id=?', ('prior-trial',)).fetchone()
         assert saved['body'] == '{"fixture":true}'

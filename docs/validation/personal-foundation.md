@@ -13,9 +13,8 @@ the callback and after saving its draft. A claim without a started call can
 resume. A started call with no committed draft records
 `reflection_outcome_unknown`. A committed draft resumes at candidate publication.
 
-Core learning databases now use schema v6. New databases create the learning and
-maintenance tables. Upgrading an older prototype preserves existing trial data
-and reflection receipts. Trial setup belongs to the separate trials change.
+The standalone core change used schema v6 and preserved existing trial data
+from older prototypes. The multi-round trial change below adds its own migration.
 
 When an approved write changes a file, active rules whose exact text survives
 can follow the new version in the same transaction. Their original adoption
@@ -49,6 +48,21 @@ candidate. Invocation uses a separate authorization, and a result must match
 the accepted operation and input digest. Timeout receipts carry an unknown
 judgment and no output log. The fixture only reads synthetic inventories.
 Real providers and host bridges remain unverified.
+
+## Offline multi-round trials
+
+The synthetic second-host adapter exercises scoped adoption, correction,
+retirement and rollback. Real hosts, model behavior and platform compatibility
+remain unverified. Trial summaries keep retest, adoption, loading and behavior
+as separate outcomes. Retest evidence must refer to the same candidate ID and
+digest as adoption. Behavior requires a post-load run tied to the operation,
+new thread and loaded version. Baseline and pre-adoption runs are rejected.
+
+Learning schema v7 creates a trial table when it is missing and preserves
+existing rows. Legacy trial summaries retain their original records and replay
+keys. Reads show their behavior as unchecked and omit the comparison verdict
+because the original records cannot establish those outcomes under the current
+evidence checks.
 
 ## Stage B review fixes on 2026-11-18
 

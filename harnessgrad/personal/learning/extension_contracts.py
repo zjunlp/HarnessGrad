@@ -103,7 +103,7 @@ class RunRecord:
     run_ref: str
     job: JobRef
     scenario_id: str
-    phase: Literal['baseline', 'candidate', 'extension_invoke']
+    phase: Literal['baseline', 'candidate', 'extension_invoke', 'post_load_behavior']
     attempt: int
     scenario_sha256: str
     snapshot_sha256: str
@@ -118,6 +118,8 @@ class RunRecord:
     reason_code: str | None
     fixture: bool
     operation: OperationRef | None = None
+    new_thread_ref: str | None = None
+    loaded_version_ref: str | None = None
 
 
 @dataclass(frozen=True)

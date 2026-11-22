@@ -19,7 +19,7 @@ from harnessgrad.personal.learning.contracts import (
 )
 
 APPLICATION_ID = 0x48474431  # HarnessGrad D1
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 SCOPE = 'profile_id=? AND project_id=?'
 SCOPE_COLUMNS = 'profile_id TEXT NOT NULL, project_id TEXT NOT NULL'
 # Earlier reservations cannot prove the callback was never started. New ones insert NULL.
@@ -60,6 +60,11 @@ MAINTENANCE_DDL = (
     'FOREIGN KEY(profile_id,project_id,item_id,revision) '
     'REFERENCES learning_revisions(profile_id,project_id,item_id,revision))',
 )
+TRIAL_DDL = (
+    f'CREATE TABLE IF NOT EXISTS learning_trials ({SCOPE_COLUMNS}, id TEXT NOT NULL, request_key TEXT NOT NULL, '
+    'request_sha256 TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(profile_id,project_id,id), '
+    'UNIQUE(profile_id,project_id,request_key))'
+)
 
 
 class PolicyConflict(ValueError):
@@ -92,6 +97,8 @@ class LearningStore:
             if version < 3:
                 for statement in MAINTENANCE_DDL:
                     db.execute(statement)
+            # Older prototypes may already have trial receipts. Keep the original rows.
+            db.execute(TRIAL_DDL)
             db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
 
     def connection(self) -> sqlite3.Connection:

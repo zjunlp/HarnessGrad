@@ -6,7 +6,7 @@ from harnessgrad.personal.learning.maintenance_contracts import (
     CurrentVersion, OperationRef, OperationView, VersionEntry, VersionReceipt,
 )
 from harnessgrad.personal.learning.reflection_contracts import (
-    ArtifactRef, ArtifactView, JobRef, PortRejected, SnapshotRef,
+    ArtifactRef, ArtifactView, CandidateRequest, JobRef, PortRejected, SnapshotRef,
 )
 
 SCOPE = LearningScope('profile', 'selected-project')
@@ -39,9 +39,14 @@ class FixtureC:
             raise PortRejected('out_of_scope')
 
     def check_job(self, job):
+        self.read_job_candidate(job)
+
+    def read_job_candidate(self, job):
         self.check_scope(LearningScope(job.profile_id, job.project_id))
-        if not any(ref == job for _, ref in self.jobs.values()):
+        candidate = next((candidate for candidate, ref in self.jobs.values() if ref == job), None)
+        if candidate is None:
             raise PortRejected('out_of_scope')
+        return candidate
 
     def freeze_snapshot(self, scope, targets):
         self.check_scope(scope)
@@ -100,12 +105,11 @@ class FixtureC:
             self.packages[self.version] = self.files
 
     def apply(self, job):
-        self.check_job(job)
-        (candidate,) = (candidate for candidate, ref in self.jobs.values() if ref == job)
+        candidate = self.read_job_candidate(job)
         op = OperationRef(job, f'apply-{job.job_id}')
         if op not in self.operations:
             self._complete(op, 'apply', 'applied', self.candidates[candidate.candidate_ref].payload['files'],
-                           candidate.candidate_sha256)
+                           candidate)
         return op
 
     def request_rollback(self, request):
@@ -140,7 +144,7 @@ class FixtureC:
             return
         self._complete(operation, 'rollback', 'rolled_back', self.packages[request.restore_version_ref])
 
-    def _complete(self, operation, kind, outcome, files, candidate_sha256=None):
+    def _complete(self, operation, kind, outcome, files, candidate: CandidateRequest | None = None):
         old = self.files[PATH]
         prior = self.version
         self._replace(files)
@@ -148,7 +152,8 @@ class FixtureC:
         status = outcome if old != self.files[PATH] else 'unchanged'
         entry = VersionEntry(TARGET, digest(old), digest(self.files[PATH]), status)
         self.receipts[(operation.job, ref)] = VersionReceipt(
-            ref, operation, None, candidate_sha256, prior, self.version, None, (entry,),
+            ref, operation, candidate.candidate_ref if candidate else None,
+            candidate.candidate_sha256 if candidate else None, prior, self.version, None, (entry,),
         )
         self.operations[operation] = OperationView(operation, kind, outcome, version_receipt_ref=ref)
 
