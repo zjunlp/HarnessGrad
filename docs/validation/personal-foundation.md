@@ -40,6 +40,16 @@ $tests = @('learning', 'reflection', 'maintenance', 'model', 'codex_adapter', 'p
 python -B -X utf8 -m pytest -q -rs --tb=short -p no:cacheprovider --basetemp $scratch @tests
 ```
 
+## Offline tool extensions
+
+The provider catalog pins provider versions, manifests, capabilities and
+scenarios per project. The offline delivery check exercises a matched-input
+baseline and candidate. A passing report must match the digest of the executed
+candidate. Invocation uses a separate authorization, and a result must match
+the accepted operation and input digest. Timeout receipts carry an unknown
+judgment and no output log. The fixture only reads synthetic inventories.
+Real providers and host bridges remain unverified.
+
 ## Stage B review fixes on 2026-11-18
 
 The Windows 11-file command and four-file Node command below were rerun on the

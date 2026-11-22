@@ -133,6 +133,8 @@ class OperationView:
     version_receipt_ref: str | None = None
     load_observation_ref: str | None = None
     run_ref: str | None = None
+    # The accepted request's input digest, independent of the returned run.
+    invocation_input_sha256: str | None = None
 
 
 @dataclass(frozen=True)
