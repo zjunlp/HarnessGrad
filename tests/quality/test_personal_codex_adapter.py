@@ -275,6 +275,9 @@ def test_replacement_during_read_does_not_return_a_snapshot(project, monkeypatch
                     instruction.open('r+b').close()
             else:
                 instruction.write_bytes(b'y' * 70000)
+                # Some filesystems timestamp both writes on the same clock tick.
+                info = instruction.stat()
+                codex_module.os.utime(instruction, ns=(info.st_atime_ns, info.st_mtime_ns + 1_000_000_000))
         return result
 
     monkeypatch.setattr(codex_module.os, 'read', racing_read)

@@ -39,7 +39,24 @@ POOL_KNOB = "HG_APPWORLD_POOL"
 @pytest.fixture(scope="module")
 def official() -> dict[str, list[str]]:
     """The release's four declared task lists, decrypted from the official bundle."""
-    return appworld.split_ids()
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
+    try:
+        return appworld.split_ids()
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('AppWorld: prepare the execution runtime to inspect the official bundle')
+
+
+@pytest.fixture(autouse=True)
+def prepared_pool():
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
+        present = appworld.POOL.is_file()
+    except DataRootNotConfigured:
+        present = False
+    if not present:
+        pytest.skip('AppWorld: prepare the task pool and configure HG_DATA_ROOT')
 
 
 @pytest.fixture(autouse=True)

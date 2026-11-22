@@ -515,6 +515,7 @@ data/candidates/
 
 # Generic evidence and verified H0 view contracts.
 !/docs/h0-subset-view.md
+!/docs/h0-content-comparability.md
 !/docs/method-terminal-and-archive.md
 !/docs/improver-artifact-manifest.md
 !/docs/task_http_budget.md

@@ -93,8 +93,9 @@ step separately. The method receives no scores between steps in a batch. Therefo
 * **AHE's full tool-using editor is not.** The evolve agent reads analysis
   reports and edits the workspace with tools; this method uses the shared
   one-shot editor (`methods/editor.py`), once per variant.
-* **Best-of-2 proposals are restored; AHE's winner rule is not.** The platform
-  selects by train score. AHE's pass-rate / exception-count / index ordering
+* **Two proposals are restored; AHE's winner rule is not.** The platform
+  measures them in order and carries the last measured candidate by default;
+  it does not select the higher train score. AHE's pass-rate / exception-count / index ordering
   (`evolve.py:3313-3336`) and winner-manifest adoption (`:3220-3223`) cannot be
   expressed inside this mode A call. Identical change declarations or candidate
   contents deterministically reduce the submission to the first usable variant;
@@ -756,8 +757,8 @@ AHE_RULE_TEXT = (
     "performed by the model restoring files (`evolve.py:2860-2861`). The only "
     "verdict is the attribution's EFFECTIVE/MIXED/HARMFUL/... judgement "
     "(`evolve.py:2294-2303`). Two distinct variants are submitted together; "
-    "winner selection remains with the platform by train score, rather than "
-    "AHE's pass-rate/exception/index rule (`evolve.py:3313-3336`).")
+    "the platform carries the last measured candidate by default; no winner "
+    "is chosen using AHE's pass-rate/exception/index rule (`evolve.py:3313-3336`).")
 
 
 # ------------------------------------------------------------------ main ---
@@ -881,7 +882,7 @@ def main() -> int:
     selected = (usable or steps[:1])[:1] if fallback else usable
     rollout_report = {"requested": 2, "submitted": len(selected),
                       "fallback_reason": fallback, "variant_outcomes": outcomes,
-                      "winner_selection": "platform_train_score"}
+                      "winner_selection": "not_implemented_last_candidate_default"}
     for step in steps:
         step["method_reported"]["ahe_rollouts"] = rollout_report
 
@@ -893,7 +894,7 @@ def main() -> int:
             request, method="ahe", steps=selected, stop=False,
             acceptance_rule=AHE_RULE_TEXT,
             extra={"ahe_rule": rule_report["rule"]},
-            note="AHE: two independent variants; platform selects by train score")
+            note="AHE: two independent variants; platform carries the last measured candidate")
     return editor.report(
         request, method="ahe", **selected[0], stop=False,
         acceptance_rule=AHE_RULE_TEXT,

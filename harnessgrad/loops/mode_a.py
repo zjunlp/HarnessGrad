@@ -16,6 +16,7 @@ from eval.ckpt.source_tree import copy_harness, copy_rejected_harness, runtime_s
 
 from pathlib import Path
 import json
+import math
 import os
 import shlex
 import shutil
@@ -32,6 +33,7 @@ from harnessgrad.experiment.method_attempts import MethodAttempts
 from methods.stop_status import TerminalStop, terminal_stop
 from harnessgrad.core import code_metrics
 from harnessgrad.core import components
+from harnessgrad.orchestration import submission_journal
 from harnessgrad import config as platform_config
 from harnessgrad.experiment import policies
 from harnessgrad.provenance import measurement_components, scoring_identity
@@ -99,10 +101,19 @@ def _no_loadable_change(changed: list[str], unreachable: list[str]) -> dict | No
     }
 
 
+def _has_measurable_submission(steps: list[dict]) -> bool:
+    """An error-only trajectory has no candidate to reserve as pending work."""
+    return any(not ((step.get('method_reported') or {}).get('error') or step.get('error'))
+               for step in steps)
+
+
 def _matching_verification_context(point, current):
     """Compare only the current task set; absent or malformed evidence is not reusable."""
     # A rejected attempt may retain its planned input identity, but has no
     # measurement to reuse even if a record also claims a score.
+    if (point.get("shared_from") or {}).get("comparability") == "published":
+        # Subsequent candidates use the current model and scoring deployment.
+        return False
     if point.get("unmeasured") or point.get("measured_by_platform") is False:
         return False
     if current is None or point.get("verification_context") is None:
@@ -395,12 +406,23 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     terminal_state: dict = {}
     task_budget_state: dict = {}
     latest_invocation: dict = {}
+    unpublished_attempts = {'generation_tokens_lower_bound': 0, 'complete': True,
+                            'generation_s': 0.0, 'generation_s_complete': True}
     attempt_ledger = MethodAttempts(run_dir, run_id,
         round_limit=os.environ.get('HG_META_ROUND_TOKEN_LIMIT'),
         run_limit=os.environ.get('HG_META_RUN_TOKEN_LIMIT'))
     inherited_usage_unknown = bool(getattr(args, 'resume', False)
         and any(v is not None for v in attempt_ledger.limits.values())
         and not attempt_ledger.path.exists())
+    if getattr(args, 'resume', False):
+        if attempt_ledger.path.exists():
+            prior_attempts = attempt_ledger.round_usage(start_steps + 1)
+            unpublished_attempts.update(generation_tokens_lower_bound=prior_attempts['generation_tokens_lower_bound'],
+                                        complete=prior_attempts['complete'],
+                                        generation_s_complete=prior_attempts['attempt_count'] == 0)
+        else:
+            # A legacy run has no ledger establishing whether earlier attempts occurred.
+            unpublished_attempts.update(complete=False, generation_s_complete=False)
 
     #: How many times **one step** may be attempted before the run gives up on it.
     #:
@@ -531,7 +553,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
             }, args.method_timeout, sandboxed=args.sandbox,
                 scratch=method_root, cwd=method_ws, readonly=(base_dir,),
                 runtime=_improver_runtime(improver), improver=improver,
-                rejected_candidate=bool(prior.get("unmeasured")))
+                rejected_candidate=bool(prior.get("unmeasured")),
+                admission_receipt=run_dir / 'training-window-status.json')
         # Reconcile before copying artifacts: a copy-out failure must not erase
         # a completed (possibly paid) invocation or make its cost look like zero.
         attempt_ledger.finish(invocation_id, reply)
@@ -539,8 +562,30 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if declared_terminal:
             terminal_state.update(declared_terminal)
         gen_s = time.time() - t_gen
+        reported_tokens = reply.get('generation_tokens')
+        usage = reply.get('method_usage') or {}
+        usage = usage if isinstance(usage, dict) else {}
+        reported = reply.get('method_reported') or {}
+        reported = reported if isinstance(reported, dict) else {}
+        reported_total = usage.get('total_tokens')
+        unknown_transport = reported.get('method_unknown_transport_attempts')
+        lower_bound = 0
+        if type(reported_tokens) is int and reported_tokens >= 0:
+            lower_bound = reported_tokens
+        else:
+            if type(reported_total) is int and reported_total >= 0:
+                lower_bound = reported_total
+            unpublished_attempts['complete'] = False
+        unpublished_attempts['generation_tokens_lower_bound'] += lower_bound
+        if (type(reported_total) is not int or reported_total != reported_tokens or
+                usage.get('complete') is False or
+                (type(unknown_transport) is int and unknown_transport > 0)):
+            unpublished_attempts['complete'] = False
+        unpublished_attempts['generation_s'] += gen_s
         cumulative["wall_clock_s"] += gen_s
-        cumulative["generation_tokens"] += int(reply.get("generation_tokens") or 0)
+        cumulative["generation_tokens"] += lower_bound
+        if not unpublished_attempts['complete']:
+            cumulative['generation_tokens_status'] = 'reported_lower_bound'
         # Before anything is decided about this round: the method's own log is evidence
         # either way, and the directory holding it is deleted when the round ends.
         try:
@@ -614,6 +659,88 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
     submission_stop = False       # that submission asked to finish
     steps_in_submission = 0
     steps_truncated = 0
+    submission_attempt_usage = None
+    recovered_measurement = None
+    recovered = None
+    if (start_steps or getattr(args, 'resume', False) or
+            callable(getattr(args, '_recovered_measurement_loader', None))) and \
+            os.environ.get('HG_EXPERIMENTAL_ROUND_JOURNAL') == '1':
+        recovered = submission_journal.pending(run_dir, curve, method_root / 'restored-submission')
+        if recovered is None and callable(getattr(args, '_recovered_measurement_loader', None)):
+            raise submission_journal.SubmissionJournalError('no pending submission for recovered measurement')
+        if recovered is not None:
+            submission_attempt_usage = recovered.get('attempt_usage')
+            batch_loaders = getattr(args, '_batch_recovery_loaders', {})
+            allowed_batch_rounds = set(range(steps_done + 2,
+                recovered['start_round'] + recovered['accepted_step_count']))
+            if not set(batch_loaders).issubset(allowed_batch_rounds):
+                raise submission_journal.SubmissionJournalError('batch supplement is not in the saved submission')
+            # A partial evaluation needs sample-level reconciliation before it
+            # can be published. Never restart the method or silently rerun its
+            # samples while that reconciliation is unavailable.
+            next_round = steps_done + 1
+            progress = run_dir / 'progress' / f'round-{next_round}'
+            if progress.exists() and any(progress.iterdir()):
+                for final_path in (run_dir / f'round{next_round}_traces',
+                                   run_dir / 'verdicts' / f'round-{next_round}'):
+                    if os.path.lexists(final_path):
+                        raise submission_journal.SubmissionJournalError(
+                            f'round {next_round} already has final evidence; reconcile it before resume')
+                loader = getattr(args, '_recovered_measurement_loader', None)
+                if not callable(loader):
+                    raise submission_journal.SubmissionJournalError(
+                        f'round {next_round} has partial evaluation evidence requiring reconciliation')
+                recovered_measurement = loader(run_dir, next_round)
+                if (not isinstance(recovered_measurement, dict) or
+                        recovered_measurement.get('status') != 'recovered_evaluation_not_published'):
+                    raise submission_journal.SubmissionJournalError('invalid recovered measurement')
+            reply = recovered['reply']
+            traj = recovered['trajectory']
+            if recovered['consumed_steps'] == 0:
+                saved_usage = recovered.get('attempt_usage')
+                if saved_usage is not None and (
+                        not isinstance(saved_usage, dict) or
+                        type(saved_usage.get('generation_tokens_lower_bound')) is not int or
+                        saved_usage['generation_tokens_lower_bound'] < 0 or
+                        type(saved_usage.get('complete')) is not bool or
+                        ('generation_s_complete' in saved_usage and type(saved_usage['generation_s_complete']) is not bool) or
+                        isinstance(saved_usage.get('generation_s'), bool) or
+                        not isinstance(saved_usage.get('generation_s'), (int, float)) or
+                        not math.isfinite(saved_usage['generation_s']) or saved_usage['generation_s'] < 0):
+                    raise submission_journal.SubmissionJournalError('pending attempt usage invalid')
+                tokens = (saved_usage['generation_tokens_lower_bound'] if saved_usage is not None
+                          else reply.get('generation_tokens'))
+                if type(tokens) is not int or tokens < 0:
+                    raise submission_journal.SubmissionJournalError(
+                        'pending submission generation usage is unknown; reconcile before resume')
+                if type(cumulative.get('generation_tokens')) is not int:
+                    raise submission_journal.SubmissionJournalError('cumulative generation usage is unknown')
+                cumulative['generation_tokens'] += tokens
+                cumulative['wall_clock_s'] += (saved_usage['generation_s'] if saved_usage is not None
+                                               else recovered['generation_s'])
+                if saved_usage is None or not saved_usage.get('generation_s_complete', False):
+                    cumulative['wall_clock_s_status'] = 'reported_lower_bound'
+                provenance = reply.get('recovery_provenance') or {}
+                # Legacy journals contain only the final reply, so earlier failed
+                # attempts cannot be assumed absent from the interrupted round.
+                if (saved_usage is None or not saved_usage['complete'] or
+                        provenance.get('generation_tokens_status') == 'reported_lower_bound'):
+                    cumulative['generation_tokens_status'] = 'reported_lower_bound'
+            pending = recovered['remaining_steps']
+            unpublished_attempts.update(generation_tokens_lower_bound=0, complete=True,
+                                        generation_s=0.0, generation_s_complete=True)
+            steps_in_submission = recovered['accepted_step_count']
+            gen_share = recovered['generation_s'] / steps_in_submission
+            changed = bool(reply.get('changed', True))
+            submission_stop = bool(reply.get(
+                'stop', True if len(traj['steps']) > 1 else not changed))
+            console.note(f'round {next_round}: restored saved method submission', level='info')
+    if getattr(args, 'resume', False) and recovered is None:
+        cumulative['generation_tokens'] += unpublished_attempts['generation_tokens_lower_bound']
+        if not unpublished_attempts['complete']:
+            cumulative['generation_tokens_status'] = 'reported_lower_bound'
+        if not unpublished_attempts['generation_s_complete']:
+            cumulative['wall_clock_s_status'] = 'reported_lower_bound'
     while steps_done < args.rounds:
         if pending:
             r = steps_done + 1
@@ -697,6 +824,21 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                     f"budget has room for {room}; the rest were not measured (recorded as "
                     f"`steps_truncated`)", level="warn")
                 submitted = submitted[:room]
+            if (os.environ.get('HG_EXPERIMENTAL_ROUND_JOURNAL') == '1'
+                    and _has_measurable_submission(submitted)):
+                previous_tree = ((curve[-1].get('identity') or {}).get('harness_sha'))
+                # Fail before scoring if an opted-in submission cannot be saved.
+                # The private journal contains the exact reply and every source
+                # step; it must never be treated as a public export.
+                submission_journal.capture(
+                    run_dir, method_root, run_id=run_id, round_no=r,
+                    previous_tree=previous_tree, reply=reply, trajectory=traj,
+                    generation_s=gen_s, accepted_step_count=len(submitted),
+                    attempt_usage=dict(unpublished_attempts))
+            if _has_measurable_submission(submitted):
+                submission_attempt_usage = dict(unpublished_attempts)
+                unpublished_attempts.update(generation_tokens_lower_bound=0, complete=True,
+                                            generation_s=0.0, generation_s_complete=True)
             pending = submitted
             steps_in_submission = len(submitted)
             # One method call can buy several measurements, so its generation time is
@@ -789,6 +931,29 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 candidate_problems.append(problem)
         has_manifest = not candidate_problems
         sha = commit_state(work, f"round {r}: {step.get('label', 'method step')}")
+        batch_loader = (getattr(args, '_batch_recovery_loaders', {}) or {}).get(r)
+        if batch_loader is not None and recovered_measurement is None:
+            existing = (run_dir / 'snapshots' / f'round-{r}.json',
+                        run_dir / f'state_after_round{r}',
+                        run_dir / 'diffs' / f'round-{r}.json',
+                        run_dir / f'round{r}_traces', run_dir / 'verdicts' / f'round-{r}')
+            if any(os.path.lexists(path) for path in existing):
+                raise submission_journal.SubmissionJournalError('batch candidate already has evidence requiring review')
+        if recovered_measurement is not None:
+            if (recovered_measurement.get('candidate_tree_sha') != sha or
+                    recovered_measurement.get('verification_context') != getattr(args, 'verification_context', None) or
+                    set(recovered_measurement.get('per_task') or {}) != set(task_ids)):
+                raise submission_journal.SubmissionJournalError('recovered measurement identity mismatch')
+            try:
+                old_snapshot = run_dir / 'snapshots' / f'round-{r}.json'
+                snapshot.verify(old_snapshot, work)
+                recovered_diff = json.loads((run_dir / 'diffs' / f'round-{r}.json').read_text())
+                if (recovered_diff.get('round') != r or recovered_diff.get('to') != sha or
+                        recovered_diff.get('from') != curve[-1]['identity']['harness_sha']):
+                    raise ValueError('saved diff identity mismatch')
+                recovered_snapshot_id = snapshot.load(old_snapshot)['id']
+            except (OSError, ValueError, KeyError, snapshot.SnapshotInvalid) as exc:
+                raise submission_journal.SubmissionJournalError('saved candidate evidence mismatch') from exc
         preparation = None
         actor_binding = None
         preparation_started = time.monotonic()
@@ -813,7 +978,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 candidate_problems.append(f"harness runtime preparation: {exc}")
                 has_manifest = False
                 actor_binding = None
-            if preparation is not None:
+            if preparation is not None and recovered_measurement is None:
                 candidate_runtime.record_preparation(run_dir, r, preparation)
         preparation_seconds = float((preparation or {}).get("seconds") or 0.0)
         if preparation is not None:
@@ -821,8 +986,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 cumulative.get("harness_preparation_wall_clock_s", 0.0) + preparation_seconds)
             cumulative["wall_clock_s"] += preparation_seconds
         args.current_harness_runtime_identity = actor_binding
-        diff = _save_round_diff(run_dir, r, work,
-                                curve[-1]["identity"]["harness_sha"], sha)
+        diff = (recovered_diff if recovered_measurement is not None else
+                _save_round_diff(run_dir, r, work, curve[-1]["identity"]["harness_sha"], sha))
         # **What changed, measured -- as opposed to what the method said it changed.**
         #
         # `edits_applied` used to be the method's own `files` list, and on `B2-llm`
@@ -834,7 +999,8 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # The method's claim is kept beside it (`files_claimed`) rather than dropped: a
         # method that names a file it did not change is itself a finding.
         changed_files = [f["path"] for f in (diff.get("files") or [])]
-        _save_round_state(run_dir, r, work, rejected_candidate=not has_manifest)
+        if recovered_measurement is None:
+            _save_round_state(run_dir, r, work, rejected_candidate=not has_manifest)
         # The round's committed state as one portable, git-free JSON artifact, so the
         # round stays openable even when `state_after_roundN` was not kept. Its own
         # failure is reported and swallowed inside `_snapshot_round`.
@@ -843,9 +1009,10 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         managed_source = (actor_binding is not None
                           or getattr(args, "harness_runtime_identity", None) is not None)
         snapshot_source = run_dir / f"state_after_round{r}" if managed_source else work
-        snapshot_parent = (_snapshot_round(run_dir, r, snapshot_source, run_id=run_id,
-                                           harness_sha=sha, parent_id=snapshot_parent)
-                           or snapshot_parent)
+        snapshot_parent = (recovered_snapshot_id if recovered_measurement is not None else
+                           (_snapshot_round(run_dir, r, snapshot_source, run_id=run_id,
+                                            harness_sha=sha, parent_id=snapshot_parent)
+                            or snapshot_parent))
         # **An identical candidate costs nothing to measure.** A method without an early
         # stop that has nothing left to change still has to spend its remaining rounds,
         # and re-running 100 task evaluations to learn a number the record already holds
@@ -915,7 +1082,18 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                            if (has_manifest and not runtime_reuse_error
                                and getattr(args, "reuse_identical", False))
                            else None)
-        if prior_point is not None:
+        if batch_loader is not None and recovered_measurement is None:
+            recovered_measurement = batch_loader(run_dir, r)
+        if recovered_measurement is not None:
+            if (recovered_measurement.get('candidate_tree_sha') != sha or
+                    recovered_measurement.get('verification_context') != getattr(args, 'verification_context', None) or
+                    set(recovered_measurement.get('per_task') or {}) != set(task_ids)):
+                raise submission_journal.SubmissionJournalError('recovered measurement identity mismatch')
+            if prior_point is not None or not has_manifest:
+                raise submission_journal.SubmissionJournalError('recovered measurement conflicts with candidate state')
+            res = recovered_measurement
+            recovered_measurement = None
+        elif prior_point is not None:
             reused_from = prior_point.get("round")
             _copy_round_traces(run_dir, reused_from, r)
             console.note(
@@ -1034,6 +1212,25 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         if preparation is not None:
             point["harness_preparation"] = preparation
             point["cost"]["harness_preparation_wall_clock_s"] = preparation_seconds
+        recovery_provenance = reply.get('recovery_provenance') or {}
+        if submission_attempt_usage is not None:
+            total = submission_attempt_usage['generation_tokens_lower_bound']
+            complete = (submission_attempt_usage['complete'] and
+                        recovery_provenance.get('generation_tokens_status') != 'reported_lower_bound')
+            point['cost']['generation_tokens'] = total
+            point['cost']['generation_tokens_status'] = 'observed' if complete else 'reported_lower_bound'
+            point['cost']['method_generation_tokens'] = total if complete else None
+            point['cost']['method_generation_tokens_lower_bound'] = total
+            point['cost']['method_spend_source'] = 'method_attempts_ledger'
+            point['cost']['method_usage_detail_scope'] = 'last_attempt_only'
+            point['cost']['method_usage_submission_steps'] = steps_in_submission
+        elif recovery_provenance.get('generation_tokens_status') == 'reported_lower_bound':
+            point['cost']['generation_tokens'] = reply.get('generation_tokens')
+            point['cost']['generation_tokens_status'] = 'reported_lower_bound'
+            point['cost']['method_generation_tokens'] = None
+            point['cost']['method_generation_tokens_lower_bound'] = reply.get('generation_tokens')
+            point['cost']['method_spend_source'] = 'recovered_reported_lower_bound'
+            point['cost']['method_usage_detail_scope'] = 'last_attempt_only'
         point["edit_kind"] = step.get("edit_kind")
         # **A reused measurement says so.** The score is the earlier state's score, so a
         # reader -- or a statistic like "best of N rounds" -- must be able to tell a
@@ -1101,6 +1298,14 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # On the point because "the candidate never ran" and "the candidate ran and lost"
         # are both `score 0.000` and only one of them is a measurement of quality.
         point["startup_failure"] = startup_failure
+        if (res or {}).get('integrity_status') == 'unknown_interrupted_process':
+            point['integrity_status'] = 'unknown_interrupted_process'
+            point['measurement_provenance'] = res['measurement_provenance']
+            # The legacy curve builder defaults missing test tallies to zero.
+            # Recovery cannot turn unavailable evidence into an observed zero.
+            for field in ('tests_passed', 'tests_total'):
+                if res.get(field) is None:
+                    point[field] = None
         point["measured_by_platform"] = res is not None
         if res is None:
             # Named problems, not "no harness.json": a candidate can be rejected for a

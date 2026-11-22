@@ -68,7 +68,7 @@ import eval.service.web_gateway as web_gateway_mod
 # visible in the import line rather than flattened through the entrypoint.
 from harnessgrad import FRAMEWORK_VERSION
 from harnessgrad import config as platform_config
-from harnessgrad.provenance import h0_identity
+from harnessgrad.provenance import h0_identity, published_h0
 from harnessgrad.entrypoints.experiment_config import (
     config_help as _config_help, expand_experiment_argv as _expand_experiment_argv,
 )
@@ -305,6 +305,9 @@ def _write_end_summary(args, run_dir: Path, curve_path: Path) -> Path | None:
 
 def _main(attempt: dict) -> int:
     with ExitStack() as sources:
+        # Internal callers may invoke _main directly; the public main keeps its
+        # lock through finalization using the outer stack.
+        attempt.setdefault('hold', sources)
         return _main_with_sources(attempt, sources)
 
 
@@ -317,6 +320,16 @@ def _treatment_runtime(args):
 def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     sources.enter_context(datasets.provider_session())
     ap, args, explicit = parse_run_args(sys.argv[1:], _SCENARIO_ARG_DEFAULTS)
+    # The embedded task harness reads its route from the environment. Apply
+    # explicit run flags to both driver and actor for the lifetime of this run.
+    for key, value in (("HG_AGENT_BACKEND", getattr(args, "agent_backend", None)),
+                       ("HG_AGENT_MODEL", getattr(args, "agent_model", None))):
+        if value is not None:
+            if key in os.environ:
+                sources.callback(os.environ.__setitem__, key, os.environ[key])
+            else:
+                sources.callback(os.environ.pop, key, None)
+            os.environ[key] = value
     scenario_spec = scenario_receipt = None
 
     if (args.run_id or "").startswith("task25-") and not args.budget_profile:
@@ -339,6 +352,17 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     except (OSError, ValueError) as exc:
         print(f'refusing --scenario: {exc}', file=sys.stderr)
         return 2
+
+    published = args.h0_from == published_h0.SELECTOR
+    if published:
+        try:
+            cohort_file = published_h0.configure(args, explicit, scenario=scenario_spec is not None)
+        except (OSError, ValueError) as exc:
+            print(f"refusing published H0: {exc}", file=sys.stderr)
+            return 2
+        if not os.environ.get("HG_ALFWORLD_STUDY_IDS"):
+            os.environ["HG_ALFWORLD_STUDY_IDS"] = cohort_file
+            sources.callback(os.environ.pop, "HG_ALFWORLD_STUDY_IDS", None)
 
     if args.expected_harness_sha256 is not None:
         value = args.expected_harness_sha256
@@ -408,11 +432,13 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     # External wrapper/dependency bytes are checked before local resolver commands
     # or optional provider probes; no platform waiver can replace this contract.
+    from harnessgrad.orchestration.treatment_workflow import capture_start, read_start_metadata
     treatment_record = None
+    # Corrupt historical JSON is a record error, not a treatment refusal.
+    treatment_metadata = read_start_metadata(args, read_metadata=resume_planning.read_metadata)
     try:
-        from harnessgrad.orchestration.treatment_workflow import capture_start
         treatment_start, treatment_saved, treatment_declared = capture_start(
-            args, environment=os.environ, read_metadata=resume_planning.read_metadata)
+            args, environment=os.environ, metadata=treatment_metadata)
     except (OSError, TypeError, ValueError) as exc:
         print(f'refusing treatment: {exc}', file=sys.stderr)
         return 2
@@ -493,6 +519,11 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     run_id = args.run_id or (
         f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
         + (f"-{secrets.token_hex(8)}" if staged else ""))
+    try:
+        attempt['hold'].enter_context(run_namespace.driver_lock(args, run_id))
+    except (OSError, run_namespace.NamespaceRefused) as exc:
+        print(f'refusing run: {exc}', file=sys.stderr)
+        return 2
     run_dir = Path(args.runs_root) / run_id
     if not args.resume:
         try:
@@ -662,17 +693,15 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # pinned above: a run that discovers its tooling is missing three rounds in has
     # already spent the rounds.
     #
-    # A refusal is only for a run that *needs* an improver and cannot find one. The
-    # reference methods carry their own (`methods/editor.py` calls `HG_METHOD_*` directly),
-    # so an unresolvable improver is a warning plus an empty identity field, not a stop --
-    # and `improver` stays empty so no curve point can claim an improver it did not use.
+    # Self-contained controls can run without a model. Built-in model-driven
+    # methods require an identified CLI editor before the initial measurement.
     #
     # Held in a local and handed to the loops that write points. It used to be a module
     # global here that `_identity` read from the other side of the call stack: a curve
     # point's improver field then depended on a mutable global, and "what does this point
     # claim" could not be answered without running the program that produced it.
     improver_request = improver_readiness.ImproverRequest(
-        args.improver, args.improver_model, args.improver_effort)
+        args.improver or platform_config.current().improver.name, args.improver_model, args.improver_effort)
     # Outputs inherited by method subprocesses intentionally persist after this run.
     for key, value in improver_request.environment_patch().items():
         if value is None:
@@ -704,6 +733,9 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     if improver_ready.refused:
         return 2
     improver = improver_ready.declaration
+    if readiness.needs_cli_editor(args) and (not improver.get("ok") or improver.get("kind") != "cli"):
+        console.note("refusing before H0: experiment edits require a resolved CLI Meta-Harness", level="error")
+        return 2
     improver_tool_calls = improver_ready.tool_calls
     improver_tool_calls_detail = improver_ready.detail
 
@@ -870,6 +902,42 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         except (OSError, TypeError, ValueError) as exc:
             print(f"refusing run: verification context changed: {exc}", file=sys.stderr)
             return 2
+    supplement_id = getattr(args, 'resume_supplement_run', None)
+    if supplement_id is not None:
+        from harnessgrad.orchestration.interrupted_measurement import (
+            InterruptedMeasurementRefused, make_recovery_loader,
+        )
+        try:
+            if (resume_state is None or os.environ.get('HG_EXPERIMENTAL_ROUND_JOURNAL') != '1'
+                    or not (run_dir / '.pending-method-submissions').is_dir()):
+                raise InterruptedMeasurementRefused('recovery requires a resumed run and private submission journal')
+            supplement = Path(args.runs_root) / supplement_id
+            if supplement.is_symlink() or not supplement.is_dir():
+                raise InterruptedMeasurementRefused('supplement run is missing or unsafe')
+            live_config = platform_config.dump(run=platform_config.run_config(
+                args, run_id, seed=os.environ.get('HARNESSGRAD_SEED'), mode=mode))
+            loader = make_recovery_loader(run_dir, supplement, expected_round=resume_state['last'] + 1,
+                live_config=live_config, expected_context=args.verification_context)
+            loader(run_dir, resume_state['last'] + 1)  # Refuse before publishing the resume lease.
+            args._recovered_measurement_loader = loader
+            batch_loaders = {}
+            for entry in (getattr(args, 'resume_batch_supplement', None) or '').split(','):
+                if not entry:
+                    continue
+                raw_round, _, batch_id = entry.partition('=')
+                batch_round = int(raw_round)
+                if batch_round <= resume_state['last'] + 1 or batch_round > args.rounds:
+                    raise InterruptedMeasurementRefused('batch supplement is outside the future round budget')
+                batch = Path(args.runs_root) / batch_id
+                if batch.is_symlink() or not batch.is_dir():
+                    raise InterruptedMeasurementRefused('batch supplement is missing or unsafe')
+                batch_loaders[batch_round] = make_recovery_loader(run_dir, batch,
+                    expected_round=batch_round, live_config=live_config,
+                    expected_context=args.verification_context)
+            args._batch_recovery_loaders = batch_loaders
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            print(f'refusing interrupted measurement recovery: {exc}', file=sys.stderr)
+            return 2
     if resume_state is not None:
         resume_lease.publish()
     if args.resume or args.side == 'eval':
@@ -930,7 +998,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             restored=resume_state is not None, ops=workspace_ops, journal=preparation_journal)
         if not args.resume:
             prepared = prepare_committed_candidate(work, PreparationOptions(
-                args.side, args.from_run, args.h0_from, Path(args.runs_root),
+                args.side, args.from_run, None if published or args.h0_comparability == "content" else args.h0_from,
+                Path(args.runs_root),
                 args.harness_runtime_binding, args.sandbox), envs=envs, setups=setups,
                 eval_from=eval_from, ops=workspace_ops, journal=preparation_journal)
             if prepared.preparation is not None:
@@ -1001,12 +1070,28 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity,
         args.measurement_components)
     h0_attribution = h0_planning.RunAttribution(run_id, mode, improver)
+    content_capture = None
     if resume_state is None:
         h0_sha = h0_planning.commit_h0_source(work, commit_state)
         t0 = time.time()
         shared_point = None
         try:
-            if args.h0_from:
+            if args.h0_agent_content:
+                content_capture = h0_planning.capture_content(work, h0_sha, h0_identities, h0_options,
+                    agent_path=args.h0_agent_content, tasks=tasks_all, scorable=scorable, setups=setups,
+                    verifiers=verifiers, envs=envs)
+            if args.h0_comparability == "content":
+                reused = h0_planning.materialize_content_h0(
+                    args.h0_from, Path(args.runs_root), args.h0_attestation_sha256, content_capture,
+                    h0_sha, man, h0_attribution, h0_options, h0_identities, console)
+                base, shared_point = reused.base, reused.point
+            elif published:
+                reused = h0_planning.materialize_published_h0(
+                    h0_sha, man, h0_attribution, h0_options, h0_identities, tasks_all, verifiers)
+                base, shared_point = reused.base, reused.point
+                console.note("using published ALFWorld H0: 53/100, with the original 100 task traces",
+                             level="info")
+            elif args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
                 if args.h0_subset_view:
                     from harnessgrad.orchestration.h0_subset import materialize_subset
@@ -1081,6 +1166,10 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             return 2
         task_ids, train_ids = h0_selection.task_ids, h0_selection.train_ids
         tasks, sampling = h0_selection.tasks, h0_selection.sampling
+        if args.h0_comparability == "content" and set(task_ids) != set(shared_point["per_task"]):
+            console.note("refusing content H0 reuse: recipient sampling changes the attested task cohort",
+                         level="error")
+            return 2
     else:
         base = resume_state["base"]
         h0_sha = resume_state["h0_sha"]
@@ -1110,6 +1199,15 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     if resume_state is not None:
         # The points already on disk are the record; a resumed run appends to them.
         curve = list(resume_state["existing"])
+        previous_cost = curve[-1].get('cumulative')
+        complete_cost = (isinstance(previous_cost, dict) and all(
+            field in previous_cost for field in
+            ('evaluation_trials', 'generation_tokens', 'env_generation_tokens', 'wall_clock_s')))
+        if complete_cost:
+            cumulative = dict(previous_cost)
+        elif callable(getattr(args, '_recovered_measurement_loader', None)):
+            print('refusing interrupted measurement recovery: cumulative cost evidence missing', file=sys.stderr)
+            return 2
     elif shared_point is not None:
         # The donor's point verbatim except for the id: its `identity` describes *how that
         # number was produced* (jobs, budget, model), which is the honest record, and
@@ -1129,7 +1227,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # The base harness is always evaluated by the platform, so its point is a
     # platform measurement like any other. Leaving the field unset made the
     # exported record claim the score was the method's -- the opposite of true.
-    curve[0]["measured_by_platform"] = True
+    if not h0_identity.has_content_admission(curve[0]):
+        curve[0]["measured_by_platform"] = True
     # The verifier's *kind*, never its spec. This point is written into the method's
     # channel, so an argv or an expected answer here would hand a method the grade it
     # is being measured against -- the same leak the eval traces are withheld for.
@@ -1143,6 +1242,12 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     _save_verdicts(run_dir, 0, base, [t["task_id"] for t in tasks])
     _save_traces(run_dir, 0, base.get("traces") or {}, train_ids, split,
                  trial_traces=base.get("trial_traces"))
+    if content_capture is not None and shared_point is None:
+        try:
+            h0_planning.write_content_attestation(run_dir, run_id, content_capture, base, console)
+        except h0_planning.H0Refused as exc:
+            exc.report(console)
+            return 2
 
     # 在分派之前挡住相对的入口路径。放在 main 里,因为 `_run_mode_a/b` 返回的是
     # 曲线,不是退出码 —— 第一次把检查放进 mode 函数时,`return 2` 让 main 拿一个
@@ -1162,25 +1267,24 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     # request carries the pristine tree as well as the incumbent. So the flag is read as
     # *nothing*: a B-flavoured method is simply one that submits its whole sequence in one
     # call, which the loop already allows.
+    # Record the admitted attempt before the loop, which may stop before
+    # publishing another measurement.
+    if resume_state is not None:
+        previous_resumes = resume_planning.read_metadata(run_dir).get("resumed") or []
+        _write_run_meta(run_dir, resumed=[*previous_resumes, {
+            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "from_round": resume_state["last"],
+            "requested_rounds": args.rounds,
+            "recorded_sha": resume_state["recorded_sha"],
+            "staged_sha": resume_state["staged_sha"],
+            "platform_content_sha": _platform_content_sha(),
+        }])
     curve = _run_mode_a(args, work, man, run_id, mode, curve, h0_sha,
                         base, tasks, task_ids, scorable, sampling, cache,
                         cumulative, train_ids, split, setups, verifiers,
                         verifier_kinds, envs, improver=improver,
                         start_steps=(resume_state["last"] if resume_state else 0),
                         resumed_from=(resume_state["last"] if resume_state else None))
-
-    # **A resumed curve says how it was stitched.** `from_round` and the two content
-    # addresses are the whole claim: the state re-staged from the record reproduced the
-    # address the earlier points already named, and the platform content matched, so no
-    # second platform version entered this curve.
-    if resume_state is not None:
-        _write_run_meta(run_dir, resumed=[{
-            "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "from_round": resume_state["last"],
-            "recorded_sha": resume_state["recorded_sha"],
-            "staged_sha": resume_state["staged_sha"],
-            "platform_content_sha": _platform_content_sha(),
-        }])
 
     if budget_binding is not None:
         _write_run_meta(run_dir, budget=budget_binding.metadata())
@@ -1198,16 +1302,18 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 def main() -> int:
     attempt = {}
     detail = "driver interrupted before evaluation completed; see command output"
-    try:
-        result = _main(attempt)
-        detail = f"driver exited {result} before evaluation completed; see command output"
-        return result
-    except BaseException as exc:
-        detail = f"{type(exc).__name__}: {exc}"
-        raise
-    finally:
-        if "finalize" in attempt:
-            attempt["finalize"](detail)
+    with ExitStack() as hold:
+        attempt['hold'] = hold
+        try:
+            result = _main(attempt)
+            detail = f"driver exited {result} before evaluation completed; see command output"
+            return result
+        except BaseException as exc:
+            detail = f"{type(exc).__name__}: {exc}"
+            raise
+        finally:
+            if "finalize" in attempt:
+                attempt["finalize"](detail)
 
 
 if __name__ == "__main__":

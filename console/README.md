@@ -39,7 +39,7 @@ JSON POST 需要单个 Content-Length（最多 1 MiB）、`Content-Type: applica
 （可带 UTF-8 charset），不支持 Transfer-Encoding；归档导入和提交上传保留各自的
 大小限制。`/api/settings/test` 仅接受 POST；若指定与已保存地址不同的 base_url，
 必须显式提供 API key，且测试不会跟随重定向。保存设置改变已配置 key 的 endpoint 时
-必须同时提供新 key；启动时覆盖 task/meta endpoint 也必须提供对应 key，否则预检查失败。
+必须同时提供新 key；启动时覆盖 task endpoint 也必须提供对应 key。实验编辑器使用所选 CLI Meta-Harness 自身的 provider 配置。
 为避免路径本身包含令牌，设置及启动预览仅显示路径为空、`/`、`/v1` 或 `/v1/` 且
 没有 userinfo、查询或片段的 HTTP(S) 地址；其他地址显示为已配置但隐藏（包括合法自定义路径）。
 留空保留原地址，不修改磁盘配置；启动 task 时留空使用原地址及其绑定 key。预检仍拒绝带
@@ -120,7 +120,7 @@ Console 启动的实验即使在建立 run 目录前失败，也会在 Runs 中�
 
 `form` 返回平台当前可选的数据集、基线 Harness、改进器和默认参数。`preview` 生成与真正
 起跑完全相同的 argv，并运行相同的服务端守卫，但不产生副作用。预览仅接受 JSON POST，
-不接受查询参数或 API key（仅接受 `task_key_present` / `meta_key_present` 布尔标记）；
+不接受查询参数或 API key（可用 `task_key_present` 表明提交时会填写求解凭据）；
 旧 GET 调用返回 405，调用方需迁移以免 URL 参数泄漏到访问日志。未保存的环境默认地址若被隐藏，
 启动页会要求重新输入地址和 key，而不承诺留空使用：
 

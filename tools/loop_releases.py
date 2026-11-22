@@ -13,12 +13,16 @@ from harnessgrad.paths import main_checkout
 from harnessgrad.execution.python_runtime.python_artifacts import atomic_json, digest, locked
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASES = ('0.2.0', '0.3.0')
+STUDY_RELEASE = '0.2.0-study'
+RELEASES = ('0.2.0', STUDY_RELEASE, '0.3.0')
 ARCHIVE = Path(__file__).with_name('assets') / 'loop-0.2.0.zip'
 ARCHIVE_SHA256 = '5249b339c57240db3f644cf246ccf486d192d10d7c7ca54c5aa70f6c9fad5fb2'
 LEGACY_TREE = '7a811b3ab930a3f902eb50e18c504288f5eea0dc'
 LEGACY_REVISION = 'b87be212e901d26262a1d3cc1b6356847899d19e'
 LEGACY_FILES = {'agent.py', 'harness.json', 'requirements.txt'}
+STUDY_SOURCE = ARCHIVE.with_name('loop-study-0.2.0')
+STUDY_PROVENANCE = ARCHIVE.with_name('loop-study-0.2.0.provenance.json')
+STUDY_FILES = LEGACY_FILES | {'.gitignore'}
 
 
 def _inventory(root: Path) -> dict:
@@ -47,12 +51,38 @@ def _stage(version: str, target: Path) -> dict:
                 (target / name).chmod(0o644)
         provenance = {'kind': 'historical-git-tree', 'revision': LEGACY_REVISION,
                       'tree': LEGACY_TREE, 'archive_sha256': ARCHIVE_SHA256}
+    elif version == STUDY_RELEASE:
+        pin = json.loads(STUDY_PROVENANCE.read_text())
+        expected = pin['files_sha256']
+        if STUDY_SOURCE.is_symlink() or not STUDY_SOURCE.is_dir():
+            raise ValueError('bundled Loop study source must be an owned directory')
+        # pip can precompile the bundled agent when installing a wheel. That
+        # cache is packaging state and must never enter the measured source.
+        names = {p.name for p in STUDY_SOURCE.iterdir()
+                 if not (p.name == '__pycache__' and not p.is_symlink() and p.is_dir())}
+        if set(expected) != STUDY_FILES or names != STUDY_FILES:
+            raise ValueError('bundled Loop study source differs from its pinned files')
+        target.mkdir()
+        for name in sorted(STUDY_FILES):
+            source_file = STUDY_SOURCE / name
+            if source_file.is_symlink() or not source_file.is_file():
+                raise ValueError('bundled Loop study source contains a link or non-regular file')
+            content = source_file.read_bytes()
+            if hashlib.sha256(content).hexdigest() != expected[name]:
+                raise ValueError('bundled Loop study source differs from its pinned files')
+            (target / name).write_bytes(content)
+            (target / name).chmod(0o644)
+        provenance = {'kind': 'published-study-source',
+                      'hub_revision': pin['published_source_revision'],
+                      'tree': pin['measured_git_tree'],
+                      'raw_source_tree': pin['source_tree_without_workspace_gitignore']}
     else:
         shutil.copytree(ROOT / 'base_harness/loop', target, symlinks=True,
                         ignore=shutil.ignore_patterns('.git', '.env', '.state', '__pycache__', '*.pyc'))
         provenance = {'kind': 'bundled-template'}
     manifest = json.loads((target / 'harness.json').read_text())
-    if manifest['name'] != 'loop' or manifest['version'] != version:
+    manifest_version = '0.2.0' if version == STUDY_RELEASE else version
+    if manifest['name'] != 'loop' or manifest['version'] != manifest_version:
         raise ValueError('Loop template version does not match the selected release')
     return provenance
 

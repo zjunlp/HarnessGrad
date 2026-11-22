@@ -35,7 +35,10 @@ def test_default_refuses_and_explicit_exclude_removes_entire_conflicting_groups(
     source_file = filtered / manifest['files'][0]['path']
     raw = source_file.read_bytes()
     strict_manifest = json.loads((default / 'source-manifest.json').read_text())
-    assert manifest['files'] == strict_manifest['files']
+    # Each preparation has its own atomic attempt directory. Compare the
+    # source identity and bytes rather than the random staging directory name.
+    assert [{k: v for k, v in f.items() if k != 'path'} for f in manifest['files']] == [
+        {k: v for k, v in f.items() if k != 'path'} for f in strict_manifest['files']]
     assert raw == (default / strict_manifest['files'][0]['path']).read_bytes()
     assert manifest['files'][0]['rows'] == manifest['split_rows']['test'] == 7
     assert len(raw.splitlines()) == 7

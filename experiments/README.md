@@ -12,14 +12,14 @@ re-reads `driver.py`'s argparse block, so a key with no flag is refused by name.
 
 * **`quickstart.json`** uses the eight-task repository `demo`, the reference
   `echo_base` scripted edit, `loop`, two maximum improvement rounds, one job and
-  one trial. No dataset download or model is needed with `HG_AGENT_BACKEND=mock`.
+  one trial. For the model-free control, use `HG_AGENT_BACKEND=mock` and `--improver none`.
   It is a plumbing control and is never a benchmark result.
 * **`eval-from-round.json`** measures round 2 of `quickstart` on demo's held-out
   side. Run `quickstart.json` first, or override `from_run` with the actual study
   run ID. It edits nothing on the exam side.
 * **`rsi-bbeh.json`** / **`rsi-bbeh-eval.json`** are the first real method recipe:
   BBEH × DGM, five study tasks per round and five tasks in fixed-checkpoint eval.
-  They need pinned BBEH data, a frozen split, a live solver and an editor endpoint.
+  They need pinned BBEH data, a frozen split, a live solver and the DSH editor.
 * **`rsi-terminal-bench2*`**, **`rsi-deepsearchqa*`** and
   **`rsi-swe-bench-pro-v2*`** cover terminal, research and code-repair agents.
   They have additional service/image/runtime prerequisites. Read the exact
@@ -69,20 +69,7 @@ upstream ports below: six need a prompt-carrying harness, one needs two trials).
 legacy small QA smoke configurations of the method's propose/measure loop, not a benchmark protocol: five
 tasks and one trial cannot resolve a difference between two methods.
 
-**Every one of them needs an improver, and none can complete a round without one.**
-`HG_AGENT_BACKEND=mock` replaces the harness's *agent* model; the method's *editing* model
-is a separate budget (`HG_METHOD_BASE_URL / HG_METHOD_API_KEY / HG_METHOD_MODEL`, see
-`.env.example`). With no improver, round 0 (H0) completes, round 1 records
-
-    entrypoint failed ... a method needs HG_METHOD_BASE_URL / HG_METHOD_API_KEY / HG_METHOD_MODEL
-
-the curve stops at H0, and the legacy driver exit remains 0 without `--fail-on-incomplete`. Known method
-prerequisites are now checked before H0, and strict runs distinguish failures from
-a valid early stop. This is not a substitute for configuring a reachable editor. The cheapest honest configurations
-are a CLI improver (`--improver codex` or `dsh`, which needs that tool logged in) or an
-endpoint (`--improver local` against a local server, or `HG_METHOD_*` set directly).
-`tests/quality/test_method_presets_run.py` skips exactly the endpoint-only files with that
-reason and fails on every other cause.
+The default Meta-Harness is the DSH CLI, running the `headless` profile with `deepseek-flash`. Set up the solver and the DSH checkout, home and provider credential before starting a model-driven study. Use `--improver codex` to choose the Codex CLI instead. The selected Meta-Harness also answers structured requests from method roles such as RRSI’s leakage critic. [First-use instructions](../docs/getting-started.md#run-the-readme-experiment)
 
 | method | file | what it needs |
 | --- | --- | --- |
@@ -91,8 +78,8 @@ reason and fails on every other cause.
 | `dream_rsi` | `method-dream_rsi.json` | an improver |
 | `harnessx` | `method-harnessx.json` | an improver |
 | `hyperagents` | `method-hyperagents.json` | an improver |
-| `meta_harness` | `method-meta_harness.json` | an improver; at `rounds > 1` also a method endpoint (its design stage is a schema call) |
-| `rrsi` | `method-rrsi.json` | an endpoint (the leakage critic) **and** an improver (the edit) |
+| `meta_harness` | `method-meta_harness.json` | an improver for candidate edits and, at `rounds > 1`, structured design responses |
+| `rrsi` | `method-rrsi.json` | an improver for candidate edits and the structured leakage verdict |
 | `sica_ci` | `method-sica_ci.json` | an improver |
 | `tthe` | `method-tthe.json` | an improver |
 
@@ -110,17 +97,6 @@ The six MiniAgent recipes use its [managed CPython 3.12 environment](../base_har
 Prepare its complete lock with `python tools/configure_harness.py --harness base_harness/miniagent --fetch`
 before the first run when wheels are not cached. Candidate preparation is offline;
 MiniAgent requires sandboxed native `files` tasks and refuses `--no-sandbox`.
-
-`HG_AGENT_BACKEND=mock` mocks the harness's agent model and nothing else, so **none of the
-ten reaches round 1 model-free**: nine stop at H0 with the endpoint message above,
-`modular_rsi` stops with the module-map error. `tests/quality/test_method_presets_run.py`
-skips each of those by the message it records, and fails on any other cause.
-
-*An improver* is the editing layer the run resolves (`--improver`; the registry default is
-the `deepseek` endpoint, a CLI such as `dsh` is the other kind), or the method endpoint
-supplied directly through `HG_METHOD_BASE_URL` / `HG_METHOD_MODEL` / `HG_METHOD_API_KEY`.
-*An endpoint* is a chat endpoint required even when the improver is a CLI: `rrsi`'s critic
-must return a JSON verdict, which a codex-style CLI cannot do.
 
 ### No preset
 
@@ -151,10 +127,7 @@ get no `method-*.json`:
   `methods/hyperagents/archive.py`, `methods/rrsi/fidelity.py`). The absent upstream pieces
   — DGM's SWE-bench gold patch, Dream-RSI's replay simulator, HarnessX's shipping validator —
   are declared deviations in the ports' `method.json`, not launch blockers.
-* That leaves only the environment: the improver layer is not shipped as a model. The
-  default `deepseek` endpoint comes from `.env`, and a CLI improver (`dsh`, `codex`) comes
-  from the machine; `--improver none` is for a method that carries its own, such as `noop`.
-  This is a deployment fact, not a missing artifact.
+* Model-driven studies require a prepared CLI and its provider. For a model-free installation check, choose the embedded `echo_base` control and pass `--improver none`.
 
 ## Custom study/held-out partitions
 

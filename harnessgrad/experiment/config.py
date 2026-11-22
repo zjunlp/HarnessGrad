@@ -54,6 +54,11 @@ class ExperimentError(ValueError):
 _FLAGS: dict[str, str] = {
     "dataset": "--dataset",
     "harness": "--harness",
+    "harness_path": "--harness-path",
+    "agent_backend": "--agent-backend",
+    "agent_model": "--agent-model",
+    "improver": "--improver",
+    "improver_model": "--improver-model",
     "side": "--side",
     "sampling": "--sampling",
     "pool": "--pool",
@@ -242,6 +247,11 @@ def to_argv(config: dict) -> list[str]:
                     f"{key} must be true or false, got {value!r}")
             if value:
                 argv.append(flag)
+            continue
+        if key == "harness_path":
+            # A packaged recipe can reference a bundled source from any cwd.
+            source = Path(_as_string(value, key))
+            argv.extend((flag, str((PLATFORM_ROOT / source).resolve())))
             continue
         if key == "method":
             argv.extend((flag, _method(value, key)))

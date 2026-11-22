@@ -74,6 +74,12 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
                 and not tokens.get("input_tasks_missing") and not tokens.get("output_tasks_missing")):
             harness_tokens = harness_lower_bound
     harness_calls = tokens.get("calls") if not tokens.get("calls_tasks_missing") else None
+    interrupted = (res or {}).get('integrity_status') == 'unknown_interrupted_process'
+    if interrupted:
+        # Retained task reports do not cover possibly interrupted/duplicated
+        # in-flight attempts. Preserve their observed sum as a lower bound.
+        harness_tokens = None
+        harness_calls = None
     env = (res or {}).get("env_usage") or {}
     env_tokens = None
     env_lower_bound = None
@@ -106,7 +112,8 @@ def _cost_of(res: dict | None, n_tasks: int, wall_s: float,
         # count, so it is reported beside it rather than added into it.
         "method_cache_read_tokens": claimed.get("method_cache_read_tokens"),
         "harness_tokens": harness_tokens,
-        "harness_usage_scope": (tokens.get("scope", "partial") if "tasks_total" in tokens
+        "harness_usage_scope": ("partial_interrupted_process" if interrupted else
+                                tokens.get("scope", "partial") if "tasks_total" in tokens
                                 else "legacy_reported_coverage_unknown"),
         # Known partial spend remains useful evidence, but is never substituted
         # for a complete total consumed by cost-aware acceptance rules.

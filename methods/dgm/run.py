@@ -256,7 +256,7 @@ def _child_counts(history: list[dict]) -> dict[int, int]:
     return counts
 
 
-def select_parent(history: list[dict], round_index: int) -> tuple[dict, dict]:
+def select_parent(history: list[dict], round_index: int, *, staged_rounds=None) -> tuple[dict, dict]:
     """The rule. Returns (chosen point, a report of the whole table).
 
     Sampled rather than argmax'd, because that is what `random.choices(...,
@@ -265,8 +265,14 @@ def select_parent(history: list[dict], round_index: int) -> tuple[dict, dict]:
     child-count term exists to make.
     """
     archive, safety_exclusions = _eligible_archive(history)
+    unstaged = ([p.get("round") for p in archive if p.get("round") not in staged_rounds]
+                if staged_rounds is not None else [])
+    if staged_rounds is not None:
+        archive = [p for p in archive if p.get("round") in staged_rounds]
     if not archive:
-        return {}, {"archive": [], "rule": "empty", "reason": "no eligible parent",
+        return {}, {"archive": [], "rule": "empty",
+                    "reason": "no eligible parent is staged" if unstaged else "no eligible parent",
+                    "unstaged_rounds": unstaged,
                     "platform_safety_exclusions": safety_exclusions}
 
     children = _child_counts(history)
@@ -304,6 +310,7 @@ def select_parent(history: list[dict], round_index: int) -> tuple[dict, dict]:
         "chose_something_other_than_best": chosen.get("round") != best.get("round"),
         "seed": round_index * 7919,
         "platform_safety_exclusions": safety_exclusions,
+        "unstaged_rounds": unstaged,
         "selection": {
             "selected_parent": chosen.get("round"),
             "selected_parent_role": "task_agent_state",
@@ -467,12 +474,15 @@ def main() -> int:
     steps: list[dict] = []
     reports: list[dict] = []
     errors: list[BaseException] = []
+    parent_dirs = _staged_states(base, history)
     for child in range(children):
-        parent, report = select_parent(history, round_index + child)
+        parent, report = select_parent(history, round_index + child, staged_rounds=parent_dirs)
         if not parent:
+            if report["unstaged_rounds"]:
+                errors.append(RuntimeError("no eligible DGM parent state was staged"))
             reports.append({**report, "child": child + 1,
                             "children_this_call": children,
-                            "why": "no eligible parent; no edit submitted"})
+                            "why": report["reason"]})
             continue
         target, target_kind = choose_target(parent, base)
         report["target"] = target
@@ -484,8 +494,9 @@ def main() -> int:
             [], f"r{parent.get('round')}"
         )
 
-        parent_dir = _state_dir(base, parent.get("round"))
-        if not parent_dir or not Path(parent_dir).is_dir():
+        parent_dir = parent_dirs[parent.get("round")]
+        if not Path(parent_dir).is_dir():
+            errors.append(RuntimeError("the staged DGM parent state is unavailable"))
             reports.append({**report, "why": "the selected state is not staged"})
             continue
 
@@ -624,21 +635,23 @@ def main() -> int:
     )
 
 
-def _state_dir(base: Path, round_no) -> str | None:
-    """Where the platform staged a previous round's harness.
-
-    `states/index.json` is read rather than the directory guessed, because a state that
-    could not be materialized is deliberately absent from the index -- a method that guessed
-    the path would find an empty directory and report a failure the platform caused.
-    """
+def _staged_states(base: Path, history: list[dict]) -> dict[int, str]:
+    """Read the index once and restrict the archive to usable staged parents."""
     index = editor.channel(base) / "states" / "index.json"
-    if not index.exists():
-        return None
     try:
         data = json.loads(index.read_text())
     except (OSError, json.JSONDecodeError):
-        return None
-    return (data.get(f"round-{round_no}") or {}).get("harness_dir")
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    staged = {}
+    for point in history:
+        number = point.get("round")
+        entry = data.get(f"round-{number}")
+        path = entry.get("harness_dir") if isinstance(entry, dict) else None
+        if type(number) is int and isinstance(path, str) and path and Path(path).is_dir():
+            staged[number] = path
+    return staged
 
 
 if __name__ == "__main__":

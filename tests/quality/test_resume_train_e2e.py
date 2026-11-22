@@ -17,8 +17,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _run(*extra: str, rounds: str) -> subprocess.CompletedProcess:
-    argv = [sys.executable, "driver.py", "--harness", "loop_plain", "--mode", "A",
+def _run(*extra: str, rounds: str, abort_in_loop: bool = False) -> subprocess.CompletedProcess:
+    entry = ["driver.py"]
+    if abort_in_loop:
+        entry = ["-c", """
+import driver
+def abort(*args, **kwargs):
+    raise RuntimeError("synthetic abort after resume admission")
+driver._run_mode_a = abort
+raise SystemExit(driver.main())
+"""]
+    argv = [sys.executable, *entry, "--harness", "loop_plain", "--mode", "A",
             "--rounds", rounds, "--run-id", "resumer", "--dataset", "demo",
             "--sampling", "all",
             "--runs-root", str(TMP / "runs"), "--work-root", str(TMP / "work"),
@@ -56,10 +65,13 @@ def test_resume_appends_instead_of_remeasuring(tmp_path: Path) -> None:
         assert old["score"] == new["score"]
     # The new point says it came after a resume, so a stitched curve is readable as stitched.
     assert after[2].get("resumed_from") == 1
+    assert after[2]['cumulative']['evaluation_trials'] >= before[-1]['cumulative']['evaluation_trials']
+    assert after[2]['cumulative']['generation_tokens'] >= before[-1]['cumulative']['generation_tokens']
 
     meta = json.loads((TMP / "runs" / "resumer" / "run_meta.json").read_text())
     assert meta.get("resumed"), "run_meta must record that this curve was continued"
     assert meta["resumed"][-1]["from_round"] == 1
+    assert meta["resumed"][-1]["requested_rounds"] == 2
 
 
 def test_resume_with_nothing_to_do_is_not_an_error(tmp_path: Path) -> None:
@@ -70,3 +82,30 @@ def test_resume_with_nothing_to_do_is_not_an_error(tmp_path: Path) -> None:
     again = _run("--resume", rounds="1")
     assert again.returncode == 0, "asking to resume a finished budget is not a failure"
     assert len(_curve()) == 2, "nothing may be measured twice"
+
+
+def test_aborted_resume_records_the_admitted_attempt_without_new_scores(tmp_path):
+    global TMP
+    TMP = tmp_path
+    first = _run(rounds="1")
+    assert first.returncode == 0, first.stderr[-1200:]
+    run = TMP / "runs" / "resumer"
+    before = (run / "curve.jsonl").read_bytes()
+    second = _run("--resume", rounds="3", abort_in_loop=True)
+    assert second.returncode != 0
+    assert "synthetic abort after resume admission" in second.stderr
+    assert (run / "curve.jsonl").read_bytes() == before
+    record = json.loads((run / "run_meta.json").read_text())["resumed"][-1]
+    assert record["from_round"] == 1 and record["requested_rounds"] == 3
+
+
+def test_driver_refuses_supplement_without_submission_journal(tmp_path: Path) -> None:
+    global TMP
+    TMP = tmp_path
+    first = _run(rounds="1")
+    assert first.returncode == 0, first.stderr[-1200:]
+    before = (TMP / 'runs/resumer/curve.jsonl').read_bytes()
+    result = _run('--resume', '--resume-supplement-run', 'unavailable', rounds='2')
+    assert result.returncode != 0
+    assert 'recovery requires a resumed run and private submission journal' in result.stderr
+    assert (TMP / 'runs/resumer/curve.jsonl').read_bytes() == before

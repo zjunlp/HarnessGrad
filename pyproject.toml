@@ -60,7 +60,12 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 # A wheel must carry the same local demo and runtime contracts as a checkout.
 # Namespace discovery alone only includes Python modules, not these resources.
 [tool.setuptools.package-data]
-"tools" = ["assets/loop-0.2.0.zip"]
+"tools" = [
+    "assets/alfworld-loop-study-h0/curve.jsonl", "assets/alfworld-loop-study-h0/round-0.tar.gz",
+    "assets/alfworld-loop-study-h0/train100.csv", "assets/loop-0.2.0.zip", "assets/loop-study-0.2.0.provenance.json",
+    "assets/loop-study-0.2.0/.gitignore", "assets/loop-study-0.2.0/agent.py",
+    "assets/loop-study-0.2.0/harness.json", "assets/loop-study-0.2.0/requirements.txt",
+]
 "tools.testing" = ["test_costs.json"]
 "console" = [
     "static/personal.html", "static/personal.js", "static/personal-window.js", "static/personal-draft.js", "static/personal-feedback.js", "static/personal-proposal.js", "static/personal.css",
@@ -147,7 +152,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 
 # Reviewed built-in recipes and offline runtime/scorer assets.
 "experiments" = [
-    "eval-from-round.json", "method-ace.json", "method-adas.json", "method-ahe.json",
+    "eval-from-round.json", "gsm8k-dgm-study.json", "method-ace.json", "method-adas.json", "method-ahe.json",
     "method-arbor.json", "method-darwinx.json", "method-dgm.json", "method-dream_rsi.json",
     "method-evo_harness.json", "method-evoprompt.json", "method-gepa.json",
     "method-harnessx.json", "method-hyperagents.json", "method-meta_harness.json",

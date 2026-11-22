@@ -157,7 +157,7 @@ def isolated_uno_recalculate(record, source, files):
         command = sandbox_command(record, root, [],
             [record['python'], '-I', '-B', '/work/native.py', 'uno-worker'])
         result = subprocess.run(command, env=minimal_env(), capture_output=True,
-                                text=True, timeout=180)
+                                text=True, errors='replace', timeout=180)
         if result.returncode:
             raise RuntimeError('isolated native UNO conversion failed')
         for target, file in zip(copied, files):
@@ -213,7 +213,7 @@ def inventory(soffice, python):
     env.update(UNO_PATH=str(program), URE_BOOTSTRAP=f'vnd.sun.star.pathname:{program}/fundamentalrc')
     probe = subprocess.run([str(interpreter), '-I', '-c',
         'import uno, pyuno, json; print(json.dumps([uno.__file__, pyuno.__file__]))'],
-        env=env, check=True, capture_output=True, text=True, timeout=30)
+        env=env, check=True, capture_output=True, text=True, errors='strict', timeout=30)
     uno_files = [Path(p).resolve(strict=True) for p in json.loads(probe.stdout)]
     files = {binary, interpreter, *uno_files}
     # Include LO resources, filters, registry, shared native libraries and bundled fonts.
@@ -229,7 +229,7 @@ def inventory(soffice, python):
                 files.update((Path(directory) / name).resolve() for name in names
                              if (Path(directory) / name).is_file())
     fonts = subprocess.run(['fc-list', '--format', '%{file}\\n'], check=True,
-                           capture_output=True, text=True, timeout=30, env=minimal_env())
+                           capture_output=True, text=True, errors='strict', timeout=30, env=minimal_env())
     files.update(Path(p).resolve(strict=True) for p in fonts.stdout.splitlines() if p)
     # Record the loader-resolved host dependencies of every deployed ELF object.
     queue = list(files)
@@ -242,7 +242,7 @@ def inventory(soffice, python):
         with path.open('rb') as stream:
             if stream.read(4) != b'\x7fELF':
                 continue
-        result = subprocess.run(['ldd', str(path)], capture_output=True, text=True, timeout=30, env=minimal_env())
+        result = subprocess.run(['ldd', str(path)], capture_output=True, text=True, errors='strict', timeout=30, env=minimal_env())
         if 'not found' in result.stdout:
             raise RuntimeError(f'unresolved native dependency: {path}')
         for name in re.findall(r'(?:=>\s+)?(/[^\s()]+)', result.stdout):
@@ -251,7 +251,7 @@ def inventory(soffice, python):
                 files.add(dependency)
                 queue.append(dependency)
     version = subprocess.run([str(binary), '--version'], env=env, check=True,
-                             capture_output=True, text=True, timeout=30).stdout.strip()
+                             capture_output=True, text=True, errors='strict', timeout=30).stdout.strip()
     return {'schema': 1, 'deployment': 'verified-host-installation',
             'soffice_binary': str(binary), 'python': str(interpreter),
             'program_dir': str(program), 'version': version,

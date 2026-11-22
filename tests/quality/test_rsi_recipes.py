@@ -5,7 +5,6 @@ are authored instrument fixtures, never reported benchmark/model measurements.
 """
 from __future__ import annotations
 
-import ast
 import json
 import os
 from pathlib import Path
@@ -29,11 +28,8 @@ RECIPES = {
 
 
 def command_flags():
-    tree = ast.parse((ROOT / 'driver.py').read_text())
-    return {arg.value for node in ast.walk(tree)
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-        and node.func.attr == 'add_argument'
-        for arg in node.args if isinstance(arg, ast.Constant) and isinstance(arg.value, str)}
+    from harnessgrad.entrypoints.run_parser import build_parser
+    return set(build_parser()._option_string_actions)
 
 
 @pytest.mark.parametrize('slug,dataset', RECIPES.items())
@@ -83,11 +79,19 @@ def test_bbeh_prepare_split_and_exact_recipe_preflight_without_runtime_or_networ
     data = tmp_path / 'prepared'
     prepare('bbeh', data, [f'test={source}'])
     split = tmp_path / 'bbeh.json'
-    environment = {**os.environ, 'HG_DATA_BBEH': str(data), 'PYTHONDONTWRITEBYTECODE': '1',
+    registry = tmp_path / 'improvers.json'
+    registry.write_text(json.dumps({
+        'default': 'release-test-cli', 'improvers': {'release-test-cli': {
+            'name': 'release-test-cli', 'kind': 'cli', 'launcher': sys.executable,
+            'provider': 'release-fixture', 'model': 'scripted', 'api_key_env': 'RELEASE_EDITOR_API_KEY'}},
+    }))
+    environment = {key: value for key, value in os.environ.items()
+                   if not key.startswith(('HG_IMPROVER', 'HG_METHOD_'))}
+    environment.update({'HG_DATA_BBEH': str(data), 'PYTHONDONTWRITEBYTECODE': '1',
+        'HG_IMPROVER_CONFIG': str(registry), 'HG_REVIEWED_ENVIRONMENT_ONLY': '1',
         'HG_AGENT_BACKEND': 'openai', 'HG_AGENT_BASE_URL': 'http://127.0.0.1:1/v1',
         'HG_AGENT_MODEL': 'local-solver-control', 'HG_AGENT_API_KEY': 'private-control-key',
-        'HG_METHOD_BASE_URL': 'http://127.0.0.1:1/v1', 'HG_METHOD_MODEL': 'local-editor-control',
-        'HG_METHOD_API_KEY': 'private-editor-key'}
+        'RELEASE_EDITOR_API_KEY': 'private-editor-key'})
     frozen = subprocess.run([sys.executable, '-m', 'harnessgrad.cli', 'split', 'create',
         '--dataset', 'bbeh', '--source', 'official-eval', '--train-ratio', '0.2',
         '--seed', '42', '--output', str(split)], cwd=ROOT, env=environment,
@@ -99,7 +103,8 @@ def test_bbeh_prepare_split_and_exact_recipe_preflight_without_runtime_or_networ
     result = subprocess.run([sys.executable, '-m', 'harnessgrad.cli', 'run', '--config',
         'experiments/rsi-bbeh.json', '--set', f'split={split}', '--set',
         f'runs_root={tmp_path / "runs"}', '--set', f'work_root={tmp_path / "work"}',
-        '--check-only'], cwd=ROOT, env=environment, capture_output=True, text=True, timeout=60)
+        '--improver', 'release-test-cli', '--check-only'], cwd=ROOT, env=environment,
+        capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'ready' in result.stdout and 'custom held-out' in result.stdout
     assert not (tmp_path / 'runs').exists() and not (tmp_path / 'work').exists()

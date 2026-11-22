@@ -32,8 +32,9 @@ def test_explicit_zero_missing_and_inconsistent_raw_total(tmp_path, monkeypatch)
     assert [a['attempt_id'], b['attempt_id']] == ['attempt-1', 'attempt-2']
     assert a['request_id'] is None and a['retry_of'] is None and a['provider_calls'] is None
     assert 'DO_NOT_COPY' not in raw
-    assert ledger['canonical_usage_aggregate']['input'] == 20
-    assert ledger['canonical_usage_aggregate']['output'] == 4
+    assert ledger['canonical_usage_aggregate'] is None
+    assert ledger['reported_usage_lower_bounds']['input'] == 10
+    assert ledger['reported_usage_lower_bounds']['output'] == 4
     assert ledger['provider_completeness'] == 'unknown'
 
 
@@ -73,7 +74,7 @@ def test_duplicate_attempt_observations_not_double_counted_or_trusted(tmp_path, 
            'input_tokens': 10, 'output_tokens': 2, 'total_tokens': 12}
     transcript = '\n'.join('dsh-usage ' + json.dumps(row) for _ in range(2))
     observation = editor._cli_usage_observation(transcript)
-    assert observation['lower_bounds']['input'] == 10
+    assert observation['lower_bounds']['input'] == 0
     assert observation['lower_bounds']['output'] == 2
     assert observation['lower_bounds']['calls'] == 1
     assert observation['total_tokens'] is None and not observation['complete']
@@ -82,7 +83,7 @@ def test_duplicate_attempt_observations_not_double_counted_or_trusted(tmp_path, 
     ledger = json.loads((tmp_path/names[1]).read_text())
     assert len(ledger['records']) == 2 and ledger['records'][1]['duplicate_of'] == 1
     assert all(x is None for x in ledger['usage'].values())
-    assert ledger['reported_usage_lower_bounds']['input'] == 10
+    assert ledger['reported_usage_lower_bounds']['input'] == 0
 
 
 def test_conflicting_attempt_observations_keep_safe_lower_bound():
@@ -91,7 +92,7 @@ def test_conflicting_attempt_observations_keep_safe_lower_bound():
         {'session_id':'s','attempt_id':'a','input_tokens':20,'output_tokens':1,'total_tokens':21},
     ]
     observation = editor._cli_usage_observation('\n'.join('dsh-usage '+json.dumps(x) for x in rows))
-    assert observation['lower_bounds']['input'] == 20
+    assert observation['lower_bounds']['input'] == 0
     assert observation['lower_bounds']['output'] == 3
     assert observation['lower_bounds']['calls'] == 1
     assert observation['total_tokens'] is None and not observation['complete']

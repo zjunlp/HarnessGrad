@@ -302,3 +302,16 @@ def test_summary_marks_legacy_cross_round_partial_tokens_as_lower_bound():
     totals = cost_totals([{'cost': {'harness_tokens': 13}}, {'cost': {}}], 'eval', notes)
     assert totals['tokens'] == 13
     assert any('harness token counts cover 1 of 2' in note and 'lower bound' in note for note in notes)
+def test_recovered_round_preserves_observed_cost_as_lower_bound():
+    from harnessgrad.experiment.records import _cost_of
+    result = {'integrity_status': 'unknown_interrupted_process', 'tokens': {
+        'tasks_total': 1, 'tasks_reported': 1, 'input': 10, 'output': 3,
+        'input_reported': 10, 'output_reported': 3, 'input_tasks_missing': 0,
+        'output_tasks_missing': 0, 'calls': 1, 'calls_reported': 1,
+        'calls_tasks_missing': 0, 'scope': 'complete'}}
+    cost = _cost_of(result, 1, 1.0)
+    assert cost['harness_tokens'] is None
+    assert cost['harness_tokens_lower_bound'] == 13
+    assert cost['harness_model_calls'] is None
+    assert cost['harness_model_calls_lower_bound'] == 1
+    assert cost['harness_usage_scope'] == 'partial_interrupted_process'

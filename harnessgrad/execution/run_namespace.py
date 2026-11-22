@@ -10,11 +10,41 @@ import hashlib
 import json
 import os
 import re
+import stat
+from contextlib import contextmanager
 from pathlib import Path
 
 
 class NamespaceRefused(ValueError):
     pass
+
+
+@contextmanager
+def driver_lock(args, run_id):
+    """Exclude cooperating drivers for one run until all finalization ends."""
+    import fcntl
+
+    run, _ = _paths(args, run_id)
+    root = run.parent
+    root.mkdir(parents=True, exist_ok=True)
+    locks = root / '.driver-locks'
+    locks.mkdir(mode=0o700, exist_ok=True)
+    info = locks.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+        raise NamespaceRefused('driver lock directory must be private and owned by this user')
+    name = hashlib.sha256(run_id.encode('utf-8')).hexdigest() + '.lock'
+    try:
+        fd = os.open(locks / name, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    except OSError as exc:
+        raise NamespaceRefused('driver lock cannot be opened safely') from exc
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise NamespaceRefused(f'another driver is already running for {run_id!r}') from exc
+        yield
+    finally:
+        os.close(fd)
 
 
 def _paths(args, run_id):

@@ -59,7 +59,8 @@ ROOT = Path(__file__).resolve().parents[2]
 # checked, and OpenClaw version/admission output is explicitly strict UTF-8.
 # Reviewed against original main, the LightRSI fix and the refactor tree; see
 # docs/validation/decoding-inventory.md for the complete comparison.
-EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 14, "tools": 41}
+# The pinned Loop study actor adds one tools call with explicit errors="replace".
+EXPECTED_CALLS = {"base_harness": 12, "eval": 15, "data": 56, "harnessgrad": 14, "tools": 43}
 EMBEDDED_SOURCES = {"tools/diagnose_appworld.py": ("ACTOR",)}
 
 #: Sites that ask for text without `errors=`, each with the reason it is left strict.
@@ -82,34 +83,6 @@ EXCEPTIONS = {
     "data/datasets/spreadsheetbench2/verify/open_spreadsheet.py:251": (
         "pinned upstream scorer bytes; the reader thread fails the task, never a score"),
 
-    # Source-bound scoring wrappers stay byte-for-byte unchanged. Their strict
-    # decode failures refuse measurement or native identity rather than producing
-    # a potentially altered score or runtime inventory.
-    "data/datasets/reasoning_gym/check.py:19": (
-        "source-bound scorer wrapper; invalid child output exits nonzero and the verifier marks it unmeasured"),
-    "data/scaffolds/spreadsheet_runtime/native.py:159": (
-        "source-bound UNO scorer helper; malformed worker output aborts before modified workbooks are published"),
-    "data/scaffolds/spreadsheet_runtime/native.py:214": (
-        "source-bound native inventory; malformed UNO module-path JSON must not identify a different runtime"),
-    "data/scaffolds/spreadsheet_runtime/native.py:231": (
-        "source-bound native inventory; malformed font paths must not silently alter the captured file set"),
-    "data/scaffolds/spreadsheet_runtime/native.py:245": (
-        "source-bound native inventory; malformed dependency paths must not silently omit a library"),
-    "data/scaffolds/spreadsheet_runtime/native.py:253": (
-        "source-bound native inventory; malformed LibreOffice version output cannot name a trusted runtime"),
-
-    # These source-bound data preparation and control paths retain their
-    # previous strict behavior. Invalid output cannot publish an artifact,
-    # report readiness, or complete the control and reach scoring.
-    "data/datasets/agentdojo.py:219": (
-        "read-only source probe rejects malformed JSON output and reports the dataset unavailable"),
-    "data/datasets/tau3_bench.py:220": (
-        "read-only bundle probe rejects malformed output and reports the dataset unavailable"),
-    "data/datasets/costbench/prepare_controller.py:131": (
-        "preparation worker decoding fails before validation and artifact publication"),
-    "data/datasets/alfworld/control.py:123": (
-        "manual control rejects malformed done output before it can proceed to scoring"),
-
     "eval/containers/harness_runtime.py:173": (
         "the host interpreter version probe: stdout is the platform-authored ASCII X.Y expression, "
         "not task/tool output. Keep a malformed version out of the overlay cache; _cached_version "
@@ -121,6 +94,11 @@ EXCEPTIONS = {
 # Strict decoding is appropriate only for reviewed identity/configuration outputs:
 # replacement could turn corrupt metadata into a different accepted identity.
 STRICT_IDENTITY_SITES = {
+    'data/datasets/agentdojo.py:219': "read-only source probe rejects malformed JSON output and reports the dataset unavailable",
+    'data/scaffolds/spreadsheet_runtime/native.py:253': "source-bound native inventory; malformed LibreOffice version output cannot name a trusted runtime",
+    'data/scaffolds/spreadsheet_runtime/native.py:245': "source-bound native inventory; malformed dependency paths must not silently omit a library",
+    'data/scaffolds/spreadsheet_runtime/native.py:231': "source-bound native inventory; malformed font paths must not silently alter the captured file set",
+    'data/scaffolds/spreadsheet_runtime/native.py:214': "source-bound native inventory; malformed UNO module-path JSON must not identify a different runtime",
     'data/datasets/gaia/prepare.py:117': 'GAIA preparation worker returns source-bound JSON metadata.',
     'data/datasets/jobbench/prepare.py:83': 'JobBench renderer returns source-bound runtime and manifest JSON.',
     'data/datasets/scienceworld/control.py:90': 'ScienceWorld control reads trusted reference actions as JSON.',
@@ -129,7 +107,7 @@ STRICT_IDENTITY_SITES = {
     'data/scaffolds/native_harbor_runtime/prepare_python.py:43': 'Harbor probe returns runtime admission and module identity JSON.',
     'data/scaffolds/native_qa/prepare.py:66': 'Native QA preparation fails closed on malformed worker output.',
     'data/scaffolds/native_research/preparation.py:21': 'Native research preparation fails closed on malformed worker output.',
-    'tools/_tau_prepare.py:240': 'Tau worker returns a source-bound runtime identity JSON envelope.',
+    'tools/diagnostics/probe_personal_codex.py:186': 'Personal Codex probe compares the explicitly selected executable version.',
     'harnessgrad/datasets/runtime_identity.py:266': 'H0 worker returns a validated runtime identity JSON envelope.',
     'tools/prepare_h0.py:149': 'Candidate runtime admission returns a validated identity JSON envelope.',
     'tools/prepare_h0.py:182': 'Verification preflight returns a validated context JSON envelope.',
@@ -210,6 +188,8 @@ def _decoding_guard_findings(checked, offenders):
 
 
 def test_every_live_text_subprocess_says_how_to_decode():
+    # Identity, version, JSON and filesystem-path probes may use explicit
+    # strict decoding: replacing a byte there could silently change identity.
     offenders, checked = [], {}
     for root in EXPECTED_CALLS:
         checked[root] = 0

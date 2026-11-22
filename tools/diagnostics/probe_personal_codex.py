@@ -184,7 +184,7 @@ def probe(codex: Path, output: Path, *, timeout: float = 90) -> dict:
     env = child_environment(home, scratch, codex)
     binary_digest = digest(codex)
     version = subprocess.run([str(codex), '--version'], cwd=project, env=env,
-                             capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+                             capture_output=True, text=True, errors='strict', timeout=10, check=True).stdout.strip()
     if not version.startswith('codex-cli '):
         raise ValueError('selected executable did not identify as Codex CLI')
     manifest = {'files': ['result.md', 'checks.json'], 'marker': 'HG_SANDBOX_FIXTURE'}

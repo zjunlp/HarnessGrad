@@ -238,18 +238,21 @@ def launch(request, *, program=None):
     request['_phase'] = 'worker-execution'
     with tempfile.TemporaryDirectory(prefix='hg-tau-worker-private-') as private:
         proc = subprocess.run(argv, input=json.dumps(request), capture_output=True, text=True,
-                              errors='strict', env=environment(private), cwd=private, check=False)
+                              encoding='utf-8', errors='surrogateescape',
+                              env=environment(private), cwd=private, check=False)
     if attempt:
-        # Raw diagnostics stay in this mode-0700 owned attempt, never the receipt/error.
-        attempt.with_name('worker-stdout.txt').write_text(proc.stdout)
-        attempt.with_name('worker-stderr.txt').write_text(proc.stderr or '')
+        # Diagnostic files are private. Preserve their readable text even when a
+        # dependency emits invalid bytes. Protocol output is checked separately.
+        for name, value in (('stdout', proc.stdout), ('stderr', proc.stderr)):
+            text = (value or '').encode('utf-8', 'surrogateescape').decode('utf-8', 'replace')
+            attempt.with_name(f'worker-{name}.txt').write_text(text, encoding='utf-8')
         attempt.write_text(json.dumps({'runtime_id': binding['runtime_id'], 'state': 'completed',
                                       'exit_code': proc.returncode,
                                       'source_identity': request['source_identity']}, sort_keys=True))
     if proc.returncode:
         verify_sources(request['source_identity'])
         try:
-            failure = json.loads(proc.stdout)
+            failure = json.loads(proc.stdout.encode('utf-8'))
         except (ValueError, TypeError):
             failure = {}
         if isinstance(failure, dict) and failure.get('error_type') == 'PreparationSourceChanged':
@@ -257,7 +260,7 @@ def launch(request, *, program=None):
         # Third-party errors can quote private tasks or provider configuration.
         raise ValueError('managed Tau preparation worker failed (exit ' + str(proc.returncode) + ')')
     request['_phase'] = 'worker-reply'
-    result = json.loads(proc.stdout)
+    result = json.loads(proc.stdout.encode('utf-8'))
     if result.get('runtime_id') != binding['runtime_id']:
         raise ValueError('Tau worker returned a different runtime identity')
     request['_phase'] = 'post-worker-artifact-admission'

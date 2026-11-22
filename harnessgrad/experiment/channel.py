@@ -18,6 +18,7 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 
@@ -26,6 +27,7 @@ from eval.observe.tracing import loop_facts as _loop_facts
 from eval.observe.tracing import task_file
 
 from harnessgrad import PLATFORM_ROOT
+from harnessgrad.core import snapshot as snapshots
 from harnessgrad.config import current as current_config
 
 def _loop_summary(traces: dict) -> dict:
@@ -556,25 +558,59 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
             continue
         dest = hg / "history" / "traces" / f"round-{past_round}"
         dest.mkdir(parents=True, exist_ok=True)
-        for trace in sorted(src.glob("*.jsonl")):
-            shutil.copy2(trace, dest / trace.name)
+        allowed = None if task_ids is None else set(task_ids)
+        for trace in sorted(src.rglob('*.jsonl')):
+            if trace.is_symlink() or not trace.is_file() or not trace.resolve().is_relative_to(src.resolve()):
+                continue
+            relative = trace.relative_to(src).as_posix()
+            task = re.sub(r'\.trial[1-9][0-9]*\.jsonl$', '', relative)
+            if task == relative:
+                task = relative[:-len('.jsonl')]
+            if allowed is not None and task not in allowed:
+                continue
+            target = dest / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(trace, target)
 
     # The states themselves, newest window only. `git archive` reads the object
     # store, so this works on the dangling commits mode A leaves after `reset_hard`.
     points = [p for p in (history or [])
               if (p.get("identity") or {}).get("harness_sha")]
     kept = points if STATES_KEPT is None else points[-STATES_KEPT:]
-    index: dict = {"kept": [], "window": STATES_KEPT, "available": len(points)}
+    index: dict = {"kept": [], "missing": {}, "window": STATES_KEPT, "available": len(points)}
     for past in kept:
         name = f"round-{past.get('round', 0)}"
         sha = past["identity"]["harness_sha"]
+        dest = hg / "states" / name
         try:
-            count = materialize(work, sha, hg / "states" / name)
+            count = materialize(work, sha, dest)
         except (subprocess.CalledProcessError, OSError, ValueError):
-            # A state that cannot be materialized is left out of the index rather
-            # than listed as a directory that is not there: a method that trusts the
-            # index and finds nothing would report a failure the platform caused.
-            continue
+            # A resumed workspace may not contain historical git objects. Its
+            # original run snapshot can still supply the exact selected parent.
+            round_no = past.get('round')
+            if run_dir is None or type(round_no) is not int or round_no < 0:
+                if dest.exists():
+                    shutil.rmtree(dest)
+                index["missing"][name] = {"sha": sha, "reason": "git_tree_unavailable"}
+                continue
+            artifact = Path(run_dir) / 'snapshots' / f'round-{round_no}.json'
+            try:
+                if artifact.is_symlink():
+                    raise ValueError('unsafe snapshot')
+                record = snapshots.load(artifact)
+                if (record.get('run_id') != Path(run_dir).name or record.get('round') != round_no
+                        or record.get('harness_sha') != sha):
+                    raise ValueError('snapshot identity mismatch')
+                if dest.exists():
+                    shutil.rmtree(dest)
+                snapshots.check_out(artifact, dest)
+                snapshots.verify(artifact, dest)
+                count = len(record['files'])
+            except (OSError, ValueError, KeyError, snapshots.SnapshotError):
+                if dest.exists():
+                    shutil.rmtree(dest)
+                index["missing"][name] = {"sha": sha, "reason": "checkpoint_snapshot_unusable"}
+                continue
         index["kept"].append(name)
         index[name] = {"sha": sha, "files": count,
                        "score": past.get("score"),

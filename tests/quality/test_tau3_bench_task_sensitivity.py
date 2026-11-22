@@ -12,6 +12,14 @@ from tools.studies import task_sensitivity as ts
 
 
 def test_sensitivity_runs_all_tau3_trials_for_identical_harnesses(tmp_path, monkeypatch):
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
+    import pytest
+    try:
+        dataset._execution_runtime()
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('tau3: prepare the native execution runtime to run this control')
     work = tmp_path/'work'
     work.mkdir()
     monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(work))

@@ -60,6 +60,7 @@ def main():
         page.wait_for_function("document.querySelector('#custom-method-source').value.includes('def propose')")
         page.fill('#custom-method-name', method); page.click('#create-method')
         page.wait_for_function("name => document.querySelector('#f-method').value === 'custom:' + name", arg=method, timeout=30000)
+        page.select_option('#f-improver', 'none')  # the authored method template is self-contained
         page.fill('#f-rounds', '1')
         page.wait_for_function("!document.querySelector('#go').disabled", timeout=45000)
         assert page.input_value('#f-task-backend') == 'mock' and page.input_value('#f-dataset') == 'demo'

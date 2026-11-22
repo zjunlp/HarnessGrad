@@ -98,7 +98,7 @@ def emit(response: dict) -> None:
       that differs from its parent by nothing, which is how a control curve starts
       to move.
     """
-    response.setdefault("method_model", os.environ.get("HG_METHOD_MODEL") or None)
+    response.setdefault("method_model", os.environ.get("HG_IMPROVER_MODEL") or None)
     response.setdefault("changed", False)
     sys.stdout.write(json.dumps(response))
     sys.stdout.flush()

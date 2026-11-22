@@ -168,8 +168,7 @@ def __getattr__(name):
     try:
         rows = roster()
     except (OSError, ValueError) as exc:
-        raise AttributeError(
-            f'costbench: {name} needs the prepared payload under {PREPARED}: {exc}') from exc
+        raise AttributeError(f'costbench: {name} needs a prepared payload: {exc}') from exc
     if name == 'SPLIT':
         from data.scaffolds.registry import validate_split
         return validate_split('costbench', load()[0], {

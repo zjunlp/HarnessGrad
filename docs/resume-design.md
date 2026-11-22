@@ -1,87 +1,44 @@
-# `--resume`: continue an interrupted run instead of starting clean
+# Resuming interrupted runs
 
-## The problem this closes
+`--resume --run-id R` continues an existing run only after checking its recorded
+identity. Keep the original run directory and use the same dataset, task selection,
+model route, seed, scorer and runtime. A change in platform identity requires an
+explicit `--resume-across-platforms REASON`; that reason does not waive the other
+compatibility checks. See [treatment-resume-contract.md](treatment-resume-contract.md).
 
-Today `driver.py` has no resume path at all:
+A run namespace admits one cooperating driver at a time. A second driver for the
+same run ID is refused while the first is active. This lock coordinates drivers
+that implement it; older drivers and unrelated writers do not participate. Before
+resuming an old run, establish that its previous driver and task processes have
+actually stopped. Do not delete or move evidence to bypass a refusal.
 
-* reusing a `--run-id` means **start clean** (`driver.py`, the `reused id` note), and
-* "staged IDs never resume" — a staged run refuses to adopt leftovers.
+## Training
 
-So a study that has already paid for nine hours of measurement loses **everything** if the
-process dies, and an exam that was killed at 147 of 200 tasks keeps the 147 progress files
-but can never turn them into a point. That is not a defensible product behaviour: the runs
-this platform exists to make are long, and long runs break.
+Training resumes from the last published round. The total `--rounds` target is
+not added to the existing round count. H0 stays the original baseline, and saved
+history, traces and verdicts are restored when available. Missing evidence is not
+invented. Resume records the platform seam and the round from which it continued.
 
-## What "resume" has to mean
+The private method-submission journal is an experimental opt-in:
+`HG_EXPERIMENTAL_ROUND_JOURNAL=1`. It saves a candidate before evaluation so a
+subsequent resume can restore it without repeating the method call. Incomplete
+rounds with existing sample evidence are refused until the evidence is reconciled.
+The current CLI does not automatically fill missing training samples in place.
 
-Two different things, because the two sides fail differently:
+For an explicitly reviewed complementary measurement, experimental
+`--resume-supplement-run RUN_ID` reconciles completed task records with the saved
+candidate. `--resume-batch-supplement ROUND=RUN_ID[,ROUND=RUN_ID]` can identify
+later saved candidates in the same batch. Admission checks task coverage,
+identity, snapshot and receipts; it refuses overlapping, missing or incompatible
+evidence. The supplement retains its own run and trial identity. Interrupted
+process integrity and any unobserved attempts remain unknown; reported costs are
+lower bounds when their coverage is incomplete. Journals and raw traces may contain
+private task material and require review before publication.
 
-1. **Train side** (`--rounds`): continue the improvement loop from the last *measured*
-   round, reusing the curve, the saved harness state and the method's history.
-2. **Eval side** (`--side eval`): finish a pool whose per-task progress files exist,
-   scoring only the tasks that have no result yet, then write one point for the whole pool.
+## Evaluation
 
-Neither may ever *re-measure* a state that is already on the curve, because a second
-measurement of the same state is a different number and there is no honest way to pick one.
-
-## Contract (train side)
-
-`driver.py --resume --run-id R ...`
-
-Preconditions, each a refusal with a sentence when violated:
-
-| Check | Refusal reason |
-| --- | --- |
-| `runs/<R>/curve.jsonl` exists and holds ≥ 1 point | there is nothing to continue |
-| the run's recorded `split_sha` equals this invocation's | the task set moved; the old points are not the same measurement |
-| the run's recorded `platform_content_sha` equals the current tree's | the code moved; mixing two platforms in one curve is the confound the platform exists to remove |
-| `state_after_round<last>/` exists | the state to continue from was not kept |
-| `--rounds` > `last` | nothing to do; exit 0 with a note, not an error |
-
-Behaviour when the checks pass:
-
-* `start_steps = last`; the loop's step budget is **total measured rounds**, so re-running
-  the same command twice is idempotent rather than doubling the curve.
-* H0 and its native verdicts/traces are rebuilt **from the record**. The next method
-  invocation receives the latest measured state's evidence, while `pristine_harness`
-  remains the saved H0 source. Nothing is re-measured.
-* Identical-source and declared-no-change reuse restore in-memory traces and verdicts,
-  not just scores. `reused_evidence` records the original measurement round and missing
-  trace/verdict task IDs. Reuse chains retain source/context checks and never invent
-  absent receipts or costs.
-* The workspace is reused when it still holds the commit the last point names; otherwise
-  `state_after_round<last>/` is staged into a fresh workspace and committed, and the new
-  commit is recorded as `resumed.restaged_sha`. The old commits may be gone; the curve's
-  recorded numbers are the record, not the git objects.
-* `run_meta.json` gains `resumed: [{at, from_round, recorded_sha, restaged_sha,
-  platform_content_sha}]`, and every point written after the resume carries
-  `"resumed_from": <round>` so a stitched curve is never mistaken for a continuous one.
-* The method sees `history=curve` (the whole curve), so a rule that reads its own history
-  behaves as if it had never been interrupted.
-
-Deliberately **not** preserved: an interrupted submission's unmeasured siblings. They were
-never on the curve; the resume starts from the last state that *was* measured, and the
-run_meta note says `dropped_pending: <n>` when a batch was cut short.
-
-## Contract (eval side)
-
-`driver.py --side eval --resume --run-id R ...`
-
-* The run's `progress/round-0/*.json` are the per-task results. Tasks with a result are
-  skipped; only the missing ones are evaluated.
-* Refuse when `--from-run`/`--from-round`, the pool, the split or the state's
-  `harness_sha` differ from what the interrupted run recorded — those would make one point
-  out of two different measurements.
-* The written point covers the **whole pool**, and carries `resumed_from_tasks: <n>` so a
-  reader can see how much of it was scored by the resumed half.
-
-## Rollout
-
-1. Land this in a worktree (`/tmp/hg-resume`, branch `feat/resume`) — a platform edit during
-   a live batch trips `PlatformTampered` for every run in flight, and the six trains now
-   running must not be invalidated.
-2. Tests: a red-first test per refusal row, plus one happy path per side. The happy path
-   uses a two-round run that is killed after round 1 and resumed to round 2, asserting the
-   curve has exactly two measured rounds and that no state was measured twice.
-3. Record `platform_content_sha` at run start (a new field; old runs simply lack it, and
-   resume refuses without it unless `--allow-unpinned-platform` is passed explicitly).
+Evaluation resumption uses the existing progress and trial evidence to avoid
+repeating completed work where the saved pool, source, scorer and runtime remain
+compatible. Missing or incompatible evidence is reported or refused rather than
+invented. A resumed score and an independently repeated measurement are distinct
+observations; keep their provenance when comparing or exporting results.

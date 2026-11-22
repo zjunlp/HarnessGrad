@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import re
 
 
 def agent_problems(run: Path, point: dict, *, model: str | None,
@@ -54,3 +55,13 @@ def _opencode_backend_matches(measured: dict, backend: str, env) -> bool:
         return False
     wire = (os.environ if env is None else env).get("HG_AGENT_OPENCODE_WIRE", "chat")
     return wire in ("chat", "responses") and trace.get("wire") == wire
+
+
+def has_content_admission(point: dict) -> bool:
+    """Recognize an admitted portable H0 in already-persisted run records."""
+    origin = point.get("shared_from")
+    pin = origin.get("attestation_sha256") if isinstance(origin, dict) else None
+    return (type(point.get("round")) is int and point["round"] == 0 and isinstance(origin, dict)
+            and origin.get("comparability") == "content"
+            and origin.get("measurement_origin") in ("platform-measurement", "published-measurement")
+            and isinstance(pin, str) and re.fullmatch(r"[0-9a-f]{64}", pin) is not None)

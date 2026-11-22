@@ -20,6 +20,16 @@ def test_only_structured_terminal_controls_stop():
     assert terminal_stop({'method_reported': {'terminal_stop': status}}) == status
 
 
+@pytest.mark.parametrize('field', ['code', 'scope'])
+@pytest.mark.parametrize('value', [[], {}, 7, None, True])
+def test_malformed_terminal_fields_are_structured_terminal_failures(field, value):
+    status = {'schema': SCHEMA, 'code': 'budget_exhausted', 'scope': 'meta_round', 'retryable': False}
+    status[field] = value
+    result = terminal_stop({'terminal_stop': status})
+    assert result == {'schema': SCHEMA, 'code': 'terminal_status_invalid',
+                      'retryable': False, 'scope': 'meta_session'}
+
+
 def test_attempts_cross_session_total_unknown_and_overshoot(tmp_path):
     a = MethodAttempts(tmp_path, 'run', round_limit=10)
     first = a.begin(1)
@@ -32,6 +42,7 @@ def test_attempts_cross_session_total_unknown_and_overshoot(tmp_path):
         b.begin(1)
     data = json.loads((tmp_path / 'method_attempts.json').read_text())
     assert [x['observed_total_tokens'] for x in data['attempts']] == [6, 6]
+    assert b.round_usage(1) == {'generation_tokens_lower_bound': 12, 'complete': True, 'attempt_count': 2}
     assert data['attempts'][1]['round_observed_overshoot_tokens'] == 2
     assert b.begin(2)  # separate round budget; run cap would cover both
 
@@ -46,6 +57,7 @@ def test_unknown_and_inflight_refuse_another_session(tmp_path):
         a.begin(1)
     data = json.loads(a.path.read_text())
     assert data['attempts'][0]['observed_total_tokens'] is None
+    assert a.round_usage(1) == {'generation_tokens_lower_bound': 0, 'complete': False, 'attempt_count': 1}
 
 
 def test_zero_is_observed_not_missing(tmp_path):
@@ -79,6 +91,8 @@ def test_changed_limits_or_symlink_ledger_refuse(tmp_path):
     ('copy_failure', None, 8, 1, 'artifact_persistence_failed', 0),
     ('step_budget', None, 8, 1, 'budget_exhausted', 0),
     ('batch_budget', None, 8, 1, 'budget_exhausted', 0),
+    ('invalid_code_list', None, 8, 1, 'terminal_status_invalid', 0),
+    ('invalid_scope_map', None, 8, 1, 'terminal_status_invalid', 0),
 ])
 def test_real_driver_retry_admission(tmp_path, kind, limit, total, expected, terminal, exit_code):
     script = tmp_path / 'method.py'
@@ -93,6 +107,8 @@ if KIND=='copy_failure':
 reply={'_error':'ordinary temporary error','method_usage':{'input':2,'output':1,'total_tokens':TOTAL}}
 if KIND in ('budget','archive'):
  reply['terminal_stop']={'schema':'harnessgrad.terminal-stop.v1','code':('budget_exhausted' if KIND=='budget' else 'artifact_persistence_failed'),'scope':'meta_round','retryable':False}
+if KIND in ('invalid_code_list','invalid_scope_map'):
+ reply['terminal_stop']={'schema':'harnessgrad.terminal-stop.v1','code':([] if KIND=='invalid_code_list' else 'budget_exhausted'),'scope':({} if KIND=='invalid_scope_map' else 'meta_round'),'retryable':False}
 if KIND in ('step_budget','batch_budget'):
  step={'harness_dir':req['base_harness'],'method_reported':{'terminal_stop':{'schema':'harnessgrad.terminal-stop.v1','code':'budget_exhausted','scope':'meta_round','retryable':False}}}
  steps=[{'harness_dir':req['base_harness']},step] if KIND=='batch_budget' else [step]

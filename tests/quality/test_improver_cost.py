@@ -137,7 +137,7 @@ def test_a_malformed_usage_line_is_ignored_rather_than_crashing_the_round():
     got = editor.parse_usage_lines(transcript)
     assert got is None
     observed = editor._cli_usage_observation(transcript)
-    assert observed['lower_bounds']['input'] == 10
+    assert observed['lower_bounds']['input'] == 0
     assert observed['canonical_complete'] is False
 
 

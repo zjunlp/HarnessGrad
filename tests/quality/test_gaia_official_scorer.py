@@ -29,9 +29,33 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import data.datasets.gaia as dataset  # noqa: E402
+from harnessgrad.paths import DataRootNotConfigured  # noqa: E402
 
 CHECK = ROOT / "data" / "datasets" / "gaia" / "verify" / "check.py"
 CONTROL_TASK = "gaia/0"
+
+
+@pytest.fixture(autouse=True)
+def require_released_artifact(request):
+    """Skip only tests whose particular upstream artifact was not prepared."""
+    name = request.node.name
+    if name == 'test_the_test_split_is_excluded_because_its_gold_is_a_placeholder':
+        artifacts = [dataset.SRC / dataset.TEST_LOCAL]
+    elif name in {'test_the_scorer_is_the_pinned_leaderboard_file',
+                  'test_the_three_normalization_branches_are_upstreams',
+                  'test_the_check_scores_the_released_answer_and_a_wrong_one',
+                  'test_a_missing_answer_is_a_measured_zero_and_a_placeholder_gold_is_not'}:
+        artifacts = [dataset.SCORER]
+    elif name == 'test_the_prompt_carries_neither_the_annotator_steps_nor_internal_paths':
+        artifacts = [dataset.SRC / dataset.VALIDATION_LOCAL, dataset.DATASET_ROOT / dataset.POOL]
+    else:
+        artifacts = [dataset.DATASET_ROOT / dataset.POOL]
+    try:
+        available = all(artifact.is_file() for artifact in artifacts)
+    except DataRootNotConfigured:
+        available = False
+    if not available:
+        pytest.skip('gaia: prepare the required upstream artifact and configure HG_DATA_ROOT')
 
 
 # ------------------------------------------------------------------------ the release ---
@@ -219,7 +243,17 @@ def test_platform_control_refuses_regardless_of_arm():
         assert {"env.exec_defaults", "env.state=container"} <= set(receipt["policy_fields"])
 
     for arm in ("--oracle", "--noop"):
-        proc = subprocess.run([sys.executable, "data/datasets/gaia/control.py", "--platform", arm,
+        # Force the unavailable-observer case this test claims to check. On a host
+        # with a working Docker observer the ordinary CLI can legitimately admit a
+        # measured control, so assuming the host has no observer runs the real task.
+        bootstrap = (
+            "import runpy,sys; "
+            "import eval.run.runner as runner; "
+            "runner._observations_for=lambda *a,**k: {}; "
+            "sys.argv=['data/datasets/gaia/control.py']+sys.argv[1:]; "
+            "runpy.run_path(sys.argv[0],run_name='__main__')"
+        )
+        proc = subprocess.run([sys.executable, "-c", bootstrap, "--platform", arm,
                                "--task-id", CONTROL_TASK],
                               cwd=ROOT, capture_output=True, text=True, timeout=900)
         combined = proc.stdout + proc.stderr

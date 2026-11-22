@@ -23,6 +23,17 @@ if not payload_present:
 from test_tau3_bench_dataset import control_module
 
 
+@pytest.fixture
+def prepared_execution_runtime():
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
+    try:
+        return dataset._execution_runtime()
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('tau3: prepare the native execution runtime to run this control')
+
+
 @pytest.fixture(autouse=True)
 def isolated_limits(monkeypatch):
     monkeypatch.setenv('HG_ENV_MODEL', 'fixture-user')
@@ -33,7 +44,7 @@ def isolated_limits(monkeypatch):
     reset()
 
 
-def test_default_limits_do_not_add_admission_caps():
+def test_default_limits_do_not_add_admission_caps(prepared_execution_runtime):
     tid = 'tau3_bench/retail/24'
     relay = dataset.SETUP[tid]['tool_relay']
     for key in ('max_calls', 'deadline_s', 'max_line_bytes'):
@@ -98,7 +109,8 @@ def test_actor_cli_does_not_reintroduce_default_transport_caps(monkeypatch, caps
 
 
 @pytest.mark.parametrize('output_limit', [None, 16384])
-def test_platform_control_preserves_resolved_environment_limits(monkeypatch, tmp_path, output_limit):
+def test_platform_control_preserves_resolved_environment_limits(monkeypatch, tmp_path, output_limit,
+                                                               prepared_execution_runtime):
     original = dataset.model_spec
     def declared_model(role, tools=None):
         spec = original(role, tools)

@@ -214,46 +214,32 @@ def instruction(prompt: str | None, evidence: str = "", facts: str = "") -> str:
 
 
 def applies(req: dict) -> bool:
-    """Is the improver this run resolved a **command**, rather than an endpoint?
-
-    True when the operator named one (`HG_IMPROVER`) or the declared kind is `cli`.
-    Older records without a kind use `path` and absence of `base_url`. A CLI may itself
-    use a custom endpoint. The distinction matters because the two are driven
-    completely differently: an endpoint is a chat call (`editor.ask`), a CLI is a
-    subprocess in the candidate tree.
-    """
-    if os.environ.get("HG_IMPROVER"):
-        return True
+    """Identify a declared CLI, including legacy records with an executable path."""
     improver = req.get("improver") or {}
+    path = improver.get("path")
+    if not isinstance(path, str) or not Path(path).is_absolute():
+        return False
     if improver.get("kind"):
-        return improver["kind"] == "cli" and bool(improver.get("path"))
-    return bool(improver.get("path")) and not improver.get("base_url")
+        return improver["kind"] == "cli"
+    return not improver.get("base_url")
 
 
 def _improver_command(req: dict) -> list[str]:
-    """Which command to run: the operator's, or the one the platform resolved."""
-    explicit = os.environ.get("HG_IMPROVER")
-    if explicit:
-        return shlex.split(explicit)
-    given = (req.get("improver") or {}).get("path")
-    if given:
-        if not Path(given).exists():
-            raise SystemExit(
-                f"the platform named an improver at {given!r}, which does not exist inside "
-                f"this sandbox. That is a platform bug (the improver's runtime trees were "
-                f"not bound), not a broken method.")
-        return [given]
-    # Ask the resolver rather than guessing at PATH: measured on the development machine,
-    # PATH points at a codex whose native binary is missing and `codex --version` crashes.
-    # Reachable only without a sandbox -- a sandboxed method cannot see `tools/`.
-    proc = subprocess.run([sys.executable, str(ROOT / "tools" / "improver.py"), "--which"],
-                          capture_output=True, text=True, timeout=300)
-    resolved = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
-    if proc.returncode != 0 or not resolved:
+    """Launch the declared executable, refusing a conflicting environment override."""
+    if not applies(req):
+        raise ValueError("candidate edits require a resolved CLI Meta-Harness")
+    given = req["improver"]["path"]
+    override = os.environ.get("HG_IMPROVER")
+    if override:
+        argv = shlex.split(override)
+        resolved = shutil.which(argv[0]) if len(argv) == 1 else None
+        if not resolved or Path(resolved).resolve() != Path(given).resolve():
+            raise ValueError("HG_IMPROVER conflicts with the resolved CLI Meta-Harness")
+    if not Path(given).exists():
         raise SystemExit(
-            "no usable improver. Run `python3 tools/improver.py --list` to see what is on "
-            "this machine, or set HG_IMPROVER.")
-    return [resolved]
+            f"the platform named an improver at {given!r}, which does not exist inside "
+            f"this sandbox. Verify the improver installation and its runtime mounts.")
+    return [given]
 
 
 def _cli_argv(req: dict, candidate: Path, task: str) -> list[str]:
@@ -572,25 +558,29 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
         # check. Exclusive mode must never enter the legacy deletion branch.
     elif candidate.exists():
         shutil.rmtree(candidate)
-    # A git repo, because codex's own `apply_patch` works through one, and because a harness
-    # *is* a git repo on this platform (`ckpt/git_state.py`).
-    copy_harness(parent, candidate, ignore=shutil.ignore_patterns(".git"))
-    selftest = stage_candidate(candidate, req.get("harness_runtime"))
-    subprocess.run(["git", "init", "-q", str(candidate)], check=True)
-    # **Only when the harness has none.** This used to write unconditionally, and the
-    # harness tree the platform stages already carries a `.gitignore` of its own
-    # (`ckpt/git_state.py` writes a five-line one, starting with a blank line). The
-    # rewrite therefore made every candidate differ from its parent in a file the
-    # *platform* had just written, `_changed_files` reported it as the improver's edit,
-    # and a proposal that changed nothing at all was handed to the round as a new
-    # candidate and measured. Measured twice (`v3-smoke`, `v4-dgm` round 1): codex's
-    # only "change" to the harness was this line, and the curve recorded a new
-    # `harness_sha` for a tree that behaves identically.
-    if not (candidate / ".gitignore").exists():
-        (candidate / ".gitignore").write_text(
-            "_harnessgrad/\n__pycache__/\n*.pyc\n.state/\n")
+    if req.get("structured_role"):
+        candidate.mkdir()
+        selftest = False
+    else:
+        # A git repo, because codex's own `apply_patch` works through one, and because a harness
+        # *is* a git repo on this platform (`ckpt/git_state.py`).
+        copy_harness(parent, candidate, ignore=shutil.ignore_patterns(".git"))
+        selftest = stage_candidate(candidate, req.get("harness_runtime"))
+        subprocess.run(["git", "init", "-q", str(candidate)], check=True)
+        # **Only when the harness has none.** This used to write unconditionally, and the
+        # harness tree the platform stages already carries a `.gitignore` of its own
+        # (`ckpt/git_state.py` writes a five-line one, starting with a blank line). The
+        # rewrite therefore made every candidate differ from its parent in a file the
+        # *platform* had just written, `_changed_files` reported it as the improver's edit,
+        # and a proposal that changed nothing at all was handed to the round as a new
+        # candidate and measured. Measured twice (`v3-smoke`, `v4-dgm` round 1): codex's
+        # only "change" to the harness was this line, and the curve recorded a new
+        # `harness_sha` for a tree that behaves identically.
+        if not (candidate / ".gitignore").exists():
+            (candidate / ".gitignore").write_text(
+                "_harnessgrad/\n__pycache__/\n*.pyc\n.state/\n")
 
-    _stage_evidence(candidate, req)
+        _stage_evidence(candidate, req)
     if selftest:
         guide = ("Prepared dependencies are attached before this turn; do not install packages.\n"
                  "Workspace imports resolve into this candidate; third-party packages are shared read-only.\n"
@@ -614,7 +604,8 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
     # directory from the process. `_cli_argv` builds both vocabularies and refuses an
     # unknown one, because a CLI handed flags it does not know either ignores them or dies
     # -- and both look like a method bug rather than a wrong argv.
-    argv = _cli_argv(req, candidate, instruction(prompt, evidence=evidence, facts=facts))
+    task = prompt if req.get("structured_role") else instruction(prompt, evidence=evidence, facts=facts)
+    argv = _cli_argv(req, candidate, task)
 
     timeout = int(os.environ.get("HG_IMPROVER_TIMEOUT_S", "1800"))
     started = time.time()
@@ -723,12 +714,12 @@ def propose(req: dict, parent: Path, *, prompt: str | None = None,
                     raise ValueError('terminal receipt has no terminal status')
             except (OSError, ValueError, TypeError):
                 terminal = status_module.terminal_stop({'terminal_stop': {}})
-        changed = _changed_files(candidate, parent)
+        changed = (sorted(entry.name for entry in candidate.iterdir()) if req.get("structured_role")
+                   else _changed_files(candidate, parent))
         protected = [f for f in changed if Path(f).name == "harness.json"]
         summary = _summary_of(transcript)
         reported = {
-            "improver": (req.get("improver") or {}).get("name")
-                        or os.environ.get("HG_IMPROVER") or "cli (resolved)",
+            "improver": (req.get("improver") or {}).get("name") or "cli (resolved)",
             "improver_path": (req.get("improver") or {}).get("path") or "",
             "exit_code": code,
             "seconds": round(time.time() - started, 1),

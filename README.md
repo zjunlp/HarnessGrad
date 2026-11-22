@@ -4,18 +4,22 @@
 
 <h1 align="center">HarnessGrad: Harness as A Continual Learner</h1>
 
-<p align="center"><strong>One project for building better agent harnesses.</strong><br>Run reproducible experiments, customize a harness for your task,<br>and explore a path toward continual improvement.</p>
+<p align="center"><strong>Build agent harnesses that improve with feedback.</strong><br>Run reproducible experiments, build for a new domain, or turn corrections into changes to your own harness.</p>
 
-<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 📖 <a href="#citation">Citation</a></p>
-
-<p align="center"><img src=".github/assets/learning-loop.svg" width="720" alt="Learning loop: tasks lead to feedback, editing the harness and evaluation, which returns to tasks."></p>
+<p align="center">🧭 <a href="#table-of-contents">Contents</a> · 🧪 <a href="#run-experiments">Experiments</a> · 🛠️ <a href="#customize-harness">Customize</a> · 🌱 <a href="#evolve-personal-harness">Evolve</a> · 📚 <a href="docs/README.md">Docs</a> · 💬 <a href="https://github.com/Xubqpanda/HarnessGrad-Community">Community</a> · 📖 <a href="#citation">Citation</a></p>
 
 <p align="center">
-  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/website-live-brightgreen.svg" alt="Website"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.12%2B-blue.svg" alt="Python 3.12 or newer">
-  <img src="https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg" alt="No third-party runtime dependencies">
-  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality gate"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/quality.yml/badge.svg" alt="Quality checks"></a>
+  <a href="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml"><img src="https://github.com/zjunlp/HarnessGrad/actions/workflows/deploy.yml/badge.svg" alt="Website deployment"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f855a.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.12%2B-3776ab.svg?logo=python&amp;logoColor=white" alt="Python 3.12 or newer">
+</p>
+
+<p align="center">
+  <a href="https://zjunlp.github.io/HarnessGrad/"><img src="https://img.shields.io/badge/Website-HarnessGrad-285f50?logo=githubpages&amp;logoColor=white" alt="Project website"></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/Docs-Explore-385fc4?logo=readthedocs&amp;logoColor=white" alt="Documentation"></a>
+  <a href=".github/CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contribute-Get%20involved-bb6346?logo=github&amp;logoColor=white" alt="Contributing guide"></a>
+  <a href="https://github.com/Xubqpanda/HarnessGrad-Community#wechat"><img src="https://img.shields.io/badge/Community-WeChat-07c160?logo=wechat&amp;logoColor=white" alt="Join the WeChat community"></a>
 </p>
 
 <a id="choose-your-path"></a>
@@ -24,9 +28,24 @@
 
 <table>
   <tr>
-    <td align="center" width="33%"><h3>🧪 Run experiments</h3><p>Compare harnesses and RSI methods with recorded results.</p><a href="#run-experiments"><strong>Explore experiments →</strong></a></td>
-    <td align="center" width="33%"><h3>🛠️ Customize a harness</h3><p>Edit and test a harness for your model or task.</p><a href="#customize-harness"><strong>Explore customization →</strong></a></td>
-    <td align="center" width="33%"><h3>🌱 Evolve your harness</h3><p>Explore research on harness evolution.</p><a href="#evolve-personal-harness"><strong>Explore evolution →</strong></a></td>
+    <td align="center" width="33%">
+      <a href="#run-experiments"><img src=".github/assets/showcase/experiments-preview.png" alt="ScienceWorld experiment curve" width="245"></a>
+      <br><strong>🧪 Run experiments</strong>
+      <br>Follow how a harness changes across rounds.
+      <br><a href="#run-experiments">Open experiments →</a>
+    </td>
+    <td align="center" width="33%">
+      <a href="#customize-harness"><img src=".github/assets/showcase/ocean-preview.png" alt="Ocean Harness showing research evidence" width="245"></a>
+      <br><strong>🛠️ Customize a harness</strong>
+      <br>See a domain harness collect evidence and answer.
+      <br><a href="#customize-harness">Open customization →</a>
+    </td>
+    <td align="center" width="33%">
+      <a href="#evolve-personal-harness"><img src=".github/assets/showcase/xiaolv-preview.png" alt="Xiao Lü desktop assistant alongside a chat" width="245"></a>
+      <br><strong>🌱 Evolve your harness</strong>
+      <br>Turn a correction into a proposed change.
+      <br><a href="#evolve-personal-harness">Open personal evolution →</a>
+    </td>
   </tr>
 </table>
 
@@ -35,31 +54,62 @@
 ## 🧭 Table of Contents
 
 - [🧪 Run experiments](#run-experiments)
+  - [Quick start](#quick-start)
   - [Experiment integrations](#what-you-can-run) · [Where to start](#where-to-start)
   - [Execution and comparison](#why-one-command-is-enough) · [Installation](#installation)
-  - [Dataset storage](#dataset-storage) · [Quick start](#quick-start)
+  - [Dataset storage](#dataset-storage)
   - [Experiment workbench](#the-workbench) · [Contributors](#contributors)
 - [🛠️ Customize a harness](#customize-harness)
-  - [Current capabilities](#customize-current) · [Quick start](#customize-quick-start)
+  - [Installation](#customize-installation) · [Quick start](#customize-quick-start)
   - [Customization workbench](#customize-workbench)
 - [🌱 Evolve your personal harness](#evolve-personal-harness)
-- [🧩 Shared foundation](#shared-foundation)
+  - [Installation](#personal-installation) · [Quick start](#personal-quick-start)
+- [💬 Community](https://github.com/Xubqpanda/HarnessGrad-Community)
 - [📚 Documentation](docs/README.md)
 - [📖 Citation](#citation)
 - [🔗 Related work](#related-work)
 - [📜 License](#license)
 
 > [!TIP]
-> Expand a workflow below to see its guide and screenshots. The same Console supports experiment inspection and harness editing.
-
-<a id="run-experiments"></a>
+> Expand a workflow to see what you can build with HarnessGrad and how to get started.
 
 <details>
 <summary><strong>🧪 Run experiments</strong> — compare harnesses and RSI methods under recorded conditions</summary>
 
+<a id="run-experiments"></a>
+
+Track how a harness performs as an improvement method edits it over successive rounds. The charts below show runs on three benchmarks.
+
+<table>
+  <tr>
+    <th>ALFWorld</th>
+    <th>AppWorld</th>
+    <th>ScienceWorld</th>
+  </tr>
+  <tr>
+    <td><a href=".github/assets/showcase/alfworld-panel-1.png"><img src=".github/assets/showcase/alfworld-panel-1.png" width="266" alt="alfworld panel-1 curve"></a><br><a href=".github/assets/showcase/alfworld-panel-2.png"><img src=".github/assets/showcase/alfworld-panel-2.png" width="266" alt="alfworld panel-2 curve"></a></td>
+    <td><a href=".github/assets/showcase/appworld-panel-1.png"><img src=".github/assets/showcase/appworld-panel-1.png" width="266" alt="appworld panel-1 curve"></a><br><a href=".github/assets/showcase/appworld-panel-2.png"><img src=".github/assets/showcase/appworld-panel-2.png" width="266" alt="appworld panel-2 curve"></a></td>
+    <td><a href=".github/assets/showcase/scienceworld-training.png"><img src=".github/assets/showcase/scienceworld-training.png" width="266" alt="scienceworld training curve"></a><br><a href=".github/assets/showcase/scienceworld-validation.png"><img src=".github/assets/showcase/scienceworld-validation.png" width="266" alt="scienceworld validation curve"></a></td>
+  </tr>
+</table>
+
+<a id="quick-start"></a>
+
+### 🚀 Quick start
+
+**How does one round of DGM change Loop’s performance on math word problems?** The task agent uses **Loop 0.2.0 (study source) with Qwen3.5-9B** to solve five GSM8K training questions. DGM uses **DeepSeek Harness (headless) with DeepSeek-V4.1-Flash** to edit Loop, then HarnessGrad scores the candidate on the same questions. [Set up the two agents and GSM8K](docs/getting-started.md#run-the-readme-experiment).
+
+```bash
+harnessgrad run --preset gsm8k-dgm-study
+```
+
+Open `runs/gsm8k-dgm-study/end-summary.md` to compare the two rounds. For a repeat run, add `--run-id` with a new name.
+
 ### 🔬 From a question to an experiment
 
 **Choose a harness → Select an RSI method → Run tasks → Inspect the evidence.** Use the same recorded conditions when comparing results, then explore the learning curve, versions and task trajectories in the Console.
+
+<p align="center"><img src=".github/assets/learning-loop.svg" width="720" alt="Learning loop: tasks lead to feedback, editing the harness and evaluation, which returns to tasks."></p>
 
 <a id="what-you-can-run"></a>
 
@@ -136,31 +186,6 @@ See [downloads](DOWNLOADS.md) for preparation and locations, and [datasets](DATA
 > [!TIP]
 > New to HarnessGrad? The [first-use guide](docs/getting-started.md) includes an installation control that does not need a model call or dataset download.
 
-<a id="quick-start"></a>
-
-### 🚀 Quick start
-
-Prepare Loop and GSM8K, then configure your OpenAI-compatible solver and editor endpoints. Replace the placeholders below and use a fresh run ID for each experiment. See the [experiment guide](docs/rsi-experiments.md) for details.
-
-```bash
-# The provided configuration uses GSM8K.
-python tools/configure_harness.py --harness base_harness/loop --fetch
-python tools/datasets.py --fetch --dataset gsm8k
-python tools/prepare_dataset.py --dataset gsm8k
-python tools/datasets.py --check --dataset gsm8k
-export HG_AGENT_BACKEND=openai
-export HG_AGENT_BASE_URL='YOUR_SOLVER_ENDPOINT_URL'
-export HG_AGENT_MODEL='YOUR_SOLVER_MODEL_NAME'
-export HG_AGENT_API_KEY='YOUR_SOLVER_API_KEY'
-export HG_METHOD_BASE_URL='YOUR_EDITOR_ENDPOINT_URL'
-export HG_METHOD_MODEL='YOUR_EDITOR_MODEL_NAME'
-export HG_METHOD_API_KEY='YOUR_EDITOR_API_KEY'
-HG_QUICKSTART_ID="dgm-$(python -c 'import uuid; print(uuid.uuid4().hex[:12])')"
-harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --check-only --check-net
-harnessgrad run --config experiments/method-dgm.json --run-id "$HG_QUICKSTART_ID" --fail-on-incomplete
-python tools/analysis/run_summary.py "runs/$HG_QUICKSTART_ID"
-```
-
 <a id="the-workbench"></a>
 
 ### 🖥️ Experiment workbench
@@ -202,10 +227,24 @@ Want to join? [Bring a harness](docs/bring-your-own-harness.md), [add a method](
 
 </details>
 
-<a id="customize-harness"></a>
-
 <details>
 <summary><strong>🛠️ Customize a harness</strong> — build for a model, environment or task</summary>
+
+<a id="customize-harness"></a>
+
+<p align="center"><a href=".github/assets/showcase/ocean.gif"><img src=".github/assets/showcase/ocean.gif" alt="Ocean Harness assembles research evidence and returns a sourced answer" width="800"></a></p>
+
+Ocean Harness is one example built with HarnessGrad. It combines domain sources, research tools, and an answer workflow to answer ocean questions with citations. Build a harness for your own domain using the workflow below.
+
+<a id="customize-installation"></a>
+
+### 📦 Installation
+
+Use Python 3.12+ and install from the HarnessGrad checkout. For model-generated edits, configure an editor endpoint in the [customization guide](docs/customization.md).
+
+```bash
+python -m pip install .
+```
 
 <a id="customize-current"></a>
 
@@ -246,22 +285,39 @@ The same Console used to inspect experiments also provides a workspace for editi
 
 </details>
 
+<details>
+<summary><strong>🌱 Evolve your harness</strong> — turn feedback into improvements to your own harness</summary>
+
 <a id="evolve-personal-harness"></a>
 
-<details>
-<summary><strong>🌱 Evolve your personal harness</strong></summary>
+<p align="center"><a href=".github/assets/showcase/xiaolv.gif"><img src=".github/assets/showcase/xiaolv.gif" alt="Xiao Lü demonstrates turning personal feedback into a proposed change" width="760"></a></p>
 
-Explore the [harness evolution protocol](docs/harness-evolution-protocol.md) and its approach to evaluating candidate improvements.
+Xiao Lü is one example of personal Harness evolution built with HarnessGrad. The desktop assistant shows how a correction from a session can become a scoped change proposal for review.
+
+<a id="personal-installation"></a>
+
+### 📦 Installation
+
+Use Python 3.12+ and install from the HarnessGrad checkout. To build the native desktop shell, follow the [desktop setup guide](desktop/personal/README.md).
+
+```bash
+python -m pip install .
+```
+
+<a id="personal-quick-start"></a>
+
+### 🚀 Quick start
+
+Open the local personal workspace with a synthetic session. Choose an existing project directory and a separate state directory outside the checkout and project.
+
+```bash
+harnessgrad personal demo --state-root /path/to/state --project /path/to/project
+harnessgrad personal serve --state-root /path/to/state
+```
+
+Open the printed local URL and select the service's `connection.json` in the browser. This example previews the workspace without model calls. For the desktop workflow shown above, see the [personal evolution guide](docs/personal-evolution.md) and the [proposal preview in PR #64](https://github.com/zjunlp/HarnessGrad/pull/64).
 
 </details>
-
-<a id="shared-foundation"></a>
-
-## 🧩 Shared foundation
-
-**One workbench for harness experiments and editing.** HarnessGrad provides harness adapters, improvement methods, candidate versions and evidence records. The Console brings experiment inspection and candidate editing together.
-
-**Reusable improvement building blocks.** Shared proposal stages turn selected feedback into skill, memory and instruction candidates. Experiment workflows retain their measurement and selection rules; customization workflows choose their own inputs and review changes. See the [shared foundation](docs/shared-foundation.md) for the interfaces and an offline example.
 
 <a id="citation"></a>
 
@@ -305,13 +361,6 @@ If the platform, the measurement protocol or a curve produced here is useful in 
           <img src="https://avatars.githubusercontent.com/u/236323912?v=4&s=200" width="80" style="border-radius:50%" alt="PenguinHarness"/>
           <br />
           <sub><b>PenguinHarness</b></sub>
-        </a>
-      </td>
-      <td align="center" width="150">
-        <a href="https://github.com/quqxui/RSI-Flow">
-          <img src="https://avatars.githubusercontent.com/u/41822324?v=4&s=200" width="80" style="border-radius:50%" alt="RSI-Flow"/>
-          <br />
-          <sub><b>RSI-Flow</b></sub>
         </a>
       </td>
     </tr>

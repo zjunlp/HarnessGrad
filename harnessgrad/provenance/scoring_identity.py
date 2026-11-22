@@ -82,3 +82,19 @@ def require_same(reference, current):
     errors = problems(reference, current)
     if errors:
         raise ValueError("; ".join(errors))
+
+
+def content_key(value):
+    """Retain every unrecognized adapter field in the v1 content comparison."""
+    if value is None:
+        return None
+    profile = dict(validate(value)["profile"])
+    if "endpoint_sha256" in profile:
+        # A route alone is not evidence about the judge that actually served it.
+        judge = profile.get("judge")
+        if (not isinstance(judge, dict) or not isinstance(judge.get("weights_sha256"), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", judge["weights_sha256"])
+                or not isinstance(judge.get("decoding"), dict) or not judge["decoding"]):
+            raise ValueError("judge endpoint portability requires pinned judge weights and decoding")
+        del profile["endpoint_sha256"]
+    return create(profile)

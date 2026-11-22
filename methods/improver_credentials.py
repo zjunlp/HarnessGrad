@@ -9,7 +9,6 @@ import os
 from pathlib import Path
 import stat
 import subprocess
-import tomllib
 
 from improver_archive import ArchiveFailure, _directory
 
@@ -206,13 +205,19 @@ def seeded_credentials(workspace, style, runtime):
             if store is not None:
                 values.extend(_codex_values(store))
             if config is not None:
-                values.extend(_config_values(tomllib.loads(config.decode('utf-8'))))
+                # The launcher itself writes this exact, secret-free default.
+                # It is safe to recognize without a parser in a sandbox whose
+                # system Python is older than the driver's Python 3.12. Any
+                # other TOML still requires a parser and fails closed if absent.
+                if config != b'\nresponses_experimental_transport = "https"\n':
+                    import tomllib
+                    values.extend(_config_values(tomllib.loads(config.decode('utf-8'))))
         for value in list(values):
             if value.lower().startswith(('bearer ','basic ')):
                 values.append(value.split(' ',1)[1].strip())
         for value in values:
             value.encode('utf-8')  # unsupported surrogate escapes fail before execution
         return sorted({value for value in values if value},key=len,reverse=True)
-    except (OSError, ValueError, TypeError, UnicodeError, RecursionError, OverflowError,
+    except (OSError, ValueError, TypeError, UnicodeError, RecursionError, OverflowError, ImportError,
             subprocess.SubprocessError):
         raise ArchiveFailure('Cannot safely interpret seeded improver credentials') from None

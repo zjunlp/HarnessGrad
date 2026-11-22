@@ -15,9 +15,12 @@ def test_launch_method_options(language, default):
     requests = []
     methods = [{'name': n, 'title': 'DO NOT DISPLAY description'} for n in
                ['a', 'gepa', 'b', 'echo_base', 'noop', 'A', 'future_<"&']]
+    next(row for row in methods if row["name"] == "noop")["self_contained"] = True
     fixture = {'datasets': [{'name': 'fixture'}], 'harnesses': ['loop'],
-               'improvers': [{'name': 'fixture'}], 'methods': methods,
-               'defaults': {'method': default}}
+               'improvers': [{'name': 'dsh', 'kind': 'cli', 'model': 'deepseek-flash'},
+                             {'name': 'other-cli', 'kind': 'cli', 'model': 'other-model'},
+                             {'name': 'raw', 'kind': 'openai-compatible'}],
+               'methods': methods, 'defaults': {'method': default, 'improver': 'dsh'}}
     with playwright.sync_playwright() as p:
         try:
             browser = p.chromium.launch()
@@ -61,6 +64,18 @@ def test_launch_method_options(language, default):
         page.wait_for_function("() => document.querySelector('#f-method').value === 'future_<\"&'")
         page.wait_for_timeout(100)
         assert previews[-1]['method'] == 'future_<"&'
+        picker = page.locator('#f-improver')
+        assert picker.input_value() == 'dsh'
+        assert picker.locator('option').evaluate_all('(els) => els.map(e => e.value)') == ['dsh', 'other-cli']
+        assert page.locator('#f-improver-model').get_attribute('placeholder') == 'deepseek-flash'
+        assert not page.locator('#f-meta-base-url, #f-meta-api-key').count()
+        picker.select_option('other-cli')
+        page.wait_for_function("() => document.querySelector('#f-improver-model').placeholder === 'other-model'")
+        page.locator('#f-method').select_option('noop')
+        picker.select_option('none')
+        assert page.locator('#f-improver-model').is_disabled()
+        page.locator('#f-method').select_option('gepa')
+        assert picker.input_value() == 'dsh'
         page.locator('#f-task-base-url').fill('https://user:secret@host.invalid/pathsecret?token=querysecret')
         page.wait_for_function("() => document.querySelector('#f-task-base-url').value.includes('querysecret')")
         page.wait_for_timeout(100)

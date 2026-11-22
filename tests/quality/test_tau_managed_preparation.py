@@ -11,6 +11,18 @@ from harnessgrad.datasets import runtime as dataset_runtime
 from tools import _tau_prepare as control
 
 
+def test_worker_diagnostics_with_invalid_utf8_are_preserved(tmp_path, monkeypatch):
+    worker = tmp_path / 'worker.py'
+    worker.write_text("import json,sys\nsys.stderr.buffer.write(b'bad: \\xff')\n"
+                      "print(json.dumps({'source_identity': {}, 'runtime_id': 'fixture'}))\n")
+    monkeypatch.setattr(control, 'verify_sources', lambda identity: None)
+    monkeypatch.setattr(dataset_runtime, 'admit_binding', lambda *a, **k: None)
+    request = {'binding': {'python': sys.executable, 'runtime_id': 'fixture'},
+               'source_identity': {}, 'attempt_path': str(tmp_path / 'attempt.json')}
+    assert control.launch(request, program=worker)['source_identity'] == {}
+    assert (tmp_path / 'worker-stderr.txt').read_text() == 'bad: \ufffd'
+
+
 def test_worker_admits_before_loading_source_and_checks_exact_python(monkeypatch):
     loaded = []
     request = {'dataset': 'tau2_bench', 'operation': 'prepare', 'options': {},

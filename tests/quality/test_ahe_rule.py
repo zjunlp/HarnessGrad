@@ -2,8 +2,8 @@
 
 Upstream evolve.py:3715-3758 supplies variant strategy hints, :3857-3875 runs
 them concurrently, :3313-3336 selects by pass rate / exceptions / index, and
-:3185-3223 adopts only the winner and its manifest. Mode A delegates selection
-to the platform; these controls exercise submission without a model or dataset.
+:3185-3223 adopts only the winner and its manifest. Mode A currently carries the
+last candidate by default; these controls exercise submission without a model or dataset.
 """
 from __future__ import annotations
 
@@ -91,7 +91,7 @@ def test_one_call_submits_two_distinct_variants(tmp_path, monkeypatch):
         assert reported["ahe_manifest"]["changes"][0]["id"] == f"chg-{variant}"
         assert "ahe_attribution" in reported
         assert reported["ahe_rollouts"]["submitted"] == 2
-        assert reported["ahe_rollouts"]["winner_selection"] == "platform_train_score"
+        assert reported["ahe_rollouts"]["winner_selection"] == "not_implemented_last_candidate_default"
         candidate = Path(step["harness_dir"])
         assert (candidate / "agent.py").read_text() == f"print('variant {variant}')\n"
         assert (candidate / f"variant_{variant}.py").exists()

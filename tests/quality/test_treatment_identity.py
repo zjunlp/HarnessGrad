@@ -145,7 +145,8 @@ def test_early_treatment_capture_reads_resume_before_binding_improver(monkeypatc
         events.append(('compare', before, after, declared, early))
     monkeypatch.setattr(treatment_workflow.treatment_identity, 'capture', capture)
     monkeypatch.setattr(treatment_workflow.treatment_identity, 'require_same', require_same)
-    assert treatment_workflow.capture_start(args, environment=environment, read_metadata=read_metadata) == (
+    metadata = treatment_workflow.read_start_metadata(args, read_metadata=read_metadata)
+    assert treatment_workflow.capture_start(args, environment=environment, metadata=metadata) == (
         captured, saved, True)
     assert events == [
         ('read', tmp_path / 'h-demo-all-munified'),

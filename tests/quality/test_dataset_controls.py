@@ -26,6 +26,7 @@ arms against a generated scaffold, so the pattern itself stays proven.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -284,6 +285,39 @@ def _provisioned(name: str) -> bool:
         return False
 
 
+def _require_control_runtime(name: str) -> None:
+    """Distinguish absent optional runtimes from broken configured runtimes."""
+    if name == 'appworld' and not os.environ.get('AW_PYTHON'):
+        pytest.skip('AppWorld local control requires an explicitly configured AW_PYTHON')
+    if name == 'alfworld':
+        from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable, resolve_execution
+        try:
+            resolve_execution('alfworld')
+        except DatasetRuntimeUnavailable as exc:
+            if exc.status == 'unavailable':
+                pytest.skip('ALFWorld control requires its prepared native execution runtime')
+            pytest.fail(f'ALFWorld execution runtime is configured but invalid: {exc}')
+
+
+def test_control_runtime_preconditions_distinguish_missing_and_invalid(monkeypatch):
+    from harnessgrad.datasets import runtime as dataset_runtime
+    monkeypatch.delenv('AW_PYTHON', raising=False)
+    with pytest.raises(pytest.skip.Exception, match='AW_PYTHON'):
+        _require_control_runtime('appworld')
+    monkeypatch.setenv('AW_PYTHON', '/configured/python')
+    _require_control_runtime('appworld')  # The control itself validates the configured interpreter.
+    def unavailable(name):
+        raise dataset_runtime.DatasetRuntimeUnavailable('missing', status='unavailable')
+    monkeypatch.setattr(dataset_runtime, 'resolve_execution', unavailable)
+    with pytest.raises(pytest.skip.Exception, match='prepared native execution runtime'):
+        _require_control_runtime('alfworld')
+    def invalid(name):
+        raise dataset_runtime.DatasetRuntimeUnavailable('corrupt', status='invalid')
+    monkeypatch.setattr(dataset_runtime, 'resolve_execution', invalid)
+    with pytest.raises(pytest.fail.Exception, match='configured but invalid'):
+        _require_control_runtime('alfworld')
+
+
 def test_every_published_dataset_has_a_row():
     """The table must be total: a new dataset cannot be added without declaring its shape."""
     published = set(registry.published())
@@ -337,6 +371,7 @@ def test_the_control_reaches_one_and_the_noop_reaches_zero(name):
     """Gates 1 and 2, by hand. Measured 0.5-9.3 s per dataset, ~40 s for all of them."""
     if not _provisioned(name):
         pytest.skip(f"{name}: not provisioned on this machine")
+    _require_control_runtime(name)
     argv = ROWS[name]["control"]
     if ROWS[name].get("requires_judge"):
         from harnessgrad.config import current

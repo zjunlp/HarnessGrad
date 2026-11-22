@@ -336,18 +336,16 @@ def _history(ms, path=None, cfg=None):
     return rows
 
 
-def schema(prompt, base, **kwargs):
-    # This role requests structured content, not a checkout edit. A CLI improver's
-    # output-to-edit conversion cannot represent it, so use the declared endpoint.
-    # Scope-specific prompt/file contents and staged feedback are explicitly supplied
-    # by each role; do not inject the entire runtime into a one-file prompt edit.
+def schema(prompt, base):
+    # The stage projects its own inputs into the prompt. Use the run's CLI
+    # identity while keeping the parent tree and full evidence out of this turn.
     return editor.ask(
         prompt,
         system="Return ONLY the requested JSON object. Never execute tasks, inspect private graders, invent measurements, or include reference answers.",
-        base=None,
-        endpoint_only=True,
+        base=base,
+        structured_cli=True,
+        evidence_channel=False,
         skill=False,
-        **kwargs,
     )
 
 

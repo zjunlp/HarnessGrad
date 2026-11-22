@@ -143,13 +143,13 @@ def test_outer_runner_threads_distinct_trials_and_refuses_stale_cache(tmp_path, 
         "p=argparse.ArgumentParser();p.add_argument('--task');p.add_argument('--workdir')\n"
         "a=p.parse_args();pathlib.Path(a.workdir,'answer.txt').write_text('correct')\n")
     cache = {}
-    first = runner._evaluate(repo, [dict(task_id="t")], {}, run_id="first-run", trials=2,
+    first = runner._evaluate(repo, [dict(task_id="t", goal="offline verification")], {}, run_id="first-run", trials=2,
         round_no=2, harness_sha="revision-a", verifiers={"t": scorer}, cache=cache, sandbox=False)
     assert first["per_task"] == {"t": 1.0}
     ids = [v["scorer_isolation_evidence"]["execution_binding"] for v in first["trial_verdicts"]["t"]]
     assert [b["trial_id"] for b in ids] == ["round-2.harness-revision-a.trial-1", "round-2.harness-revision-a.trial-2"]
     assert all(b["outer_run_id"] == "first-run" for b in ids)
-    second = runner._evaluate(repo, [dict(task_id="t")], {}, run_id="second-run", trials=2,
+    second = runner._evaluate(repo, [dict(task_id="t", goal="offline verification")], {}, run_id="second-run", trials=2,
         round_no=2, harness_sha="revision-a", verifiers={"t": scorer}, cache=copy.deepcopy(cache), sandbox=False)
     assert second["per_task"] == {} and "binding" in json.dumps(second["invalid"])
 

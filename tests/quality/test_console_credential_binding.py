@@ -30,23 +30,19 @@ def console(tmp_path, monkeypatch):
 
 def form(**kwargs):
     return {"dataset": "demo", "harness": "loop", "task_model": "synthetic",
-            "improver": "noop", "improver_model": "editor", "rounds": 1,
+            "improver": "authored-cli", "improver_model": "editor", "rounds": 1,
             "jobs": 1, "trials": 1, **kwargs}
 
 
-@pytest.mark.parametrize("side,prefix,url_field,key_field", [
-    ("task", "HG_AGENT", "task_base_url", "task_api_key"),
-    ("meta", "HG_METHOD", "meta_base_url", "meta_api_key"),
-])
-def test_launch_env_binds_saved_key_to_exact_saved_url(console, side, prefix, url_field, key_field):
+def test_launch_env_binds_saved_solver_key_to_exact_saved_url(console):
     def env(url, key=""):
-        return console.launch_env(form(**{url_field: url, key_field: key}))
+        return console.launch_env(form(task_base_url=url, task_api_key=key))
 
-    assert env(SAVED)[prefix + "_API_KEY"] == f"saved-{side}"
-    assert env(OTHER)[prefix + "_BASE_URL"] == OTHER
-    assert env(OTHER)[prefix + "_API_KEY"] == ""
-    assert env(OTHER, "explicit-key")[prefix + "_API_KEY"] == "explicit-key"
-    assert env(SAVED + "/")[prefix + "_API_KEY"] == ""
+    assert env(SAVED)["HG_AGENT_API_KEY"] == "saved-task"
+    assert env(OTHER)["HG_AGENT_BASE_URL"] == OTHER
+    assert env(OTHER)["HG_AGENT_API_KEY"] == ""
+    assert env(OTHER, "explicit-key")["HG_AGENT_API_KEY"] == "explicit-key"
+    assert env(SAVED + "/")["HG_AGENT_API_KEY"] == ""
 
 
 def test_launch_env_defaults_task_but_mock_clears_task_credentials(console):
@@ -71,34 +67,28 @@ def ready(console, tmp_path, monkeypatch):
     monkeypatch.setattr(console, "sandbox_supported", lambda: SimpleNamespace(ok=True, detail="fixture"))
     monkeypatch.setattr(console, "adapters", lambda: [{"name": "demo"}])
     monkeypatch.setattr(console, "base_harnesses", lambda: ["loop"])
-    monkeypatch.setattr(console, "improvers", lambda: [{"name": "noop", "kind": "cli", "model": ""}])
+    monkeypatch.setattr(console, "improvers", lambda: [{"name": "authored-cli", "kind": "cli", "model": ""}])
     return console
 
 
-@pytest.mark.parametrize("side", ["task", "meta"])
-def test_guard_pending_flags_only_satisfy_their_own_missing_key(ready, side):
-    values = {"task_base_url": OTHER} if side == "task" else {"meta_base_url": OTHER}
-    launch = form(**values)
-    assert ready.guard_launch(launch)[1]["error"] == f"no-{side}-key"
-    wrong = {"preview_meta_key_pending": True} if side == "task" else {"preview_key_pending": True}
-    assert ready.guard_launch(launch, **wrong)[1]["error"] == f"no-{side}-key"
-    right = {"preview_key_pending": True} if side == "task" else {"preview_meta_key_pending": True}
-    assert ready.guard_launch(launch, **right) == (200, {})
+def test_guard_pending_solver_key_is_preview_only(ready):
+    launch = form(task_base_url=OTHER)
+    assert ready.guard_launch(launch)[1]["error"] == "no-task-key"
+    assert ready.guard_launch(launch, preview_meta_key_pending=True)[1]["error"] == "no-task-key"
+    assert ready.guard_launch(launch, preview_key_pending=True) == (200, {})
 
 
-@pytest.mark.parametrize("side", ["task", "meta"])
-def test_preview_flags_never_send_or_reveal_keys_and_post_guard_rechecks(ready, side):
-    launch = form(**{f"{side}_base_url": OTHER, f"{side}_api_key": "supplied-secret",
-                     f"{side}_key_present": "true"})
+def test_preview_flags_never_reveal_keys_and_post_guard_rechecks(ready):
+    launch = form(task_base_url=OTHER, task_api_key="supplied-secret", task_key_present="true")
     payload = ready.launch_preview(launch)
     assert payload["preflight"]["ok"] is True
-    assert f"{side}_api_key" not in payload["form"]
+    assert "task_api_key" not in payload["form"]
     assert "supplied-secret" not in repr(payload)
     assert "saved-task" not in repr(payload) and "saved-meta" not in repr(payload)
-    del launch[f"{side}_api_key"]
-    assert ready.guard_launch(launch)[1]["error"] == f"no-{side}-key"
-    launch[f"{side}_key_present"] = "false"
-    assert ready.launch_preview(launch)["preflight"]["error"] == f"no-{side}-key"
+    del launch["task_api_key"]
+    assert ready.guard_launch(launch)[1]["error"] == "no-task-key"
+    launch["task_key_present"] = "false"
+    assert ready.launch_preview(launch)["preflight"]["error"] == "no-task-key"
 
 
 @pytest.mark.parametrize("side", ["task", "meta", "assistant"])

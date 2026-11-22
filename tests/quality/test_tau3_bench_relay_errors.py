@@ -16,6 +16,17 @@ if not payload_present:
 from test_tau3_bench_dataset import control_module
 
 
+@pytest.fixture(scope='module', autouse=True)
+def require_execution_runtime():
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
+    try:
+        dataset._execution_runtime()
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip('tau3: prepare the native execution runtime to run relay scoring controls')
+
+
 ACTOR = '''
 import argparse, json, socket, sys
 from pathlib import Path

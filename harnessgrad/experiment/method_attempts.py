@@ -110,6 +110,26 @@ class MethodAttempts:
                 raise ValueError('invalid admitted token allowance')
             return allowance
 
+    def round_usage(self, number):
+        """Return the retained lower bound and coverage for previous attempts."""
+        if type(number) is not int or number < 1:
+            raise ValueError('method attempt requires a positive round')
+        with self._locked() as state:
+            rows = [row for row in state['attempts'] if row.get('round') == number]
+            lower = 0
+            complete = True
+            for row in rows:
+                total = row.get('observed_total_tokens')
+                observed_lower = row.get('observed_total_tokens_lower_bound')
+                if type(total) is int and total >= 0:
+                    lower += total
+                else:
+                    complete = False
+                    if type(observed_lower) is int and observed_lower >= 0:
+                        lower += observed_lower
+            return {'generation_tokens_lower_bound': lower, 'complete': complete,
+                    'attempt_count': len(rows)}
+
     def finish(self, attempt, reply):
         usage = reply.get('method_usage') if isinstance(reply, dict) else None
         usage = usage if isinstance(usage, dict) else None

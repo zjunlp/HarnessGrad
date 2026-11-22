@@ -46,6 +46,16 @@ def test_cli_launch_has_owned_dependencies_and_public_selftest(tmp_path, monkeyp
     assert not result["changed"]
 
 
+def test_python_candidate_skips_bun_dependency_staging(tmp_path):
+    from methods.bun_workspace import stage_candidate
+    (tmp_path / "harness.json").write_text(json.dumps({"runtime": {
+        "kind": "python", "python": "3.12", "requirements": "requirements.lock"}}))
+    assert stage_candidate(tmp_path, None) is None
+    assert not (tmp_path / ".state").exists()
+    with pytest.raises(ValueError, match="does not match"):
+        stage_candidate(tmp_path, {"kind": "bun"})
+
+
 def test_declared_bun_candidate_without_preparation_cannot_launch(tmp_path, monkeypatch):
     parent = harness(tmp_path)
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: pytest.fail("CLI launched without dependencies"))
@@ -143,17 +153,20 @@ def test_editor_cli_bridge_reuses_runtime_for_source_only_archive_parent(tmp_pat
     parent = tmp_path / "archive-parent"
     copy_harness(base, parent)
     (parent / "engine/app/main.ts").write_text("export const n = 42")
-    seen = []
-    def run(argv, **kw):
-        if argv[0] != "git":
-            candidate = Path(kw["cwd"])
-            assert (candidate / "engine/node_modules/sample/index.js").is_file()
-            assert "42" in (candidate / "engine/app/main.ts").read_text()
-            seen.append(argv)
-        return subprocess.CompletedProcess(argv, 0, "", "")
-    monkeypatch.setattr(bridge.subprocess, "run", run)
-    monkeypatch.setattr(bridge, "_improver_command", lambda req: ["local-probe"])
+    receipt_path = tmp_path / "observed.json"
+    command = tmp_path / "probe.py"
+    command.write_text("""import json, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(json.dumps({
+    "package": Path("engine/node_modules/sample/index.js").is_file(),
+    "source": Path("engine/app/main.ts").read_text(),
+}))
+""")
+    monkeypatch.setattr(bridge, "_improver_command",
+                        lambda req: [sys.executable, str(command), str(receipt_path)])
+    monkeypatch.setattr(editor, "_method_workspace", lambda: tmp_path)
     monkeypatch.setitem(sys.modules, "openai", None)
     monkeypatch.setattr(editor, "cli_improver_identity", lambda _: {"kind":"cli", "argv_style":"codex"})
-    editor.ask("offline only", base=base, parent=parent)
-    assert seen and not calls
+    editor.ask("offline only", base=base, parent=parent, evidence_channel=False)
+    assert json.loads(receipt_path.read_text()) == {"package": True, "source": "export const n = 42"}
+    assert not calls

@@ -175,17 +175,14 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     read `HG_AGENT_API_KEY` can spend the agent's quota, and -- worse for this
     platform -- can answer the eval tasks itself.
 
-    When the run resolved an improver that *is* an endpoint (`--improver deepseek`),
-    the endpoint and the model are written in here. A method reaches a chat model through
-    `HG_METHOD_BASE_URL` / `HG_METHOD_MODEL` (`methods/editor.py`), so a named improver
-    that only lived in the registry would leave the record saying `deepseek` while the
-    method called whatever `.env` happened to hold. That is the same failure as a harness
-    misreporting its model, and it is fixed the same way: the platform states the fact
-    where the consumer reads it.
+    A CLI may itself use a configured remote provider. Forward the selected
+    CLI's connection settings only to that method's environment.
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith("HG_AGENT_")}
     endpoint = (improver or {}).get("base_url")
     if endpoint:
+        if improver.get("kind") != "cli":
+            raise ValueError("experiment editing requires a CLI Meta-Harness")
         env["HG_METHOD_BASE_URL"] = str(endpoint)
         if (improver or {}).get("model"):
             env["HG_METHOD_MODEL"] = str(improver["model"])
@@ -199,6 +196,8 @@ def _method_env(work: Path, improver: dict | None = None) -> dict:
     # exported by the tool environment, inherited by the driver and by every method, and it
     # decided which settings file the improver read -- measured, the operator's, complete
     # with `llm-pi-ai` providers nobody chose for it.
+    if (improver or {}).get("kind") == "cli" and improver.get("model"):
+        env["HG_IMPROVER_MODEL"] = str(improver["model"])
     if (improver or {}).get("home"):
         env["HG_IMPROVER_DSH_HOME"] = str(improver["home"])
     if (improver or {}).get("argv_style") == "dsh":
@@ -299,7 +298,8 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
                  cwd: Path | None = None, readonly: tuple[Path, ...] = (),
                  runtime: tuple[str, ...] = (),
                  improver: dict | None = None,
-                 rejected_candidate: bool = False) -> dict:
+                 rejected_candidate: bool = False,
+                 admission_receipt: Path | None = None) -> dict:
     """Invoke a method with the platform's own files checked before and after.
 
     Detection, not prevention: a method runs as an ordinary subprocess with the
@@ -307,6 +307,20 @@ def _call_method(work: Path, argv: list[str], request: dict, timeout_s: int,
     What this does is refuse a content mismatch. The snapshots do not identify
     its writer: concurrent user edits and untracked artifacts can also cause it.
     """
+    night_only = os.environ.get('HG_TRAIN_NIGHT_ONLY', '0')
+    if night_only not in {'0', '1'}:
+        raise ValueError('HG_TRAIN_NIGHT_ONLY must be 0 or 1')
+    if night_only == '1':
+        from harnessgrad.training_window import wait_for_admission
+        if admission_receipt is None:
+            raise ValueError('night-only method calls require a separate admission receipt')
+        receipt_path = Path(admission_receipt)
+        if receipt_path.is_symlink():
+            raise ValueError('training window receipt cannot be a symlink')
+        receipt = receipt_path.resolve()
+        if receipt.is_relative_to(Path(work).resolve()):
+            raise ValueError('training window receipt cannot be inside the Harness workspace')
+        wait_for_admission(timeout_s, receipt)
     before = snapshot(PLATFORM_ROOT)
     reply = _call_entrypoint(work, argv, request, timeout_s=timeout_s,
                              sandboxed=sandboxed, scratch=scratch, cwd=cwd,

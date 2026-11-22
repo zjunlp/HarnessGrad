@@ -23,6 +23,7 @@ import json
 import os
 import subprocess
 import sys
+import shutil
 from pathlib import Path
 
 import pytest
@@ -32,6 +33,17 @@ sys.path.insert(0, str(ROOT))
 
 import eval.observe.progress as progress                                    # noqa: E402
 from eval.observe.console import Console                                    # noqa: E402
+
+
+def _offline_mock_loop(tmp_path: Path) -> Path:
+    """Use real Loop source with its mock backend and no unused network dependencies."""
+    target = tmp_path / 'offline-loop'
+    shutil.copytree(ROOT / 'base_harness/loop', target)
+    manifest = json.loads((target / 'harness.json').read_text())
+    manifest.pop('runtime', None)
+    manifest.pop('install', None)
+    (target / 'harness.json').write_text(json.dumps(manifest))
+    return target
 
 
 def _events(tmp_path: Path):
@@ -215,9 +227,10 @@ def test_a_real_run_narrates_its_tasks_inside_the_round(tmp_path):
     实测就是这样:方法调用的 phase 进了事件流,四道真题一条 task 事件都没有。
     """
     runs = tmp_path / "runs"
+    loop = _offline_mock_loop(tmp_path)
     env = {**os.environ, "HG_AGENT_BACKEND": "mock", progress.ENV_BEAT_S: "0.2"}
     proc = subprocess.run(
-        [sys.executable, "driver.py", "--harness", "loop", "--mode", "A",
+        [sys.executable, "driver.py", "--harness-path", str(loop), "--mode", "A",
          "--rounds", "1", "--run-id", "progress-check", "--dataset", "demo",
          "--sampling", "all", "--runs-root", str(runs),
          "--work-root", str(tmp_path / "work"),
@@ -277,9 +290,10 @@ def test_each_rounds_task_phases_carry_their_own_round_number(tmp_path):
     读的就是这份记录。
     """
     runs = tmp_path / "runs"
+    loop = _offline_mock_loop(tmp_path)
     env = {**os.environ, "HG_AGENT_BACKEND": "mock", progress.ENV_BEAT_S: "30"}
     proc = subprocess.run(
-        [sys.executable, "driver.py", "--harness", "loop", "--mode", "A",
+        [sys.executable, "driver.py", "--harness-path", str(loop), "--mode", "A",
          "--rounds", "2", "--run-id", "round-labels", "--dataset", "demo",
          "--sampling", "all", "--runs-root", str(runs),
          "--work-root", str(tmp_path / "work"),

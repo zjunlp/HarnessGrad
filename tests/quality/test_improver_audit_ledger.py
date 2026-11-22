@@ -63,8 +63,11 @@ def test_per_call_allowlist_coverage_and_aggregate_compatibility(tmp_path, monke
     # An incomplete canonical observation is unknown; independently retained
     # numeric lower bounds remain useful without claiming a complete bill.
     assert ledger['canonical_usage_aggregate'] is None
-    for field in ('input', 'output', 'cache_read'):
-        assert ledger['reported_usage_lower_bounds'][field] == sum(r[field] for r in records if r[field] is not None)
+    # The second call did not report a cache split: its prompt cannot safely be
+    # counted as fresh input, although its raw value remains in the record.
+    assert ledger['reported_usage_lower_bounds']['input'] == 12
+    assert ledger['reported_usage_lower_bounds']['output'] == 3
+    assert ledger['reported_usage_lower_bounds']['cache_read'] == 2
     assert ledger['reported_usage_lower_bounds']['calls'] == sum(r['status'] == 'parsed' for r in records)
 
 

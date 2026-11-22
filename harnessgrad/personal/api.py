@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from importlib import resources
 import json
 import os
 from pathlib import Path
@@ -13,6 +12,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 
+from harnessgrad import PLATFORM_ROOT
 from harnessgrad.personal.contracts import MAX_BYTES, decode, encode
 from harnessgrad.personal.fixtures import example
 from harnessgrad.personal.event_store import DraftConflict
@@ -26,6 +26,7 @@ ASSETS = {'/': ('personal.html', 'text/html'), '/personal.js': ('personal.js', '
           '/personal-feedback.js': ('personal-feedback.js', 'text/javascript'),
           '/personal-proposal.js': ('personal-proposal.js', 'text/javascript'),
           '/personal.css': ('personal.css', 'text/css'), '/tokens.css': ('tokens.css', 'text/css')}
+ASSET_ROOT = PLATFORM_ROOT / 'console' / 'static'
 
 
 class PersonalServer(ThreadingHTTPServer):
@@ -94,7 +95,7 @@ class Handler(BaseHTTPRequestHandler):
             route = urlsplit(self.path)
             if not mutation and route.path in ASSETS and not route.query:
                 filename, kind = ASSETS[route.path]
-                data = resources.files('console').joinpath('static', filename).read_bytes()
+                data = (ASSET_ROOT / filename).read_bytes()
                 self.reply(200, data, content_type=kind)
                 return
             supplied = self.headers.get('Authorization', '')

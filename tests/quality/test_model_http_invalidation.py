@@ -146,7 +146,7 @@ if mode in ('clean', 'recovered'): (w/'answer.txt').write_text('yes')
     spec = {'kind': 'answer', 'expected': 'yes', 'trial_protocol': PROTOCOL}
     if enabled:
         spec['model_failure_policy'] = POLICY
-    result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': ''}], {}, trials=3, jobs=1,
+    result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': 'offline model failure fixture'}], {}, trials=3, jobs=1,
         envs={'fixture/t': {'kind': 'files', 'network': 'none'}}, verifiers={'fixture/t': spec},
         run_id='fixture', harness_sha='fixture', progress_dir=tmp_path/'run')
     invalid = enabled and mode in ('wrapped', 'swallowed', 'recovered', 'independent', 'pass-before-fault')
@@ -186,7 +186,7 @@ Path('verifier/evidence.json').write_text(json.dumps({'matched': True}))
             'inputs': [{'path': 'check.py', 'content': check}],
             'reward_file': '/verifier/reward.txt', 'evidence_file': '/verifier/evidence.json',
             'trial_protocol': PROTOCOL, 'model_failure_policy': policy, 'trial_evidence': {'version': 1}}
-    result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': ''}], {}, trials=3, jobs=1,
+    result = runner.evaluate(repo, [{'task_id': 'fixture/t', 'goal': 'offline model failure fixture'}], {}, trials=3, jobs=1,
         envs={'fixture/t': {'kind': 'files', 'network': 'none'}}, verifiers={'fixture/t': spec},
         run_id='fixture', harness_sha='fixture', progress_dir=tmp_path/'run')
     report = result['repeated_trials']

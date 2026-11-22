@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -367,19 +368,17 @@ def test_the_derived_interaction_agrees_with_the_declared_one():
         assert row["interaction"] == dataset_classes.EXPECTED_INTERACTION[row["dataset"]], row
 
 
-def test_the_cross_check_actually_fires():
+def test_the_cross_check_actually_fires(monkeypatch):
     """Two sides that can never disagree are one side with extra steps."""
-    original = dict(dataset_classes.EXPECTED_INTERACTION)
-    try:
-        dataset_classes.EXPECTED_INTERACTION["agentdojo"] = "single_shot"
-        with pytest.raises(SystemExit) as excinfo:
-            dataset_classes.classify_all()
-        assert "agentdojo" in str(excinfo.value)
-        assert "agentdojo" in str(excinfo.value)
-    finally:
-        dataset_classes.EXPECTED_INTERACTION.clear()
-        dataset_classes.EXPECTED_INTERACTION.update(original)
-    assert dataset_classes.classify_all()  # restored
+    module = SimpleNamespace(ENV={"task": {"kind": "exec"}},
+                             VERIFY={"task": {"kind": "stub"}},
+                             load=lambda: ([{"task_id": "task"}], None), SPLIT=None)
+    monkeypatch.setattr(registry, "provider", lambda name: None)
+    monkeypatch.setattr(registry, "importlib", SimpleNamespace(import_module=lambda name: module))
+    monkeypatch.setattr(dataset_classes, "_cli_scripts", lambda module, task_id: [])
+    monkeypatch.setitem(dataset_classes.EXPECTED_INTERACTION, "agentdojo", "single_shot")
+    with pytest.raises(SystemExit, match="agentdojo.*closed_loop"):
+        dataset_classes.classify("agentdojo")
 
 
 def test_a_container_environment_is_always_a_closed_loop():
@@ -476,16 +475,23 @@ def test_the_interaction_and_runnable_flags_reach_the_cli():
                           cwd=ROOT, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stderr[-400:]
     rows = json.loads(proc.stdout)
-    assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
+    assert all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == _declared_closed_loop_here()
 
 
 def test_the_filters_select_what_they_say(classified):
     rows = dataset_classes.select(classified, interaction="closed_loop", runnable_only=True)
-    assert rows and all(row["interaction"] == "closed_loop" and not row["refused"]
+    assert all(row["interaction"] == "closed_loop" and not row["refused"]
                         for row in rows)
     assert {row["dataset"] for row in rows} == _declared_closed_loop_here()
+
+
+def test_interaction_filter_with_runnable_synthetic_rows():
+    rows = [{"interaction": "closed_loop", "refused": False},
+            {"interaction": "single_shot", "refused": False},
+            {"interaction": "closed_loop", "refused": True}]
+    assert dataset_classes.select(rows, interaction="closed_loop", runnable_only=True) == rows[:1]
 
 
 def test_the_demand_surface_and_adversarial_filters_select_what_they_say(classified):

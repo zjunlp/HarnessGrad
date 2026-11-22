@@ -86,7 +86,7 @@ def _invoke(mod, request: dict, monkeypatch, respond):
 
     seen: list[dict] = []
 
-    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False):
+    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, structured_cli=False):
         seen.append({"prompt": prompt, "system": system})
         return respond(prompt, system)
 
@@ -99,57 +99,25 @@ def _invoke(mod, request: dict, monkeypatch, respond):
     return {"stdout": json.loads(out.getvalue() or "{}"), "calls": seen}
 
 
-def test_the_critic_is_never_routed_to_a_cli_improver(tmp_path, monkeypatch):
-    """critic 要的是 `{"verdict": ...}`,而 CLI 改进器给不出 —— 它只会改文件、写一段话。
-
-    实测(`v4-rrsi`,2026-10-05):critic 被送进 codex,codex 去改了 `.gitignore`,把
-    `{"verdict":"accept","reasons":[...]}` 写在**prose**里,`_ask_cli` 于是返回
-    `{"files": [...], "hypothesis": "<那段 prose>"}`;`accept()` 在顶层找不到 `verdict`,
-    重试 3 次,每轮的候选都被这个 critic 拒掉 —— A 形状 arm 三轮**一个候选都没测到**,
-    而曲线上的说法像是"提议太弱"。
-
-    这条测试用真的 `ask` 跑派发:round.json 里放一个 CLI improver,把 `_ask_cli` 换成
-    会抛异常的桩,再把 OpenAI 客户端换掉,断言 critic 仍然走 endpoint。
-    """
+def test_critic_requests_a_verdict_from_the_recorded_meta_harness(tmp_path, monkeypatch):
     import editor
 
-    base = _write_harness(tmp_path / "h")
-    (base / "_harnessgrad" / "round.json").write_text(json.dumps(
-        {"identity": {"improver": {"name": "codex", "kind": "cli",
-                                   "path": "/x/codex.js"}}}))
-
-    def explode_cli(*_a, **_k):
-        raise AssertionError("critic 被送进了 CLI 改进器 —— 它给不出 `verdict`")
-    monkeypatch.setattr(editor, "_ask_cli", explode_cli)
-
-    class _Msg:
-        content = '{"verdict": "accept", "reasons": [], "risk_notes": []}'
-
-    class _Resp:
-        choices = [type("C", (), {"message": _Msg()})()]
-        usage = None
-        model = "stub"
-
-    class _Client:
-        def __init__(self, **_kw):
-            self.chat = type("Chat", (), {
-                "completions": type("Comp", (), {
-                    "create": staticmethod(lambda **_kw: _Resp())})()})()
-
-    def endpoint_client(**kwargs):
-        client = _Client(**kwargs)
-        client.complete = client.chat.completions.create
-        return client
-    monkeypatch.setattr(editor.endpoint_client, "Client", endpoint_client)
-    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://stub/v1")
-    monkeypatch.setenv("HG_METHOD_API_KEY", "stub")
-    monkeypatch.setenv("HG_METHOD_MODEL", "stub-model")
-
     mod = _load()
-    out = mod._critic_review("--- a/agent.py\n+++ b/agent.py\n+print(1)\n",
-                             "a one line change", ["agent.py"], 3, base=base)
-    assert out["verdict"] == "accept", out
-    assert out.get("model_used") is True
+    base = _write_harness(tmp_path / "h")
+    recorded = {"name": "dsh", "kind": "cli", "path": "/authored/dsh"}
+    (base / "_harnessgrad" / "round.json").write_text(json.dumps({"identity": {"improver": recorded}}))
+    diff = "--- a/agent.py\n+++ b/agent.py\n+print(1)\n"
+    calls = []
+    def cli(prompt, tree, parent, improver, *, structured_cli, evidence_channel):
+        assert structured_cli and evidence_channel is False
+        assert tree == parent and list(tree.iterdir()) == []
+        assert diff in prompt and improver == recorded
+        calls.append(True)
+        return {"verdict": "accept", "reasons": [], "risk_notes": []}
+
+    monkeypatch.setattr(mod.editor, "_ask_cli", cli)
+    result = mod._critic_review(diff, "one line change", ["agent.py"], 3, base=base)
+    assert calls == [True] and result["verdict"] == "accept" and result["model_used"]
 
 
 def _point(round_no: int, train: float, *, score: float = 0.0,
@@ -272,7 +240,7 @@ def test_a_stalled_round_with_untried_components_reserves_an_exploration_slot(mo
     # 合规的那次会走到模型 critic,所以这里要打桩,否则测试依赖网络/凭据。
     import editor
     monkeypatch.setattr(editor, "ask", lambda prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True,
-                        parent=None, endpoint_only=False:
+                        parent=None, structured_cli=False:
                         {"verdict": "accept", "reasons": [], "risk_notes": []})
 
     cfg = mod.RRSIConfig()
@@ -300,7 +268,7 @@ def test_the_critic_rejects_a_task_specialized_edit(monkeypatch):
 
     import editor
 
-    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False):
+    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, structured_cli=False):
         assert system == mod.CRITIC_SYSTEM
         return {"verdict": "reject",
                 "reasons": ["task-specialization: hard-codes task t03"]}
@@ -326,7 +294,7 @@ def test_an_unparseable_critic_reply_rejects_rather_than_accepts(monkeypatch):
     import editor
     prompts: list[str] = []
 
-    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, endpoint_only=False):
+    def fake_ask(prompt, system=editor.DEFAULT_SYSTEM, base=None, skill=True, parent=None, structured_cli=False):
         prompts.append(prompt)
         return {"no_change": "???"}
 

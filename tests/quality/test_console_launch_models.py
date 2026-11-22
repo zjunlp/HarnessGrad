@@ -96,9 +96,9 @@ def test_embedded_endpoint_credentials_rejected(setup):
     assert setup.guard_launch(f)[1]['error'] == 'bad-endpoint'
 
 
-def test_cli_improver_keeps_its_transport_separate_from_method_endpoint(setup):
+def test_cli_improver_refuses_a_raw_method_endpoint(setup):
     f = form(improver='dsh', improver_model='meta-model', meta_base_url='https://example.invalid/v1', meta_api_key='meta-secret')
-    assert setup.guard_launch(f) == (200, {})
+    assert setup.guard_launch(f)[1]['error'] == 'editor-endpoint-removed'
     env = setup.launch_env(f)
-    assert env['HG_METHOD_MODEL'] == 'meta-model' and env['HG_METHOD_API_KEY'] == 'meta-secret'
+    assert 'HG_METHOD_MODEL' not in env and 'HG_METHOD_API_KEY' not in env
     assert 'HG_IMPROVER_CONFIG' not in env

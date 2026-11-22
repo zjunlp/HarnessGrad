@@ -1,6 +1,6 @@
 {
-    "_why": "One place that says which improver to use and how it is governed. `default` names an entry below; an entry's `version` is what is resolved: an exact version, `latest` (highest verified on this machine), or an absolute path. Whatever is resolved is reported as an immutable fact (version + sha256) and belongs on every curve point -- `latest` means 'do not pin', never 'do not record'. The `default` is an **endpoint**, not the CLI: an unattended run has to be able to use the default, and a CLI needs a logged-in account, a HOME of its own and a long timeout — measured, making codex the default meant a run resolved a CLI, recorded it in `identity.improver`, and then a method carrying its own editor called whatever `.env` held instead. That is the defect `INTERFACE.md` §4.49.1 records; the decision there is option A, and this line is it.",
-    "default": "deepseek",
+    "_why": "The registry selects the Meta-Harness that edits candidate trees in an experiment. Each run records the selected CLI, resolved version and model. The DSH headless profile is the shipped default.",
+    "default": "dsh",
     "improvers": {
         "codex": {
             "name": "codex",
@@ -39,27 +39,8 @@
             "provider": "deepseek-official",
             "profile": "headless",
             "modified": false,
-            "note": "The harness's own agent CLI as the improver: `dsh --profile headless` runs one agentic task in the candidate tree with read/edit/bash tools, on `deepseek-flash` -- the same model the `deepseek` endpoint improver calls, so the two differ in *agency*, not in model. This is what the endpoint layer cannot do: `methods/editor.py` is one chat completion, so evidence must be inlined and is capped (6 traces, worst-first), while this reads `_harnessgrad/` itself and decides what matters. `argv_style` and `launcher` are how an entry says its CLI is not codex; `runtime` is what the method sandbox must bind; `build_command` identifies the *checkout* rather than the 2 KB launcher, because that repository is live and its build output can change underneath a run. Recorded as `version` on every point, e.g. `0.1.5+cdb43ac4`.\n\n`home` is a dsh home built for this role and nothing else: one provider, one model, no sessions, no third-party providers. It exists because borrowing the operator's `~/.dsh` made \"which model edits the harness\" depend on an ambient `DSH_HOME` that this tool environment happens to export -- inherited by the driver and by every method -- and because that home carries `llm-pi-ai` providers nobody chose for the improver. `methods/cli_improver.py` copies it into the round's workspace (dsh writes sessions under its home and the sandbox binds these trees read-only) and hands the improver a *restricted* environment: `api_key_env` is the one credential it gets, and every other secret-shaped variable is dropped, so \"no forbidden models, no other endpoints\" is a property of what the process holds rather than of it not trying. Configure root/home in a local registry or set HG_DSH_ROOT and HG_IMPROVER_DSH_HOME. HG_DSH_NODE pins Node (otherwise the declared interpreter is resolved once). The resolver expands {root}/{home}, records CLI and Node hashes, and passes the resolved installation to the method.",
+            "note": "The DSH CLI edits the candidate workspace with read, edit and shell tools. The headless profile uses the deepseek-official provider and the deepseek-flash model. HG_DSH_ROOT selects its built checkout and HG_IMPROVER_DSH_HOME its prepared home. The resolver records the CLI version and Node and CLI content hashes. The method receives a copy of the selected home and the credential named by api_key_env.",
             "root": ""
-        },
-        "local": {
-            "name": "local",
-            "kind": "openai-compatible",
-            "version": "",
-            "path": "",
-            "modified": false,
-            "note": "A local model as the improver, through the platform's own chat-completions client (methods/editor.py). Kept as an option, not a default: measured, this vLLM's /v1/responses returns tool calls as <tool_call> TEXT rather than structured function_call items, so a codex-style loop cannot use it. Re-evaluate when a local model is chosen; the plan is to select one specifically for this role."
-        },
-        "deepseek": {
-            "name": "deepseek",
-            "kind": "openai-compatible",
-            "version": "",
-            "path": "",
-            "modified": false,
-            "model": "deepseek-flash",
-            "base_url": "https://api.deepseek.com/v1",
-            "api_key_env": "DEEPSEEK_API_KEY",
-            "note": "A hosted chat-completions provider used as the improver through the platform client (`methods/editor.py`). The default model is `deepseek-flash` (DeepSeek-V4.1-Flash). Use `--improver-model` to select a model served by this endpoint. The platform passes the endpoint and selected model to the method and records them with the run."
         }
     }
 }

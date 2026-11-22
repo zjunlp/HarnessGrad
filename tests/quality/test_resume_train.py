@@ -236,6 +236,51 @@ def test_a_resume_restores_the_base_tree_a_shared_h0_left_behind(tmp_path: Path)
     assert (tmp_path / "work" / "agent.py").read_text() == "print('round 0')\n"
 
 
+@pytest.mark.parametrize("retention", ["directory", "portable"])
+def test_resume_rebuilds_intermediate_parents_before_restoring_last(tmp_path, retention):
+    from shutil import copytree
+    from eval.ckpt.git_state import content_sha, materialize
+    from harnessgrad.core import snapshot
+    from harnessgrad.experiment.channel import _stage_for_method
+
+    run = _run(tmp_path, rounds=(0, 1, 2), platform=None, last_body="print('last')\n")
+    points = [json.loads(line) for line in (run / "curve.jsonl").read_text().splitlines()]
+    source = tmp_path / 'saved-1'
+    sha = points[1]['identity']['harness_sha']
+    if retention == "directory":
+        copytree(source, run / 'state_after_round1')
+    else:
+        snapshot.write(run, 1, source, run_id=run.name, harness_sha=sha)
+    work = tmp_path / "work"
+    _resume_train_state(_args(), run, None, work)
+    parent = tmp_path / "middle-parent"
+    materialize(work, sha, parent)
+    assert (parent / "agent.py").read_text() == "print('round 1')\n"
+    assert content_sha(work) == points[-1]['identity']['harness_sha']
+    assert (work / "agent.py").read_text() == "print('last')\n"
+    _stage_for_method(work, points[-1], {}, history=points, run_dir=run)
+    index = json.loads((work / "_harnessgrad/states/index.json").read_text())
+    assert index["kept"] == ["round-0", "round-1", "round-2"]
+    assert index["missing"] == {}
+
+
+def test_resume_refuses_corrupt_middle_parent_without_publishing(tmp_path):
+    from shutil import copytree
+
+    run = _run(tmp_path, rounds=(0, 1, 2), platform=None, last_body="print('last')\n")
+    state = run / "state_after_round1"
+    copytree(tmp_path / "saved-1", state)
+    (state / "agent.py").write_text("print('wrong parent')\n")
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "sentinel").write_text("original")
+    before = (run / "curve.jsonl").read_bytes()
+    with pytest.raises(ResumeRefused, match="retained round 1 hashes to"):
+        _resume_train_state(_args(), run, None, work)
+    assert (work / "sentinel").read_text() == "original"
+    assert (run / "curve.jsonl").read_bytes() == before
+
+
 def test_a_resume_refuses_when_the_saved_base_is_not_what_the_curve_scored(
         tmp_path: Path) -> None:
     """保存的 base 与曲线上的地址不一致 = 两个状态，不能接着往后记。"""

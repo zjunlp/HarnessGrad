@@ -55,10 +55,10 @@ def test_propose_failure_accounts_once_and_stays_terminal(tmp_path, monkeypatch,
 
 def test_endpoint_total_must_be_explicit_not_sum():
     editor._record_usage(SimpleNamespace(prompt_tokens=12, completion_tokens=3, total_tokens=21), 'fake')
-    assert editor.spent_tokens() == 15
+    assert editor.spent_tokens() is None
     assert editor.method_usage()['total_tokens'] == 21
     editor._record_usage(SimpleNamespace(prompt_tokens=2, completion_tokens=1), 'fake')
-    assert editor.spent_tokens() == 18
+    assert editor.spent_tokens() is None
     assert editor.method_usage()['total_tokens'] is None and not editor.method_usage()['complete']
 
 
@@ -95,7 +95,7 @@ def test_derived_cli_total_cannot_fill_missing_wire_total():
         'usage_evidence': {'source':'pi-ai', 'raw':{'input':12,'output':3},
                            'fields':{'totalTokens':'derived'}}}
     editor._account_cli_observation('dsh-usage ' + json.dumps(line))
-    assert editor.spent_tokens() == 15
+    assert editor.spent_tokens() is None
     assert editor.method_usage()['total_tokens'] is None
     assert not editor.method_usage()['complete']
 
@@ -105,12 +105,12 @@ def test_explicit_raw_cli_total_preserves_inconsistency():
         'usage_evidence': {'source':'pi-ai', 'raw':{'total':21},
                            'fields':{'totalTokens':'observed'}}}
     editor._account_cli_observation('dsh-usage ' + json.dumps(line))
-    assert editor.spent_tokens() == 15
+    assert editor.spent_tokens() is None
     assert editor.method_usage()['total_tokens'] == 21
 
 
 def test_partial_endpoint_is_unknown_with_positive_lower_bound():
     editor._record_usage(SimpleNamespace(prompt_tokens=12, total_tokens=12), 'fake')
     assert editor.spent_tokens() is None
-    assert editor.spent()['input'] == 12
-    assert editor.method_usage()['total_tokens'] is None
+    assert editor.spent()['input'] is None
+    assert editor.method_usage()['total_tokens'] == 12

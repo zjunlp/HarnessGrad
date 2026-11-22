@@ -25,8 +25,8 @@
    "direction": "unknown"
   },
   {
-   "what": "Design is an endpoint JSON call, rather than the upstream trajectory-reading subagent.",
-   "why": "editor.ask(endpoint_only=True) is required for the design schema because the CLI editor returns file edits. Batch design therefore needs the shared method endpoint credentials even when implementation uses a CLI improver. The designer sees the shared editor's inlined source/evidence, frontier and historical rows, without the upstream subagent's autonomous filesystem exploration. Unparseable design replies cause a recorded single-candidate fallback; other call failures remain errors. Shared editor retries and implementation repair calls may add model calls.",
+   "what": "Batch design uses a structured role of the selected CLI Meta-Harness.",
+   "why": "The designer receives the selected source and study evidence, frontier and historical rows. It writes a bounded JSON artifact in a separate role workspace. The same CLI then implements candidates on copies of the selected parent. Unparseable design replies cause a recorded single-candidate fallback; other call failures remain errors. Shared editor retries and implementation repair calls may add model calls.",
    "direction": "weaker"
   }
  ]

@@ -240,8 +240,51 @@ def select_resume_state(request, points, run_dir):
     return last, view
 
 
-def restore_checkpoint_tree(request, run_dir, first_point, last, view, work, ops):
-    """Recreate the base Git object, then overlay and commit the retained last state."""
+def _commit_retained_tree(source, work, message, ops):
+    # Keep the object store while replacing all files from the previous round.
+    for child in list(work.iterdir()):
+        if child.name == ".git":
+            continue
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    shutil.copytree(source, work, dirs_exist_ok=True, symlinks=True,
+                    ignore=shutil.ignore_patterns(".git"))
+    (work / STATE_DIRNAME).mkdir(exist_ok=True)
+    return ops.commit(work, message)
+
+
+def _restore_intermediate_trees(run_dir, points, last, work, ops):
+    restored = False
+    for point in points:
+        number = point.get("round")
+        sha = (point.get("identity") or {}).get("harness_sha")
+        if type(number) is not int or not 0 < number < last or not sha or tree_present(work, sha):
+            continue
+        source = run_dir / f"state_after_round{number}"
+        portable = run_dir / "snapshots" / f"round-{number}.json"
+        if not source.is_dir() and portable.is_symlink():
+            raise ResumeRefused(f"retained round {number} snapshot must not be a symlink")
+        if not (source.exists() or source.is_symlink() or portable.is_file()):
+            # A historical run may deliberately omit old sources. The method
+            # channel reports those missing states rather than inventing them.
+            continue
+        try:
+            with candidate_runtime.checkpoint_source(run_dir, point) as retained:
+                actual = _commit_retained_tree(retained, work, f"resume: round {number}", ops)
+        except (OSError, ValueError, candidate_runtime.RuntimeUnavailable) as exc:
+            raise ResumeRefused(f"cannot restore retained round {number}: {exc}") from exc
+        if actual != sha:
+            raise ResumeRefused(
+                f"retained round {number} hashes to {actual[:12]} but its curve names {sha[:12]}")
+        restored = True
+    return restored
+
+
+def restore_checkpoint_tree(request, run_dir, existing, last, view, work, ops):
+    """Restore recorded parent trees and leave the last state in the worktree."""
+    first_point = existing[0]
     h0_sha = (first_point.get("identity") or {}).get("harness_sha")
     base_state = run_dir / "state_after_round0"
     if not base_state.is_dir() and request.initial_source is not None:
@@ -256,18 +299,8 @@ def restore_checkpoint_tree(request, run_dir, first_point, last, view, work, ops
                 f"run's round-0 point scored {h0_sha[:12]}; the saved base is not the state "
                 f"the curve published, so continuing would attach new rounds to a different "
                 f"harness")
-        # Keep `.git` (that is where the base object now lives) and put the state we
-        # continue from on top of it, exactly as the round loop does after measuring.
-        for child in list(work.iterdir()):
-            if child.name == ".git":
-                continue
-            shutil.rmtree(child) if child.is_dir() else child.unlink()
-        shutil.copytree(view, work, dirs_exist_ok=True, symlinks=True)
-        # `stage_workspace` creates this when it initialises a repo, and the copy above can
-        # remove it on a state saved by an older platform. The sandbox mounts a writable
-        # tmpfs over it, and a mount target has to exist.
-        (work / STATE_DIRNAME).mkdir(exist_ok=True)
-        staged_sha = ops.commit(work, f"resume: round {last}")
+        _restore_intermediate_trees(run_dir, existing, last, work, ops)
+        staged_sha = _commit_retained_tree(view, work, f"resume: round {last}", ops)
     else:
         ops.stage(view, work)
         staged_sha = ops.commit(work, f"resume: round {last}")
@@ -276,6 +309,8 @@ def restore_checkpoint_tree(request, run_dir, first_point, last, view, work, ops
                 f"{run_dir.name} keeps no state_after_round0/, and the tree its round-0 point "
                 f"scored ({h0_sha[:12]}) is not in this repository's object store; the run "
                 f"cannot be restored to the state that score belongs to")
+        if _restore_intermediate_trees(run_dir, existing, last, work, ops):
+            staged_sha = _commit_retained_tree(view, work, f"resume: round {last}", ops)
 
     return h0_sha, staged_sha, restored_base
 
@@ -301,7 +336,7 @@ def admit_restored_candidate(run_dir, existing, last, work, staged_sha):
 
 def restore_train_workspace(request, run_dir, existing, last, view, work, ops):
     h0_sha, staged_sha, restored_base = restore_checkpoint_tree(
-        request, run_dir, existing[0], last, view, work, ops)
+        request, run_dir, existing, last, view, work, ops)
     base = reused_measurement(run_dir, existing[0], existing)
     recorded_sha, binding = admit_restored_candidate(run_dir, existing, last, work, staged_sha)
     return {"existing": existing, "last": last, "base": base, "h0_sha": h0_sha or staged_sha,

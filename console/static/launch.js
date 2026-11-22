@@ -10,7 +10,7 @@
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   let FORM = null, seq = 0;
   const card = { dataset: "", harness: "", task_backend: "mock", task_model: "", task_base_url: "", task_api_key: "",
-                 method: "none", improver: "", improver_model: "", meta_base_url: "", meta_api_key: "",
+                 method: "none", improver: "", improver_model: "",
                  rounds: 3, jobs: 1, trials: 1, sampling: "all", candidate_sha256: "", candidate_filesystem_sha256: "", custom_method_sha256: "" };
 
   function field(label, control, hint) {
@@ -32,9 +32,7 @@
     card.task_backend = d.task_backend || card.task_backend;
     card.task_model = card.task_model || d.task_model || "";
     card.task_base_url = card.task_base_url || d.task_base_url || "";
-    card.meta_base_url = card.meta_base_url || d.meta_base_url || "";
     card.improver = card.improver || d.improver || ((FORM.improvers || [])[0] || {}).name || "";
-    card.improver_model = card.improver_model || d.improver_model || "";
     const methodRows = window.HGLaunchMethods.rows(FORM.methods || [], t("ls.47"));
     card.method = window.HGLaunchMethods.selected(methodRows, card.method, d.method);
     if (d.rounds) card.rounds = d.rounds;
@@ -53,10 +51,8 @@
       field("task base URL", `<input class="input" id="f-task-base-url" value="${esc(card.task_base_url)}" placeholder="${esc(d.task_base_url_reenter ? t("ls.urlReenter") : d.task_base_url_redacted ? t("ls.urlHidden") : "https://…/v1")}">`),
       field("task API key", `<input class="input" id="f-task-api-key" type="password" autocomplete="new-password" value="${esc(card.task_api_key)}" placeholder="${d.task_api_key_set ? t("ls.55") : "API key"}">`),
       field(t("ls.79"), select("f-method", methodRows, card.method), t("ls.48")),
-      field("meta-harness", select("f-improver", [{value: "none", label: "none (self-contained method)"}, ...(FORM.improvers || []).map((x) => ({ value: x.name, label: x.label || x.name }))], card.improver)),
+      field("meta-harness", select("f-improver", [], "")),
       field("meta-model", `<input class="input" id="f-improver-model" list="meta-models" value="${esc(card.improver_model)}"><datalist id="meta-models">${(FORM.meta_models || []).map((m) => `<option value="${esc(m)}"></option>`).join("")}</datalist>`),
-      field(t("ls.49"), `<input class="input" id="f-meta-base-url" value="${esc(card.meta_base_url)}" placeholder="https://…/v1">`, t("ls.50")),
-      field(t("ls.51"), `<input class="input" id="f-meta-api-key" type="password" autocomplete="new-password" value="${esc(card.meta_api_key)}" placeholder="${d.meta_api_key_set ? t("ls.55") : "API key"}">`),
       field(t("ls.52"), `<input class="input" id="f-rounds" type="number" min="0" max="20" value="${esc(card.rounds)}">`, t("ls.54")),
       field(t("ls.53"), `<input class="input" id="f-jobs" type="number" min="1" max="64" value="${esc(card.jobs)}">`),
       field("trials", `<input class="input" id="f-trials" type="number" min="1" max="3" value="${esc(card.trials)}">`),
@@ -65,6 +61,26 @@
       const el = $(id); if (!el) return;
       el[`on${event}`] = () => { card[key] = cast ? cast(el.value) : el.value; preview(); };
     };
+    const syncEditor = () => {
+      const single = card.rounds === 0 || card.method === "none";
+      const selfContained = card.method.startsWith("custom:") ||
+        (FORM.methods || []).some(row => row.name === card.method && row.self_contained);
+      const choices = (FORM.improvers || []).filter(row => row.kind === "cli");
+      const allowNone = single || selfContained;
+      const control = $("f-improver");
+      control.replaceChildren();
+      if (allowNone) control.add(new Option("none", "none"));
+      choices.forEach(row => control.add(new Option(row.label || row.name, row.name)));
+      if (!choices.some(row => row.name === card.improver) && !(selfContained && card.improver === "none")) {
+        card.improver = d.improver || choices[0]?.name || "";
+      }
+      control.value = single ? "none" : card.improver;
+      control.disabled = single;
+      const model = $("f-improver-model");
+      model.disabled = single || card.improver === "none";
+      model.placeholder = model.disabled ? "" : (choices.find(row => row.name === card.improver)?.model || "");
+    };
+    syncEditor();
     bind("f-dataset", "dataset"); bind("f-harness", "harness");
     $("f-task-backend").onchange = (event) => {
       card.task_backend = event.target.value;
@@ -84,11 +100,19 @@
         card.rounds = Number(d.rounds) || 3;
         $("f-rounds").value = String(card.rounds);
       }
+      syncEditor();
       preview();
     };
-    bind("f-improver", "improver"); bind("f-improver-model", "improver_model", null, "input");
-    bind("f-meta-base-url", "meta_base_url", null, "input"); bind("f-meta-api-key", "meta_api_key", null, "input");
-    bind("f-rounds", "rounds", Number, "input"); bind("f-jobs", "jobs", Number, "input");
+    $("f-rounds").oninput = event => { card.rounds = Number(event.target.value); syncEditor(); preview(); };
+    $("f-improver").onchange = event => {
+      card.improver = event.target.value;
+      card.improver_model = "";
+      $("f-improver-model").value = "";
+      syncEditor();
+      preview();
+    };
+    bind("f-improver-model", "improver_model", null, "input");
+    bind("f-jobs", "jobs", Number, "input");
     bind("f-trials", "trials", Number, "input");
     preview();
   }
@@ -106,8 +130,8 @@
     const previewBody = { dataset: card.dataset, harness: card.harness,
       task_backend: card.task_backend, task_model: card.task_model, task_base_url: card.task_base_url,
       rounds: card.rounds, jobs: card.jobs, trials: card.trials,
-      improver: card.improver, improver_model: card.improver_model, meta_base_url: card.meta_base_url,
-      task_key_present: Boolean(card.task_api_key), meta_key_present: Boolean(card.meta_api_key),
+      improver: card.improver, improver_model: card.improver_model,
+      task_key_present: Boolean(card.task_api_key),
       method: card.method, sampling: card.sampling };
     try {
       const d = await (await fetch('/api/launch/preview', { method: 'POST',
@@ -127,7 +151,7 @@
         `${labels[2]}: rounds=${scope.rounds ?? unknown}, trials/task=${scope.trials_per_task ?? unknown}, jobs=${scope.jobs ?? unknown}`,
         `${labels[3]}: ${solver.backend || unknown} / ${solver.model || unknown}`,
         `${labels[4]}: ${editor.method || unknown} / ${editor.improver || unknown} / ${editor.model || unknown}` +
-          (editor.active === false ? (zh ? "；0 轮，不执行改进" : "; zero rounds, no improvement") : "") +
+          (editor.active === false ? (zh ? "；本次无需模型编辑" : "; no model editing") : "") +
           (editor.kind === "cli" ? (zh ? "；provider 由 CLI 配置" : "; provider configured by CLI") : ""),
         `${labels[5]}: ${unknown} — ${zh ? "由数据集和运行配置决定；可能产生独立模型调用。" : "resolved from dataset and runtime configuration; may use separate model calls."}`,
       ].join("\n");
@@ -239,11 +263,9 @@
         if (!response.ok) throw new Error(data.detail || data.error || response.status);
         const value = `custom:${data.name}`;
         $("f-method").add(new Option(`${data.name} (custom)`, value));
-        $("f-method").value = value; card.method = value;
-        $("f-improver").value = "none"; card.improver = "none";
-        if (card.rounds === 0) { card.rounds = 3; $("f-rounds").value = "3"; }
+        $("f-method").value = value;
+        $("f-method").dispatchEvent(new Event("change"));
         status.textContent = "已保存并选中；请检查预览 / Saved and selected; review the preview.";
-        preview();
       } catch (e) { status.textContent = e.message; }
     });
     load().catch((error) => { $("fields").innerHTML = `<div class="empty">${t("ls.86")}${esc(error.message)}</div>`; });

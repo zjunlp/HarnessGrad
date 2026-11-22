@@ -1,0 +1,16 @@
+{
+  "name": "loop",
+  "manifest_version": "0.2.0",
+  "release_selector": "0.2.0-study",
+  "source_tree_without_workspace_gitignore": "7435f8da7df46b27d79601d8936c7d83cb251b7a",
+  "measured_git_tree": "7a40f6ddd0cef5c7210c1be3dc6529cc19c03775",
+  "study_archive_sha256": "6b8a02b4022783ef852f262b1da5ce081d9822b65facb7134a86aa4877c7e275",
+  "published_source_revision": "dffe13f4e2eb585cb521039fe72d841da77d81e5",
+  "study_platform_revision_recorded": "447155aa5b25bf5c77622e6f6c9bbcefdf949557",
+  "files_sha256": {
+    ".gitignore": "717d72c0f75d29bf8a72037957c21e2150e502606e817b8a9525dc2d89f8aa44",
+    "agent.py": "5a861008f32fae318242948e447cb33b6a6a4586a1d4127a405b05e9a7a091b9",
+    "harness.json": "50b2cf63dfcbc937e4a47a04c3bda23240771103ab42c2717bfccfb3cb2a3f80",
+    "requirements.txt": "8be10848dc9737d2dcfd24a34f5034ddeb02e918b078ce09a3c2d090fbc44ed8"
+  }
+}

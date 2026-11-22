@@ -11,7 +11,8 @@ def runtime_projection(args, *, environment, dump_config, load_profile):
     """Project treatment inputs without including continuation or output controls."""
     operational = {'rounds', 'resume', 'resume_across_platforms', 'run_id', 'runs_root',
                    'work_root', 'show_config', 'check_only', 'prepare_only', 'check_net',
-                   'treatment_manifest', 'no_summary', 'summary', 'show_summary'}
+                   'treatment_manifest', 'no_summary', 'summary', 'show_summary',
+                   'resume_supplement_run', 'resume_batch_supplement'}
     arguments = {key: str(value) if isinstance(value, Path) else value
                  for key, value in args._namespace_args.items() if key not in operational}
     arguments.pop('method_entrypoint', None)
@@ -23,16 +24,19 @@ def runtime_projection(args, *, environment, dump_config, load_profile):
                               ('HG_META_ROUND_TOKEN_LIMIT', 'HG_META_RUN_TOKEN_LIMIT')}}
 
 
-def capture_start(args, *, environment, read_metadata):
+def read_start_metadata(args, *, read_metadata):
+    """Load historical state before treating validation errors as refusals."""
+    if not args.resume:
+        return {}
+    mode = 'unified' if args.mode in ('A', 'B') else args.mode
+    run_id = args.run_id or f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
+    return read_metadata(Path(args.runs_root) / run_id)
+
+
+def capture_start(args, *, environment, metadata):
     """Capture early treatment identity and enforce the existing resume binding."""
-    saved = None
-    declared = False
-    if args.resume:
-        mode = 'unified' if args.mode in ('A', 'B') else args.mode
-        run_id = args.run_id or f"{args.harness}-{args.dataset}-{args.sampling}-m{mode}"
-        metadata = read_metadata(Path(args.runs_root) / run_id)
-        saved = metadata.get(treatment_identity.KEY)
-        declared = bool(metadata.get('treatment_manifest_declared'))
+    saved = metadata.get(treatment_identity.KEY)
+    declared = bool(metadata.get('treatment_manifest_declared'))
     treatment_environment = dict(environment)
     for key, value in improver_readiness.ImproverRequest(
             args.improver, args.improver_model, args.improver_effort).environment_patch().items():

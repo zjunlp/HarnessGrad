@@ -1,5 +1,6 @@
 """Synthetic credential stores only; optional real pinned Node/YAML parser, no providers."""
 import json
+import builtins
 import os
 from pathlib import Path
 import shutil
@@ -9,8 +10,25 @@ import sys
 import pytest
 from methods import cli_improver
 from improver_credentials import seeded_credentials
+from improver_archive import ArchiveFailure
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_codex_generated_default_needs_no_toml_parser_but_other_config_fails_closed(tmp_path, monkeypatch):
+    home = tmp_path / '.codex-home'; home.mkdir()
+    config = home / 'config.toml'
+    config.write_text('\nresponses_experimental_transport = "https"\n')
+    real_import = builtins.__import__
+    def without_tomllib(name, *args, **kwargs):
+        if name == 'tomllib':
+            raise ImportError('synthetic unavailable parser')
+        return real_import(name, *args, **kwargs)
+    monkeypatch.setattr(builtins, '__import__', without_tomllib)
+    assert seeded_credentials(tmp_path, 'codex', {}) == []
+    config.write_text('api_key = "synthetic-secret"\n')
+    with pytest.raises(ArchiveFailure, match='Cannot safely interpret'):
+        seeded_credentials(tmp_path, 'codex', {})
 YAML_DOCUMENT = '''version: 1
 refs:
   FIXTURE_REF: "synthetic-file-ref"

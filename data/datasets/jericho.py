@@ -94,6 +94,10 @@ ORACLE_SOURCE = "released"
 #: measured subset). `--split official --side eval` is the comparable run: the whole pool, with
 #: no study material in it. `--split declared` keeps this adapter's own division.
 OFFICIAL_EVAL = None
+# The public suite supplies evaluation games only; these declarations do not
+# depend on the external game payload or the native runtime.
+SPLIT = None
+SPLIT_SOURCE = "none"
 
 
 DATASET_ROOT = dataset_root('jericho')
@@ -407,13 +411,6 @@ def __getattr__(name: str):
         return _map(_setup)
     if name == "VERIFY":
         return _map(_verifier)
-    if name == "SPLIT":
-        # No division: the suite's games are the benchmark's evaluation material and it
-        # publishes no study side (2026-10-24). `HG_JERICHO_SPLIT=none` selected this and
-        # is gone; `--split default` asks for the platform's hash rule.
-        return None
-    if name == "SPLIT_SOURCE":
-        return "none"
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

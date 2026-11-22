@@ -118,7 +118,7 @@ def test_fault_after_actual_native_route_acquisition_closes_route_and_stepwise_d
     # No request is issued: this control acquires only an owned local route/socket.
     monkeypatch.setenv('HG_AGENT_BASE_URL', 'http://127.0.0.1:9/v1')
     with pytest.raises(KeyboardInterrupt) as raised:
-        runner.run_one(repo, {'task_id': 'authored'}, env={'kind': 'files', 'network': 'none'})
+        runner.run_one(repo, {'task_id': 'authored', 'goal': 'offline service cleanup'}, env={'kind': 'files', 'network': 'none'})
     assert raised.value is failure and len(routes) == 1
     assert routes[0].directory is None and not route_directories[0].exists()
     assert not workspaces[0].path.exists() and not workspaces[0].stepwise_dir.exists()

@@ -309,27 +309,6 @@ def candidates(extra: str | None = None) -> list[Candidate]:
     return out
 
 
-def _dotenv(path: Path) -> dict[str, str]:
-    """Read minimal `KEY=value` entries; see the same function in `tools/serve_ui.py`."""
-    out: dict[str, str] = {}
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return out
-    for line in text.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        out[key.strip()] = value.strip().strip('"').strip("'")
-    return out
-
-
-def requested_note(entry: dict) -> str:
-    """What the config *asked* for, for a non-binary improver."""
-    return entry.get("version", "") or "configured endpoint"
-
-
 def load_config(path: Path | None = None) -> dict:
     selected = path or current_config().improver.registry
     path = Path(selected).expanduser() if selected else DEFAULT_CONFIG
@@ -481,63 +460,15 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
                               f"(has: {', '.join(sorted(config.get('improvers') or {})) or 'none'})"}
     entry = (config.get("improvers") or {}).get(key) or {}
 
-    #: A non-`cli` improver is not a binary. `local` is a model endpoint reached with the
-    #: platform's own client (`methods/editor.py`), so resolving it by searching for codex
-    #: would report a codex version under the name "local" -- which is exactly what the
-    #: first version of `improver_options` did in the UI. What "resolved" means for it is
-    #: that the endpoint is configured; whether the *model* is good enough is a question
-    #: for the smoke test, not for a version string.
-    if entry.get("kind") and entry.get("kind") != "cli":
-        # Read `.env` too: the panel and driver are separate processes, and
-        # `HG_METHOD_*` often exists only there. Reading only `os.environ` made
-        # the panel report a missing endpoint while the driver was using it.
-        env = _dotenv(ROOT / ".env")
-        # **A named entry's endpoint wins over `.env`, and that ordering was measured.**
-        #
-        # The obvious rule -- "a real environment variable beats a file" -- cannot be
-        # implemented here, because `driver.py:load_env` copies `.env` into the process
-        # environment before the improver is resolved (`os.environ.setdefault`), so by the
-        # time this runs the two are indistinguishable. Measured on the first
-        # `--improver deepseek` run: `.env`'s `HG_METHOD_MODEL=qwen3.5-9b-local` was
-        # already in `os.environ`, the entry's `deepseek-v4-pro` lost to it, and the run
-        # recorded `improver: deepseek` while the method called the local vLLM. A record
-        # that names one endpoint and a method that calls another is the same defect as a
-        # harness misreporting its model.
-        #
-        # So the specific statement wins over the generic one: the entry names *this*
-        # improver's endpoint, `.env` only names a default for improvers that declare
-        # nothing (which is how `local` still works). An operator who wants a different
-        # model for a named improver says so with `--improver-model`, which is recorded.
-        base = (entry.get("base_url") or current_config().method.base_url
-                or env.get("HG_METHOD_BASE_URL", ""))
-        model = (model_override or entry.get("model")
-                 or current_config().method.model
-                 or env.get("HG_METHOD_MODEL", ""))
-        key_env = entry.get("api_key_env") or ""
-        # The key is not resolved into the record -- it is a secret, and the record is
-        # read by people and written to disk. What is checked is that it *exists*: a run
-        # whose improver has no credential fails at the first call, after the round has
-        # been paid for, and the failure looks like a broken method.
-        forbidden = forbidden_reason(config, model)
-        if forbidden:
-            return {"ok": False, "name": entry.get("name") or key, "kind": entry.get("kind"),
-                    "model": model, "path": base, "runtime": [], "reason": forbidden}
-        missing = [name for name, ok in (("base_url", base), ("model", model),
-                                         (key_env, os.environ.get(key_env)) if key_env
-                                         else ("", True)) if not ok]
-        return {"ok": bool(base and model and (not key_env or os.environ.get(key_env))),
-                "name": entry.get("name") or key,
-                "kind": entry.get("kind"), "model": model, "path": base,
-                # What the method's own client must be told, so the endpoint it calls is
-                # the endpoint this record names (`harnessgrad/methods.py:_method_env`).
-                "base_url": base, "api_key_env": key_env,
-                # A model endpoint is reached over the network, so it needs no trees
-                # bound; kept explicit so every path through here has the same keys.
-                "runtime": [],
-                "version": entry.get("version", "") or "", "requested": requested_note(entry),
-                "sha256": "", "modified": bool(entry.get("modified")),
-                "reason": "" if not missing else
-                          f"the {key!r} improver needs {', '.join(missing)}"}
+    if Path(requested or ".").is_absolute():
+        # A path explicitly selects its binary independently of the registry default.
+        entry = {"kind": "cli", "path": requested}
+    if entry.get("kind", "cli") != "cli":
+        return {"ok": False, "name": key, "requested": requested or key, "candidates": [],
+                "reason": f"{key!r} is an endpoint; experiments require a CLI Meta-Harness"}
+    denied = forbidden_reason(config, model_override or str(entry.get("model") or ""))
+    if denied:
+        return {"ok": False, "name": key, "requested": requested or key, "candidates": [], "reason": denied}
 
     # **A CLI this repository drives itself, resolved from its declaration.** Everything
     # below this line is the codex search: three install globs, a native binary beside a
@@ -637,7 +568,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
         return {"ok": bool(ok), "path": str(path), "version": version,
                 "sha256": Candidate(path).sha256(), "requested": requested or key,
                 "modified": bool(entry.get("modified")),
-                "kind": str(entry.get("kind") or ""),
+                "kind": "cli",
                 "name": entry.get("name") or key,
                 "argv_style": str(entry.get("argv_style") or ""),
                 # The home this CLI should run against, and the one credential it may hold.
@@ -698,13 +629,7 @@ def resolve(config: dict | None = None, *, version: str = "", requested: str = "
     return {"ok": True, "path": str(chosen.path), "version": chosen.version,
             "sha256": chosen.sha256(), "requested": requested or "latest",
             "modified": bool(entry.get("modified")),
-            # **Which layer this is**, from the config entry rather than guessed from the
-            # path: a `cli` improver edits files through its own tools and therefore needs
-            # a model that emits standard tool_calls, while an `openai-compatible` one is
-            # driven by `methods/editor.py` and needs nothing of the sort. The driver's gate
-            # read `improver["kind"]` and this dict had no such key, so the gate silently did
-            # nothing -- found by a test that expected a refusal and got a completed run.
-            "kind": str(entry.get("kind") or ""),
+            "kind": "cli",
             "name": name,
             # The chosen entry's model, or -- for a CLI, which declares none -- the model
             # that CLI's own config names. `source=config_home()` is what makes a custom

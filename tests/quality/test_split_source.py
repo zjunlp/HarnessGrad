@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 import data.scaffolds.registry as registry  # noqa: E402
+from harnessgrad.paths import DatasetPath, DataRootNotConfigured, env_name  # noqa: E402
 
 
 def _tasks() -> list[dict]:
@@ -173,6 +174,10 @@ def test_every_runnable_dataset_answers_the_official_question():
             with pytest.raises((ValueError, OSError)) as caught:
                 module.load()
             root = getattr(module, "DATASET_ROOT", None)
+            if isinstance(root, DatasetPath):
+                assert isinstance(caught.value, DataRootNotConfigured), (name, caught.value)
+                assert env_name(root.directory) in str(caught.value)
+                continue
             assert root is not None and str(root) in str(caught.value), (
                 f"{name} cannot answer OFFICIAL_EVAL and its load() error does not name "
                 f"the root to provision: {caught.value}")
@@ -217,7 +222,11 @@ def test_the_sha_identifies_the_task_sets_and_not_their_order():
     assert registry.split_sha(a) != registry.split_sha(c)
 
 
-def test_a_division_is_declared_or_absent_and_never_invented():
+@pytest.mark.parametrize('name,has_declared_split', [
+    ('gsm8k', True), ('triviaqa', True), ('aime', False), ('musique', False),
+    ('strategyqa', False), ('chessbench_puzzles', False),
+])
+def test_a_division_is_declared_or_absent_and_never_invented(name, has_declared_split):
     """Two states, and the sha has to tell them apart within each.
 
     * a benchmark that publishes **both** sides (`gsm8k`, whose study side is the whole
@@ -233,9 +242,18 @@ def test_a_division_is_declared_or_absent_and_never_invented():
     a benchmark's dev or test file was silently cut in two. The operator removed that
     invented division on 2026-10-24; this test is what would notice it coming back.
     """
-    for name in ("gsm8k", "triviaqa"):
+    from harnessgrad.datasets.runtime import DatasetRuntimeUnavailable
+    from harnessgrad.paths import DataRootNotConfigured
+    try:
         tasks, _, declared = registry.load_split(name)
-        official = registry.official_split(name, tasks)
+    except DatasetRuntimeUnavailable as exc:
+        if exc.status != 'unavailable':
+            raise
+        pytest.skip(f'{name}: required dataset runtime has not been prepared')
+    except (DataRootNotConfigured, FileNotFoundError):
+        pytest.skip(f'{name}: required external dataset files have not been prepared')
+    official = registry.official_split(name, tasks)
+    if has_declared_split:
         assert declared is not None, f"{name} publishes both sides"
         assert registry.split_sha(declared) == registry.split_sha(official), name
         assert registry.split_sha(declared) != registry.split_sha(
@@ -243,9 +261,7 @@ def test_a_division_is_declared_or_absent_and_never_invented():
         assert official["train"], f"{name} studies a train side"
         assert official["eval"] == declared["eval"], name
 
-    for name in ("aime", "musique", "strategyqa", "chessbench_puzzles"):
-        tasks, _, declared = registry.load_split(name)
-        official = registry.official_split(name, tasks)
+    else:
         assert declared is None, f"{name} loads one scored split; it declares no division"
         assert official["train"] == [], name
         assert official["eval"] == [t["task_id"] for t in tasks], name

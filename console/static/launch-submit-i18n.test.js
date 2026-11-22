@@ -25,7 +25,7 @@ test('dictionary loads before loader and page code', () => {
 test('dynamic translations preserve preflight data and secrets stay out of GET', () => {
   const js = read('launch.js');
   assert.match(js, /task_key_present: Boolean\(card\.task_api_key\)/);
-  assert.match(js, /meta_key_present: Boolean\(card\.meta_api_key\)/);
+  assert.doesNotMatch(js, /f-meta-base-url|f-meta-api-key|HG_METHOD_BASE_URL/);
   assert.match(js, /\(d\.preflight \|\| \{\}\)\.detail/);
   assert.ok(!js.slice(js.indexOf('const q ='), js.indexOf('try {', js.indexOf('const q ='))).includes('task_api_key: card.task_api_key'));
 });

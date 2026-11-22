@@ -64,7 +64,7 @@ from pathlib import Path
 
 from eval.policy.appworld_reporting import make_manifest
 
-from harnessgrad.paths import dataset_root
+from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = "dataset"
 VERIFIER_KIND = 'command'
@@ -332,7 +332,7 @@ def oracle_files(task: dict) -> dict[str, str]:
 try:
     _pool_rows = _pool()
     _POOL_ERROR = None
-except FileNotFoundError as exc:
+except (FileNotFoundError, DataRootNotConfigured) as exc:
     _pool_rows = []
     _POOL_ERROR = str(exc)
 
@@ -488,7 +488,13 @@ def _setup(task_id: str) -> dict:
 
 def load():
     if _POOL_ERROR is not None:
-        raise ValueError(_POOL_ERROR)
+        # Discovery may import this module before the operator configures or
+        # prepares external storage. Recheck on use rather than freezing that
+        # earlier missing-storage state for the life of the process.
+        try:
+            _refresh_loaded_pool()
+        except (FileNotFoundError, DataRootNotConfigured) as exc:
+            raise ValueError(str(exc)) from exc
     if _LOAD_ERROR is not None:
         raise ValueError(f"appworld: {_LOAD_ERROR}")
     tasks = [{"task_id": task_id, "goal": _goal(_ROWS[task_id]), "inputs": []}

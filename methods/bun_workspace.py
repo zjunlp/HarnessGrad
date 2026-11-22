@@ -19,6 +19,10 @@ def source_for(candidate, receipt):
     spec = json.loads(manifest.read_text()).get("runtime")
     if spec is None:
         return None
+    if isinstance(spec, dict) and spec.get("kind") == "python":
+        if receipt and receipt.get("kind") == "bun":
+            raise ValueError("Bun dependency receipt does not match the Python candidate")
+        return None
     if not receipt or receipt.get("kind") != "bun":
         raise ValueError("Candidate requires a prepared Bun dependency receipt")
     identity = receipt["identity"]

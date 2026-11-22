@@ -16,7 +16,9 @@ def terminal_stop(payload):
     if value is None:
         return None
     if (not isinstance(value, dict) or value.get('schema') != SCHEMA
-            or value.get('code') not in CODES or value.get('retryable') is not False
+            or not isinstance(value.get('code'), str) or value.get('code') not in CODES
+            or value.get('retryable') is not False
+            or not isinstance(value.get('scope', 'meta_session'), str)
             or value.get('scope', 'meta_session') not in SCOPES):
         return {'schema': SCHEMA, 'code': 'terminal_status_invalid',
                 'retryable': False, 'scope': 'meta_session'}

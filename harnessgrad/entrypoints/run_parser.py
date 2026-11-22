@@ -88,6 +88,9 @@ def build_parser() -> argparse.ArgumentParser:
     # 改进器"的方法时,它们决定谁来做那一步 —— 而解析出来的
     # 版本和哈希会进每个曲线点(INTERFACE.md §4.49)。放在命令行而不是只读配置:
     # 一次实验"用哪个改进器"正是最该被显式记录、最不该靠环境变量碰运气的东西。
+    ap.add_argument("--agent-backend", choices=("openai", "mock"), default=argparse.SUPPRESS,
+                    help="task-agent backend for this invocation (overrides HG_AGENT_BACKEND)")
+    ap.add_argument("--agent-model", default=argparse.SUPPRESS, help="served task-agent model ID for this invocation (overrides HG_AGENT_MODEL)")
     ap.add_argument("--improver", default=None,
                     help="harnessgrad/improvers/improvers.json 里的名字,或一个可执行文件的路径")
     ap.add_argument("--improver-model", default=None, help="覆盖改进器自己的模型")
@@ -154,16 +157,30 @@ def build_parser() -> argparse.ArgumentParser:
                          "REASON is recorded with both hashes and both git shas under the run's "
                          "`platform-seams/`, so the curve says which code measured which rounds "
                          "instead of hiding it")
+    ap.add_argument("--resume-supplement-run", default=None, metavar="RUN_ID",
+                    help="experimental: recover an interrupted train round from an independently "
+                         "measured complementary run; requires --resume and the private "
+                         "method-submission journal")
+    ap.add_argument('--resume-batch-supplement', default=None, metavar='ROUND=RUN_ID[,ROUND=RUN_ID]',
+                    help='experimental: use fully measured saved batch candidates on resume')
     ap.add_argument("--from-round", type=int, default=None,
                     help="--side eval: which round of that run (default: its last)")
     ap.add_argument("--h0-from", default=None, metavar="RUN_ID",
-                    help="reuse another run's round-0 measurement instead of measuring one. "
+                    help="reuse another run's round-0 measurement, or select the official "
+                         "published:alfworld-loop-study baseline (53/100). "
                          "Same base tree, same study tasks, so every method must be offered "
                          "the *same* first score: re-measuring it per method lets batching "
                          "non-determinism hand one method a different number and a different "
                          "trace set, which is the one thing a comparison cannot absorb. The "
                          "reused point records `shared_from` naming the run it came from. "
                          "Refused unless both runs share the base harness sha")
+    ap.add_argument("--h0-comparability", choices=("strict", "content"), default="strict",
+                    help="opt into content-attested H0 reuse rather than deployment equality")
+    ap.add_argument("--h0-attestation-sha256", metavar="SHA256",
+                    help="trusted digest of the original donor's h0-content-attestation.json")
+    ap.add_argument("--h0-agent-content", type=Path, metavar="FILE",
+                    help="reviewed serving receipt for the configured agent; on fresh measurements "
+                         "capture a portable H0 attestation")
     ap.add_argument("--h0-subset-view", action="store_true",
                     help="derive a verified proper subset of an original --h0-from donor; "
                          "requires --sampling all and explicit current --tasks")
@@ -269,12 +286,37 @@ def parse_run_args(
         if '--no-sandbox' in expanded:
             ap.error('reviewed source requires the sandbox request; --no-sandbox is unsupported')
     args = ap.parse_args(expanded)
+    if args.resume_batch_supplement:
+        if not args.resume_supplement_run:
+            ap.error('--resume-batch-supplement requires --resume-supplement-run')
+        seen_rounds = set()
+        for entry in args.resume_batch_supplement.split(','):
+            number, sep, name = entry.partition('=')
+            if (not sep or not number.isascii() or not number.isdecimal() or int(number) < 1 or
+                    int(number) in seen_rounds or not name or name in ('.', '..') or
+                    '/' in name or '\\' in name):
+                ap.error('--resume-batch-supplement must be a unique ROUND=RUN_ID')
+            seen_rounds.add(int(number))
+    if args.resume_supplement_run is not None:
+        name = args.resume_supplement_run
+        if (not args.resume or getattr(args, 'side', scenario_defaults.get('side')) != 'train' or
+                not name or name in ('.', '..') or
+                '/' in name or '\\' in name):
+            ap.error('--resume-supplement-run requires --resume, train side, and a run ID')
     if args.harness_runtime_binding is not None and (args.resume or args.h0_from):
         ap.error("--harness-runtime-binding cannot be combined with --resume or --h0-from")
     explicit = set(vars(args)) & scenario_defaults.keys()
     for field, default in scenario_defaults.items():
         if not hasattr(args, field):
             setattr(args, field, default)
+    if args.h0_comparability == "content":
+        if (not args.h0_from or args.resume or args.side != "train" or args.h0_subset_view
+                or not args.h0_agent_content or not args.h0_attestation_sha256):
+            ap.error("--h0-comparability content requires a train-side --h0-from, "
+                     "--h0-agent-content and --h0-attestation-sha256")
+    elif args.h0_attestation_sha256 or (args.h0_agent_content and
+            (args.h0_from or args.resume or args.side != "train")):
+        ap.error("H0 content options require explicit content reuse or a fresh train-side capture")
     if args.h0_subset_view and (not args.h0_from or args.resume or args.sampling != "all"
                                 or not args.tasks or args.side != "train"):
         ap.error("--h0-subset-view requires --h0-from, --sampling all, explicit --tasks, --side train, and no --resume")

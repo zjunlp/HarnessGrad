@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import shlex
@@ -22,7 +23,9 @@ ROOT = Path(__file__).resolve().parents[2]
 def fixture_catalogue(monkeypatch):
     # These tests exercise methods; importing every benchmark adds unrelated dependencies.
     monkeypatch.setattr(readiness.datasets, "published", lambda: ())
-    for key in ("HG_IMPROVER", "HG_IMPROVER_NAME"):
+    monkeypatch.setenv("HG_REVIEWED_ENVIRONMENT_ONLY", "1")
+    for key in ("HG_IMPROVER", "HG_IMPROVER_NAME", "HG_IMPROVER_CONFIG",
+                "HG_METHOD_BASE_URL", "HG_METHOD_MODEL", "HG_METHOD_API_KEY"):
         monkeypatch.delenv(key, raising=False)
 
 
@@ -66,15 +69,45 @@ def test_missing_method_cannot_pass_readiness(tmp_path):
     assert row.required and not row.ok
 
 
-def test_shared_editor_method_requires_its_model_configuration(tmp_path, monkeypatch):
-    for key in ("HG_METHOD_BASE_URL", "HG_METHOD_MODEL", "HG_METHOD_API_KEY"):
-        monkeypatch.delenv(key, raising=False)
-    entry = shlex.join([sys.executable, str(ROOT / "methods" / "dgm" / "run.py")])
-    rows = readiness.plan_checks(arguments(tmp_path, entry))
-    editor = next((row for row in rows if row.name == "editor"), None)
-    assert editor is not None
-    assert editor.required and not editor.ok
-    assert "HG_METHOD_" in editor.detail
+@pytest.fixture
+def registered_cli(tmp_path, monkeypatch):
+    launcher = tmp_path / "authored-cli"
+    launcher.write_text("#!/bin/sh\nprintf 'authored-cli 1.2.3\\n'\n", encoding="utf-8")
+    launcher.chmod(0o755)
+    registry = tmp_path / "improvers.json"
+    registry.write_text(json.dumps({"default": "authored", "improvers": {
+        "authored": {"name": "authored", "kind": "cli", "argv_style": "dsh",
+                     "launcher": str(launcher), "model": "authored-model",
+                     "provider": "authored", "profile": "headless"},
+        "http-editor": {"name": "http-editor", "kind": "openai-compatible",
+                        "model": "authored-model", "base_url": "http://127.0.0.1:1/v1",
+                        "api_key_env": "HG_METHOD_API_KEY"},
+    }}))
+    monkeypatch.setenv("HG_IMPROVER_CONFIG", str(registry))
+    return launcher
+
+
+@pytest.mark.parametrize("selector", ["none", "http-editor", "missing-editor"])
+def test_model_driven_method_refuses_endpoint_as_editor_before_h0(
+        tmp_path, monkeypatch, registered_cli, selector):
+    monkeypatch.setenv("HG_METHOD_BASE_URL", "http://127.0.0.1:1/v1")
+    monkeypatch.setenv("HG_METHOD_MODEL", "authored-model")
+    monkeypatch.setenv("HG_METHOD_API_KEY", "authored-key")
+    if selector == "none":
+        monkeypatch.setenv("HG_IMPROVER", str(registered_cli))
+
+    entry = shlex.join([sys.executable, str(ROOT / "methods/dgm/run.py")])
+    args = arguments(tmp_path, entry, improver=selector)
+    for checks in (readiness.configuration_checks, readiness.method_checks):
+        rows = checks(args)
+        assert any(row.name == "editor" and row.required and not row.ok for row in rows)
+    monkeypatch.setattr(driver, "evaluate", lambda *a, **k: pytest.fail("H0 was executed"))
+    monkeypatch.setattr(sys, "argv", ["driver.py", "--harness", "loop_plain", "--dataset", "demo",
+                                    "--sampling", "all", "--rounds", "1", "--method-entrypoint", entry,
+                                    "--improver", selector, "--runs-root", str(tmp_path / "runs"),
+                                    "--work-root", str(tmp_path / "work"), "--no-sandbox"])
+    assert driver.main() == 2
+    assert not list((tmp_path / "runs").glob("*/curve.jsonl"))
 
 
 def test_noop_does_not_require_an_editor(tmp_path, monkeypatch):
@@ -107,23 +140,24 @@ def test_check_only_uses_the_staged_rounds_default(tmp_path, monkeypatch, sampli
     assert not (tmp_path / "runs").exists()
 
 
-def test_cli_override_needs_no_method_endpoint(tmp_path, monkeypatch):
-    for key in ("HG_METHOD_BASE_URL", "HG_METHOD_MODEL", "HG_METHOD_API_KEY"):
-        monkeypatch.delenv(key, raising=False)
-    monkeypatch.setenv("HG_IMPROVER", shlex.join([sys.executable, "--profile", "custom"]))
-    entry = shlex.join([sys.executable, str(ROOT / "methods" / "dgm" / "run.py")])
-    rows = readiness.method_checks(arguments(tmp_path, entry))
-    editor = next(row for row in rows if row.name == "editor")
-    assert editor.ok, editor.detail
+@pytest.mark.parametrize("method", ["dgm", "rrsi", "meta_harness"])
+def test_registered_cli_supports_edit_and_structured_roles_without_method_endpoint(
+        tmp_path, registered_cli, method):
+    entry = shlex.join([sys.executable, str(ROOT / "methods" / method / "run.py")])
+    args = arguments(tmp_path, entry, improver="authored", rounds=2)
+    for checks in (readiness.configuration_checks, readiness.method_checks):
+        rows = checks(args)
+        assert all(row.ok for row in rows if row.required), rows
 
 
-def test_missing_cli_override_is_rejected(tmp_path, monkeypatch):
-    monkeypatch.setenv("HG_IMPROVER", "no-such-harnessgrad-editor --profile custom")
-    entry = shlex.join([sys.executable, str(ROOT / "methods" / "dgm" / "run.py")])
-    editor = next(row for row in readiness.method_checks(arguments(tmp_path, entry))
-                  if row.name == "editor")
-    assert not editor.ok
-    assert "no-such-harnessgrad-editor" in editor.detail
+@pytest.mark.parametrize("executable", ["missing-editor", sys.executable])
+def test_ambient_cli_cannot_replace_registered_editor(tmp_path, monkeypatch, registered_cli, executable):
+    monkeypatch.setenv("HG_IMPROVER", executable)
+    entry = shlex.join([sys.executable, str(ROOT / "methods/dgm/run.py")])
+    args = arguments(tmp_path, entry, improver="authored")
+    for checks in (readiness.configuration_checks, readiness.method_checks):
+        rows = checks(args)
+        assert any(row.name == "editor" and not row.ok for row in rows)
 
 
 def test_missing_method_stops_before_dataset_loading(tmp_path, monkeypatch):

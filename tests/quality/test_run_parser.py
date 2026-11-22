@@ -11,6 +11,26 @@ DEFAULTS = {'dataset': 'demo', 'sampling': 'diagnostic', 'rounds': 3,
             'trials': 1, 'jobs': 1, 'side': 'train', 'pool': None, 'split': 'declared'}
 
 
+def test_supplement_recovery_requires_resumed_train_and_safe_run_id():
+    _, args, _ = run_parser.parse_run_args(['--resume', '--resume-supplement-run', 'supplement-1'], DEFAULTS)
+    assert args.resume_supplement_run == 'supplement-1'
+    for argv in (['--resume-supplement-run', 'supplement-1'],
+                 ['--resume', '--side', 'eval', '--resume-supplement-run', 'supplement-1'],
+                 ['--resume', '--resume-supplement-run', '../other']):
+        with pytest.raises(SystemExit):
+            run_parser.parse_run_args(argv, DEFAULTS)
+
+
+def test_batch_supplement_requires_unique_safe_rounds():
+    _, args, _ = run_parser.parse_run_args(['--resume', '--resume-supplement-run', 'first',
+        '--resume-batch-supplement', '12=second,13=third'], DEFAULTS)
+    assert args.resume_batch_supplement == '12=second,13=third'
+    for value in ('12=second,12=other', '12=../outside', '0=bad', '12='):
+        with pytest.raises(SystemExit):
+            run_parser.parse_run_args(['--resume', '--resume-supplement-run', 'first',
+                '--resume-batch-supplement', value], DEFAULTS)
+
+
 def test_expansion_preserves_explicit_precedence_and_original_argv(tmp_path):
     config = tmp_path / 'experiment.json'
     config.write_text(json.dumps({'dataset': 'demo', 'jobs': 2}))

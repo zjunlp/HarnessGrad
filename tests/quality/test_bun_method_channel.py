@@ -113,11 +113,11 @@ def test_formal_round_preserves_public_channel_and_cli_dispatch(tmp_path, monkey
     method_root.mkdir()
     monkeypatch.setattr(mode_a.tempfile, "mkdtemp", lambda **kwargs: str(method_root))
     monkeypatch.delenv("HG_IMPROVER", raising=False)
-    monkeypatch.setattr(editor, "model_settings", lambda: pytest.fail("endpoint dispatch"))
 
-    def cli_reply(prompt, root, parent, identity):
+    def cli_reply(prompt, root, parent, identity, *, evidence_channel):
         assert identity == improver
         assert parent == root
+        assert evidence_channel == root / '_harnessgrad'
         assert (root / "_harnessgrad/SKILL.md").read_text() == (
             ROOT / "harnessgrad/improvers/skill.md").read_text()
         return {"no_change": "offline CLI dispatch verified"}
