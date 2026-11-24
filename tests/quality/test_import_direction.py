@@ -25,7 +25,12 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/improvement/contracts.py": {"__future__", "dataclasses", "difflib", "typing"},
     "harnessgrad/improvement/model.py": {"__future__", "json", "typing", "harnessgrad.improvement.contracts", "methods.endpoint_client"},
     "harnessgrad/personal/profile.py": {"__future__", "dataclasses", "math", "os", "pathlib", "typing", "harnessgrad.config", "harnessgrad.personal.contracts", "methods.endpoint_client"},
-    "harnessgrad/personal/model.py": {"__future__", "contextlib", "os", "threading", "time", "uuid", "fcntl", "msvcrt", "harnessgrad.personal.contracts", "harnessgrad.personal.profile", "harnessgrad.improvement.model", "methods.endpoint_client"},
+    "harnessgrad/personal/execution_lock.py": {
+        "__future__", "contextlib", "fcntl", "msvcrt", "os", "pathlib", "stat"},
+    "harnessgrad/personal/model.py": {
+        "__future__", "threading", "time", "uuid", "harnessgrad.personal.contracts",
+        "harnessgrad.personal.execution_lock", "harnessgrad.personal.profile",
+        "harnessgrad.improvement.model", "methods.endpoint_client"},
     "harnessgrad/personal/model_store.py": {"__future__", "uuid", "harnessgrad.personal.contracts", "harnessgrad.personal.profile"},
     "harnessgrad/improvement/stages.py": {"__future__", "dataclasses", "json", "typing", "harnessgrad.improvement.contracts", "methods.policy_ports.ace_proposal", "methods.policy_ports.skillopt_fast", "methods.policy_ports.skillopt_patch", "methods.policy_ports.evo_harness_proposal", "methods.policy_ports.gepa_proposal", "methods.policy_ports.vendor.ace"},
     "harnessgrad/orchestration/treatment_workflow.py": {"__future__", "pathlib", "shlex", "harnessgrad.orchestration.improver_readiness", "harnessgrad.orchestration.treatment_identity"},
