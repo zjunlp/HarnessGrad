@@ -9,6 +9,7 @@ import re
 import tarfile
 
 from benchmark_charts import svg_bar_chart, svg_chart, svg_train_chart
+from train_accounting import SOURCE, original_cost
 
 SLUG = "scienceworld"
 POOLS = {"train": 100, "dev": 100, "test": 100}
@@ -147,12 +148,18 @@ def project(family_dir, revision):
                     raise ValueError(f"{method} r{number}: parent has no verified train score")
                 inherited = {"parentRound": parent, "sourceRound": source}
 
+            reviewed = original_cost(row["run_id"], number)
+            if reviewed is None:
+                train_cost = task_cost(folder / "tasks" / f"round-{number}.tar.gz", usage) if number else None
+            else:
+                train_cost = [reviewed["input"], reviewed["output"]] if reviewed["input"] is not None else None
             rounds.append({
                 "round": number,
                 "train": None if number in excluded else row["score"],
                 "eval": {"dev": point["score"]} if point else {},
                 **({"inherited": inherited} if inherited else {}),
-                "trainCost": task_cost(folder / "tasks" / f"round-{number}.tar.gz", usage) if number else None,
+                "trainCost": train_cost,
+                **({"gapSubtotal": reviewed["gapSubtotal"]} if reviewed and "gapSubtotal" in reviewed else {}),
                 "devCost": task_cost(family_dir / point["traces"], point["usage"]) if point else None,
                 "improverCost": [usage.get(key) for key in
                                  ("method_generation_input", "method_cache_read_tokens", "method_generation_output")],
@@ -173,6 +180,7 @@ def project(family_dir, revision):
     meta = family["meta_agent"]
     return {
         "slug": SLUG,
+        "accountingSource": SOURCE,
         "revision": revision,
         "pools": POOLS,
         "reference": reference,

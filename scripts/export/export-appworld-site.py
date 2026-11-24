@@ -20,6 +20,7 @@ import os
 import pathlib
 
 from benchmark_charts import svg_bar_chart, svg_chart, svg_train_chart
+from train_accounting import apply_task_cost, original_cost
 
 D = pathlib.Path(__file__).resolve().parent
 #: Same two knobs as `export-site.py`: the repository root is the site, and the run receipts
@@ -307,6 +308,9 @@ def collect() -> dict:
                                  "cache_write": 0,
                                  "calls": cost.get("method_model_calls")},
                 }
+            reviewed = original_cost(run.name, round_no)
+            if reviewed is not None:
+                apply_task_cost(cell.setdefault("_cost", {}), reviewed)
             cells.append(cell)
         # **Ties are exact, and the earlier round wins.** `dgm` r9 = r16 = .4386 and `tthe`
         # r6 = r17 = .4035 to the last digit, so which one "the best round" is was decided by

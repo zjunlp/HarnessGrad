@@ -1,0 +1,223 @@
+{
+  "source": "https://huggingface.co/datasets/Xubqpanda/HarnessGrad/blob/f4c7be3452383831087b5844543caaf57c6ba226/Experiments/accounting/original-train-token-accounting-20261124.json",
+  "runs": {
+    "rsi10-20261020T1715Z-dream_rsi-train": {
+      "6": {
+        "tasks": 100,
+        "input": 0,
+        "output": 0
+      }
+    },
+    "appworld-study-ahe-20261019T1817Z": {
+      "17": {
+        "tasks": 90,
+        "input": 12675314,
+        "output": 177358
+      }
+    },
+    "appworld-study-dgm-20261020T2105Z": {
+      "10": {
+        "tasks": 90,
+        "input": 17468187,
+        "output": 234647
+      },
+      "11": {
+        "tasks": 90,
+        "input": 18406872,
+        "output": 295215
+      },
+      "13": {
+        "tasks": 90,
+        "input": 17054537,
+        "output": 215333
+      },
+      "17": {
+        "tasks": 90,
+        "input": 17525056,
+        "output": 207221
+      },
+      "19": {
+        "tasks": 90,
+        "input": 13777308,
+        "output": 227350
+      }
+    },
+    "appworld-study-dream_rsi-20261020T2106Z": {
+      "11": {
+        "tasks": 90,
+        "input": 12254050,
+        "output": 192714
+      }
+    },
+    "appworld-study-harnessx-20261019T1817Z": {
+      "7": {
+        "tasks": 90,
+        "input": 12815569,
+        "output": 216096
+      },
+      "13": {
+        "tasks": 90,
+        "input": 10665550,
+        "output": 243887
+      },
+      "15": {
+        "tasks": 90,
+        "input": 10815020,
+        "output": 240546
+      },
+      "17": {
+        "tasks": 90,
+        "input": 13331705,
+        "output": 261858
+      }
+    },
+    "appworld-study-hyperagents-20261020T0414Z": {
+      "1": {
+        "tasks": 90,
+        "input": 12174595,
+        "output": 301043
+      }
+    },
+    "appworld-study-sica_ci-20261019T1816Z": {
+      "3": {
+        "tasks": 90,
+        "input": 10610713,
+        "output": 238923
+      },
+      "7": {
+        "tasks": 90,
+        "input": 12480273,
+        "output": 209206
+      },
+      "8": {
+        "tasks": 90,
+        "input": 11365841,
+        "output": 211787
+      },
+      "9": {
+        "tasks": 90,
+        "input": 12503985,
+        "output": 303552
+      },
+      "11": {
+        "tasks": 90,
+        "input": 12509543,
+        "output": 212706
+      },
+      "16": {
+        "tasks": 90,
+        "input": 11080105,
+        "output": 160517
+      },
+      "18": {
+        "tasks": 90,
+        "input": 10386910,
+        "output": 186003
+      },
+      "19": {
+        "tasks": 90,
+        "input": 7681883,
+        "output": 107862
+      }
+    },
+    "sw-qwen-loop020-ahe-artifactfix-train100-r10-20261115-b2": {
+      "11": {
+        "tasks": 100,
+        "input": 37074860,
+        "output": 87631
+      },
+      "12": {
+        "tasks": 100,
+        "input": 0,
+        "output": 0
+      }
+    },
+    "sw-qwen-loop020-darwinx-train100-r10-20261114-010511": {
+      "14": {
+        "tasks": 100,
+        "input": 38681044,
+        "output": 165311
+      }
+    },
+    "sw-qwen-loop020-dgm-historyfix-train100-r10-20261114-0342": {
+      "12": {
+        "tasks": 100,
+        "input": 30694039,
+        "output": 108688
+      },
+      "14": {
+        "tasks": 100,
+        "input": 27407994,
+        "output": 113147
+      }
+    },
+    "sw-qwen-loop020-dream-dsh-train100-r10-20261113-021302": {
+      "1": {
+        "tasks": 100,
+        "input": null,
+        "output": null,
+        "gapSubtotal": {
+          "tasks": 12,
+          "input_tokens": 13641,
+          "output_tokens": 204
+        }
+      },
+      "14": {
+        "tasks": 100,
+        "input": 24496983,
+        "output": 72183
+      }
+    },
+    "sw-qwen-loop020-harnessx-observed-recovery-train100-r10-20261114-024705": {
+      "2": {
+        "tasks": 100,
+        "input": null,
+        "output": null,
+        "gapSubtotal": {
+          "tasks": 32,
+          "input_tokens": 332031,
+          "output_tokens": 3514
+        }
+      },
+      "9": {
+        "tasks": 100,
+        "input": 1803578,
+        "output": 13508
+      }
+    },
+    "sw-qwen-loop020-hyperagents-cleanprefix-dsh-train100-r10-20261113-223225": {
+      "17": {
+        "tasks": 100,
+        "input": 19382797,
+        "output": 44932
+      },
+      "18": {
+        "tasks": 100,
+        "input": 0,
+        "output": 0
+      },
+      "19": {
+        "tasks": 100,
+        "input": 0,
+        "output": 0
+      }
+    },
+    "sw-qwen-loop020-sica-dsh-train100-r10-20261112": {
+      "4": {
+        "tasks": 100,
+        "input": 94566083,
+        "output": 194568
+      },
+      "15": {
+        "tasks": 100,
+        "input": 38779479,
+        "output": 129078
+      },
+      "18": {
+        "tasks": 100,
+        "input": 18777607,
+        "output": 60103
+      }
+    }
+  }
+}

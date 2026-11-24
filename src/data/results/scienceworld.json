@@ -1,5 +1,6 @@
 {
  "slug": "scienceworld",
+ "accountingSource": "https://huggingface.co/datasets/Xubqpanda/HarnessGrad/blob/f4c7be3452383831087b5844543caaf57c6ba226/Experiments/accounting/original-train-token-accounting-20261124.json",
  "revision": "dffe13f4e2eb585cb521039fe72d841da77d81e5",
  "pools": {
   "train": 100,
@@ -111,7 +112,10 @@
         "parentRound": 3,
         "sourceRound": 3
        },
-       "trainCost": null,
+       "trainCost": [
+        94566083,
+        194568
+       ],
        "devCost": null,
        "improverCost": [
         568819,
@@ -332,7 +336,10 @@
        "eval": {
         "dev": 0.6051
        },
-       "trainCost": null,
+       "trainCost": [
+        38779479,
+        129078
+       ],
        "devCost": [
         47569459,
         152348
@@ -392,7 +399,10 @@
        "eval": {
         "dev": 0.7140000000000001
        },
-       "trainCost": null,
+       "trainCost": [
+        18777607,
+        60103
+       ],
        "devCost": [
         62909483,
         204483
@@ -484,7 +494,12 @@
         3318016,
         57527
        ],
-       "sharedImproverCost": false
+       "sharedImproverCost": false,
+       "gapSubtotal": {
+        "tasks": 12,
+        "input_tokens": 13641,
+        "output_tokens": 204
+       }
       },
       {
        "round": 2,
@@ -729,7 +744,10 @@
        "eval": {
         "dev": 0.5943
        },
-       "trainCost": null,
+       "trainCost": [
+        24496983,
+        72183
+       ],
        "devCost": [
         29913987,
         85923
@@ -1120,7 +1138,10 @@
         "parentRound": 10,
         "sourceRound": 10
        },
-       "trainCost": null,
+       "trainCost": [
+        30694039,
+        108688
+       ],
        "devCost": null,
        "improverCost": [
         23955553,
@@ -1158,7 +1179,10 @@
         "parentRound": 12,
         "sourceRound": 10
        },
-       "trainCost": null,
+       "trainCost": [
+        27407994,
+        113147
+       ],
        "devCost": null,
        "improverCost": [
         25289883,
@@ -1355,7 +1379,12 @@
         1095936,
         25020
        ],
-       "sharedImproverCost": false
+       "sharedImproverCost": false,
+       "gapSubtotal": {
+        "tasks": 32,
+        "input_tokens": 332031,
+        "output_tokens": 3514
+       }
       },
       {
        "round": 3,
@@ -1478,7 +1507,10 @@
        "eval": {
         "dev": 0.1515
        },
-       "trainCost": null,
+       "trainCost": [
+        1803578,
+        13508
+       ],
        "devCost": null,
        "improverCost": [
         1519107,
@@ -2068,7 +2100,10 @@
        "eval": {
         "dev": 0.6441
        },
-       "trainCost": null,
+       "trainCost": [
+        19382797,
+        44932
+       ],
        "devCost": [
         30702913,
         73242
@@ -2086,7 +2121,10 @@
        "eval": {
         "dev": 0.6787000000000001
        },
-       "trainCost": null,
+       "trainCost": [
+        0,
+        0
+       ],
        "devCost": [
         17552598,
         56157
@@ -2104,7 +2142,10 @@
        "eval": {
         "dev": 0.611
        },
-       "trainCost": null,
+       "trainCost": [
+        0,
+        0
+       ],
        "devCost": [
         17428175,
         50759
@@ -2430,7 +2471,10 @@
        "eval": {
         "dev": 0.6520999999999999
        },
-       "trainCost": null,
+       "trainCost": [
+        38681044,
+        165311
+       ],
        "devCost": [
         70395362,
         306299
@@ -2798,7 +2842,10 @@
        "eval": {
         "dev": 0.6476999999999999
        },
-       "trainCost": null,
+       "trainCost": [
+        37074860,
+        87631
+       ],
        "devCost": [
         42865932,
         109789
@@ -2816,7 +2863,10 @@
        "eval": {
         "dev": 0.6093999999999999
        },
-       "trainCost": null,
+       "trainCost": [
+        0,
+        0
+       ],
        "devCost": [
         54018015,
         134557

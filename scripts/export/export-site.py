@@ -31,6 +31,7 @@ import sys
 from datetime import datetime, timezone
 
 from benchmark_charts import svg_chart, svg_train_chart
+from train_accounting import SOURCE, apply_task_cost, original_cost
 
 D = pathlib.Path(__file__).resolve().parent
 #: This repository **is** the site, so the default output root is the repository root (this
@@ -528,6 +529,10 @@ def method_cost(method: str) -> dict[int, dict]:
             # Survives to the table as 0.00/0.00: the round acted and spent nothing on the model.
             entry["task"] = {"tokens": 0, "calls": 0}
             entry.pop("task_unrecorded", None)
+    for number, entry in out.items():
+        reviewed = original_cost(run.name, number)
+        if reviewed is not None:
+            apply_task_cost(entry, reviewed)
     return out
 
 
@@ -820,12 +825,10 @@ def task_cost_table(methods: list[dict], split: str) -> str:
     """
     if split == "train":
         rounds = _cost_rounds(methods)
-        caption = ('<caption>task-agent tokens per round — millions of tokens (M); '
-                   "in = uncached prompt tokens, out = generated tokens; "
-                   "0.00 = the round made no model calls at all (the harness solved the tasks "
-                   "with its own solver, and the traces record every step without one "
-                   "reply record); n/r = the round ran but the record carries no counts"
-                   "</caption>")
+        caption = ('<caption>Task-agent input and output in millions of tokens. '
+                   'Reconciled rounds use original Train calls after H0. Missing receipts may use '
+                   'trace-based estimates or the documented Pencil default. '
+                   f'<a href="{SOURCE}">Per-task figures and accounting rules</a>.</caption>')
         head1 = '<tr><th rowspan="2">method</th>' + "".join(
             f'<th colspan="2">r{r}</th>' for r in rounds) + "</tr>"
         head2 = "<tr>" + "".join(f"<th>in</th><th>out</th>" for _ in rounds) + "</tr>"
@@ -843,7 +846,9 @@ def task_cost_table(methods: list[dict], split: str) -> str:
                 # carry usage), so calling it "reuse" and printing a dash threw away a number that
                 # was on disk. Read the split first, and keep "reuse" for the case where the
                 # round really left no record of acting.
-                if piece.get("zero_model_calls"):
+                if piece.get("original_train_accounting"):
+                    cells += [f'<td>{piece[field] / 1e6:.2f}</td>' for field in ('input', 'output')]
+                elif piece.get("zero_model_calls"):
                     cells += ["<td>0.00</td>", "<td>0.00</td>"]
                 elif piece.get("input") or piece.get("output"):
                     cells += [_cell((piece.get("input") or 0) / 1e6),

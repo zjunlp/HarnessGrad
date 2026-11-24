@@ -3349,14 +3349,12 @@
        "task_split": {
         "input": 0,
         "output": 0,
-        "tasks_reporting": 0,
-        "tasks": 99,
-        "zero_model_calls": true,
-        "tasks_acted": 99
+        "tasks": 100,
+        "original_train_accounting": true
        },
        "task": {
         "tokens": 0,
-        "calls": 0
+        "calls": null
        }
       },
       "7": {

@@ -35,6 +35,10 @@ const attributes = {
 const devPoints = methods.reduce((total, method) => total + method.rounds.filter(
   ({ round, eval: evaluation }) => round > 0 && evaluation.dev != null,
 ).length, 0);
+const gapSubtotals = methods.flatMap((method) => method.rounds.flatMap((round) => {
+  const gap = 'gapSubtotal' in round ? round.gapSubtotal : undefined;
+  return gap ? [{ method: method.name, round: round.round, ...gap }] : [];
+}));
 const testRows = [...methods].sort((a, b) => b.testScore - a.testScore);
 ---
 
@@ -85,8 +89,12 @@ const testRows = [...methods].sort((a, b) => b.testScore - a.testScore);
     <p><strong>{zh ? '开销 — 任务智能体的逐轮 token 用量' : 'Cost — task-agent tokens per round'}</strong></p>
     <div class="hg-table">
       <table>
-        <caption>{zh ? '单位为百万 token。in 为输入，out 为输出。— 表示没有完整且可核对的用量记录。'
-          : 'Millions of tokens (M). in = input, out = generated tokens. A dash marks missing or incomplete usage.'}</caption>
+        <caption>
+          {zh ? '单位为百万 token。in 为输入，out 为输出。— 表示整轮用量未知。'
+              : 'Millions of tokens (M). in = input, out = output. A dash marks an unavailable round total.'}
+          {pool === 'train' && <>{zh ? ' 逐题对账涵盖原始训练调用，含轨迹重算。' : ' Reconciled rounds count original Train calls and include trace-based reconstruction.'}
+            {' '}<a href={data.accountingSource}>{zh ? '逐题数字与统计口径' : 'Per-task figures and accounting rules'}</a></>}
+        </caption>
         <thead>
           <tr><th scope="col" rowspan="2">{zh ? '方法' : 'method'}</th>
             {rounds.slice(pool === 'train' ? 1 : 0).map((round) => <th colspan="2">r{round}</th>)}
@@ -103,6 +111,10 @@ const testRows = [...methods].sort((a, b) => b.testScore - a.testScore);
         ))}</tbody>
       </table>
     </div>
+
+    {pool === 'train' && <p>{zh ? '以下轮次仅列已对账缺项的小计（输入 / 输出 token）：' : 'Reconciled gap subtotals for rounds with incomplete coverage (input / output tokens): '}
+      {gapSubtotals.map((gap, i) => <>{i > 0 && ' · '}<code>{gap.method}</code> R{gap.round} ({gap.tasks} {zh ? '题' : 'tasks'}) {gap.input_tokens.toLocaleString('en-US')} / {gap.output_tokens.toLocaleString('en-US')}</>)}
+    </p>}
 
     <p><strong>{zh ? '开销 — 生成检查点的逐轮改进 token 用量' : 'Cost — improver tokens per checkpoint round'}</strong></p>
     <div class="hg-table">
