@@ -201,6 +201,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "personamem_v2": ("context", "memory"),
     "memoryagentbench": ("context", "memory"),
     "appworld": ("context", "tools", "control", "recovery"),
+    "ptc_bench": ("context", "tools", "control", "memory", "recovery"),
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),
     "scienceworld": ("context", "tools", "control", "memory", "recovery"),
@@ -308,6 +309,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "personamem_v2": ("memory", "supplied_history"),
     "memoryagentbench": ("memory", "supplied_history"),
     "appworld": ("tool_use", "tool_dialogue"),
+    "ptc_bench": ("tool_use", "tool_dialogue"),
     "bird_minidev": ("artifact", "text_to_sql"),
     "physicsquestions": ("reasoning", "reasoning"),
     "scienceworld": ("environment", "science_simulation"),
@@ -414,6 +416,7 @@ EXPECTED_INTERACTION = {
     "tau3_bench": "closed_loop",
     "terminal_bench": "closed_loop",
     "appworld": "closed_loop",
+    "ptc_bench": "closed_loop",
     "triviaqa": "single_shot",
     "gaia": "closed_loop",
 }

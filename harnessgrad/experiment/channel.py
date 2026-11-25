@@ -148,6 +148,10 @@ def _for_method(point: dict) -> dict:
 _NATIVE_CASE_UNAVAILABLE = "[native verifier contract unavailable]"
 
 
+def _private_ptc_verifier(spec):
+    return ((spec or {}).get("python_runtime") or {}).get("dataset") == "ptc_bench"
+
+
 def _native_case_path(spec):
     native = spec.get("native_benchmark")
     if not isinstance(native, dict) or native.get("dataset") not in {"deepswe", "jobbench", "swe_bench_pro"}:
@@ -224,6 +228,10 @@ def _resolve_checks(spec: dict, budget: list[int]) -> dict:
     §2.5.9 copies the inputs in after it has stopped, into a fresh container, and that is
     where that boundary lives -- not here.
     """
+    if _private_ptc_verifier(spec):
+        # The case includes unobserved user turns and simulator state. The
+        # scorer bundle also contains verifiers for held-out tasks.
+        return {}
     out: dict[str, str] = {}
     native_case = _native_case_path(spec or {})
     if native_case is False:
@@ -322,6 +330,7 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
             continue
         spec = (verifiers or {}).get(tid) or {}
         setup = (setups or {}).get(tid) or {}
+        private_ptc = _private_ptc_verifier(spec)
         budget = [CONTEXT_TOTAL_LIMIT]
         entry = {
             "task_id": tid,
@@ -331,9 +340,9 @@ def _stage_task_context(work: Path, tasks, setups, verifiers, result,
                 "kind": spec.get("kind"),
                 # `expected` is the gold for an `answer` verifier; `checks` is the gold
                 # for a `command` one. Both are given, for the reason in `_resolve_checks`.
-                "expected": spec.get("expected"),
+                "expected": None if private_ptc else spec.get("expected"),
                 "argv": (["<managed-verifier-python>", "-I", "-B", "<trusted-native-verifier>"]
-                         if _native_case_path(spec) is not None and spec.get("python_runtime") else
+                         if private_ptc or (_native_case_path(spec) is not None and spec.get("python_runtime")) else
                          ["<managed-verifier-python>", *spec["argv"][1:]]
                          if spec.get("python_runtime") and spec.get("argv") else spec.get("argv")),
                 "reward_file": spec.get("reward_file"),

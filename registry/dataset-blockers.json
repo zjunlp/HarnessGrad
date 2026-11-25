@@ -922,6 +922,21 @@
   },
   {
    "blockers": [],
+   "dataset": "ptc_bench",
+   "demand": "tool_use",
+   "exercises": [
+    "context",
+    "tools",
+    "control",
+    "memory",
+    "recovery"
+   ],
+   "historical_runs": [],
+   "shared_blockers": [],
+   "surface": "tool_dialogue"
+  },
+  {
+   "blockers": [],
    "dataset": "reasoning_gym",
    "demand": "reasoning",
    "exercises": [

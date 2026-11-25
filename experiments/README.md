@@ -24,6 +24,7 @@ re-reads `driver.py`'s argparse block, so a key with no flag is refused by name.
   **`rsi-swe-bench-pro-v2*`** cover terminal, research and code-repair agents.
   They have additional service/image/runtime prerequisites. Read the exact
   [preparation recipes](../docs/rsi-experiments.md) before launching.
+* **[PTC-Bench](splits/ptc-bench/README.md)** has a frozen 80/80/80 research partition. Use the same split file across phases and select validation or test tasks explicitly when evaluating a saved checkpoint.
 
 Recipe files set `fail_on_incomplete: true`: method errors or incomplete task
 measurements exit nonzero. A legitimate method stop remains successful and is

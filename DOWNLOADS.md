@@ -925,6 +925,22 @@ failed transfers remove partial files and newly created empty directories.
 
 > Declared for consistency with the other QA datasets; this table is CSV, so the check reads it with `csv`, not pyarrow.
 
+## `ptc_bench`
+
+- **Data root:** `<HG_DATA_ROOT>/ptc_bench`
+- **Root override:** `HG_DATA_PTC_BENCH`
+
+### Official I-PTC source and PTC-Bench evaluation partitions
+
+- **Type:** `http`
+- **Version (pinned):** `fa4462e5ad1ea3cde2011aaf6396de5d76da4489`
+- **Size:** 1,335,401 byte archive
+- **URL:** https://codeload.github.com/HuanzhiMao/I-PTC/tar.gz/fa4462e5ad1ea3cde2011aaf6396de5d76da4489
+- **Destination:** `<HG_DATA_ROOT>/ptc_bench/source.tar.gz`
+- **SHA256:** `6121aabf40f21c544d4cc3fce98c62afe0c2f3a38ef62ed7909441535f63e9ba`
+
+> Main, error-recovery and multi-turn combined are 240 evaluation tasks. Prepare the private cases and a standard-library-only Python 3.12 execution runtime.
+
 ## `reasoning_gym`
 
 - **Data root:** `<HG_DATA_ROOT>/reasoning_gym`

@@ -29,6 +29,14 @@
     },
     {
       "datasets": [
+        "ptc_bench"
+      ],
+      "loading_and_preparation": "Verified GitHub commit and archive, order-preserving preparation of 240 private cases, and a standard-library-only managed Python 3.12 runtime.",
+      "trusted_execution": "Isolated Unix relay owns simulated state and releases follow-up requests in order. The pinned official verifier grades the sealed state and responses with binary task pass.",
+      "verification_scope": "One authored positive and one do-nothing control per official evaluation partition passed through the actual no-network platform runner. The controls exercised a state change, an injected tool failure and a follow-up user turn. All 240 initial-state noops failed the upstream binary metric in a separate offline preflight. No model run or full executable oracle corpus was measured."
+    },
+    {
+      "datasets": [
         "livecodebench"
       ],
       "loading_and_preparation": "Standard-library prepared metadata; NumPy only in metric helpers and managed scoring runtime.",

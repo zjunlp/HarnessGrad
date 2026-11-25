@@ -6,6 +6,7 @@ Start with the path that matches your task. The large reference files at the rep
 
 - [First use](getting-started.md) — installation, offline control and Console setup.
 - [RSI experiments](rsi-experiments.md) — prepare and run a research recipe.
+- [PTC-Bench](../data/datasets/ptc_bench/README.md) and its [train, validation, and test partition](../experiments/splits/ptc-bench/README.md).
 - [Harness authoring](writing_a_harness.md) and [bring your own harness](bring-your-own-harness.md).
 - [Customization proposals](customization.md) — generate a reviewable candidate from selected feedback.
 - [Bring your own method](bring-your-own-method.md) and [dataset onboarding](dataset-onboarding.md).
