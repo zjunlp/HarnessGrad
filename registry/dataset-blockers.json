@@ -948,6 +948,35 @@
    "surface": "reasoning"
   },
   {
+   "dataset": "robocasa365",
+   "demand": "environment",
+   "surface": "embodied_manipulation",
+   "exercises": [
+    "context",
+    "tools",
+    "control",
+    "recovery"
+   ],
+   "shared_blockers": [],
+   "blockers": [
+    {
+     "id": "procedural-rollout-coverage",
+     "family": "measurement-coverage",
+     "status": "measurement",
+     "observed": "The leaderboard publishes task classes and a sampled rollout count. Each adapter episode is procedurally sampled and has no paired released answer trajectory.",
+     "evidence": [
+      {
+       "kind": "repository",
+       "path": "data/datasets/robocasa365/README.md",
+       "locator": "Evaluation protocol"
+      }
+     ],
+     "next_action": "Record coverage and wall-clock time on the complete 50-class pool with a selected policy before reporting model performance."
+    }
+   ],
+   "historical_runs": []
+  },
+  {
    "blockers": [],
    "dataset": "scienceworld",
    "demand": "environment",

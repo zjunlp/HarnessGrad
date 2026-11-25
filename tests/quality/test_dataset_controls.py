@@ -56,6 +56,8 @@ ROWS: dict[str, dict] = {
         "json_scores": {"--oracle": 1, "--noop": 0},
         "metric_tests": ["test_wtm_bench_official_scorer.py"],
     },
+    'robocasa365': {'control': [], 'metric_tests': ['test_robocasa365_official_scorer.py'],
+                   'exempt': 'The official evaluator procedurally samples scenarios and publishes no action oracle for the adapter seed roster. The focused tests cover task identity, native success signal handling and sealed scoring. A policy run is a separate measurement.'},
     # Pinned upstream ports; controls do not imply production authorization.
     'bbeh': {'control': ['data/scaffolds/native_qa/control.py', '--dataset', 'bbeh'], 'metric_tests': ['test_native_qa_adapters.py']},
     'browsecomp': {'control': [], 'metric_tests': ['test_native_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},

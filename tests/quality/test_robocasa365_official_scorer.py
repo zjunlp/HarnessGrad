@@ -1,0 +1,172 @@
+"""Pin the RoboCasa365 catalogs, public tool surface and sealed binary verdict."""
+from collections import Counter
+from hashlib import sha256
+import json
+from pathlib import Path
+import sys
+from types import SimpleNamespace
+
+import pytest
+
+from data.datasets import robocasa365 as dataset
+from data.scaffolds import custom_split, registry
+from data.scaffolds.asset_module import load as load_asset
+from harnessgrad.datasets.runtime import execution_descriptor
+
+
+def test_leaderboard_is_the_default_test_set():
+    tasks, scorable, declared = registry.load_split('robocasa365')
+    official = registry.official_split('robocasa365', tasks)
+    assert len(tasks) == len(scorable) == 2500
+    assert len({case['seed'] for case in dataset.CASES.values()}) == len(tasks)
+    assert declared == official == {'train': [], 'eval': dataset.OFFICIAL_EVAL}
+    assert {case['pool'] for case in dataset.CASES.values()} == {'leaderboard'}
+    with pytest.raises(ValueError, match='declared split has an empty train side'):
+        custom_split.resolve('robocasa365', tasks, declared, 'declared', side='train')
+    counts = Counter(dataset.CASES[tid]['task'] for tid in official['eval'])
+    assert len(counts) == 50 and set(counts.values()) == {50}
+    assert {name: len(group) for name, group in dataset.PROTOCOL.GROUPS.items()} == {
+        'atomic_seen': 18, 'composite_seen': 16, 'composite_unseen': 16,
+    }
+    assert execution_descriptor('robocasa365')['python'] == '3.11'
+
+
+@pytest.mark.parametrize('pool', ['train', 'validation'])
+def test_old_study_episode_ids_are_no_longer_valid(pool):
+    protocol = dataset.PROTOCOL
+    task_id = f'robocasa365/{pool}/OpenDrawer/00'
+    case = {**dataset.CASES['robocasa365/leaderboard/OpenDrawer/00'],
+            'task_id': task_id, 'pool': pool, 'seed': protocol._seed(task_id)}
+    assert task_id not in dataset.CASES
+    with pytest.raises(ValueError, match='invalid RoboCasa365 case identity'):
+        protocol.validate_case(case)
+
+
+def test_full_catalog_leaves_study_split_open_and_preserves_leaderboard(monkeypatch):
+    monkeypatch.setenv('HG_ROBOCASA365_POOL', 'all')
+    expanded = load_asset(Path(dataset.__file__))
+    monkeypatch.setitem(sys.modules, dataset.__name__, expanded)
+    tasks, scorable, declared = registry.load_split('robocasa365')
+    assert declared == {'train': [], 'eval': dataset.OFFICIAL_EVAL}
+    assert len(tasks) == len(scorable) == 2815
+    assert len({case['seed'] for case in expanded.CASES.values()}) == len(tasks)
+    assert len({case['task'] for case in expanded.CASES.values()}) == 365
+    assert all(expanded.CASES[task_id] == case for task_id, case in dataset.CASES.items())
+    with pytest.raises(ValueError, match='declared split has an empty train side'):
+        custom_split.resolve('robocasa365', tasks, declared, 'declared', side='train')
+
+    added = list(expanded.PROTOCOL.catalog_cases())
+    assert registry.official_split('robocasa365', tasks) == {
+        'train': [case['task_id'] for case in added], 'eval': dataset.OFFICIAL_EVAL,
+    }
+    assert Counter(case['group'] for case in added) == {'atomic': 47, 'composite': 268}
+    assert len({case['task'] for case in added}) == 315
+    assert not {case['task'] for case in added} & {case['task'] for case in dataset.CASES.values()}
+    assert len(expanded.PROTOCOL.FALLBACK_MEDIAN_SECONDS) == 48
+    for case in added:
+        assert expanded.PROTOCOL.validate_case(case) == case
+        assert case['task_id'] in expanded.SETUP and case['task_id'] in expanded.VERIFY
+    assert expanded.CASES['robocasa365/catalog/CloseDrawer/00']['horizon'] == 450
+    fallback = expanded.CASES['robocasa365/catalog/BoilEggs/00']
+    assert fallback['horizon'] == 1050
+    with pytest.raises(ValueError, match='invalid RoboCasa365 case identity'):
+        expanded.PROTOCOL.validate_case({**fallback, 'horizon': 1000})
+    with pytest.raises(ValueError, match='expected a measured leaderboard reward'):
+        expanded.aggregate({fallback['task_id']: 1})
+
+
+def test_aggregate_keeps_partial_coverage_visible():
+    ids = dataset.OFFICIAL_EVAL
+    scores = dict.fromkeys(ids, 0)
+    scores[ids[0]] = scores[ids[1]] = 1
+    result = dataset.aggregate(scores)
+    assert result['complete']
+    assert result['success_rate'] == pytest.approx(2 / 2500)
+    assert result['groups']['atomic_seen']['success_rate'] == pytest.approx(2 / 900)
+    partial = dataset.aggregate({ids[0]: 1, ids[50]: 0, ids[51]: 0})
+    assert partial['success_rate'] == 0.5
+    assert partial['rollouts_measured'] == 3 and not partial['complete']
+
+
+@pytest.fixture
+def protocol_modules(monkeypatch):
+    monkeypatch.setitem(sys.modules, 'protocol', dataset.PROTOCOL)
+    episode = load_asset(dataset.ASSETS / 'simulator.py').Episode
+    check = load_asset(dataset.ASSETS / 'verify/check.py')
+    return episode, check
+
+
+def test_gym_success_is_latched_without_exposing_it(protocol_modules, monkeypatch):
+    episode_type, _ = protocol_modules
+    protocol = dataset.PROTOCOL
+    state = SimpleNamespace(tolist=lambda: [0.0])
+    observation = {protocol.LANGUAGE_KEY: 'Open the cabinet.'}
+    observation.update(dict.fromkeys(protocol.STATE_KEYS, state))
+
+    class Gym:
+        def __init__(self):
+            self.actions = []
+        def step(self, action):
+            self.actions.append(action)
+            return observation, 0.0, False, False, {
+                'success': len(self.actions) == 1, 'sim_state': 'private',
+            }
+
+    monkeypatch.setitem(sys.modules, 'numpy', SimpleNamespace(
+        asarray=lambda values, **_: values, float64='float64',
+    ))
+    env = Gym()
+    episode = episode_type(env, observation, 2)
+    action = {key: [0] * size for key, size in protocol.ACTION_SIZES.items()}
+    malformed = {**action, 'action.gripper_close': [float('nan')]}
+    assert 'error' in episode.handle('step_many', {'actions': [action, malformed]})
+    assert 'error' in episode.handle('reset', {})
+    assert env.actions == []
+    showed = episode.handle('step', {'action': action, 'cameras': []})
+    assert set(showed) == {'instruction', 'step', 'horizon', 'ended', 'state', 'images'}
+    assert not showed['ended'] and episode.first_success_step == 1
+    ended = episode.handle('step_many', {'actions': [action, action], 'cameras': []})
+    assert ended['ended'] and ended['step'] == 2
+    assert len(env.actions) == 2 and episode.first_success_step == 1
+
+
+@pytest.mark.parametrize('success_step,expected', [(None, False), (1, True)])
+def test_verifier_checks_sealed_native_episode(protocol_modules, success_step, expected):
+    _, check = protocol_modules
+    protocol = dataset.PROTOCOL
+    task = dataset.OFFICIAL_EVAL[0]
+    case = protocol.encode_case(dataset.CASES[task]).encode()
+    config = json.dumps({
+        'case': dataset.CASES[task], 'bundle': 'b' * 64, 'episode_schema': protocol.EPISODE_SCHEMA,
+        'metric': protocol.METRIC, 'revision': protocol.REVISION, 'scene_split': protocol.SCENE_SPLIT,
+    }).encode()
+    digest = sha256(config).hexdigest()
+    sealed = {
+        'schema': 'harnessgrad.interaction-record.v1',
+        'binding': {'task_id': task, 'input_sha256': 'a' * 64},
+        'payload': {
+            'schema': protocol.EPISODE_SCHEMA, 'task_id': task, 'revision': protocol.REVISION,
+            'scene_split': 'pretrain', 'bundle': 'b' * 64, 'steps': 2,
+            'input_sha256': 'a' * 64, 'case_sha256': sha256(case).hexdigest(),
+            'first_success_step': success_step, 'terminal': False, 'python_version': [3, 11, 18],
+        },
+    }
+    assert check.evaluate(config, sealed, digest)['success'] is expected
+    with pytest.raises(ValueError, match='input checksum'):
+        check.evaluate(config, sealed, 'c' * 64)
+    sealed['payload']['bundle'] = 'c' * 64
+    with pytest.raises(ValueError, match='episode identity'):
+        check.evaluate(config, sealed, digest)
+    sealed['payload']['bundle'] = 'b' * 64
+    sealed['payload']['first_success_step'] = 3
+    with pytest.raises(ValueError, match='invalid step counts'):
+        check.evaluate(config, sealed, digest)
+
+
+def test_packages_are_pinned_without_loading_dependencies():
+    entries = dataset.downloads()
+    assert len({entry['dst'] for entry in entries}) == len(entries)
+    assert all(len(entry['sha256']) == 64 for entry in entries)
+    assert all(not Path(entry['dst']).is_absolute() for entry in entries)
+    pins = execution_descriptor('robocasa365')['pins']
+    assert (pins['mujoco'], pins['numpy']) == ('3.3.1', '2.2.5')

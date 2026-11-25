@@ -109,6 +109,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.datasets.costbench" = ["execution-runtime.json", "requirements.lock", "source-files.json", "README.md",
                              "LIFECYCLE_CONTROL.md"]
 "data.datasets.costbench_dynamic" = ["README.md"]
+"data.datasets.robocasa365" = ["execution-runtime.json", "requirements.lock", "archives.json", "tasks.json", "README.md"]
 "data.datasets.ds1000" = ["execution-runtime.json", "requirements.lock",
                          "cpu-wheels-cp312-linux-x86_64.json", "README.md"]
 "harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
