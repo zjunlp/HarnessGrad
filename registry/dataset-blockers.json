@@ -1374,6 +1374,19 @@
     }
    ],
    "historical_runs": []
+  },
+  {
+   "blockers": [],
+   "dataset": "wtm_bench",
+   "demand": "artifact",
+   "exercises": [
+    "context",
+    "tools",
+    "verification"
+   ],
+   "historical_runs": [],
+   "shared_blockers": [],
+   "surface": "spreadsheet"
   }
  ],
  "review": {

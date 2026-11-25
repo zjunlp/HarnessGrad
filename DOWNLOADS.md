@@ -3038,3 +3038,19 @@ failed transfers remove partial files and newly created empty directories.
 - **Destination:** `<HG_DATA_ROOT>/workbench/native-source.tar.gz`
 
 > Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `wtm_bench`
+
+- **Data root:** `<HG_DATA_ROOT>/wtm_bench`
+- **Root override:** `HG_DATA_WTM_BENCH`
+
+### Microsoft WTM-Bench curated workbook pairs and native grader
+
+- **Type:** `http`
+- **Version (pinned):** `83d45ae601f3241ac7246613c67b765e48f93c06`
+- **Size:** 23,404,688 byte archive
+- **URL:** https://codeload.github.com/microsoft/WTM-Bench/tar.gz/83d45ae601f3241ac7246613c67b765e48f93c06
+- **Destination:** `<HG_DATA_ROOT>/wtm_bench/source.tar.gz`
+- **SHA256:** `5642966efd2ac4f35e6497bd81365c7d874f19813c85643011581ab62e8b9220`
+
+> Prepare the 150 curated Level 5 evaluation tasks, and prepare the managed Python execution runtime separately.

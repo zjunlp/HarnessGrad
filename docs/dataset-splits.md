@@ -175,6 +175,7 @@ uses all 150 tasks.
 | `twowikimultihopqa` | none | none | - | - | None (the pool is the scored split) |
 | `widesearch` | undeclared | absent | - | - | absent |
 | `workbench` | undeclared | absent | - | - | absent |
+| `wtm_bench` | none | none | - | - | None (the pool is the scored split) |
 
 <!-- split-inventory:end -->
 

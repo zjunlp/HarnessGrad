@@ -119,6 +119,14 @@
     },
     {
       "datasets": [
+        "wtm_bench"
+      ],
+      "loading_and_preparation": "Pinned Microsoft archive, curated Level 5 task catalogue and workbook bytes. Requires PyArrow for preparation and a separate managed Python 3.12 execution runtime.",
+      "trusted_execution": "Sandboxed workbook editing and a bound, offline official workbook grader. Neither the scorer nor the reference workbooks are staged for actors or methods.",
+      "verification_scope": "All 150 released workbook pairs checked directly with the pinned official scorer. At reported precision, references score 1 on 148 tasks and 0.8 on two chart tasks. All 150 unchanged workbooks score 0. Sandbox controls check native workbook scores and missing output. The original step-reward metric and model runs are outside this coverage."
+    },
+    {
+      "datasets": [
         "reasoning_gym"
       ],
       "loading_and_preparation": "Stdlib materialized loader; historical exact pinned snapshot found and atomically imported into task-owned storage (3,315,981 bytes; 1,780 records). Managed 0.1.25 execution closure locally imports.",
