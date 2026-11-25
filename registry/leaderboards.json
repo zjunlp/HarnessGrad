@@ -628,6 +628,13 @@
         "contributor": "Xubqpanda",
         "since": "2026-11-03",
         "note": "declared adapter"
+      },
+      {
+        "name": "wtm_bench",
+        "adapter": "data/datasets/wtm_bench.py",
+        "contributor": "Xubqpanda",
+        "since": "2026-11-25",
+        "note": "Declared adapter for Microsoft's curated Level 5 workbook tasks."
       }
     ]
   },

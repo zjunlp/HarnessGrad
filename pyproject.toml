@@ -176,6 +176,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.datasets.chessbench_puzzles" = ["execution-runtime.json", "runtime.json", "requirements-load.txt", "LOADER_RUNTIME.md", "NATIVE_RUNTIME.md"]
 "data.datasets.appworld" = ["execution-runtime.json", "requirements.lock", "PREPARATION.md", "cli/aw"]
 "data.datasets.ptc_bench" = ["execution-runtime.json", "requirements.lock", "README.md"]
+"data.datasets.wtm_bench" = ["execution-runtime.json", "requirements.lock", "README.md"]
 "data.runtimes" = ["chessbench_puzzles-native.json", "alfworld-native.json", "bird_minidev-native.json",
                    "jericho-native.json", "scienceworld-native.json"]
 "data.datasets.locomo" = ["requirements-score.txt", "execution-runtime.json", "requirements.lock",

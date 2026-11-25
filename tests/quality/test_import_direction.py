@@ -785,6 +785,7 @@ class ImportDirectionTests(unittest.TestCase):
             'twowikimultihopqa',
             'widesearch',
             'workbench',
+            'wtm_bench',
         )
         # The reviewed inventory and catalogue are properties of source declarations;
         # neither requires dataset payloads or optional adapter dependencies.
