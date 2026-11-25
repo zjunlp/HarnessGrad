@@ -1,0 +1,16 @@
+{
+  "name": "loop-vision",
+  "version": "0.1.0",
+  "entrypoint": "agent.py",
+  "backend": "cli",
+  "env_kinds": ["files"],
+  "components": {
+    "control": ["agent.py", "harness.json"],
+    "unattributed": ["requirements.lock", "README.md"]
+  },
+  "runtime": {
+    "kind": "python",
+    "python": "3.12",
+    "requirements": "requirements.lock"
+  }
+}
