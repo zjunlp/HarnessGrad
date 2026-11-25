@@ -115,7 +115,7 @@ Open `runs/gsm8k-dgm-study/end-summary.md` to compare the two rounds. For a repe
 
 **PTC-Bench** covers single-turn tool use, recovery from scheduled API failures, and follow-up requests over shared simulated state. The [adapter guide](data/datasets/ptc_bench/README.md) covers preparation and the [80/80/80 research split](experiments/splits/ptc-bench/README.md) defines checkpoint selection and held-out evaluation.
 
-**WTM-Bench** covers 150 Level 5 spreadsheet tasks. The [adapter guide](data/datasets/wtm_bench/README.md) explains preparation and the released workbook score used by HarnessGrad.
+**WTM-Bench** covers 150 Level 5 spreadsheet tasks. The [adapter guide](data/datasets/wtm_bench/README.md) covers preparation, and the [50/50/50 research split](experiments/splits/wtm-bench/README.md) keeps related workbooks together.
 
 <a id="what-you-can-run"></a>
 

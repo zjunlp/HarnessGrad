@@ -1,6 +1,6 @@
 # WTM-Bench
 
-[Workbook Time Machine](https://arxiv.org/abs/2608.07873) evaluates agents that edit a real starter workbook from a natural-language request. This adapter serves the 150 curated Level 5 evaluation tasks from the [Microsoft release](https://github.com/microsoft/WTM-Bench/tree/83d45ae601f3241ac7246613c67b765e48f93c06), under the `wtm_bench/Backward_EnronFuse.*` IDs. The [Hugging Face collection](https://huggingface.co/datasets/prose-ms/wtm-bench) also contains a larger pool. The adapter covers the curated Level 5 pool and declares no training partition.
+[Workbook Time Machine](https://arxiv.org/abs/2608.07873) evaluates agents that edit a real starter workbook from a natural-language request. This adapter serves the 150 curated Level 5 evaluation tasks from the [Microsoft release](https://github.com/microsoft/WTM-Bench/tree/83d45ae601f3241ac7246613c67b765e48f93c06), under the `wtm_bench/Backward_EnronFuse.*` IDs. The [Hugging Face collection](https://huggingface.co/datasets/prose-ms/wtm-bench) also contains a larger pool. The full Level 5 evaluation uses all 150 tasks. HarnessGrad studies can use the [workbook-grouped 50/50/50 research split](../../../experiments/splits/wtm-bench/README.md).
 
 Actors receive the released user request and workbook preview together with `input.xlsx`. They can edit the workbook with the task-owned Python and openpyxl and submit `output.xlsx`. The verifier checks the pinned starter and reference workbooks and grades a private copy of the submission. Reference files and the scorer are private to verification.
 
