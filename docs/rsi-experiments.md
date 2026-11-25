@@ -26,6 +26,23 @@ runs leave capture disabled. File IDs, remote URLs and transports outside the
 native HTTP route do not supply image bytes. To collect visual evidence for a
 baseline measured before capture was enabled, start a fresh study.
 
+### Caching large local verification assets
+
+Set `HG_VERIFICATION_FILE_CACHE_ROOTS` to a colon-separated list of absolute,
+trusted local asset directories to reuse file SHA-256 digests within each
+HarnessGrad process. For example, point it at the prepared RoboCasa365 assets
+while running a local study.
+
+```sh
+export HG_VERIFICATION_FILE_CACHE_ROOTS="$HG_DATA_ROBOCASA365/prepared-v1"
+```
+
+Each verification check still enumerates the directories and checks file
+identity and metadata. Changed files are hashed again. Use this option on
+filesystems that reliably update inode metadata when files change. Directories
+outside the configured roots and portable attestations continue to hash source
+bytes on every check. The cache is disabled by default and lasts for one process.
+
 | Route | Why an RSI/Harness researcher might choose it | Preparation beyond the platform | Headline score in this port |
 | --- | --- | --- | --- |
 | [BBEH](https://github.com/google-deepmind/bbeh) | Hard general reasoning; diagnose context, execution and answer delivery beyond school mathematics | Pinned JSON data; agent/editor model; no Docker, web service or model judge | Native per-answer correctness |

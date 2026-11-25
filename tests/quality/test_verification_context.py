@@ -1,6 +1,7 @@
 """Authored verification context and cache controls; no real scorers or models."""
 import copy
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -108,6 +109,50 @@ def test_relay_code_and_read_paths_changes_are_bound(tmp_path):
     assert context.problems(None,None)
 
 
+def test_local_file_cache_preserves_digest_and_rehashes_changed_assets(tmp_path, monkeypatch):
+    assets = tmp_path / 'assets'
+    nested = assets / 'nested'
+    nested.mkdir(parents=True)
+    image = nested / 'texture.png'
+    image.write_bytes(b'abc')
+    mesh = assets / 'mesh.obj'
+    mesh.write_bytes(b'mesh')
+    scorer = tmp_path / 'check.py'
+    scorer.write_text('pass')
+    task = [{'task_id': 'bench'}]
+    setups = {'bench': {'tool_relay': {'read_paths': [str(assets)]}}}
+    verifiers = {'bench': {'inputs': [{'path': 'check.py', 'from': str(scorer)}]}}
+
+    def capture():
+        return context.capture(task, {}, setups, verifiers, sandbox=False)
+
+    monkeypatch.delenv('HG_VERIFICATION_FILE_CACHE_ROOTS', raising=False)
+    baseline = capture()
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    with patch.object(context, '_file_digest', wraps=context._file_digest) as digest:
+        assert capture() == baseline
+        assert capture() == baseline
+        assert [call.args[0] for call in digest.call_args_list] == [mesh, image, scorer, scorer]
+
+        # An in-place edit can preserve the length and mtime of a nested file.
+        previous = image.stat()
+        image.write_bytes(b'xyz')
+        os.utime(image, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+        digest.reset_mock()
+        changed = capture()
+        assert changed != baseline
+        assert [call.args[0] for call in digest.call_args_list] == [image, scorer]
+
+        mesh.unlink()
+        assert capture() != changed
+        mesh.write_bytes(b'mesh')
+        assert capture() == changed
+
+        digest.reset_mock()
+        context.capture_content(task, {}, setups, verifiers, sandbox=False)
+        assert [call.args[0] for call in digest.call_args_list] == [mesh, image, scorer]
+
+
 def test_cache_reuses_only_unchanged_context_and_records_progress(tmp_path):
     repo=tmp_path/'repo';repo.mkdir(); source=tmp_path/'scorer.py';source.write_text('one')
     task={'task_id':'authored'};calls=[];cache={}
@@ -134,8 +179,13 @@ def test_cache_reuses_only_unchanged_context_and_records_progress(tmp_path):
         assert not evaluate()['cached_tasks'] and len(calls)==4
 
 
-def test_missing_and_midrun_changed_source_are_unmeasured(tmp_path):
+@pytest.mark.parametrize('cache_files', [False, True])
+def test_missing_and_midrun_changed_source_are_unmeasured(tmp_path, monkeypatch, cache_files):
     repo=tmp_path/'repo'; repo.mkdir(); source=tmp_path/'check.py'
+    if cache_files:
+        monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(tmp_path))
+    else:
+        monkeypatch.delenv('HG_VERIFICATION_FILE_CACHE_ROOTS', raising=False)
     task={'task_id':'x'}; cache={}; calls=[]
     verifier={'x':{'kind':'command','argv':['python3','check.py'],
                    'inputs':[{'path':'check.py','from':str(source)}]}}

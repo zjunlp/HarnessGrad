@@ -4,6 +4,7 @@ This is an equality commitment, not authentication of code, data or runtime.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 import hashlib
 import json
 import os
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # under the previous staging contract cannot prove the same scoring conditions.
 MEASUREMENT_PROTOCOL = 'harnessgrad.measurement.v2'
 _HASH = re.compile(r'[0-9a-f]{64}\Z')
+_CACHE_ROOTS_ENV = 'HG_VERIFICATION_FILE_CACHE_ROOTS'
 
 
 def _canonical(value):
@@ -70,12 +72,42 @@ def fields(value):
     return {} if value is None else {KEY: validate(value)}
 
 
-def _stamp(path):
-    s = path.lstat()
+def _stat_stamp(s):
     return (s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
 
 
-def _source(path, memo, *, portable=False):
+def _stamp(path):
+    return _stat_stamp(path.lstat())
+
+
+def _cache_roots(setting):
+    roots = []
+    for raw in filter(None, setting.split(os.pathsep)):
+        path = Path(raw)
+        if not path.is_absolute() or not path.is_dir():
+            raise ValueError(f'{_CACHE_ROOTS_ENV} requires absolute directory paths')
+        roots.append(path.resolve(strict=True))
+    return tuple(roots)
+
+
+def _file_digest(path, *, expected=None):
+    with path.open('rb') as stream:
+        if expected is not None and _stat_stamp(os.fstat(stream.fileno())) != expected:
+            raise ValueError('verification source changed during capture')
+        digest = hashlib.sha256()
+        while block := stream.read(1024 * 1024):
+            digest.update(block)
+        if expected is not None and _stat_stamp(os.fstat(stream.fileno())) != expected:
+            raise ValueError('verification source changed during capture')
+        return digest.hexdigest()
+
+
+@lru_cache(maxsize=262_144)
+def _cached_file_digest(path, stamp):
+    return _file_digest(path, expected=stamp)
+
+
+def _source(path, memo, *, portable=False, cache_roots=()):
     source = Path(path)
     if not source.is_absolute():
         source = ROOT / source
@@ -88,6 +120,7 @@ def _source(path, memo, *, portable=False):
     if resolved in forbidden:
         raise ValueError('verification source is an overly broad root')
     boundary = resolved if resolved.is_dir() else resolved.parent
+    use_file_cache = any(resolved.is_relative_to(root) for root in cache_roots)
     active = set()
 
     def walk(p):
@@ -102,11 +135,8 @@ def _source(path, memo, *, portable=False):
                 link = {'source_relative': target.relative_to(boundary).as_posix()}
             result = {'link': link, 'target': walk(target)}
         elif stat.S_ISREG(mode):
-            with p.open('rb') as stream:
-                digest = hashlib.sha256()
-                while block := stream.read(1024 * 1024):
-                    digest.update(block)
-            result = {'file': digest.hexdigest(), 'executable': bool(mode & 0o111)}
+            digest = (_cached_file_digest(p, before) if use_file_cache else _file_digest(p))
+            result = {'file': digest, 'executable': bool(mode & 0o111)}
         elif stat.S_ISDIR(mode):
             real = p.resolve(strict=True)
             if real in active:
@@ -128,13 +158,13 @@ def _source(path, memo, *, portable=False):
     return result
 
 
-def _sources(value, memo, *, relay=False, runtimes=None):
+def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=()):
     if isinstance(value, list):
-        return [_sources(v, memo, runtimes=runtimes) for v in value]
+        return [_sources(v, memo, runtimes=runtimes, cache_roots=cache_roots) for v in value]
     if not isinstance(value, dict):
         return value
     portable = runtimes is not None
-    result = {k: _sources(v, memo, relay=(k == 'tool_relay'), runtimes=runtimes)
+    result = {k: _sources(v, memo, relay=(k == 'tool_relay'), runtimes=runtimes, cache_roots=cache_roots)
               for k, v in value.items()}
     if portable and 'python_runtime' in value:
         from harnessgrad.datasets.runtime import validate_binding
@@ -156,7 +186,8 @@ def _sources(value, memo, *, relay=False, runtimes=None):
             and value.get('content') is None):
         if not isinstance(value['from'], str):
             raise ValueError('invalid verification source declaration')
-        result['__source_content_sha256'] = _source(value['from'], memo, portable=portable)
+        result['__source_content_sha256'] = _source(value['from'], memo, portable=portable,
+                                                     cache_roots=cache_roots)
         if portable and Path(value['from']).is_absolute():
             del result['from']
     if 'read_paths' in value:
@@ -181,7 +212,7 @@ def _sources(value, memo, *, relay=False, runtimes=None):
             else:
                 if any(path == root or path.is_relative_to(root) for root in system):
                     raise ValueError('unbound system read path cannot be committed as source')
-                commitment = {'source_sha256': _source(raw, memo, portable=portable)}
+                commitment = {'source_sha256': _source(raw, memo, portable=portable, cache_roots=cache_roots)}
                 if portable:
                     commitment['name'] = path.name if path.is_absolute() else raw
                 commitments.append(commitment)
@@ -190,7 +221,7 @@ def _sources(value, memo, *, relay=False, runtimes=None):
             del result['read_paths']
     if relay and isinstance(value.get('program'), str):
         program = Path(value['program'])
-        result['__program_sha256'] = _source(program, memo, portable=portable)
+        result['__program_sha256'] = _source(program, memo, portable=portable, cache_roots=cache_roots)
         if portable and program.is_absolute():
             result['program'] = {'name': program.name}
     return result
@@ -214,6 +245,8 @@ def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
     mappings = (setups or {}, verifiers or {}, envs or {})
     if any(not isinstance(x, dict) for x in mappings):
         raise ValueError('invalid verification context declarations')
+    # Portable attestations read every byte even in a locally optimized experiment.
+    cache_roots = _cache_roots(os.environ.get(_CACHE_ROOTS_ENV, '')) if runtimes is None else ()
     memo, result = {}, {}
     for task in tasks:
         if not isinstance(task, dict) or not isinstance(task.get('task_id'), str) or not task['task_id'] or task['task_id'] in result:
@@ -227,9 +260,9 @@ def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
             value = {'measurement_protocol': MEASUREMENT_PROTOCOL,
                      'execution_policy': policy,
                      'task': task, 'scorable_present': tid in scorable, 'scorable': scorable.get(tid),
-                     'setup': _sources(mappings[0].get(tid), memo, runtimes=runtimes),
-                     'verifier': _sources(mappings[1].get(tid), memo, runtimes=runtimes),
-                     'env': _sources(mappings[2].get(tid), memo, runtimes=runtimes)}
+                     'setup': _sources(mappings[0].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots),
+                     'verifier': _sources(mappings[1].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots),
+                     'env': _sources(mappings[2].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots)}
             if runtimes is not None:
                 value['projection'] = 'harnessgrad.verification-content.v1'
             result[tid] = _digest(value)
