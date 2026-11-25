@@ -481,6 +481,13 @@
         "note": "declared adapter"
       },
       {
+        "name": "ptc_bench",
+        "adapter": "data/datasets/ptc_bench.py",
+        "contributor": "Xubqpanda",
+        "since": "2026-11-25",
+        "note": "declared adapter"
+      },
+      {
         "name": "reasoning_gym",
         "adapter": "data/datasets/reasoning_gym.py",
         "contributor": "Xubqpanda",

@@ -93,6 +93,8 @@ Track how a harness performs as an improvement method edits it over successive r
   </tr>
 </table>
 
+[PersonaMem-v2 training results](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/main/Experiments/PersonaMem-v2/qwen3.5-9b_loop/dsh-deepseek-v4.1-flash-1017) include H0–R20 curves and text-free task traces for seven methods.
+
 <a id="quick-start"></a>
 
 ### 🚀 Quick start

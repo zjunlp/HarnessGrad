@@ -764,6 +764,7 @@ class ImportDirectionTests(unittest.TestCase):
             'officeqa_pro',
             'personamem_v2',
             'physicsquestions',
+            'ptc_bench',
             'reasoning_gym',
             'scienceworld',
             'searchqa',

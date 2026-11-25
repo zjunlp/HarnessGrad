@@ -33,8 +33,8 @@ The platform seals the simulator state and submissions outside the actor. The fi
 ## Offline controls
 
 ```bash
-python data/datasets/ptc_bench/control.py --oracle --platform
-python data/datasets/ptc_bench/control.py --noop --platform
+python tools/ptc_bench_control.py --oracle --platform
+python tools/ptc_bench_control.py --noop --platform
 ```
 
 These commands run one authored positive and one do-nothing control per partition. The positive controls cover a real state change with an answer, an injected failure and recovery, and a genuine second user turn on a persistent simulator. They use the pinned release without a model endpoint. The release provides answer dictionaries on some tasks and has no complete executable oracle corpus. In a separate official-verifier preflight, all 240 do-nothing cases returned `passed=false`, including cases with a nonzero partial score.

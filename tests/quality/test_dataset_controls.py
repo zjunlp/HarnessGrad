@@ -47,7 +47,7 @@ QUALITY = ROOT / "tests" / "quality"
 #: and the sentence has to say why and what writing one would take.
 ROWS: dict[str, dict] = {
     "ptc_bench": {
-        "control": ["data/datasets/ptc_bench/control.py"],
+        "control": ["tools/ptc_bench_control.py"],
         "json_scores": {"--oracle": 1, "--noop": 0},
         "metric_tests": ["test_ptc_bench_official_scorer.py"],
     },

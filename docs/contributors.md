@@ -6,7 +6,7 @@ Ordered by number of credited entries. `since` is the month an entry was adopted
 
 <a id="xubqpanda"></a>
 
-## [@Xubqpanda](https://github.com/Xubqpanda) — 59 entries
+## [@Xubqpanda](https://github.com/Xubqpanda) — 60 entries
 
 Buqiang Xu. platform core; every harness and method in this catalogue
 
@@ -77,6 +77,7 @@ Buqiang Xu. platform core; every harness and method in this catalogue
 - `twowikimultihopqa` — 2026-11-03 — declared adapter
 - `widesearch` — 2026-11-03 — declared adapter
 - `workbench` — 2026-11-03 — declared adapter
+- `ptc_bench` — 2026-11-25 — declared adapter
 
 <a id="harbor-framework"></a>
 
