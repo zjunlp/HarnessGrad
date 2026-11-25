@@ -1,6 +1,12 @@
 """Validation for explicitly enabled runtime extensions; standard library only."""
 from pathlib import Path
 import math
+import sys
+
+
+def validate_relay_ready_timeout(value) -> None:
+    if type(value) not in (int, float) or not 0 < value <= sys.float_info.max:
+        raise ValueError("tool_relay.ready_timeout_s must be a positive finite number")
 
 
 def validate_record(spec) -> None:

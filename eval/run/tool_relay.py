@@ -41,6 +41,7 @@ import traceback
 from pathlib import Path
 
 from data.scaffolds.runtime_extensions import validate_record as validate_record
+from data.scaffolds.runtime_extensions import validate_relay_ready_timeout
 
 #: Fixed destination the sandbox mounts the socket at. Kept in step with
 #: `eval/containers/tool_route.py`, which publishes it; a dataset never chooses this.
@@ -307,7 +308,7 @@ def declaration(setup: dict | None) -> dict | None:
     return (setup or {}).get("tool_relay")
 
 
-def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
+def start(setup: dict | None, *, ready_timeout_s: float | None = None,
           context: dict | None = None, private_diagnostics=False) -> ToolRelay | None:
     """Start the relay `setup` declares, or return `None` for a task that needs none.
 
@@ -318,6 +319,12 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
     decl = declaration(setup)
     if not decl:
         return None
+    if ready_timeout_s is None:
+        ready_timeout_s = decl.get("ready_timeout_s", READY_TIMEOUT_S)
+    try:
+        validate_relay_ready_timeout(ready_timeout_s)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
     validate_record(decl.get("record"))
     filename = decl.get("filename", "environment")
     if not isinstance(filename, str) or filename in ("", ".", "..") or Path(filename).name != filename:

@@ -30,12 +30,15 @@ SETUP[task_id] = {
         "program": str(relay_program),
         "content": private_json,
         "content_flag": "--case",
+        "ready_timeout_s": 120,
         "record": {"path": "trusted_episode", "max_bytes": 32 * 1024 * 1024},
     },
 }
 ```
 
 relay 声明支持 `program/python/content/content_path/content_flag/filename/budget/deadline_s/max_calls/max_line_bytes`。
+`tool_relay.ready_timeout_s` 可声明服务启动后等待连接的秒数，取有限正数，省略时使用 60 秒。
+直接调用 `tool_relay.start(..., ready_timeout_s=...)` 时，显式参数优先。
 `record.path` 是一个相对顶层目录名；省略 `max_bytes` 默认为 32 MiB。显式 `null` 不加记录大小上限；正整数仍执行大小校验。文件类型、链接、JSON 和绑定校验始终保留。
 
 启用 `record` 后，可信服务进程得到：

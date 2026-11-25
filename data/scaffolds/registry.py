@@ -897,6 +897,9 @@ def _check_setup(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: SETUP[{tid!r}] must be a dict")
     relay = spec.get("tool_relay") or {}
+    if "ready_timeout_s" in relay:
+        from data.scaffolds.runtime_extensions import validate_relay_ready_timeout
+        validate_relay_ready_timeout(relay["ready_timeout_s"])
     if "python_runtime" in relay:
         from harnessgrad.datasets.runtime import validate_binding
         if not isinstance(relay.get("python"), str):
