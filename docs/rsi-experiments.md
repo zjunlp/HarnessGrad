@@ -9,6 +9,23 @@ These are executable experiment configurations, not new benchmark results. The
 five-task settings bound the initial task count; they do not demonstrate a method's
 quality. Downloading source bytes does not establish native runtime readiness.
 
+### Visual training evidence
+
+Pass `--visual-evidence` on a training run to archive inline PNG and JPEG inputs
+observed on the platform's native HTTP model route. The recorder supports Chat
+Completions and Responses. The run stores each image once under
+`visual-evidence/train/images`, keyed by SHA-256, and writes trial indexes under
+`visual-evidence/train/rounds`. References record HTTP status and response
+completion. Loop Vision also links the images to model and tool steps.
+
+The shared editing workspace receives training indexes under
+`evidence/history/visual` with read-only paths to the images. An editor can open
+a selected frame with its image-viewing tool. Capture records expose the request
+and HTTP response, with interpretation left to the downstream model. Evaluation
+runs leave capture disabled. File IDs, remote URLs and transports outside the
+native HTTP route do not supply image bytes. To collect visual evidence for a
+baseline measured before capture was enabled, start a fresh study.
+
 | Route | Why an RSI/Harness researcher might choose it | Preparation beyond the platform | Headline score in this port |
 | --- | --- | --- | --- |
 | [BBEH](https://github.com/google-deepmind/bbeh) | Hard general reasoning; diagnose context, execution and answer delivery beyond school mathematics | Pinned JSON data; agent/editor model; no Docker, web service or model judge | Native per-answer correctness |

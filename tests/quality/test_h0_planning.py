@@ -157,15 +157,19 @@ def driver_control(tmp_path, monkeypatch):
     config.reset()
 
 
-def test_driver_fresh_h0_calls_once_and_preserves_unknown_cost(driver_control, monkeypatch, tmp_path):
+@pytest.mark.parametrize("capture_visual", [False, True])
+def test_driver_fresh_h0_calls_once_and_preserves_unknown_cost(
+        driver_control, monkeypatch, tmp_path, capture_visual):
     driver, execute = driver_control
     calls = []
     def measure(repo, tasks, scorable, cache, **kwargs):
         calls.append(kwargs["harness_sha"])
+        assert kwargs.get("visual_evidence", False) is capture_visual
         return {"per_task": {"t01": .5}, "verification_context": kwargs["verification_context"],
                 "traces": {}, "trials": 1}
     monkeypatch.setattr(driver, "evaluate", measure)
-    assert execute("fresh") == 0
+    flags = ("--visual-evidence",) if capture_visual else ()
+    assert execute("fresh", *flags) == 0
     assert len(calls) == 1
     point = json.loads((tmp_path / "runs/fresh/curve.jsonl").read_text().splitlines()[0])
     assert point["cost"]["harness_tokens"] is None and point["cost"]["env_generation_tokens"] is None

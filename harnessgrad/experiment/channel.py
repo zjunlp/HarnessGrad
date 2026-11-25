@@ -467,12 +467,49 @@ def _stage_default_skill(channel: Path) -> None:
         (channel / "SKILL.md").write_text(skill.read_text(encoding="utf-8"), encoding="utf-8")
 
 
+def _stage_visual_evidence(channel, root, points, task_ids):
+    """Publish trial indexes for the method's admitted training tasks."""
+    if not task_ids:
+        return
+    allowed = set(task_ids)
+    images = root.resolve() / 'images'
+    destination = channel / 'history' / 'visual'
+    for round_no in sorted({p['round'] for p in points if type(p.get('round')) is int}):
+        source = root / 'rounds' / f'round-{round_no}'
+        records = []
+        for path in sorted(source.glob('*.json')):
+            if path.is_symlink() or not path.is_file():
+                continue
+            try:
+                trial = json.loads(path.read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                continue
+            if (not isinstance(trial, dict) or trial.get('schema') != 'harnessgrad.visual-trial.v1'
+                    or trial.get('round') != round_no or trial.get('task_id') not in allowed):
+                continue
+            for call in trial['calls']:
+                for image in call['images']:
+                    name = image.pop('file', None)
+                    if (isinstance(name, str) and re.fullmatch(r'[0-9a-f]{64}\.(?:png|jpg)', name)
+                            and (images / name).is_file() and not (images / name).is_symlink()):
+                        image['path'] = str(images / name)
+                    elif image.get('status') == 'captured':
+                        image['status'] = 'file_unavailable'
+            records.append(trial)
+        if records:
+            records.sort(key=lambda row: (row['task_id'], row['trial'], row['capture_id']))
+            destination.mkdir(parents=True, exist_ok=True)
+            with (destination / f'round-{round_no}.jsonl').open('w', encoding='utf-8') as stream:
+                for record in records:
+                    stream.write(json.dumps(record, ensure_ascii=False) + '\n')
+
+
 def _stage_for_method(work: Path, point: dict, traces: dict,
                       history: list[dict] | None = None,
                       task_ids: list[str] | None = None,
                       run_dir: Path | None = None,
                       tasks=None, setups=None, verifiers=None,
-                      result=None) -> None:
+                      result=None, visual_root: Path | None = None) -> None:
     """Hand the method this round's evidence, and the record of the rounds before it.
 
     `history` is what makes a whole family of methods implementable. Several published
@@ -539,6 +576,8 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
     # §4.7 already says where the things a method may read live. A method with its own
     # skill simply ignores it.
     _stage_default_skill(hg)
+    if visual_root is not None:
+        _stage_visual_evidence(hg, visual_root, [*(history or []), point], task_ids)
     for past in (history or []):
         (hg / "history" / f"round-{past.get('round', 0)}.json").write_text(
             json.dumps(_for_method(past), indent=1))

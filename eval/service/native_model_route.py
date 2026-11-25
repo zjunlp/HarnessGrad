@@ -72,7 +72,7 @@ class _Server(socketserver.ThreadingUnixStreamServer):
 
 
 class NativeModelRoute:
-    def __init__(self, base_url: str, *, observe_http=False, budget_context=None):
+    def __init__(self, base_url: str, *, observe_http=False, budget_context=None, visual=None):
         parsed = urlsplit(base_url)
         # TLS/userinfo need a different transport contract. Fail rather than
         # quietly dropping encryption, credentials or URL semantics.
@@ -87,9 +87,9 @@ class NativeModelRoute:
         from eval.service.request_budget import Settlement
         self.settlement = Settlement()
         self.http = None
-        if observe_http:
+        if observe_http or visual is not None:
             from eval.service.http_observation import HTTPObservation
-            self.http = HTTPObservation()
+            self.http = HTTPObservation(visual)
         self.directory = None
         self.socket_path = None
         self.server = None

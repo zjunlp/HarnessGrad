@@ -43,8 +43,9 @@ class TaskSession:
                                               if self.task_budget_context is not None else {})).start()
         return self.model.base_url
 
-    def start_native_model(self, base, *, factory, observe_http):
+    def start_native_model(self, base, *, factory, observe_http, visual=None):
         self.model = factory(base, **({'observe_http': True} if observe_http else {}),
+            **({'visual': visual} if visual is not None else {}),
             **({'budget_context': self.task_budget_context} if self.task_budget_context is not None else {})).start()
 
     def prepare_stepwise(self, session, *, factory, contract, public_fields, timeout_s):

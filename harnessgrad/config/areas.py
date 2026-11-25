@@ -328,6 +328,7 @@ class RunConfig:
     runs_root: str = "runs"
     work_root: str = "../harnessgrad_work"
     method_entrypoint: str | None = None
+    visual_evidence: bool = False
     # Optional trusted dispatcher binding.  These are argv-derived facts and
     # therefore belong beside the run identity, not in the environment snapshot.
     budget_profile: str | None = None

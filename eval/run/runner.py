@@ -322,7 +322,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             harness_runtime_identity: dict | None = None,
             _worker: dict | None = None,
             _private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None,
-            task_budget_context=None) -> dict:
+            task_budget_context=None, visual_trial=None) -> dict:
     # A direct caller must learn configuration faults before paying for actor work.
     # Construction reuses the broker's frozen declaration/config checks; entering
     # the broker (socket creation and requests) remains verifier-only. Evaluation
@@ -433,6 +433,7 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
             env, run_id, run_seed, recordings_root, trial_id=trial_id,
             runtime_receipt=runtime_receipt, worker=_worker,
             dataset_runtime_identity=dataset_runtime_identity,
+            **({'visual_trial': visual_trial} if visual_trial is not None else {}),
             **({"task_budget_context": task_budget_context} if task_budget_context is not None else {}),
             **candidate_runtime.fields(selected_harness),
             **({'private_paths': _private_paths} if _private_paths else {}),
@@ -506,7 +507,7 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             evidence_output: dict | None = None,
             harness_runtime_identity: dict | None = None,
             private_paths: tuple[Path, ...] = (), dataset_runtime_identity=None,
-            task_budget_context=None) -> dict:
+            task_budget_context=None, visual_trial=None) -> dict:
     """Run the harness on one task in a throwaway dir, off the platform's disk.
 
     Returns {task_id, answer, trace, exit_code}. A non-zero exit is recorded as
@@ -814,7 +815,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 if not base:
                     raise modelgate_mod.GatewayUnavailable("live offline agent needs HG_AGENT_BASE_URL")
                 session.start_native_model(base, factory=NativeModelRoute,
-                                           observe_http=model_failure.enabled(verifier))
+                                           observe_http=model_failure.enabled(verifier),
+                                           **({'visual': visual_trial} if visual_trial is not None else {}))
+                if visual_trial is not None:
+                    child_env['HG_ACTOR_VISUAL_EVIDENCE'] = '1'
             except (modelgate_mod.GatewayUnavailable, ValueError) as exc:
                 result = _invalid(task, exc, stage="native model route admission", service=None)
                 if task_budget_context is not None:
@@ -1110,7 +1114,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
              dataset_runtime_identity: dict | None = None,
              harness_runtime_identity: dict | None = None,
              verification_context: dict | None = None,
-             task_budget_context=None, measurement_components=None) -> dict:
+             task_budget_context=None, measurement_components=None, visual_evidence=False) -> dict:
     """Run a harness over a task set and score it.
 
     `scorable` maps task_id -> expected answer. Scoring lives here, not in the
@@ -1129,6 +1133,7 @@ def evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
                          trials=trials, jobs=jobs, progress_dir=progress_dir,
                          persist_trial_report=persist_trial_report,
                          dataset_runtime_identity=dataset_runtime_identity,
+                         **({'visual_evidence': True} if visual_evidence else {}),
                          **({'verification_context': verification_context}
                             if verification_context is not None else {}),
                          **({'harness_runtime_identity': harness_runtime_identity}
@@ -1171,7 +1176,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
               dataset_runtime_identity: dict | None = None,
               harness_runtime_identity: dict | None = None,
               verification_context: dict | None = None,
-              task_budget_context=None, measurement_components=None) -> dict:
+              task_budget_context=None, measurement_components=None, visual_evidence=False) -> dict:
     """Score a harness on a task set.
 
     `trials` is how many times each `(harness, task)` pair is measured. One is the
@@ -1340,6 +1345,13 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
         repo, sandbox, run_id, run_seed, round_no, harness_sha, trials, len(tasks),
         recordings_root, diagnostic_authorization, private_paths)
     task_budget_stops = {}
+    visual_archive = None
+    if visual_evidence:
+        from eval.service.visual_evidence import ImageArchive
+        if progress_dir is None:
+            raise ValueError('visual evidence requires a run output directory')
+        visual_archive = ImageArchive(progress_dir, round_no)
+
     def measure_task(*args, **kwargs):
         if task_budget_stops:
             result = _invalid(args[1], ValueError('task budget already stopped'),
@@ -1347,8 +1359,21 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split,
                                           'reason': 'task_budget_already_stopped'}
             return result
-        result = run_one(*args,
-            **({'task_budget_context': task_budget_context} if task_budget_context is not None else {}), **kwargs)
+        visual = (visual_archive.start_trial(args[1]['task_id'], kwargs.get('trial_id'))
+                  if visual_archive is not None else None)
+        result = {}
+        try:
+            result = run_one(*args,
+                **({'task_budget_context': task_budget_context} if task_budget_context is not None else {}),
+                **({'visual_trial': visual} if visual is not None else {}), **kwargs)
+        finally:
+            if visual is not None:
+                try:
+                    visual.finish(result.get('trace', ''),
+                                  available=(result.get('model_gateway') or {}).get('transport') == 'unix+isolated-loopback'
+                                  or bool(visual.calls))
+                except OSError:
+                    console.reporter.note('Could not write the trial visual evidence index.', level='warn')
         if result.get('task_budget_stop'):
             task_budget_stops[args[1]['task_id']] = result['task_budget_stop']
         return result

@@ -145,7 +145,7 @@ harness for the tasks described in `evidence/tasks/`.
 Read `evidence/SKILL.md` first: it defines the harness contract, where the evidence is,
 what a valid change is, and which failure modes are known to matter on this platform.
 
-Everything you may read is under `evidence/`:
+Use the evidence under `evidence/` and the read-only artifact paths listed there:
 
   evidence/SKILL.md            how to improve a harness (read this first)
   evidence/round.json          what the incumbent scored, per task

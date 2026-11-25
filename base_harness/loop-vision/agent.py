@@ -13,6 +13,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from uuid import uuid4
 
 
 # Outer loop turns include parse and submission retries.
@@ -89,7 +90,7 @@ def _record_usage(usage) -> None:
             USAGE[key] += v
 
 
-def _call_openai(messages: list[dict]) -> str:
+def _call_openai(messages: list[dict], *, visual_request=None) -> str:
     """Request a completion with a per-request timeout and bounded retries."""
     from openai import OpenAI
 
@@ -107,9 +108,11 @@ def _call_openai(messages: list[dict]) -> str:
 
     for attempt in range(attempts):
         try:
+            request_id = visual_request(messages) if visual_request is not None else None
             resp = client.chat.completions.create(
                 model=model, messages=messages, temperature=0.0,
                 max_tokens=MAX_OUTPUT_TOKENS,
+                **({"extra_headers": {"X-HarnessGrad-Visual-Request": request_id}} if request_id else {}),
             )
             _record_usage(getattr(resp, "usage", None))
             return resp.choices[0].message.content or ""
@@ -130,10 +133,10 @@ def _call_openai(messages: list[dict]) -> str:
     raise RuntimeError(f"{attempts} attempts failed, last: {last}") from last
 
 
-def _complete(messages: list[dict]) -> str:
+def _complete(messages: list[dict], *, visual_request=None) -> str:
     """Dispatch one logical model call and count it once."""
     USAGE["calls"] += 1
-    return _call_mock(messages) if _backend() == "mock" else _call_openai(messages)
+    return _call_mock(messages) if _backend() == "mock" else _call_openai(messages, visual_request=visual_request)
 
 
 class _Action(dict):
@@ -350,13 +353,17 @@ def _image_paths(names) -> list[Path]:
     return paths
 
 
-def _result_image_paths(stdout: str) -> list[Path]:
+def _result_observation(stdout: str) -> tuple[dict, int | None]:
     try:
         result = json.loads(stdout)
-        images = result.get("images") if isinstance(result, dict) else None
-        return _image_paths(list(images.values())) if isinstance(images, dict) else []
+        if isinstance(result, dict) and isinstance(result.get("images"), dict):
+            images = result["images"]
+            paths = _image_paths(list(images.values()))
+            step = result.get("step")
+            return dict(zip(paths, images)), step if type(step) is int and step >= 0 else None
     except (ValueError, RecursionError):
-        return []
+        pass
+    return {}, None
 
 
 def _read_image(workdir: Path, path: Path) -> bytes:
@@ -461,6 +468,8 @@ def run(task: dict, workdir: Path) -> str:
     last_command_result = None
     output_dir = None
     latest_image_message = None
+    latest_image_source = None
+    capture_visual = os.environ.get("HG_ACTOR_VISUAL_EVIDENCE") == "1"
     # Flush each trace line so partial runs retain their latest events.
     with trace_path.open("w", buffering=1) as trace:
         # Record effective settings so environment overrides are visible in the trace.
@@ -485,7 +494,17 @@ def run(task: dict, workdir: Path) -> str:
             if dropped:
                 trace.write(json.dumps({"step": step, "history_dropped": dropped}) + "\n")
             t0 = time.time()
-            reply = _complete(messages)
+            def record_visual_request(current_messages):
+                if latest_image_source is None or not any(
+                        message is latest_image_message for message in current_messages):
+                    return None
+                request_id = uuid4().hex
+                trace.write(json.dumps({"visual_request": {"id": request_id, "model_step": step,
+                                                           **latest_image_source}}) + "\n")
+                return request_id
+
+            reply = (_complete(messages, visual_request=record_visual_request)
+                     if capture_visual else _complete(messages))
             took = time.time() - t0
             model_s += took
             trace.write(json.dumps({"step": step, "reply": reply,
@@ -557,8 +576,11 @@ def run(task: dict, workdir: Path) -> str:
             took = time.time() - t0
             command_s += took
             out = proc.stdout + proc.stderr
+            labels, environment_step = {}, None
+            if proc.returncode == 0 and ("images" not in action or capture_visual):
+                labels, environment_step = _result_observation(proc.stdout)
             if proc.returncode == 0 and "images" not in action:
-                image_paths = _result_image_paths(proc.stdout)
+                image_paths = list(labels)
             image_parts, image_records = _image_attachments(workdir, image_paths, proc.returncode)
             command_trace = {"step": step, "command": cmd, "exit": proc.returncode,
                              "shell": shell, "command_ms": int(took * 1000), "output": out}
@@ -615,6 +637,14 @@ def run(task: dict, workdir: Path) -> str:
                 observation["content"] = [
                     {"type": "text", "text": observation["content"]}, *image_parts]
                 latest_image_message = observation
+                if capture_visual:
+                    latest_image_source = {
+                        "tool_step": step,
+                        "images": [{"sha256": row["sha256"], "label": labels.get(Path(row["path"]))}
+                                   for row in image_records if "sha256" in row],
+                    }
+                    if environment_step is not None and all(path in labels for path in image_paths):
+                        latest_image_source["environment_step"] = environment_step
 
         trace.write(json.dumps({"wall_clock_s": {
             "model": round(model_s, 1), "commands": round(command_s, 1),

@@ -1065,7 +1065,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         if baseline_state.is_dir():
             man = manifest(baseline_state)
     h0_options = h0_planning.H0Options(args.dataset, args.sampling, args.side, args.trials,
-                                       args.jobs, args.gpu_budget, args.sandbox)
+                                       args.jobs, args.gpu_budget, args.sandbox,
+                                       visual_evidence=args.visual_evidence)
     h0_identities = h0_planning.H0Identities(args.scoring_identity, args.dataset_runtime_identity,
         args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity,
         args.measurement_components)
