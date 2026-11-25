@@ -227,27 +227,39 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
     Every task must land on exactly one side, and the sides must not overlap --
     an overlap means the method is scored on something it studied.
 
-    **A declaration is a claim about the benchmark, so both sides must be filled.** A
-    split the *run* supplies is a different thing and is validated by `validate_split`
-    with only the run's own side required; see that function for why.
+    Declared train/eval splits cover the catalog and fill both sides. An adapter
+    can declare `SPLIT_SOURCE = "official-eval"` to default to its official
+    evaluation IDs only and leave the rest of its catalog available for explicit splits.
     """
     remote = provider(name)
     if remote is not None:
         catalog = remote.catalog()
         tasks, scorable = catalog["tasks"], catalog["scorable"]
-        split = catalog["metadata"].get("SPLIT")
-        groups = catalog["metadata"].get("SPLIT_GROUPS")
+        metadata = catalog["metadata"]
+        split = metadata.get("SPLIT")
+        source = metadata.get("SPLIT_SOURCE")
+        groups = metadata.get("SPLIT_GROUPS")
         if groups is not None:
             groups = _validate_split_groups(name, tasks, groups)
-        return tasks, scorable, (None if split is None else validate_split(
-            name, tasks, split, split_groups=groups))
-    tasks, scorable = load(name)
-    module = importlib.import_module(module_name(name))
-    split = getattr(module, "SPLIT", None)
+    else:
+        tasks, scorable = load(name)
+        module = importlib.import_module(module_name(name))
+        split = getattr(module, "SPLIT", None)
+        source = getattr(module, "SPLIT_SOURCE", None)
+        groups = (load_split_groups(name, tasks)
+                  if split is not None or source == "official-eval" else None)
+    if source == "official-eval":
+        eval_ids = official_split(name, tasks)["eval"]
+        selected = set(eval_ids)
+        selected_tasks = [task for task in tasks if task["task_id"] in selected]
+        selected_groups = ({tid: group for tid, group in groups.items() if tid in selected}
+                           if groups is not None else None)
+        return tasks, scorable, validate_split(
+            name, selected_tasks, {"train": [], "eval": eval_ids},
+            require_nonempty=("eval",), split_groups=selected_groups)
     if split is None:
         return tasks, scorable, None
-    return tasks, scorable, validate_split(
-        name, tasks, split, split_groups=load_split_groups(name, tasks))
+    return tasks, scorable, validate_split(name, tasks, split, split_groups=groups)
 
 
 def _validate_split_groups(name: str, tasks: list[dict], groups: dict) -> dict[str, str]:

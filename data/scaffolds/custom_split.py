@@ -201,6 +201,8 @@ def read(name, tasks, path, *, side='train'):
 def resolve(name, tasks, declared, choice, *, side='train'):
     """Same split selection for preflight/preparation and a real driver run."""
     if choice in (None, 'declared'):
+        if declared is not None and not declared[side]:
+            raise ValueError(f'dataset {name!r}: declared split has an empty {side} side')
         return declared, 'declared' if declared is not None else None, None
     if choice not in ('default', 'official'):
         split, receipt = read(name, tasks, choice, side=side)
