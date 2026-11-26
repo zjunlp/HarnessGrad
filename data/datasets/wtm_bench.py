@@ -110,8 +110,9 @@ def downloads():
 def provision_status():
     from harnessgrad.datasets.runtime import check_execution
 
-    status = {"root": str(DATASET_ROOT), "execution_runtime": check_execution("wtm_bench")}
+    status = {"root": None, "execution_runtime": check_execution("wtm_bench")}
     try:
+        status["root"] = str(DATASET_ROOT)
         rows = records()
         _prepared_file("scorer_v2.py", SCORER_SHA256)
         for row in rows:
