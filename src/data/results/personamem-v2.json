@@ -1,0 +1,1087 @@
+{
+  "slug": "personamem-v2",
+  "revision": "4e9389a984d2b562040cc3742ca1983d89c9fdb1",
+  "archiveUrl": "https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/4e9389a984d2b562040cc3742ca1983d89c9fdb1/Experiments/PersonaMem-v2/qwen3.5-9b_loop/dsh-deepseek-v4.1-flash-1017",
+  "metric": "question_accuracy",
+  "pools": {
+    "train": 100,
+    "validation": 100,
+    "test": 100
+  },
+  "episodeCounts": {
+    "train": 4,
+    "validation": 39,
+    "test": 3
+  },
+  "checkpointCounts": {
+    "validation": 123,
+    "test": 8
+  },
+  "reference": {
+    "train": 0.0,
+    "validation": 0.0,
+    "test": 0.0
+  },
+  "sourceSha256": {
+    "validation/measurements.jsonl": "8263d9e89d2bedaff884db22e055a2a85f78bdf2e88a1e53f18cf5868cb45546",
+    "test/measurements.jsonl": "29862f9fbaaa23f110bdae437369486669321c43b7d3037c8ef84215af232d97",
+    "test/selection.json": "6c1734d3306b923c123ef5e3a0edeed0b635b2d49b2b376e64f9bcab71bb8836",
+    "training-curves.csv": "19507ba1af00c87c0698d64db35bd877e2eb79873761f4366577ed6c2f81a452",
+    "ahe/curve.jsonl": "9828aed6f3be00e242f73d4d9d9488f61ea8689dc79cddad18cb684836d4902f",
+    "darwinx/curve.jsonl": "42d0d3cda789f76accbce466ef8250f04bf112633f37c1e3ba84034bb6cfb50d",
+    "dgm/curve.jsonl": "13fd6250646ccea9b4f6fa646f7b1b89ff45dd849826a273bc1528a804dfbdb1",
+    "dream_rsi/curve.jsonl": "d94b2793c9e72b46596ed86b349e0e298bdce77939966805f5e2227a4ecaea73",
+    "harnessx/curve.jsonl": "aeb91d8146b1a769fe0b03a67cf4b143bbde4d632a215ec0890dc65161e015a7",
+    "hyperagents/curve.jsonl": "5fe338630e78bcb527b134178acb13f9aa3ac64c5b772545a7add8f617a70474",
+    "sica_ci/curve.jsonl": "b3f340e255260f7ac6b4764a805cd4d9f0e27dc7f4b4a09e934c1aeef57f0b10"
+  },
+  "stacks": [
+    {
+      "id": "dsh-deepseek-v4.1-flash-1017",
+      "taskModel": "qwen3.5-9b-local",
+      "baseHarness": "loop-0.2.0",
+      "metaHarness": "deepseek-harness",
+      "metaModel": "deepseek-v4.1-flash-1017",
+      "methods": [
+        {
+          "name": "ahe",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.02
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.3,
+              "eval": {
+                "validation": 0.22
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.57,
+              "eval": {
+                "validation": 0.42
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.41,
+              "eval": {
+                "validation": 0.47
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.51,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.56,
+              "eval": {
+                "validation": 0.51
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.67,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.68,
+              "eval": {
+                "validation": 0.59
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.63,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.44
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.59,
+              "eval": {
+                "validation": 0.53
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.7,
+              "eval": {
+                "validation": 0.52
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.73,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.7,
+              "eval": {
+                "validation": 0.58
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.74,
+              "eval": {
+                "validation": 0.62
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.74,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.74,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.71,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.56
+              }
+            }
+          ],
+          "selectedRound": 16,
+          "validationScore": 0.62,
+          "testScore": 0.55
+        },
+        {
+          "name": "darwinx",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.04
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.37,
+              "eval": {
+                "validation": 0.32
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.54,
+              "eval": {
+                "validation": 0.42
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.44,
+              "eval": {
+                "validation": 0.36
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.33,
+              "eval": {
+                "validation": 0.3
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.48,
+              "eval": {
+                "validation": 0.36
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.55,
+              "eval": {
+                "validation": 0.38
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.44,
+              "eval": {
+                "validation": 0.34
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.51,
+              "eval": {
+                "validation": 0.39
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.54,
+              "eval": {
+                "validation": 0.42
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.57,
+              "eval": {
+                "validation": 0.41
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.44
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.58,
+              "eval": {
+                "validation": 0.41
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.44
+              }
+            }
+          ],
+          "selectedRound": 18,
+          "validationScore": 0.44,
+          "testScore": 0.49
+        },
+        {
+          "name": "dgm",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.35,
+              "eval": {
+                "validation": 0.09
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.01
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.24,
+              "eval": {
+                "validation": 0.21
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.36,
+              "eval": {
+                "validation": 0.27
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.36,
+              "eval": {
+                "validation": 0.27
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.2,
+              "eval": {
+                "validation": 0.17
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.48,
+              "eval": {
+                "validation": 0.32
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.38,
+              "eval": {
+                "validation": 0.42
+              },
+              "remeasured": true,
+              "originalTrain": 0.0
+            },
+            {
+              "round": 11,
+              "train": 0.48,
+              "eval": {
+                "validation": 0.37
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.57,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.55,
+              "eval": {
+                "validation": 0.37
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.61,
+              "eval": {
+                "validation": 0.39
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.46
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.48,
+              "eval": {
+                "validation": 0.52
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.56,
+              "eval": {
+                "validation": 0.47
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.55,
+              "eval": {
+                "validation": 0.36
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.55,
+              "eval": {
+                "validation": 0.32
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.56,
+              "eval": {
+                "validation": 0.51
+              }
+            }
+          ],
+          "selectedRound": 16,
+          "validationScore": 0.52,
+          "testScore": 0.53
+        },
+        {
+          "name": "dream_rsi",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.38
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.06,
+              "eval": {
+                "validation": 0.02
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.13,
+              "eval": {
+                "validation": 0.11
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.23,
+              "eval": {
+                "validation": 0.26
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.37,
+              "eval": {
+                "validation": 0.38
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.5,
+              "eval": {
+                "validation": 0.44
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.62,
+              "eval": {
+                "validation": 0.48
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.62,
+              "eval": {
+                "validation": 0.48
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.67,
+              "eval": {
+                "validation": 0.45
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.67,
+              "eval": {
+                "validation": 0.45
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.47
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.45
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.47
+              }
+            }
+          ],
+          "selectedRound": 14,
+          "validationScore": 0.48,
+          "testScore": 0.48
+        },
+        {
+          "name": "harnessx",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.57,
+              "eval": {
+                "validation": 0.47
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.59,
+              "eval": {
+                "validation": 0.51
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.63,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.39,
+              "eval": {
+                "validation": 0.3
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.59,
+              "eval": {
+                "validation": 0.5
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.67,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.65,
+              "eval": {
+                "validation": 0.52
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.69,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.66,
+              "eval": {
+                "validation": 0.52
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.65,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.68,
+              "eval": {
+                "validation": 0.56
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.61,
+              "eval": {
+                "validation": 0.54
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.66,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.68,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.68,
+              "eval": {
+                "validation": 0.57
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.65,
+              "eval": {
+                "validation": 0.55
+              }
+            }
+          ],
+          "selectedRound": 10,
+          "validationScore": 0.57,
+          "testScore": 0.62
+        },
+        {
+          "name": "hyperagents",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.0,
+              "eval": {
+                "validation": 0.0
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.1,
+              "eval": {
+                "validation": 0.3
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.28,
+              "eval": {
+                "validation": 0.26
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.26,
+              "eval": {
+                "validation": 0.24
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.14,
+              "eval": {
+                "validation": 0.27
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.24,
+              "eval": {
+                "validation": 0.22
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.5,
+              "eval": {
+                "validation": 0.36
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.41,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.26,
+              "eval": {
+                "validation": 0.22
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.49,
+              "eval": {
+                "validation": 0.34
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.42,
+              "eval": {
+                "validation": 0.41
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.31,
+              "eval": {
+                "validation": 0.34
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.51,
+              "eval": {
+                "validation": 0.41
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.43,
+              "eval": {
+                "validation": 0.39
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.38,
+              "eval": {
+                "validation": 0.39
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.65,
+              "eval": {
+                "validation": 0.37
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.4,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.6,
+              "eval": {
+                "validation": 0.55
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.58,
+              "eval": {
+                "validation": 0.5
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.47
+              }
+            }
+          ],
+          "selectedRound": 18,
+          "validationScore": 0.55,
+          "testScore": 0.52
+        },
+        {
+          "name": "sica_ci",
+          "rounds": [
+            {
+              "round": 1,
+              "train": 0.37,
+              "eval": {
+                "validation": 0.12
+              }
+            },
+            {
+              "round": 2,
+              "train": 0.1,
+              "eval": {
+                "validation": 0.07
+              }
+            },
+            {
+              "round": 3,
+              "train": 0.33,
+              "eval": {
+                "validation": 0.27
+              }
+            },
+            {
+              "round": 4,
+              "train": 0.45,
+              "eval": {
+                "validation": 0.24
+              }
+            },
+            {
+              "round": 5,
+              "train": 0.51,
+              "eval": {
+                "validation": 0.41
+              }
+            },
+            {
+              "round": 6,
+              "train": 0.27,
+              "eval": {
+                "validation": 0.07
+              }
+            },
+            {
+              "round": 7,
+              "train": 0.24,
+              "eval": {
+                "validation": 0.19
+              }
+            },
+            {
+              "round": 8,
+              "train": 0.36,
+              "eval": {
+                "validation": 0.2
+              }
+            },
+            {
+              "round": 9,
+              "train": 0.1,
+              "eval": {
+                "validation": 0.3
+              }
+            },
+            {
+              "round": 10,
+              "train": 0.5,
+              "eval": {
+                "validation": 0.05
+              }
+            },
+            {
+              "round": 11,
+              "train": 0.53,
+              "eval": {
+                "validation": 0.35
+              }
+            },
+            {
+              "round": 12,
+              "train": 0.51,
+              "eval": {
+                "validation": 0.02
+              }
+            },
+            {
+              "round": 13,
+              "train": 0.38,
+              "eval": {
+                "validation": 0.29
+              }
+            },
+            {
+              "round": 14,
+              "train": 0.33,
+              "eval": {
+                "validation": 0.29
+              }
+            },
+            {
+              "round": 15,
+              "train": 0.53,
+              "eval": {
+                "validation": 0.38
+              }
+            },
+            {
+              "round": 16,
+              "train": 0.53,
+              "eval": {
+                "validation": 0.38
+              }
+            },
+            {
+              "round": 17,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 18,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 19,
+              "train": 0.52,
+              "eval": {
+                "validation": 0.43
+              }
+            },
+            {
+              "round": 20,
+              "train": 0.5,
+              "eval": {
+                "validation": 0.43
+              }
+            }
+          ],
+          "selectedRound": 17,
+          "validationScore": 0.43,
+          "testScore": 0.42
+        }
+      ]
+    }
+  ]
+}

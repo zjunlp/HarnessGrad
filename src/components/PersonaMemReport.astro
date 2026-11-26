@@ -1,0 +1,110 @@
+---
+import BenchmarkChart from './BenchmarkChart.astro';
+import BenchmarkFilter from './BenchmarkFilter.astro';
+import data from '../data/results/personamem-v2.json';
+
+const { lang = 'en' } = Astro.props;
+const zh = lang === 'zh';
+const { slug, pools, reference, archiveUrl, checkpointCounts } = data;
+const [stack] = data.stacks;
+const { methods } = stack;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const methodPages = import.meta.glob(['../content/docs/methods/*.mdx', '../content/docs/zh/methods/*.mdx']);
+const methodLabel: Record<string, string> = {
+  ahe: 'AHE', darwinx: 'DarwinX', dgm: 'DGM', dream_rsi: 'DREAM-RSI',
+  harnessx: 'HarnessX', hyperagents: 'HyperAgents', sica_ci: 'SICA-CI',
+};
+const localePrefix = zh ? '/zh' : '';
+const methodLink = (name: string) =>
+  ('../content/docs' + localePrefix + '/methods/' + name + '.mdx') in methodPages
+    ? base + localePrefix + '/methods/' + name + '/' : archiveUrl + '/' + name;
+const percent = (value: number) => Math.round(value * 100) + '%';
+const label = {
+  train: zh ? '训练集' : 'Train', validation: zh ? '验证集' : 'Validation',
+  test: zh ? '测试集' : 'Test',
+};
+const splitKeys = ['train', 'validation', 'test'] as const;
+const splitTabs = splitKeys.map((pool) => ({
+  value: pool, label: label[pool], count: pools[pool], countUnit: zh ? '题' : 'questions',
+  h0: percent(reference[pool]),
+}));
+const options = (value: string) => [{ value, label: value }];
+const scope = {
+  'data-task-model': stack.taskModel, 'data-base-harness': stack.baseHarness,
+  'data-meta-model': stack.metaModel, 'data-meta-harness': stack.metaHarness,
+};
+const testRows = [...methods].sort((a, b) => b.testScore - a.testScore);
+---
+<BenchmarkFilter slug={slug} splits={splitTabs}
+  methods={methods.map(({ name }) => ({ value: name, label: methodLabel[name] }))}
+  taskModels={options(stack.taskModel)} baseHarnesses={options(stack.baseHarness)}
+  metaModels={options(stack.metaModel)} metaHarnesses={options(stack.metaHarness)}
+/>
+
+<p>
+  <a href={archiveUrl}>{zh ? 'Hugging Face 评测归档' : 'Evaluation archive on Hugging Face'}</a>
+  {' · '}
+  <a href={archiveUrl + '/cost-reconciliation-8c08cebe.json'}>{zh ? '训练用量对账' : 'Training cost reconciliation'}</a>
+</p>
+
+{(['train', 'validation'] as const).map((pool) => (
+  <section data-split={pool} {...scope}>
+    <h3 id={pool}>{label[pool]} · {pools[pool]} {zh ? '题' : 'questions'} · H0 {percent(reference[pool])}</h3>
+    <BenchmarkChart slug={slug} pool={pool} alt={label[pool] + (zh ? '逐轮问答准确率' : ' question accuracy by round')} />
+    <div class="hg-table">
+      <table>
+        <thead><tr>
+          <th scope="col">{zh ? '方法' : 'Method'}</th>
+          <th scope="col">r0 (H0)</th>
+          {methods[0].rounds.map(({ round }) => <th scope="col">{'r' + round}</th>)}
+        </tr></thead>
+        <tbody>{methods.map((method) => (
+          <tr data-method-row={method.name}>
+            <th scope="row"><a href={methodLink(method.name)}>{methodLabel[method.name]}</a></th>
+            <td>{percent(reference[pool])}</td>
+            {method.rounds.map((record) => {
+              const chosen = pool === 'validation' && record.round === method.selectedRound;
+              const repeat = pool === 'train' && 'remeasured' in record && record.remeasured;
+              const measured = pool === 'train' ? record.train : record.eval.validation;
+              return <td>
+                {chosen ? <strong>{percent(measured)}</strong> : percent(measured)}
+                {repeat && <sup aria-label={zh ? '同一 checkpoint 补测' : 'Same-checkpoint remeasurement'}>†</sup>}
+              </td>;
+            })}
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+    <p>{pool === 'train'
+      ? (zh ? '† DGM 第 10 轮展示同一 checkpoint 的补测结果。原始运行和补测都记录在公开归档中。'
+            : '† DGM round 10 shows the remeasurement of the same checkpoint. The archive retains both results.')
+      : (zh ? '粗体标出用于测试的 checkpoint。验证集共评估 ' + checkpointCounts.validation + ' 个不同的 checkpoint（含 H0），相同 checkpoint 的轮次共享同一次测量。'
+            : 'Bold marks the checkpoint selected for test. Validation covers ' + checkpointCounts.validation + ' distinct checkpoints, including H0. Rounds sharing a checkpoint use the same measurement.')}
+    </p>
+  </section>
+))}
+
+<section data-split="test" {...scope}>
+  <h3 id="test">{label.test} · {pools.test} {zh ? '题' : 'questions'} · H0 {percent(reference.test)}</h3>
+  <BenchmarkChart slug={slug} pool="test" alt={zh ? '验证集选定 checkpoint 的测试准确率' : 'Test accuracy of validation-selected checkpoints'} />
+  <div class="hg-table">
+    <table>
+      <thead><tr>
+        <th scope="col">{zh ? '方法' : 'Method'}</th>
+        <th scope="col">{zh ? '选定轮次' : 'Selected round'}</th>
+        <th scope="col">{label.validation}</th>
+        <th scope="col">{label.test}</th>
+      </tr></thead>
+      <tbody>
+        <tr><th scope="row">{zh ? '共享 H0' : 'Shared H0'}</th><td>r0</td>
+            <td>{percent(reference.validation)}</td><td>{percent(reference.test)}</td></tr>
+        {testRows.map((method) => (
+          <tr data-method-row={method.name}>
+            <th scope="row"><a href={methodLink(method.name)}>{methodLabel[method.name]}</a></th>
+            <td>{'r' + method.selectedRound}</td><td>{percent(method.validationScore)}</td><td><strong>{percent(method.testScore)}</strong></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>

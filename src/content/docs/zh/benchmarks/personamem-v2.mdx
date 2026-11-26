@@ -1,0 +1,15 @@
+---
+title: PersonaMem-v2
+description: PersonaMem-v2 text-32k 研究子集的训练、验证与留出测试结果。
+---
+import PersonaMemReport from '../../../../components/PersonaMemReport.astro';
+
+## 评测内容
+
+PersonaMem-v2 衡量智能体能否用对话历史回答与用户过去交互有关的问题。在这项研究中，每段会话按顺序提供历史，随后给出多项选择题。结果按题目汇总准确率。
+
+训练集、验证集和测试集各有 **100 道题**，分别来自 **4 段、39 段和 3 段** text-32k 会话。七种方法各运行 20 轮，从验证集选出准确率最高的 checkpoint，并列时取较早轮次，再到留出测试集评测。
+
+## 结果
+
+<PersonaMemReport lang="zh" />

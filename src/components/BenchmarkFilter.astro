@@ -20,6 +20,7 @@ interface SplitOption {
   label: string;
   /** Tasks in this split, shown in the tab. Omitted when unknown. */
   count?: number;
+  countUnit?: string;
   /** The split's H0 under the same harness, shown in the tab. */
   h0?: string;
 }
@@ -77,7 +78,7 @@ const first = "*";
     >
       <span class="hg-split-name">{split.label}</span>
       <span class="hg-split-meta">
-        {split.count !== undefined ? `${split.count} tasks` : ""}
+        {split.count !== undefined ? `${split.count} ${split.countUnit ?? "tasks"}` : ""}
         {split.count !== undefined && split.h0 !== undefined ? " · " : ""}
         {split.h0 !== undefined ? `H0 ${split.h0}` : ""}
       </span>

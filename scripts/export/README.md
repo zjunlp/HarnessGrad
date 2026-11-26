@@ -64,3 +64,15 @@ which now names `scripts/export/` instead of the working directory the export us
 Each page carries its provenance in the data: `generated_at`, `platform_content_sha` (the
 platform tree the run was measured under) and the run ids per round, so a reader can tell a
 re-export from an edit even when the numbers are identical.
+
+## PersonaMem-v2
+
+Download the training CSV, the seven method curve files, and the validation
+and test measurement files plus test selection from the
+[pinned release](https://huggingface.co/datasets/Xubqpanda/HarnessGrad/tree/4e9389a984d2b562040cc3742ca1983d89c9fdb1/Experiments/PersonaMem-v2/qwen3.5-9b_loop/dsh-deepseek-v4.1-flash-1017).
+Keep the relative paths and run:
+
+    python scripts/export/export-personamem-site.py --source /path/to/downloaded/release
+
+The exporter checks training, validation, and test checkpoint identities,
+verifies checkpoint selection, and records the source file hashes.

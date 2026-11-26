@@ -1,0 +1,15 @@
+---
+title: PersonaMem-v2
+description: Training, validation, and held-out test results on the PersonaMem-v2 text-32k study cohort.
+---
+import PersonaMemReport from '../../../components/PersonaMemReport.astro';
+
+## What it measures
+
+PersonaMem-v2 evaluates whether an agent can use conversation history to answer questions about a user's past interactions. In this study, an episode delivers the history in order, then presents multiple-choice questions. The reported metric is question accuracy.
+
+Train, validation, and test each contain **100 questions**, spread over **4**, **39**, and **3** separate text-32k episodes respectively. Seven methods generate checkpoints over 20 rounds. Each method selects its highest-accuracy validation checkpoint, with ties going to the earlier round, and evaluates it on the held-out test set.
+
+## Results
+
+<PersonaMemReport />
