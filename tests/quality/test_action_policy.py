@@ -1,12 +1,14 @@
 """Exercise composition and isolation without loading a model or simulator."""
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
+import subprocess
 from threading import Barrier, Event
 import time
 
 import pytest
 
 from data.action_policy_ports.robocasa365 import environment
+from eval.service import action_policy
 from eval.service.action_policy import bind_setups, EpisodePolicy, PROTOCOL
 from eval.service.tool_transport import Relay, call
 from harnessgrad.provenance import verification_context
@@ -156,6 +158,7 @@ def test_waiting_prediction_expires_without_blocking_another_socket(tmp_path):
                 assert waiting.handle('policy.run', args) == {
                     'error': 'action policy could not complete the request'}
                 assert waiting.summary['queue_seconds'] >= 0.1
+                assert waiting.summary['queue_timeouts'] == 1
                 assert waiting.summary['predictions'] == 0
                 assert waiting.fault is None
             finally:
@@ -174,10 +177,82 @@ def test_policy_failure_and_contract_mismatch(tmp_path):
         try:
             rejected = call(route.path, 'policy.run', {'instruction': 'move', 'steps': 2})
             assert rejected == {'error': 'action policy could not complete the request'}
-            assert route.fault == 'ToolTransportError'
+            assert route.fault == 'predict: ToolTransportError'
+            assert route.summary['policy_seconds'] > 0
             assert call(env.path, 'observe')['step'] == 0
         finally:
             route.close()
+
+
+@pytest.mark.parametrize('expiry', ['prediction', 'episode', 'close'])
+def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, monkeypatch, expiry):
+    started, release = Event(), Event()
+
+    def hold():
+        started.set()
+        assert release.wait(5)
+
+    if expiry == 'prediction':
+        monkeypatch.setattr(action_policy, 'PREDICT_TIMEOUT_S', 0.25)
+    args = {'instruction': 'move', 'steps': 1}
+    with fixture_service(tmp_path / 'model.sock', events=[], before_predict=hold) as service, \
+            episode(tmp_path / 'env.sock') as env, ThreadPoolExecutor(max_workers=1) as pool:
+        setup = bind(service.path, ['task'])['task']
+        route = EpisodePolicy(setup, env.path, task_id='task', trial_id='1', run_seed='1',
+                              timeout_s=0.5 if expiry == 'episode' else 20).start()
+        pending = pool.submit(call, route.path, 'policy.run', args, timeout_s=2)
+        try:
+            assert started.wait(2)
+            if expiry == 'close':
+                route.close()
+            assert pending.result(timeout=2) == {'error': 'action policy could not complete the request'}
+            assert not route.prediction_queue.tickets
+            assert route.fault == (None if expiry == 'close' else 'predict: timeout')
+            assert route.summary['policy_seconds'] > 0
+            assert route.summary['executed_steps'] == 0
+        finally:
+            release.set()
+            route.close()
+
+
+def test_runner_keeps_policy_fault_when_actor_later_times_out(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+
+    from eval.run import runner, task_session
+
+    harness = tmp_path / 'harness'
+    harness.mkdir()
+    (harness / 'harness.json').write_text(json.dumps({'entrypoint': 'agent.py'}))
+    (harness / 'agent.py').touch()
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
+    routes = []
+    start = task_session.TaskSession.start_action_policy
+
+    def start_policy(session, *args, **kwargs):
+        start(session, *args, **kwargs)
+        routes.append(session.action_policy)
+
+    def time_out(*args, **kwargs):
+        reply = call(routes[0].path, 'policy.run', {'instruction': 'move', 'steps': 1})
+        assert 'error' in reply
+        raise subprocess.TimeoutExpired('actor', 20)
+
+    monkeypatch.setattr(task_session.TaskSession, 'start_action_policy', start_policy)
+    monkeypatch.setattr(runner.actor_execution, 'execute', time_out)
+    with fixture_service(tmp_path / 'model.sock', fail=True) as model, episode(tmp_path / 'env.sock') as env:
+        setup = bind(model.path, ['task'])['task']
+        relay = SimpleNamespace(path=env.path, fault=lambda: None, stop=lambda: None,
+                                report=dict, cleanup=lambda: None, model=None)
+        monkeypatch.setattr(task_session.tool_relay, 'start', lambda *args, **kwargs: relay)
+        result = runner.run_one(harness, {'task_id': 'task', 'goal': 'Move'},
+                                timeout_s=20, setup=setup, env={'kind': 'files', 'network': 'none'})
+    assert result['invalid']['stage'] == 'action policy route', result
+    assert result.get('verdict') is None
+    stats = result['runtime_services']['action_policy']
+    assert stats['fault'] == 'predict: ToolTransportError'
+    assert stats['policy_seconds'] > 0
 
 
 @pytest.mark.parametrize('capture', [verification_context.capture, verification_context.capture_content])

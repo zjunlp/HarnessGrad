@@ -124,7 +124,7 @@ def test_action_policy_stats_survive_verdict_writing_and_public_export(tmp_path)
     change(root, 'sub', 'run_meta.json', lambda meta: meta.update(action_policy=policy))
     first = {'requests': 2, 'predictions': 4, 'executed_steps': 50, 'clipped_values': 0,
              'queue_seconds': 0.125, 'policy_seconds': 0.5, 'inference_seconds': 0.25,
-             'environment_seconds': 1.5}
+             'environment_seconds': 1.5, 'queue_timeouts': 1}
     last = {'requests': 1, 'predictions': 2}
     raw = {**first, 'sha256': 'a' * 64, 'instruction': PRIVATE_TASK, 'fault': SECRET}
     _save_verdicts(root / 'sub', 1, {

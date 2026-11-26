@@ -960,12 +960,6 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                     if session.tool is not None:
                         session.tool.stop()
             exit_code, stderr = capture.process.returncode, capture.process.stderr[-2000:]
-            if session.action_policy is not None and session.action_policy.fault:
-                return _invalid(task, session.action_policy.fault, stage='action policy route', service=None)
-            if session.tool is not None:
-                fault = session.tool.fault()
-                if fault is not None:
-                    return _invalid(task, fault, stage="tool relay", service=None)
         except subprocess.TimeoutExpired:
             exit_code, stderr = -1, f"timeout after {timeout_s}s"
         except modelgate_mod.GatewayUnavailable as exc:
@@ -999,6 +993,13 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
             if immutable_runtimes or verifier_runtimes:
                 return _invalid(task, exc, stage="immutable runtime launch", service=None)
             raise
+
+        if session.action_policy is not None and session.action_policy.fault:
+            return _invalid(task, session.action_policy.fault, stage='action policy route', service=None)
+        if session.tool is not None:
+            fault = session.tool.fault()
+            if fault is not None:
+                return _invalid(task, fault, stage="tool relay", service=None)
 
         with phases("collect"):
             output = capture.collect(stepwise=session.stepwise is not None)

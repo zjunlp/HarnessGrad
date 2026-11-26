@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 from collections import deque
+from contextlib import contextmanager
 from hashlib import sha256
 import json
 import math
 import re
 from pathlib import Path
 import shutil
+import socket as sockets
 import stat
 import tempfile
 import threading
@@ -15,10 +17,11 @@ import time
 from weakref import WeakValueDictionary
 
 from data.scaffolds.asset_module import load
-from eval.service.tool_transport import Relay, ToolTransportError, call
+from eval.service.tool_transport import Relay, ToolCallTimeout, ToolTransportError, call
 
 
 PROTOCOL = 'harnessgrad.action-policy.v1'
+PREDICT_TIMEOUT_S = 60.0
 CLIENT = Path(__file__).with_name('action_policy_client.py')
 PROMPT = (
     'A learned robot controller is available. Use it to execute the task instruction or a subgoal. '
@@ -79,6 +82,14 @@ def bind_setups(socket, dataset, task_ids, setups, envs, *, sandbox):
     return bound
 
 
+class _EpisodeEnded(Exception):
+    """The episode closed or ran out of time before dispatching this call."""
+
+
+class _EpisodeDeadline(_EpisodeEnded):
+    """The episode budget expired before dispatch."""
+
+
 class _PredictionQueue:
     """Serialize predictions to a socket within this HarnessGrad process."""
 
@@ -90,16 +101,15 @@ class _PredictionQueue:
         with cls._registry_lock:
             queue = cls._queues.get(socket)
             if queue is None:
-                queue = cls(socket)
+                queue = cls()
                 cls._queues[socket] = queue
             return queue
 
-    def __init__(self, socket):
-        self.socket = socket
+    def __init__(self):
         self.condition = threading.Condition()
         self.tickets = deque()
 
-    def predict(self, args, *, remaining, summary):
+    def predict(self, predict, args, *, remaining, summary):
         ticket = object()
         queued_at = time.monotonic()
         with self.condition:
@@ -109,12 +119,12 @@ class _PredictionQueue:
                 try:
                     while self.tickets[0] is not ticket:
                         self.condition.wait(timeout=remaining())
+                except _EpisodeDeadline:
+                    summary['queue_timeouts'] += 1
+                    raise
                 finally:
                     summary['queue_seconds'] += time.monotonic() - queued_at
-            started = time.monotonic()
-            result = call(self.socket, 'predict', args, timeout_s=remaining())
-            summary['policy_seconds'] += time.monotonic() - started
-            return result
+            return predict(args)
         finally:
             with self.condition:
                 self.tickets.remove(ticket)
@@ -136,7 +146,9 @@ class EpisodePolicy:
         self.seed = digest([run_seed, task_id, trial_id or 'trial-1'])
         self.deadline = time.monotonic() + timeout_s
         self.closed = threading.Event()
-        self.summary = {'sha256': self.binding['sha256'], 'requests': 0, 'predictions': 0,
+        self.connection_lock = threading.Lock()
+        self.connection = None
+        self.summary = {'sha256': self.binding['sha256'], 'requests': 0, 'predictions': 0, 'queue_timeouts': 0,
                         'executed_steps': 0, 'clipped_values': 0, 'queue_seconds': 0.0,
                         'policy_seconds': 0.0, 'inference_seconds': 0.0, 'environment_seconds': 0.0}
         self.fault = None
@@ -156,28 +168,73 @@ class EpisodePolicy:
         return self
 
     def close(self):
-        if self.closed.is_set():
-            return
-        self.closed.set()
+        with self.connection_lock:
+            if self.closed.is_set():
+                return
+            self.closed.set()
+            if self.connection is not None:
+                try:
+                    self.connection.shutdown(sockets.SHUT_RDWR)
+                except OSError:
+                    pass
         self.prediction_queue.wake_waiters()
         self.relay.stop()
         shutil.rmtree(self.directory, ignore_errors=True)
 
+    def _check_open(self):
+        if self.closed.is_set():
+            raise _EpisodeEnded()
+
     def _remaining(self):
         seconds = self.deadline - time.monotonic()
-        if self.closed.is_set() or seconds <= 0:
-            raise TimeoutError('action policy episode deadline reached')
+        if seconds <= 0:
+            raise _EpisodeDeadline()
+        self._check_open()
         return seconds
 
+    @contextmanager
+    def _connection(self, sock):
+        with self.connection_lock:
+            self._check_open()
+            self.connection = sock
+        try:
+            yield self._check_open
+        finally:
+            with self.connection_lock:
+                self.connection = None
+
+    def _request(self, path, op, args, *, budget, timing):
+        self._remaining()
+        started = time.monotonic()
+        deadline = min(self.deadline, started + budget)
+        try:
+            return call(path, op, args, timeout_s=None, deadline=deadline, connection=self._connection)
+        except ToolCallTimeout:
+            self._record_fault(f'{op}: timeout')
+            raise
+        except (OSError, ToolTransportError, ValueError) as exc:
+            if self.closed.is_set():
+                if time.monotonic() >= deadline:
+                    self._record_fault(f'{op}: timeout')
+            else:
+                self._record_fault(f'{op}: {type(exc).__name__}')
+            raise
+        finally:
+            self.summary[timing] += time.monotonic() - started
+
     def _environment(self, op, args):
-        return call(self.environment_socket, op, args, timeout_s=self._remaining())
+        return self._request(self.environment_socket, op, args,
+                             budget=math.inf, timing='environment_seconds')
+
+    def _predict(self, args):
+        return self._request(self.binding['socket'], 'predict', args,
+                             budget=PREDICT_TIMEOUT_S, timing='policy_seconds')
 
     def handle(self, op, args):
         if op != 'policy.run':
             try:
                 return self._environment(op, args)
-            except (OSError, ToolTransportError) as exc:
-                self._record_fault(exc)
+            except (_EpisodeEnded, OSError, ToolTransportError, ValueError):
                 return {'error': 'environment tool could not complete the request'}
         steps = args.get('steps')
         instruction = args.get('instruction')
@@ -189,25 +246,27 @@ class EpisodePolicy:
         self.summary['requests'] += 1
         try:
             return self.run(instruction, steps)
-        except (OSError, ToolTransportError, ValueError, TypeError, KeyError) as exc:
-            self._record_fault(exc)
+        except (_EpisodeEnded, OSError, ToolTransportError):
+            return {'error': 'action policy could not complete the request'}
+        except (ValueError, TypeError, KeyError, AttributeError) as exc:
+            self._record_fault(f'invalid action policy or environment reply: {type(exc).__name__}')
             return {'error': 'action policy could not complete the request'}
 
-    def _record_fault(self, exc):
-        if not self.closed.is_set() and time.monotonic() < self.deadline:
-            self.fault = type(exc).__name__
+    def _record_fault(self, reason):
+        if self.fault is None:
+            self.fault = reason
             self.summary['fault'] = self.fault
 
     def run(self, instruction, steps):
         cameras = self.environment['cameras']
-        started = time.monotonic()
         observation = self._environment('observe', {'cameras': cameras})
-        self.summary['environment_seconds'] += time.monotonic() - started
+        if 'error' in observation:
+            return {**observation, 'executed_steps': 0}
         first = observation['step']
         target = min(first + steps, observation['horizon'])
         while observation['step'] < target and not observation['ended']:
             current_step = observation['step']
-            result = self.prediction_queue.predict({
+            result = self.prediction_queue.predict(self._predict, {
                 'identity': self.binding['sha256'], 'instruction': instruction,
                 'images': observation['images'], 'state': observation['state'],
                 'seed': int(digest([self.seed, current_step])[:16], 16),
@@ -220,9 +279,7 @@ class EpisodePolicy:
             if not isinstance(actions, list) or len(actions) != self.binding['identity']['chunk_size']:
                 raise ValueError('policy returned a batch of the wrong size')
             submitted = self._format_actions(actions[:target - current_step])
-            started = time.monotonic()
             updated = self._environment('step_many', {'actions': submitted, 'cameras': cameras})
-            self.summary['environment_seconds'] += time.monotonic() - started
             if 'error' in updated:
                 return {**observation, 'executed_steps': current_step - first, 'error': updated['error']}
             advance = updated['step'] - current_step
