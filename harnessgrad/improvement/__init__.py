@@ -9,9 +9,11 @@ from .contracts import Feedback, index_feedback, is_relative_path, selected_surf
 
 _STAGE_EXPORTS = frozenset({
     'Proposal', 'MemorySkillProposal', 'skillopt_proposal', 'ace_proposal', 'evo_harness_proposal', 'gepa_proposal',
+    'text_edit_proposal',
 })
 __all__ = ['Feedback', 'index_feedback', 'is_relative_path', 'selected_surfaces', 'text_diff',
-           'Proposal', 'MemorySkillProposal', 'skillopt_proposal', 'ace_proposal', 'evo_harness_proposal', 'gepa_proposal']
+           'Proposal', 'MemorySkillProposal', 'skillopt_proposal', 'ace_proposal', 'evo_harness_proposal',
+           'gepa_proposal', 'text_edit_proposal']
 
 
 def __getattr__(name):
