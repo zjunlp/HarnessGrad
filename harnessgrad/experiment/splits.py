@@ -14,7 +14,7 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command', required=True)
     create = commands.add_parser('create', help='freeze a seeded ratio/count partition')
     create.add_argument('--dataset', required=True)
-    create.add_argument('--source', choices=('all', 'official-eval'), default='all')
+    create.add_argument('--source', choices=custom_split.SOURCES, default='all')
     sizes = create.add_mutually_exclusive_group(required=True)
     sizes.add_argument('--train-ratio', type=float)
     sizes.add_argument('--train-count', type=int)

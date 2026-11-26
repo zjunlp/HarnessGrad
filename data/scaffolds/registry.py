@@ -224,8 +224,7 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
 
     Validates the declaration here rather than at the point of use, because the
     failure mode of a bad split is a run that completes and reports a number.
-    Every task must land on exactly one side, and the sides must not overlap --
-    an overlap means the method is scored on something it studied.
+    Assigned tasks must belong to exactly one side.
 
     Declared train/eval splits cover the catalog and fill both sides. An adapter
     can declare `SPLIT_SOURCE = "official-eval"` to default to its official
@@ -249,14 +248,12 @@ def load_split(name: str) -> tuple[list[dict], dict[str, str], dict | None]:
         groups = (load_split_groups(name, tasks)
                   if split is not None or source == "official-eval" else None)
     if source == "official-eval":
-        eval_ids = official_split(name, tasks)["eval"]
-        selected = set(eval_ids)
-        selected_tasks = [task for task in tasks if task["task_id"] in selected]
-        selected_groups = ({tid: group for tid, group in groups.items() if tid in selected}
-                           if groups is not None else None)
+        official = (metadata.get(OFFICIAL_EVAL_ATTR, ...) if remote is not None
+                    else getattr(module, OFFICIAL_EVAL_ATTR, ...))
+        split = _official_partition(name, tasks, official, source)
         return tasks, scorable, validate_split(
-            name, selected_tasks, {"train": [], "eval": eval_ids},
-            require_nonempty=("eval",), split_groups=selected_groups)
+            name, tasks, split, require_nonempty=("eval",),
+            split_groups=groups, allow_unassigned=True)
     if split is None:
         return tasks, scorable, None
     return tasks, scorable, validate_split(name, tasks, split, split_groups=groups)
@@ -297,7 +294,8 @@ def load_split_groups(name: str, tasks: list[dict]) -> dict[str, str] | None:
 
 def validate_split(name: str, tasks: list[dict], split: dict,
                    *, require_nonempty: tuple[str, ...] = _VALID,
-                   split_groups: dict[str, str] | None = None) -> dict:
+                   split_groups: dict[str, str] | None = None,
+                   allow_unassigned: bool = False) -> dict:
     """Validate a mapping and return it normalized to both sides.
 
     This runs on splits that did **not** come from the dataset's own declaration: one the
@@ -339,7 +337,7 @@ def validate_split(name: str, tasks: list[dict], split: dict,
             f"scored on")
 
     covered = set(groups["train"]) | set(groups["eval"])
-    if covered != known:
+    if not allow_unassigned and covered != known:
         raise ValueError(
             f"dataset {name!r}: task(s) {sorted(known - covered)} are on neither "
             f"side of the split; they would be silently neither trained on nor "
@@ -456,23 +454,24 @@ def official_split(name: str, tasks: list[dict]) -> dict:
     remote = provider(name)
     if remote is not None:
         metadata = remote.catalog()["metadata"]
-        if OFFICIAL_EVAL_ATTR not in metadata:
-            raise ValueError(f"dataset {name!r} does not declare {OFFICIAL_EVAL_ATTR}")
-        declared = metadata[OFFICIAL_EVAL_ATTR]
-        ids = [t["task_id"] for t in tasks]
-        eval_ids = list(ids) if declared is None else list(declared)
-        eval_set = set(eval_ids)
-        return {"train": [i for i in ids if i not in eval_set], "eval": eval_ids}
+        return _official_partition(name, tasks, metadata.get(OFFICIAL_EVAL_ATTR, ...),
+                                   metadata.get("SPLIT_SOURCE"))
     module = importlib.import_module(module_name(name))
-    if not hasattr(module, OFFICIAL_EVAL_ATTR):
+    return _official_partition(name, tasks, getattr(module, OFFICIAL_EVAL_ATTR, ...),
+                               getattr(module, "SPLIT_SOURCE", None))
+
+
+def _official_partition(name, tasks, declared, source):
+    if declared is ...:
         raise ValueError(
             f"dataset {name!r} does not declare {OFFICIAL_EVAL_ATTR}, so `--split official` "
             f"has no meaning for it. Declare it in the adapter (the ids of the benchmark's "
             f"own evaluation set, or None when the pool holds no study material) or use "
             f"`--split declared` / `--split default`.")
-    declared = getattr(module, OFFICIAL_EVAL_ATTR)
     ids = [t["task_id"] for t in tasks]
     eval_ids = list(ids) if declared is None else list(declared)
+    if source == "official-eval":
+        return {"train": [], "eval": eval_ids}
     # Hoisted, not inline: `i not in set(eval_ids)` inside the comprehension rebuilds the
     # set once per task. Measured on TriviaQA's pool (19,944 ids, 17,944 of them eval):
     # 9.75 s for this one call, which `QASpec.build()` pays at import.

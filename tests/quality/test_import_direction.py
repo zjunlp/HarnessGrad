@@ -440,6 +440,10 @@ EXCEPTIONS = {
         "The existing platform control invokes run_one with the Jericho verifier.",
     ("data-eval", "data/scaffolds/qa/control.py", "eval.run.runner"):
         "The shared QA control invokes run_one to validate adapter wiring.",
+    ("data-eval", "data/datasets/robocasa365/control.py", "eval.run.runner"):
+        "The local control exercises simulator startup and sealed scoring through run_one.",
+    ("data-eval", "data/datasets/robocasa365/relay.py", "eval.service.tool_transport"):
+        "The simulator serves public observations and actions over the platform tool relay.",
     ("data-eval", "data/datasets/scienceworld/control.py", "eval.run.runner"):
         "The existing platform control invokes run_one with the ScienceWorld verifier.",
     ("data-eval", "data/datasets/spreadsheetbench/control.py", "eval.run.runner"):
@@ -773,6 +777,7 @@ class ImportDirectionTests(unittest.TestCase):
             'physicsquestions',
             'ptc_bench',
             'reasoning_gym',
+            'robocasa365',
             'scienceworld',
             'searchqa',
             'sportsunderstanding',

@@ -50,7 +50,7 @@ def test_official_eval_only_provider_keeps_extra_cases_available(monkeypatch):
     monkeypatch.setattr(registry, 'provider', lambda name: SimpleNamespace(catalog=lambda: catalog))
 
     assert registry.load_split('authored') == (tasks, scorable, evaluated)
-    assert registry.official_split('authored', tasks) == {'train': ['catalog'], 'eval': ['exam']}
+    assert registry.official_split('authored', tasks) == evaluated
 
 
 def test_control_snapshot_keeps_selected_reference_callbacks_in_the_provider(monkeypatch):

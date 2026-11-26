@@ -549,7 +549,9 @@ def classify(name: str) -> dict:
         else:
             if getattr(module, "ENV", None):
                 row["env_kinds"] = sorted({v.get("kind") for v in module.ENV.values()})
-            tasks = module.load()[0]
+            elif getattr(module, "DEFAULT_ENV", None):
+                row["env_kinds"] = [module.DEFAULT_ENV.get("kind", "files")]
+            tasks, _, split = registry.load_split(name)
             task_id = tasks[0]["task_id"]
             # Prefer the declared kind to building every lazy verifier entry.
             declared_kinds = (getattr(module, "VERIFIER_KIND", None)
@@ -557,7 +559,7 @@ def classify(name: str) -> dict:
             row["verifier_kinds"] = ([declared_kinds] if declared_kinds
                                      else sorted({v["kind"] for v in module.VERIFY.values()}))
             scripts = _cli_scripts(module, task_id)
-            count, split = len(tasks), getattr(module, 'SPLIT', None)
+            count = len(tasks)
         surface_names = []
         acts = False
         for script in scripts:

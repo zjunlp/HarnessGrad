@@ -18,6 +18,7 @@ def test_leaderboard_is_the_default_test_set():
     tasks, scorable, declared = registry.load_split('robocasa365')
     official = registry.official_split('robocasa365', tasks)
     assert len(tasks) == len(scorable) == 2500
+    assert set(scorable.values()) == {dataset.METRIC} == {dataset.PROTOCOL.METRIC}
     assert len({case['seed'] for case in dataset.CASES.values()}) == len(tasks)
     assert declared == official == {'train': [], 'eval': dataset.OFFICIAL_EVAL}
     assert {case['pool'] for case in dataset.CASES.values()} == {'leaderboard'}
@@ -56,9 +57,10 @@ def test_full_catalog_leaves_study_split_open_and_preserves_leaderboard(monkeypa
         custom_split.resolve('robocasa365', tasks, declared, 'declared', side='train')
 
     added = list(expanded.PROTOCOL.catalog_cases())
-    assert registry.official_split('robocasa365', tasks) == {
-        'train': [case['task_id'] for case in added], 'eval': dataset.OFFICIAL_EVAL,
-    }
+    assert registry.official_split('robocasa365', tasks) == declared
+    assert custom_split.resolve('robocasa365', tasks, declared, 'official', side='eval')[0] == declared
+    with pytest.raises(ValueError, match='split has an empty side'):
+        custom_split.resolve('robocasa365', tasks, declared, 'official', side='train')
     assert Counter(case['group'] for case in added) == {'atomic': 47, 'composite': 268}
     assert len({case['task'] for case in added}) == 315
     assert not {case['task'] for case in added} & {case['task'] for case in dataset.CASES.values()}
@@ -73,6 +75,57 @@ def test_full_catalog_leaves_study_split_open_and_preserves_leaderboard(monkeypa
         expanded.PROTOCOL.validate_case({**fallback, 'horizon': 1000})
     with pytest.raises(ValueError, match='expected a measured leaderboard reward'):
         expanded.aggregate({fallback['task_id']: 1})
+
+
+def test_frozen_catalog_study_and_official_test_agree_across_entries(monkeypatch, tmp_path):
+    from console.submissions import _metadata
+    from harnessgrad.orchestration.selected_dataset import SelectionOptions, resolve_catalog_partition
+    from tools.serve_ui import task_options
+
+    monkeypatch.setenv('HG_ROBOCASA365_POOL', 'all')
+    expanded = load_asset(Path(dataset.__file__))
+    monkeypatch.setitem(sys.modules, dataset.__name__, expanded)
+    name = 'robocasa365'
+    tasks, _, declared = registry.load_split(name)
+    relative = 'experiments/splits/robocasa365/study.json'
+    split, receipt = custom_split.read(name, tasks, dataset.PLATFORM / relative)
+    assert receipt['counts'] == {'train': 252, 'eval': 63, 'excluded': 2500}
+    assert receipt['official_eval_reused_for_train'] == 0
+    assert set(receipt['manifest']['excluded']) == set(declared['eval'])
+    strata = {
+        tid: ('atomic' if case['group'] == 'atomic' else
+              'composite_estimated' if case['task'] in expanded.PROTOCOL.FALLBACK_MEDIAN_SECONDS
+              else 'composite_upstream')
+        for tid, case in expanded.CASES.items() if case['pool'] == 'catalog'
+    }
+    assert set(split['train']) | set(split['eval']) == set(strata)
+    quotas = {'atomic': 9, 'composite_upstream': 44, 'composite_estimated': 10}
+    assert receipt['manifest']['recipe'] == {
+        'algorithm': 'robocasa365-catalog-v1', 'seed': 0, 'eval_by_stratum': quotas}
+    for stratum, quota in quotas.items():
+        order = sorted((tid for tid, group in strata.items() if group == stratum),
+                       key=lambda tid: (sha256(f'robocasa365-catalog-v1:0:{tid}'.encode()).digest(), tid))
+        assert set(order[:quota]) == {tid for tid in split['eval'] if strata[tid] == stratum}
+
+    donor = tmp_path / 'train-run'
+    donor.mkdir()
+    (donor / 'run_meta.json').write_text(json.dumps({
+        'dataset': name, 'split_sha': registry.split_sha(split), 'split_protocol': receipt}))
+    policy = SimpleNamespace(note=lambda *args, **kwargs: None)
+    for choice, expected in ((str(dataset.PLATFORM / relative), split), ('official', declared)):
+        options = SelectionOptions(name, choice, 'eval', None, 'all', 'eval-run', donor.name, True, False)
+        partition = resolve_catalog_partition(options, registry, runs_root=tmp_path,
+                                              scenario=None, reporter=policy)
+        assert partition.split == expected
+    with pytest.raises(ValueError, match='official test differs'):
+        custom_split.check_eval_pair(donor, name, {'train': [], 'eval': declared['eval'][:-1]},
+                                    None, official_tasks=tasks)
+    with pytest.raises(ValueError, match='empty train side'):
+        _metadata({'dataset': name, 'split': 'declared', 'side': 'train'})
+    assert _metadata({'dataset': name, 'split': relative, 'side': 'train'})['tasks'] == 252
+    assert _metadata({'dataset': name, 'split': relative, 'side': 'eval'})['tasks'] == 63
+    assert _metadata({'dataset': name, 'split': 'official', 'side': 'eval'})['tasks'] == 2500
+    assert Counter(row['side'] for row in task_options(name)['tasks']) == {'eval': 2500, 'unassigned': 315}
 
 
 def test_aggregate_keeps_partial_coverage_visible():

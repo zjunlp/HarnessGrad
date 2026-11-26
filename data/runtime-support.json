@@ -3,6 +3,14 @@
   "groups": [
     {
       "datasets": [
+        "robocasa365"
+      ],
+      "loading_and_preparation": "Committed task roster and pinned prepared simulator assets, managed Python 3.11 and OSMesa.",
+      "trusted_execution": "Isolated native simulator relay records RoboCasa Gym success. A separate command verifier grades the sealed episode.",
+      "verification_scope": "Offline roster, native success protocol, and sealed scorer controls cover the adapter. Full leaderboard evaluation requires the prepared simulator and an evaluation policy."
+    },
+    {
+      "datasets": [
         "gsm8k",
         "hotpotqa",
         "triviaqa"

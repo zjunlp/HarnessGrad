@@ -119,7 +119,8 @@ def resolve_catalog_partition(options: SelectionOptions, source: DatasetSource,
     if options.side == 'eval' and options.from_run:
         from data.scaffolds.custom_split import check_eval_pair
         try:
-            check_eval_pair(runs_root / options.from_run, options.dataset, split, protocol)
+            check_eval_pair(runs_root / options.from_run, options.dataset, split, protocol,
+                            official_tasks=tasks if split_source == 'official' else None)
         except (OSError, ValueError) as exc:
             raise SelectedRunRefused(f'refusing custom split evaluation: {exc}', channel="console") from exc
     return DatasetPartition(tasks, scorable, split, split_source, protocol, oracle_source, oracle_coverage)

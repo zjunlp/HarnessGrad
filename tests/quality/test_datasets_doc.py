@@ -189,9 +189,8 @@ def test_every_published_dataset_appears_exactly_once():
 
 
 def test_catalog_discovery_does_not_depend_on_runtime_imports(monkeypatch):
-    expected = doc._published()
+    expected = tuple(sorted(registry.published()))
     monkeypatch.setattr(registry, "published", lambda: ())
-    assert len(expected) == 56
     assert doc._published() == expected
 
 

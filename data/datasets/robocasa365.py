@@ -17,6 +17,7 @@ from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
 KIND = 'dataset'
 VERIFIER_KIND = 'command'
+METRIC = 'robocasa365.multitask.task_success.v1'
 ORACLE_SOURCE = 'authored'
 ORACLE_VALIDATED_BY = 'RoboCasa365 Gym success protocol and sealed scorer controls'
 MANAGED_EXECUTION_RUNTIME = 'robocasa365'
@@ -46,7 +47,7 @@ GOAL = (
 
 def load():
     return ([{'task_id': task_id, 'goal': GOAL, 'inputs': []} for task_id in CASES],
-            dict.fromkeys(CASES, PROTOCOL.METRIC))
+            dict.fromkeys(CASES, METRIC))
 
 
 def _prepared():

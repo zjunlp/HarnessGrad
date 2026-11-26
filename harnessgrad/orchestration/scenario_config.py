@@ -51,7 +51,7 @@ def pool_environment(dataset: str, pool: str | None) -> dict[str, str]:
     """Reuse existing adapter pool selectors, before an adapter can be imported."""
     if pool is None:
         return {}
-    if dataset == 'robocasa365' and pool == 'all':
+    if dataset == 'robocasa365' and pool in ('all', 'leaderboard'):
         return {'HG_ROBOCASA365_POOL': pool}
     key = {'appworld': 'HG_APPWORLD_POOL', 'alfworld': 'HG_ALFWORLD_POOL'}.get(dataset)
     if key:

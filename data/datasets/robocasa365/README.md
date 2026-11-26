@@ -46,8 +46,22 @@ the 2,500 test episodes and one fixed-seed episode for each of the 315 additiona
 classes. List the additional IDs with
 `python3 -m data.datasets.robocasa365 --pool catalog`. These episodes are
 available for explicit study splits. The default split leaves them unassigned.
-For a standalone check of one catalog episode, use `--pool all --split official
---side train --rounds 0 --sampling all --tasks robocasa365/catalog/CloseDrawer/00`.
+
+Use `--pool all --split experiments/splits/robocasa365/study.json` to opt into the
+frozen catalog study. It assigns 252 catalog episodes to `--side train` and 63
+to validation via `--side eval`. Each episode represents a different task class.
+The validation selection uses seed 0 and the SHA-256 order of
+`robocasa365-catalog-v1:0:<task_id>` within each stratum. It selects 9 atomic
+tasks, 44 composite tasks with upstream horizons, and 10 composite tasks with
+estimated horizons. The remaining catalog episodes are study tasks.
+
+Validate a trained checkpoint using the same split file with `--side eval` and
+`--from-run`. For official test evaluation of that checkpoint, use
+`--pool all --split official --side eval --from-run <training run>` and the
+chosen round. HarnessGrad validates the training manifest against the full
+roster and checks that the entire leaderboard is held out from study and
+validation. `--split official` assigns only the leaderboard and has an empty
+training side.
 
 The additional list follows the pinned upstream task documentation. For 267 of
 the additional classes the upstream registry supplies a horizon. The other 48

@@ -305,8 +305,6 @@ def main(argv: list[str] | None = None) -> int:
         specs.append((label.strip(), Path(path)))
 
     tasks_all, scorable, split = registry.load_split(args.dataset)
-    _, setups, verifiers = registry.load_tasks(args.dataset)
-    envs = registry.load_envs(args.dataset)
     wanted = None
     if args.tasks:
         wanted = [t.strip() for t in args.tasks.split(",") if t.strip()]
@@ -321,6 +319,12 @@ def main(argv: list[str] | None = None) -> int:
         # cannot be part of a train/eval split, and silently inventing one would make the
         # report's own split disagree with the dataset it came from.
         declared = set(split["train"]) | set(split["eval"])
+        unassigned = [t["task_id"] for t in tasks if t["task_id"] not in declared]
+        if unassigned and wanted is not None:
+            print(f"refusing --tasks outside the declared split: {unassigned}", file=sys.stderr)
+            return 2
+        if unassigned:
+            print(f"skipping {len(unassigned)} tasks outside the declared split", file=sys.stderr)
         tasks = [t for t in tasks if t["task_id"] in declared]
     if len(tasks) < 3:
         # Below three tasks the leave-one-out quality is computed from one or two numbers
@@ -328,6 +332,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"refusing: {len(tasks)} task(s) is too few for a leave-one-out "
               f"correlation; pass at least 3 with --tasks", file=sys.stderr)
         return 2
+    selected_ids = [t["task_id"] for t in tasks]
+    _, setups, verifiers = registry.load_tasks(args.dataset, task_ids=selected_ids)
+    envs = registry.load_envs(args.dataset, task_ids=selected_ids)
 
     runs_root = ROOT / "runs"
     runs_root.mkdir(parents=True, exist_ok=True)

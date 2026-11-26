@@ -50,12 +50,14 @@ itself goes stale. The cell is therefore `unknown (computed)` and `--host` print
 number, which is the same choice `tools/datasets_doc.py` makes for `provision`: never a
 number the file cannot attribute.
 
-Four states, and the table names which one a dataset is in
+The table describes the adapter's state
 ----------------------------------------------------------
 * `declared` -- `SPLIT_SOURCE` is `"declared"`: the benchmark publishes both sides and the
   adapter says which is which. The sides are `unknown (computed)` here (see above);
   `OFFICIAL_EVAL` is the scored side's ids, also computed, except where an adapter
   declares it literally (`tau3_bench`: `None`).
+* `official-eval` -- the adapter assigns only the official evaluation IDs by default.
+  Other catalog tasks require an explicit study split.
 * `none` -- the adapter declares no division: `SPLIT_SOURCE` is `"none"`, or a prose
   source (the authored bundle), or absent with no `SPLIT` at all (`locomo`). A run covers
   every task. `OFFICIAL_EVAL` then says what the pool is: `None` (the pool *is* the
@@ -349,7 +351,8 @@ def _state(module, source) -> str:
                 or getattr(module, "_lazy_declarations", False)
                 or callable(getattr(module, "__getattr__", None)))
         return "undeclared" if lazy else "none"
-    return "declared" if source.strip() == "declared" else "none"
+    source = source.strip()
+    return source if source in ("declared", "official-eval") else "none"
 
 
 def _official(module, state: str) -> str:
@@ -366,7 +369,7 @@ def _official(module, state: str) -> str:
       the one literal an adapter states (`tau3_bench`), and it is printed.
     """
     value = _attribute(module, "OFFICIAL_EVAL")
-    if state == "declared":
+    if state in ("declared", "official-eval"):
         return "None" if value is None else COMPUTED
     if value is _MISSING:
         return ABSENT
@@ -397,9 +400,10 @@ def row_for(name: str) -> Row:
                    train=DASH, eval=DASH, official=DASH)
     source = _attribute(module, "SPLIT_SOURCE")
     state = _state(module, source)
-    sides = COMPUTED if state == "declared" else DASH
     return Row(dataset=name, state=state, source=_source_cell(source), tasks=COMPUTED,
-               train=sides, eval=sides, official=_official(module, state))
+               train=COMPUTED if state == "declared" else DASH,
+               eval=COMPUTED if state in ("declared", "official-eval") else DASH,
+               official=_official(module, state))
 
 
 def build_rows() -> list[Row]:
@@ -447,14 +451,23 @@ def _host_row(name: str) -> Row:
                 return Row(dataset=name, state='refused', source=DASH, tasks=DASH,
                            train=DASH, eval=DASH, official=DASH)
         else:
-            tasks, _scorable = _load(module)
+            if source == "official-eval":
+                tasks, _, split = registry.load_split(name)
+            else:
+                tasks, _scorable = _load(module)
             count = len(tasks)
     except Exception as exc:  # noqa: BLE001 - the absence is the answer here, not a crash
         return Row(dataset=name, state="not provisioned", source=source, tasks=DASH,
                    train=DASH, eval=DASH, official=DASH,
                    detail=f"{type(exc).__name__}: {exc}")
-    split = _attribute(module, "SPLIT")
     official = _attribute(module, "OFFICIAL_EVAL")
+    if source == "official-eval":
+        if provider is not None:
+            split = _attribute(module, "SPLIT")
+        return Row(dataset=name, state=source, source=source, tasks=str(count),
+                   train=str(len(split["train"])), eval=str(len(split["eval"])),
+                   official=_official_cell(official))
+    split = _attribute(module, "SPLIT")
     if split is _MISSING or split is None:
         state, train, eval_ = "none", DASH, DASH
     else:

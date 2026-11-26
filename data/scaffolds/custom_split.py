@@ -14,6 +14,7 @@ from data.scaffolds import registry
 
 SCHEMA = 'harnessgrad.custom-split.v1'
 CLAIM = 'custom-heldout; not an official benchmark split or leaderboard score'
+SOURCES = ('all', 'official-eval', 'non-official-eval')
 
 
 def digest(value):
@@ -63,8 +64,20 @@ def _check_groups(groups, sides):
                     + '; choose a source pool and partition that keep complete groups together')
 
 
+def _source_ids(ids, official, source):
+    if source == 'all':
+        return set(ids)
+    if source not in SOURCES:
+        raise ValueError('custom split source must be ' + ', '.join(SOURCES))
+    if official is None:
+        raise ValueError('dataset has not declared an official evaluation pool; use --source all')
+    if not official <= set(ids):
+        raise ValueError('dataset declares official evaluation IDs outside the source roster')
+    return official if source == 'official-eval' else set(ids) - official
+
+
 def create(name, tasks, *, train_ratio=None, train_count=None, seed=0, source='all'):
-    """Freeze an order-independent seeded split of all tasks or official eval IDs.
+    """Freeze an order-independent seeded split of the requested task pool.
 
     Counts are exact. Ratios target task counts; indivisible groups use the closest
     nonempty prefix of the seeded group order and report the actual counts.
@@ -75,11 +88,8 @@ def create(name, tasks, *, train_ratio=None, train_count=None, seed=0, source='a
     if (train_ratio is None) == (train_count is None):
         raise ValueError('choose exactly one of train_ratio or train_count')
     official = _official(name, tasks)
-    if source not in ('all', 'official-eval'):
-        raise ValueError('source must be all or official-eval')
-    if source == 'official-eval' and official is None:
-        raise ValueError('dataset has not declared an official evaluation pool; use --source all')
-    pool = ids if source == 'all' else [t for t in ids if t in official]
+    pool_ids = _source_ids(ids, official, source)
+    pool = [tid for tid in ids if tid in pool_ids]
     if len(pool) < 2:
         raise ValueError('a custom train/eval partition needs at least two source tasks')
     if train_count is not None:
@@ -151,18 +161,12 @@ def validate(name, tasks, manifest, *, require_nonempty=('train', 'eval')):
     all_ids = [*sides['train'], *sides['eval'], *excluded]
     if len(all_ids) != len(set(all_ids)) or set(all_ids) != set(ids):
         raise ValueError('train/eval/excluded must cover every task exactly once, without overlap')
-    if manifest['source'] not in ('all', 'official-eval'):
-        raise ValueError('custom split source must be all or official-eval')
-    if manifest['source'] == 'all' and excluded:
-        raise ValueError('source all cannot exclude tasks')
-    if manifest['source'] == 'official-eval':
-        official = _official(name, tasks)
-        if official is None or set(sides['train'] + sides['eval']) != official:
-            raise ValueError('custom source pool differs from the declared official evaluation IDs')
+    selected = set(sides['train'] + sides['eval'])
+    if selected != _source_ids(ids, official, manifest['source']):
+        raise ValueError('custom source pool differs from the declared source selection')
     if not isinstance(manifest['recipe'], dict) or manifest['claim'] != CLAIM:
         raise ValueError('custom split recipe/claim is malformed')
     _check_groups(groups, {**sides, 'excluded': excluded})
-    selected = set(sides['train'] + sides['eval'])
     return registry.validate_split(name, [t for t in tasks if t['task_id'] in selected], sides,
         require_nonempty=require_nonempty,
         split_groups={t: groups[t] for t in selected} if groups is not None else None)
@@ -209,11 +213,12 @@ def resolve(name, tasks, declared, choice, *, side='train'):
         return split, 'file:' + str(Path(choice).resolve()), receipt
     groups = _groups(name, tasks)
     split = registry.default_split(tasks, split_groups=groups) if choice == 'default' else registry.official_split(name, tasks)
-    return registry.validate_split(name, tasks, split, require_nonempty=(side,), split_groups=groups), choice, None
+    return registry.validate_split(name, tasks, split, require_nonempty=(side,), split_groups=groups,
+                                   allow_unassigned=choice == 'official'), choice, None
 
 
-def check_eval_pair(train_run, name, split, protocol):
-    """Prevent a custom-trained checkpoint from being relabelled official eval.
+def check_eval_pair(train_run, name, split, protocol, *, official_tasks=None):
+    """Admit paired validation and an official test held out from the study.
 
     A donor run older than `run_meta.json` (the legacy state layout some archived runs
     still use) has no protocol to compare against, and refusing there would break a
@@ -232,6 +237,14 @@ def check_eval_pair(train_run, name, split, protocol):
     previous = meta.get('split_protocol')
     if previous is None and protocol is None:
         return
+    if isinstance(previous, dict) and protocol is None and official_tasks is not None:
+        manifest = previous.get('manifest')
+        if isinstance(manifest, dict) and manifest.get('source') == 'non-official-eval':
+            study = validate(name, official_tasks, manifest)
+            if (meta.get('split_sha') != registry.split_sha(study)
+                    or split is None or set(split['eval']) != set(manifest['excluded'])):
+                raise ValueError('official test differs from the study manifest holdout')
+            return
     if (previous is None) != (protocol is None):
         raise ValueError('paired evaluation must reuse the training run split file and custom identity')
     if split is None or meta.get('split_sha') != registry.split_sha(split):
