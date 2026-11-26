@@ -5,11 +5,11 @@ On Linux x86-64 with Bubblewrap, install the verified npm releases with:
 
 ```sh
 harnessgrad harness install opencode --version 1.19.5
-HARNESS_DIR=$(harnessgrad harness install opencode --version 2.3.0)
+HARNESS_DIR=$(harnessgrad harness install opencode)
 ```
 
 Use the printed directory with `harnessgrad run --harness-path`. Omitting
-`--version` selects the latest verified release, currently `2.3.0`.
+`--version` selects the latest verified release, currently `2.4.1`.
 `--install-root` selects the dedicated store, which defaults to
 `harnessgrad/base-harnesses` under the user data directory.
 
