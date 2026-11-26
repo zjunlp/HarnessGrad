@@ -469,35 +469,24 @@ def _stage_default_skill(channel: Path) -> None:
 
 def _stage_visual_evidence(channel, root, points, task_ids):
     """Publish trial indexes for the method's admitted training tasks."""
+    from eval.service.visual_evidence import image_path, round_manifests
+
     if not task_ids:
         return
-    allowed = set(task_ids)
-    images = root.resolve() / 'images'
     destination = channel / 'history' / 'visual'
     for round_no in sorted({p['round'] for p in points if type(p.get('round')) is int}):
-        source = root / 'rounds' / f'round-{round_no}'
-        records = []
-        for path in sorted(source.glob('*.json')):
-            if path.is_symlink() or not path.is_file():
-                continue
-            try:
-                trial = json.loads(path.read_text(encoding='utf-8'))
-            except (OSError, ValueError):
-                continue
-            if (not isinstance(trial, dict) or trial.get('schema') != 'harnessgrad.visual-trial.v1'
-                    or trial.get('round') != round_no or trial.get('task_id') not in allowed):
-                continue
+        records = round_manifests(root, round_no, task_ids)
+        for trial in records:
             for call in trial['calls']:
                 for image in call['images']:
-                    name = image.pop('file', None)
-                    if (isinstance(name, str) and re.fullmatch(r'[0-9a-f]{64}\.(?:png|jpg)', name)
-                            and (images / name).is_file() and not (images / name).is_symlink()):
-                        image['path'] = str(images / name)
+                    path = image_path(root, image)
+                    image.pop('file', None)
+                    image.pop('path', None)
+                    if path is not None:
+                        image['path'] = str(path.absolute())
                     elif image.get('status') == 'captured':
                         image['status'] = 'file_unavailable'
-            records.append(trial)
         if records:
-            records.sort(key=lambda row: (row['task_id'], row['trial'], row['capture_id']))
             destination.mkdir(parents=True, exist_ok=True)
             with (destination / f'round-{round_no}.jsonl').open('w', encoding='utf-8') as stream:
                 for record in records:

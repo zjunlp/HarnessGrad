@@ -13,8 +13,10 @@ context, the prepared run reservation, and the runtime commitment for a declared
 treatment. Restarting the same service at a new socket path preserves those
 identities. The driver preflights the service with `--check-only` and
 `--prepare-only` using `describe`. Recreate prepared reservations made with the
-earlier socket-path binding. Measurements captured under different policy or
-route code require a fresh evaluation.
+earlier socket-path binding. `tools/prepare_h0.py` accepts
+`--action-policy-socket` and checks the same policy binding before measuring or
+reusing an H0. Measurements captured under different policy or route code
+require a fresh evaluation.
 
 ## GR00T N1.5 on RoboCasa365
 

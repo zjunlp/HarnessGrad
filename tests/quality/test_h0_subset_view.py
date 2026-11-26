@@ -127,6 +127,10 @@ def test_selection_must_be_explicit_proper_subset(control, tmp_path, selection):
 
 
 def test_real_driver_mock_actor_subset_and_no_change_round(tmp_path):
+    from eval.service.http_observation import HTTPObservation
+    from eval.service.visual_evidence import ImageArchive, round_manifests
+    from test_visual_evidence import _png, _send
+
     root = Path(__file__).resolve().parents[2]
     def execute(name, *extra):
         return subprocess.run([sys.executable, 'driver.py', '--harness', 'loop_plain',
@@ -139,8 +143,15 @@ def test_real_driver_mock_actor_subset_and_no_change_round(tmp_path):
     original = execute('original')
     assert original.returncode == 0, original.stdout[-1500:] + original.stderr[-1500:]
     donor_root = tmp_path / 'runs/original'
+    archive = ImageArchive(donor_root, 0)
+    frames = {'t01': _png(b'\xff\x00\x00'), 't03': _png(b'\x00\xff\x00')}
+    for tid, frame in frames.items():
+        trial = archive.start_trial(tid, 'trial-1')
+        _send(HTTPObservation(trial).connection(), 'responses', frame, 'a' * 32)
+        trial.finish('', available=True)
     before = {p.relative_to(donor_root): p.read_bytes() for p in donor_root.rglob('*') if p.is_file()}
-    view = execute('view', '--h0-from', 'original', '--h0-subset-view', '--tasks', 't01,t02')
+    view = execute('view', '--h0-from', 'original', '--h0-subset-view', '--tasks', 't01,t02',
+                   '--visual-evidence')
     assert view.returncode == 0, view.stdout[-2000:] + view.stderr[-2000:]
     curve = [json.loads(line) for line in (tmp_path / 'runs/view/curve.jsonl').read_text().splitlines()]
     assert len(curve) == 2
@@ -149,8 +160,11 @@ def test_real_driver_mock_actor_subset_and_no_change_round(tmp_path):
     assert curve[1]['score'] == curve[0]['score']
     assert curve[0]['current_run_cost']['evaluation_trials'] == 0
     assert not (tmp_path / 'runs/view/progress/round-0').exists()
+    visual = tmp_path / 'runs/view/visual-evidence/train'
+    assert [row['task_id'] for row in round_manifests(visual, 0, frames)] == ['t01']
+    assert [path.read_bytes() for path in (visual / 'images').iterdir()] == [frames['t01']]
     assert before == {p.relative_to(donor_root): p.read_bytes() for p in donor_root.rglob('*') if p.is_file()}
-    resumed = execute('view', '--resume', '--tasks', 't01,t02', '--rounds', '2')
+    resumed = execute('view', '--resume', '--tasks', 't01,t02', '--rounds', '2', '--visual-evidence')
     assert resumed.returncode == 0, resumed.stdout[-1500:] + resumed.stderr[-1500:]
     continued = [json.loads(line) for line in (tmp_path / 'runs/view/curve.jsonl').read_text().splitlines()]
     assert len(continued) == 3

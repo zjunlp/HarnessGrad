@@ -35,7 +35,7 @@ def authored_legacy_harness(monkeypatch):
     # Never load a real dataset in unit tests. The context is a synthetic task plan.
     from harnessgrad.provenance import verification_context
     monkeypatch.setattr(prepare_h0, '_verification_preflight',
-                        lambda dataset, side, ids, split, sampling, environment:
+                        lambda dataset, side, ids, split, sampling, environment, **kwargs:
                         verification_context.create({tid: 'a' * 64 for tid in (ids or ['t1', 't2'])}))
 
 
@@ -195,6 +195,23 @@ def test_dry_run_measures_the_baseline_and_nothing_else(tmp_path, capsys):
     assert "--rounds 0" in printed and "--improver none" in printed
     assert "--tasks t1,t2" in printed
     assert not (tmp_path / "runs").exists() or not list((tmp_path / "runs").glob("h0-*"))
+
+
+def test_action_policy_socket_is_forwarded_to_preflight_and_driver(tmp_path, monkeypatch, capsys):
+    from harnessgrad.provenance import verification_context
+
+    sockets = []
+
+    def preflight(*args, action_policy_socket):
+        sockets.append(action_policy_socket)
+        return verification_context.create({'t1': 'a' * 64})
+
+    monkeypatch.setattr(prepare_h0, '_verification_preflight', preflight)
+    socket = tmp_path / 'policy.sock'
+    assert prepare_h0.main(['--dataset', 'demo', '--dry-run', '--runs-root', str(tmp_path / 'runs'),
+                            '--action-policy-socket', str(socket)]) == 0
+    assert sockets == [socket]
+    assert f'--action-policy-socket {socket}' in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("contents, message", [

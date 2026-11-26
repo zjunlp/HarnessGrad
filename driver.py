@@ -1095,6 +1095,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         h0_sha = h0_planning.commit_h0_source(work, commit_state)
         t0 = time.time()
         shared_point = None
+        visual_donor = None
         try:
             if args.h0_agent_content:
                 content_capture = h0_planning.capture_content(work, h0_sha, h0_identities, h0_options,
@@ -1113,6 +1114,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                              level="info")
             elif args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
+                visual_donor = donor.directory
                 if args.h0_subset_view:
                     from harnessgrad.orchestration.h0_subset import materialize_subset
                     reused = materialize_subset(donor, work, h0_sha, man, h0_attribution,
@@ -1186,6 +1188,17 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             return 2
         task_ids, train_ids = h0_selection.task_ids, h0_selection.train_ids
         tasks, sampling = h0_selection.tasks, h0_selection.sampling
+        if args.visual_evidence and train_ids and visual_donor is not None:
+            from eval.service.visual_evidence import reuse_round_zero
+
+            try:
+                images = reuse_round_zero(visual_donor, run_dir, train_ids)
+            except OSError:
+                console.note('Could not copy the H0 donor visual evidence.', level='warn')
+            else:
+                if not images:
+                    console.note('The H0 donor has no saved images for the selected training tasks.',
+                                 level='warn')
         if args.h0_comparability == "content" and set(task_ids) != set(shared_point["per_task"]):
             console.note("refusing content H0 reuse: recipient sampling changes the attested task cohort",
                          level="error")

@@ -9,7 +9,7 @@ import zlib
 import pytest
 
 from eval.service.http_observation import HTTPObservation
-from eval.service.visual_evidence import ImageArchive
+from eval.service.visual_evidence import ImageArchive, reuse_round_zero, round_manifests
 from harnessgrad.experiment.channel import _stage_visual_evidence
 
 
@@ -74,3 +74,37 @@ def test_deduplicates_images_and_preserves_distinct_tool_events(tmp_path, operat
         assert image['label'] == 'wrist'
         assert (archive.images / f'{image["sha256"]}.png').read_bytes() == data
     assert http.report()['complete']
+
+
+def test_retry_replaces_logical_index_and_h0_reuse_copies_only_selected_images(tmp_path):
+    donor, recipient = tmp_path / 'donor', tmp_path / 'recipient'
+    red, green, blue = _png(b'\xff\x00\x00'), _png(b'\x00\xff\x00'), _png(b'\x00\x00\xff')
+    archive = ImageArchive(donor, 0)
+
+    def record(archive, task, trial_id, image):
+        trial = archive.start_trial(task, trial_id, trial_number=1)
+        _send(HTTPObservation(trial).connection(), 'responses', image, 'a' * 32)
+        trial.finish('', available=True)
+        return trial
+
+    first = record(archive, 'train', 'trial-1', red)
+    # Keep an earlier UUID index as a pre-upgrade run would have on disk.
+    (index,) = archive.manifests.glob('*.json')
+    historical = index.read_bytes()
+    resumed = ImageArchive(donor, 0)
+    retried = record(resumed, 'train', 'trial-1', green)
+    (archive.manifests / f"{first.identity['capture_id']}.json").write_bytes(historical)
+    record(resumed, 'excluded', 'trial-1', blue)
+    assert len(list(archive.manifests.glob('trial-*.json'))) == 2
+
+    assert reuse_round_zero(donor, recipient, ['train']) == 1
+    assert reuse_round_zero(donor, recipient, ['train']) == 1
+    copied = recipient / 'visual-evidence' / 'train'
+    recorded = round_manifests(copied, 0, ['train', 'excluded'])
+    assert len(recorded) == 1 and recorded[0]['capture_id'] == retried.identity['capture_id']
+    assert [path.read_bytes() for path in (copied / 'images').iterdir()] == [green]
+    _stage_visual_evidence(tmp_path / 'method', copied, [{'round': 0}], ['train'])
+    output = tmp_path / 'method' / 'history' / 'visual' / 'round-0.jsonl'
+    [row] = output.read_text().splitlines()
+    assert json.loads(row)['trial_id'] == 'trial-1'
+    assert reuse_round_zero(tmp_path / 'legacy', recipient, ['train']) == 0

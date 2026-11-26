@@ -85,7 +85,8 @@ EXTRACTED_UNIT_IMPORTS = {
         "eval.containers.sandbox", "eval.containers.bun_runtime", "harnessgrad.training_window", "methods.stop_status"},
     "harnessgrad/experiment/channel.py": {
         "__future__", "pathlib", "hashlib", "json", "os", "re", "shutil", "subprocess",
-        "eval.ckpt.git_state", "eval.observe.tracing", "harnessgrad", "harnessgrad.config",
+        "eval.ckpt.git_state", "eval.observe.tracing", "eval.service.visual_evidence",
+        "harnessgrad", "harnessgrad.config",
         "harnessgrad.core.snapshot",
         "harnessgrad.datasets.runtime", "harnessgrad.datasets.runtime_identity",
         "harnessgrad.provenance.native_judge_identity"},

@@ -17,14 +17,18 @@ Completions and Responses. The run stores each image once under
 `visual-evidence/train/images`, keyed by SHA-256, and writes trial indexes under
 `visual-evidence/train/rounds`. References record HTTP status and response
 completion. Loop Vision also links the images to model and tool steps.
+Retrying a logical trial updates its index in place.
 
 The shared editing workspace receives training indexes under
 `evidence/history/visual` with read-only paths to the images. An editor can open
 a selected frame with its image-viewing tool. Capture records expose the request
 and HTTP response, with interpretation left to the downstream model. Evaluation
 runs leave capture disabled. File IDs, remote URLs and transports outside the
-native HTTP route do not supply image bytes. To collect visual evidence for a
-baseline measured before capture was enabled, start a fresh study.
+native HTTP route do not supply image bytes. With `--h0-from` and
+`--visual-evidence`, strict local H0 reuse (including subset views) copies the
+admitted training tasks' round-zero image indexes and referenced images into the
+new run. To collect images for a baseline measured before capture was enabled,
+start a fresh study.
 
 ### Caching large local verification assets
 

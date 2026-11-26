@@ -1361,7 +1361,7 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
     # of number this platform exists to refuse.
     trial_options = trial_worker.RunOptions(
         repo, sandbox, run_id, run_seed, round_no, harness_sha, trials, len(tasks),
-        recordings_root, diagnostic_authorization, private_paths)
+        recordings_root, diagnostic_authorization, private_paths, visual_evidence=visual_evidence)
     task_budget_stops = {}
     visual_archive = None
     if visual_evidence:
@@ -1370,15 +1370,17 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             raise ValueError('visual evidence requires a run output directory')
         visual_archive = ImageArchive(progress_dir, round_no)
 
-    def measure_task(*args, **kwargs):
+    def measure_task(*args, visual_attempt=None, **kwargs):
         if task_budget_stops:
             result = _invalid(args[1], ValueError('task budget already stopped'),
                               stage='task budget', service=None)
             result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split,
                                           'reason': 'task_budget_already_stopped'}
             return result
-        visual = (visual_archive.start_trial(args[1]['task_id'], kwargs.get('trial_id'))
-                  if visual_archive is not None else None)
+        visual = None
+        if visual_attempt is not None:
+            number, trial_id = visual_attempt
+            visual = visual_archive.start_trial(args[1]['task_id'], trial_id, trial_number=number)
         result = {}
         try:
             result = run_one(*args,

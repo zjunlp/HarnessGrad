@@ -16,6 +16,7 @@ MAX_IMAGE_BYTES = 4 << 20
 MAX_TRIAL_BYTES = 128 << 20
 MAX_TRIAL_IMAGES = 4096
 _MIME_EXTENSIONS = {'image/png': 'png', 'image/jpeg': 'jpg'}
+_IMAGE_NAME = re.compile(r'[0-9a-f]{64}\.(?:png|jpg)')
 
 
 def _image_parts(operation, payload):
@@ -93,11 +94,85 @@ class ImageArchive:
         self.lock = threading.Lock()
         self.trials = {}
 
-    def start_trial(self, task_id, trial_id):
-        with self.lock:
-            number = self.trials.get(task_id, 0) + 1
-            self.trials[task_id] = number
-        return TrialImages(self, task_id, number, trial_id)
+    def start_trial(self, task_id, trial_id, *, trial_number=None):
+        if trial_number is None:
+            with self.lock:
+                trial_number = self.trials.get(task_id, 0) + 1
+                self.trials[task_id] = trial_number
+        return TrialImages(self, task_id, trial_number, trial_id)
+
+
+def _manifest_name(trial):
+    if not trial['trial_id']:
+        return trial['capture_id'] + '.json'
+    key = json.dumps([trial['task_id'], trial['trial_id']]).encode()
+    return 'trial-' + hashlib.sha256(key).hexdigest() + '.json'
+
+
+def round_manifests(root, round_no, task_ids):
+    """Read one index per logical trial, including legacy archives with retries."""
+    allowed = set(task_ids)
+    rounds = root / 'rounds'
+    directory = rounds / f'round-{round_no}'
+    if any(path.is_symlink() for path in (root.parent, root, rounds, directory)):
+        return []
+    chosen = {}
+    for path in directory.glob('*.json'):
+        try:
+            if path.is_symlink() or not path.is_file():
+                continue
+            trial = json.loads(path.read_text(encoding='utf-8'))
+            if (not isinstance(trial, dict) or trial.get('schema') != 'harnessgrad.visual-trial.v1'
+                    or trial.get('round') != round_no or not isinstance(trial.get('task_id'), str)
+                    or trial['task_id'] not in allowed or type(trial.get('trial')) is not int
+                    or not isinstance(trial.get('capture_id'), str)
+                    or trial.get('trial_id') is not None and not isinstance(trial['trial_id'], str)
+                    or not isinstance(trial.get('calls'), list)
+                    or any(not isinstance(call, dict) or not isinstance(call.get('images'), list)
+                           or any(not isinstance(image, dict) for image in call['images'])
+                           for call in trial['calls'])):
+                continue
+            key = (trial['task_id'], trial.get('trial_id') or trial['capture_id'])
+            rank = (path.name == _manifest_name(trial), path.stat().st_mtime_ns, path.name)
+            if key not in chosen or rank > chosen[key][0]:
+                chosen[key] = (rank, trial)
+        except (OSError, ValueError, KeyError):
+            continue
+    return sorted((trial for _, trial in chosen.values()),
+                  key=lambda row: (row['task_id'], row['trial'], row['capture_id']))
+
+
+def image_path(root, image):
+    name = image.get('file')
+    if isinstance(name, str) and _IMAGE_NAME.fullmatch(name) and name.split('.')[0] == image.get('sha256'):
+        path = root / 'images' / name
+        if not path.parent.is_symlink() and not path.is_symlink() and path.is_file():
+            return path
+    return None
+
+
+def reuse_round_zero(donor, recipient, task_ids):
+    """Copy admitted local training indexes and only their referenced image bytes."""
+    source = donor / 'visual-evidence' / 'train'
+    records = round_manifests(source, 0, task_ids)
+    if not records:
+        return 0
+    archive = ImageArchive(recipient, 0)
+    transferred = set()
+    for trial in records:
+        for call in trial['calls']:
+            for image in call['images']:
+                path = image_path(source, image)
+                if path is None or path.name in transferred:
+                    continue
+                with path.open('rb') as stream:
+                    data = stream.read(MAX_IMAGE_BYTES + 1)
+                if len(data) <= MAX_IMAGE_BYTES and hashlib.sha256(data).hexdigest() == image['sha256']:
+                    _atomic_file(archive.images / path.name, data, exclusive=True)
+                    transferred.add(path.name)
+        payload = json.dumps(trial, ensure_ascii=False).encode() + b'\n'
+        _atomic_file(archive.manifests / _manifest_name(trial), payload)
+    return len(transferred)
 
 
 class TrialImages:
@@ -159,7 +234,7 @@ class TrialImages:
                 _link_call(call, link)
         report = {'schema': 'harnessgrad.visual-trial.v1', **self.identity,
                   'status': 'recorded' if available else 'route_unavailable', 'calls': self.calls}
-        name = self.identity['capture_id'] + '.json'
+        name = _manifest_name(self.identity)
         _atomic_file(self.archive.manifests / name, json.dumps(report, ensure_ascii=False).encode() + b'\n')
 
 
