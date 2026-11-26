@@ -103,7 +103,7 @@ def source_item(event_id, text=None, *, kind='reusable'):
     return SourceItem(event, selection, kind, task_boundary=True)
 
 
-def setup(tmp_path, *, items=None, files=None, path='instruction.md', kind='rule', prior=True):
+def make_reflection_fixture(tmp_path, *, items=None, files=None, path='instruction.md', kind='rule', prior=True):
     items = items if items is not None else (source_item('selected', 'not-selected|修改 Python 后先跑相关测试'),)
     store = LearningStore(tmp_path / 'learning.sqlite3')
     update = LearningPolicyUpdate(SCOPE, 0, True, (SOURCE,), 0, 10, 'configure', 'confirmation')
@@ -140,7 +140,7 @@ def setup(tmp_path, *, items=None, files=None, path='instruction.md', kind='rule
 @pytest.mark.parametrize('kind,path', [('rule', 'instruction.md'), ('memory', 'instruction.md'), ('skill', SKILL)])
 def test_d2_revises_existing_text_and_submits_one_scoped_candidate(tmp_path, kind, path):
     files = {'instruction.md': AGENTS, SKILL: SKILL_PREFIX + OLD + '\n'}
-    fixture = setup(tmp_path, files=files, path=path, kind=kind)
+    fixture = make_reflection_fixture(tmp_path, files=files, path=path, kind=kind)
     original = tmp_path / 'AGENTS.md'
     original.write_bytes(AGENTS.encode())
     service = fixture.service()
@@ -167,7 +167,7 @@ def test_d2_revises_existing_text_and_submits_one_scoped_candidate(tmp_path, kin
 
 
 def test_identical_experience_is_no_change(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     fixture.reply['text'] = OLD
     result = fixture.service().submit(fixture.request())
     assert (result.decision.status, result.decision.reason_code) == ('no_change', 'already_present')
@@ -177,7 +177,7 @@ def test_identical_experience_is_no_change(tmp_path):
 
 @pytest.mark.parametrize('change', [{'kind': 'virtual_snapshot'}, {'sha256': '0' * 64}])
 def test_candidate_registration_rejects_mismatched_artifact(tmp_path, monkeypatch, change):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     register = fixture.c.register_candidate
     monkeypatch.setattr(fixture.c, 'register_candidate', lambda *args: replace(register(*args), **change))
 
@@ -189,21 +189,21 @@ def test_candidate_registration_rejects_mismatched_artifact(tmp_path, monkeypatc
 
 
 def test_revision_does_not_create_a_second_copy_of_an_existing_rule(tmp_path):
-    fixture = setup(tmp_path, files={'instruction.md': AGENTS + '\r\n' + NEW + '\r\n'})
+    fixture = make_reflection_fixture(tmp_path, files={'instruction.md': AGENTS + '\r\n' + NEW + '\r\n'})
     result = fixture.service().submit(fixture.request())
     assert (result.decision.status, result.decision.reason_code) == ('deferred', 'duplicate_existing_experience')
     assert not fixture.c.artifacts and not fixture.c.jobs
 
 
 def test_partial_line_is_not_a_valid_revision_anchor(tmp_path):
-    fixture = setup(tmp_path, files={'instruction.md': '# Instructions\n> Deprecated example: ' + OLD + '\n'})
+    fixture = make_reflection_fixture(tmp_path, files={'instruction.md': '# Instructions\n> Deprecated example: ' + OLD + '\n'})
     result = fixture.service().submit(fixture.request())
     assert result.decision.reason_code == 'stale_snapshot'
     assert not fixture.prompts and not fixture.c.artifacts
 
 
 def test_new_text_uses_only_the_selected_project_surface(tmp_path):
-    fixture = setup(tmp_path, files={'instruction.md': '# Instructions\n'}, prior=False)
+    fixture = make_reflection_fixture(tmp_path, files={'instruction.md': '# Instructions\n'}, prior=False)
     receipt = fixture.service().submit(fixture.request())
     assert receipt.experience.prior_version_ref is None
     candidate = receipt.decision.candidate
@@ -211,7 +211,7 @@ def test_new_text_uses_only_the_selected_project_surface(tmp_path):
 
 
 def test_retries_reuse_frozen_output_and_original_job(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     fixture.c.drop_registration = fixture.c.drop_ack = True
     request = fixture.request()
     assert fixture.service().submit(request).decision.reason_code == 'artifact_unavailable'
@@ -227,7 +227,7 @@ def test_retries_reuse_frozen_output_and_original_job(tmp_path):
 
 @pytest.mark.parametrize('phase', ['register_candidate', 'submit_candidate'])
 def test_concurrent_publishers_do_not_repeat_the_port_call(tmp_path, monkeypatch, phase):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     request = fixture.request()
     started, resume = Event(), Event()
     call = getattr(fixture.c, phase)
@@ -254,7 +254,7 @@ def test_concurrent_publishers_do_not_repeat_the_port_call(tmp_path, monkeypatch
 
 @pytest.mark.parametrize('phase', ['after_claim', 'before_draft_commit', 'after_draft_commit'])
 def test_reflection_recovers_after_process_exit(tmp_path, phase):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     service = fixture.service()
     request = fixture.request()
     script = """
@@ -336,7 +336,7 @@ sys.exit(3)
 def test_d1_audit_evidence_cannot_trigger_d2(tmp_path, case, reason):
     items = ((source_item('one', kind='one_off'),) if case == 'one_off' else
              (source_item('same'), source_item('same', 'changed body')))
-    fixture = setup(tmp_path, items=items)
+    fixture = make_reflection_fixture(tmp_path, items=items)
     ref = fixture.source.receipts[0].evidence_ref
     result = fixture.service().submit(fixture.request((ref,)))
     assert result.decision.reason_code == reason
@@ -344,7 +344,7 @@ def test_d1_audit_evidence_cannot_trigger_d2(tmp_path, case, reason):
 
 
 def test_conflicting_quotes_allow_explicit_deferral_and_no_submission(tmp_path):
-    fixture = setup(tmp_path, items=(source_item('one', 'Run tests for Python edits.'),
+    fixture = make_reflection_fixture(tmp_path, items=(source_item('one', 'Run tests for Python edits.'),
                                     source_item('two', 'Do not run tests for Python edits.')))
     fixture.reply.clear()
     fixture.reply.update(decision='deferred', reason_code='conflicting_evidence')
@@ -354,7 +354,7 @@ def test_conflicting_quotes_allow_explicit_deferral_and_no_submission(tmp_path):
 
 
 def test_evidence_and_catalog_are_scoped_before_callback(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     other = LearningScope(SCOPE.profile_id, 'other-project')
     fixture.store.update_learning_policy(replace(fixture.update, scope=other), lambda _: True)
     cross_project = fixture.service().submit(replace(fixture.request(), scope=other))
@@ -369,7 +369,7 @@ def test_evidence_and_catalog_are_scoped_before_callback(tmp_path):
 @pytest.mark.parametrize('other', [LearningScope('other-profile', SCOPE.project_id),
                                  LearningScope(SCOPE.profile_id, 'other-project')])
 def test_mixed_scope_evidence_is_refused_before_reflection(tmp_path, other):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     item = source_item('selected', 'This evidence belongs to a different scope.')
     grant = replace(fixture.update, scope=other)
     foreign = LearningService(fixture.store, SelectedImportSource(other, SOURCE, (item,)),
@@ -388,14 +388,14 @@ def test_mixed_scope_evidence_is_refused_before_reflection(tmp_path, other):
     assert [item['ref'] for item in fixture.prompts[0]['evidence']] == list(local.evidence_refs)
 
 def test_selected_files_and_existing_topic_cannot_be_redirected(tmp_path):
-    fixture = setup(tmp_path, files={'instruction.md': AGENTS, SKILL: SKILL_PREFIX + OLD})
+    fixture = make_reflection_fixture(tmp_path, files={'instruction.md': AGENTS, SKILL: SKILL_PREFIX + OLD})
     fixture.reply.update(path=SKILL, kind='skill')
     assert fixture.service().submit(fixture.request()).decision.reason_code == 'existing_experience_conflict'
     assert not fixture.c.artifacts
 
 
 def test_skill_frontmatter_cannot_be_used_as_an_edit_anchor(tmp_path):
-    fixture = setup(tmp_path, files={SKILL: SKILL_PREFIX + OLD}, path=SKILL, kind='skill')
+    fixture = make_reflection_fixture(tmp_path, files={SKILL: SKILL_PREFIX + OLD}, path=SKILL, kind='skill')
     catalog = (replace(fixture.existing[0], text='description: Verify changed files.'),)
     rejected = fixture.service(catalog=catalog).submit(fixture.request())
     assert rejected.decision.reason_code == 'skill_frontmatter_changed'
@@ -403,7 +403,7 @@ def test_skill_frontmatter_cannot_be_used_as_an_edit_anchor(tmp_path):
 
 
 def test_snapshot_is_checked_before_reserving_evidence(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     good = fixture.request()
     stale = replace(good, snapshot=replace(good.snapshot, snapshot_sha256='f' * 64))
     assert fixture.service().submit(stale).decision.reason_code == 'stale_snapshot'
@@ -412,7 +412,7 @@ def test_snapshot_is_checked_before_reserving_evidence(tmp_path):
 
 
 def test_existing_model_session_accepts_the_offline_reflection_callback(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     baseline_store = EventStore(tmp_path / 'personal.sqlite3')
     project = baseline_store.add_project(tmp_path)
     settings = load_model_settings({
@@ -429,7 +429,7 @@ def test_existing_model_session_accepts_the_offline_reflection_callback(tmp_path
 
 
 def test_revocation_after_preparation_prevents_queue_submission(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     service = fixture.service()
     request = fixture.request()
     assert service.reflect(request).status == 'candidate_ready'
@@ -442,7 +442,7 @@ def test_revocation_after_preparation_prevents_queue_submission(tmp_path):
 
 
 def test_reflection_reservation_prevents_concurrent_and_overlapping_work(tmp_path):
-    fixture = setup(tmp_path, items=(source_item('one'), source_item('two')))
+    fixture = make_reflection_fixture(tmp_path, items=(source_item('one'), source_item('two')))
     both = fixture.request()
     first = fixture.request((both.evidence_refs[0],))
     started, resume = Event(), Event()
@@ -465,7 +465,7 @@ def test_reflection_reservation_prevents_concurrent_and_overlapping_work(tmp_pat
 
 
 def test_learning_schema_upgrade_preserves_d1_state(tmp_path):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     prior = fixture.store.read_receipts(SCOPE)
     with closing(fixture.store.connection()) as db, db:
         db.execute('DROP TABLE learning_trials')
@@ -484,7 +484,7 @@ def test_learning_schema_upgrade_preserves_d1_state(tmp_path):
 
 
 def test_v4_upgrade_preserves_receipts_and_does_not_retry_an_ambiguous_claim(tmp_path):
-    fixture = setup(tmp_path, items=(source_item('one'), source_item('two')))
+    fixture = make_reflection_fixture(tmp_path, items=(source_item('one'), source_item('two')))
     first, second = fixture.request().evidence_refs
     completed, pending = fixture.request((first,)), fixture.request((second,))
     service = fixture.service()
@@ -503,7 +503,7 @@ def test_v4_upgrade_preserves_receipts_and_does_not_retry_an_ambiguous_claim(tmp
 
 @pytest.mark.parametrize('version', [5, 6])
 def test_upgrade_preserves_previous_trial_records(tmp_path, version):
-    fixture = setup(tmp_path)
+    fixture = make_reflection_fixture(tmp_path)
     request = fixture.request()
     receipt = fixture.service().submit(request)
     with closing(fixture.store.connection()) as db, db:
