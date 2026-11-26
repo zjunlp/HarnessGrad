@@ -392,6 +392,13 @@ provider 和 execution 共用存储机制，但声明、索引和制品按 profi
 结构检查；启动前的 `admit_binding` 重读绑定指定的 manifest，核验 venv 内容、
 基础解释器、声明、精确依赖和路径，不读取最新索引换环境，不安装或静默回退。
 
+进程内，同一制品在扫描开始前到达的并发请求共享一次校验。扫描期间到达的请求进入
+下一次校验，可检测在上一轮扫描后发生的变动。每次扫描检查清单、目录成员、链接和
+文件权限。在受支持的 Linux 本地文件系统上，冻结的单链接普通文件可复用同一设备、
+inode、权限、大小、mtime 和 ctime 对应的 SHA-256。可写文件、硬链接、刚发生状态变化的文件
+及其他文件系统的文件会重新读取内容。基础解释器
+字节和依赖探测也逐批校验。文件指纹保存在进程内，新的进程重新计算。
+
 声明解析与实际启动是两个独立阶段。`registry.load_tasks/load_envs` 在有界的声明 scope 中，
 同一个执行环境只做一次完整库存校验和解释器探测；provider worker 的 `execution_snapshot`
 在进入时校验一次，逐任务查询仅复制该绑定。scope 结束后不保留“已校验”权限。
@@ -964,8 +971,8 @@ or ambient platform fallback during dataset loading, launch or reuse.
 
 This route does not support workers, observed backends or exec/container tasks.
 The binding is included in the environment verification_context and the private
-dataset_runtime_identity actor role. Every launch and reuse admission rehashes the
-captured artifact; it does not follow a changed discovery index. Older identities
+dataset_runtime_identity actor role. Launch and reuse admit the captured
+artifact with the same manifest and file checks described above. Older identities
 remain readable, but cannot be reused for a task that newly requires actor proof;
 start a new run after preparing the declared execution artifact.
 

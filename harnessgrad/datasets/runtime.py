@@ -8,6 +8,7 @@ libraries and the base standard library are compatibility inputs, not a sealed O
 """
 from __future__ import annotations
 
+from concurrent.futures import Future
 from contextlib import contextmanager
 from contextvars import ContextVar
 from copy import deepcopy
@@ -24,6 +25,9 @@ import stat
 import subprocess
 import sys
 import tempfile
+from threading import Lock
+from time import sleep
+from weakref import WeakValueDictionary
 
 from harnessgrad.paths import configured_path, main_checkout
 from harnessgrad.execution.python_runtime.python_artifacts import (
@@ -44,6 +48,9 @@ _NAME = re.compile(r"[a-z][a-z0-9_]*\Z")
 _EXECUTION_SNAPSHOT = ContextVar("dataset_execution_snapshot", default=None)
 _DECLARATION_RUNTIMES = ContextVar("dataset_declaration_runtimes", default=None)
 _PIN = re.compile(r"([A-Za-z0-9][A-Za-z0-9._-]*)==([A-Za-z0-9][A-Za-z0-9.!+_-]*)\Z")
+_ADMISSION_BATCH_WINDOW_S = 0.008
+_ADMISSIONS = WeakValueDictionary()
+_ADMISSIONS_LOCK = Lock()
 
 
 class DatasetRuntimeUnavailable(RuntimeError):
@@ -52,6 +59,12 @@ class DatasetRuntimeUnavailable(RuntimeError):
     def __init__(self, message, *, status="unavailable"):
         super().__init__(message)
         self.status = status
+
+
+class _ArtifactAdmissions:
+    def __init__(self):
+        self.verify_lock = Lock()
+        self.waiting = None
 
 
 def _package(name):
@@ -308,6 +321,36 @@ def _admit_base_executable(venv, base):
 
 
 def _verify_manifest(name, spec, manifest_path, runtime_id):
+    """Share a verification only with callers admitted before its scan starts."""
+    key = (name, _canonical(spec), str(manifest_path), runtime_id)
+    with _ADMISSIONS_LOCK:
+        entry = _ADMISSIONS.get(key)
+        if entry is None:
+            entry = _ArtifactAdmissions()
+            _ADMISSIONS[key] = entry
+        lead = entry.waiting is None
+        if lead:
+            entry.waiting = Future()
+        batch = entry.waiting
+
+    if lead:
+        try:
+            with entry.verify_lock:
+                sleep(_ADMISSION_BATCH_WINDOW_S)
+                with _ADMISSIONS_LOCK:
+                    entry.waiting = None
+                result = _verify_manifest_bytes(name, spec, manifest_path, runtime_id)
+        except BaseException as exc:
+            with _ADMISSIONS_LOCK:
+                if entry.waiting is batch:
+                    entry.waiting = None
+            batch.set_exception(exc)
+        else:
+            batch.set_result(result)
+    return deepcopy(batch.result())
+
+
+def _verify_manifest_bytes(name, spec, manifest_path, runtime_id):
     """Validate an exact artifact; the mutable discovery index is not consulted."""
     manifest_path = Path(manifest_path)
     if (not manifest_path.is_absolute() or manifest_path.name != "artifact.json"
@@ -327,7 +370,7 @@ def _verify_manifest(name, spec, manifest_path, runtime_id):
     if venv.is_symlink() or str(venv) != manifest["path"]:
         raise ValueError("runtime physical path changed")
     _store(venv)  # Exact bindings must not bypass the outside-platform rule.
-    if _inventory(venv) != manifest["files"]:
+    if _inventory(venv, reuse_frozen=True) != manifest["files"]:
         raise ValueError("runtime file inventory changed")
     _admit_base_executable(venv, manifest["base_python"])
     probe = _probe(venv / "bin/python")
