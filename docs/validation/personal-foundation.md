@@ -1,5 +1,69 @@
 # Personal foundation validation
 
+## Offline personal learning and maintenance
+
+The core workflow processes explicitly labelled sample feedback and uses
+scripted replies to register rule and Skill candidates. Maintenance checks
+cover revision history, corrections, retirement and reconciliation against a
+simulated version service. Real host intake, automatic classification and
+adoption still need integration testing.
+
+Recovery tests exit a child process after the reflection claim, after starting
+the callback and after saving its draft. A claim without a started call can
+resume. A started call with no committed draft records
+`reflection_outcome_unknown`. A committed draft resumes at candidate publication.
+
+The standalone core change used schema v6 and preserved existing trial data
+from older prototypes. The multi-round trial change below adds its own migration.
+
+When an approved write changes a file, active rules whose exact text survives
+can follow the new version in the same transaction. Their original adoption
+receipts stay available. Retiring a rule carried forward this way restricts
+retirement to context selection because its older whole-file rollback could
+remove newer rules. Replaying the verified write can reconcile older stores
+whose rule bindings still refer to the preceding version.
+
+Sources can redeliver a newly classified event after the cursor advances.
+The original bytes and any previous selection remain pinned. A reusable
+classification can then trigger once under the normal evidence, cadence and
+authorization checks.
+
+Focused validation on Windows with CPython 3.12.14 reported
+`155 passed, 2 skipped in 14.80s`. The skips cover POSIX symlink/FIFO tests
+and permission bits bypassed by the current account.
+
+```powershell
+$scratch = Join-Path $env:TEMP ('hg-learning-core-' + [Guid]::NewGuid().ToString('N'))
+$tests = @('learning', 'reflection', 'maintenance', 'model', 'codex_adapter', 'proposal_flow') |
+    ForEach-Object { "tests/quality/test_personal_$_.py" }
+python -B -X utf8 -m pytest -q -rs --tb=short -p no:cacheprovider --basetemp $scratch @tests
+```
+
+## Offline tool extensions
+
+The provider catalog pins provider versions, manifests, capabilities and
+scenarios per project. The offline delivery check exercises a matched-input
+baseline and candidate. A passing report must match the digest of the executed
+candidate. Invocation uses a separate authorization, and a result must match
+the accepted operation and input digest. Timeout receipts carry an unknown
+judgment and no output log. The fixture only reads synthetic inventories.
+Real providers and host bridges remain unverified.
+
+## Offline multi-round trials
+
+The synthetic second-host adapter exercises scoped adoption, correction,
+retirement and rollback. Real hosts, model behavior and platform compatibility
+remain unverified. Trial summaries keep retest, adoption, loading and behavior
+as separate outcomes. Retest evidence must refer to the same candidate ID and
+digest as adoption. Behavior requires a post-load run tied to the operation,
+new thread and loaded version. Baseline and pre-adoption runs are rejected.
+
+Learning schema v7 creates a trial table when it is missing and preserves
+existing rows. Legacy trial summaries retain their original records and replay
+keys. Reads show their behavior as unchecked and omit the comparison verdict
+because the original records cannot establish those outcomes under the current
+evidence checks.
+
 ## Stage B review fixes on 2026-11-18
 
 The Windows 11-file command and four-file Node command below were rerun on the

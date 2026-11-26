@@ -1,52 +1,17 @@
 """Thin task-budget assembly around the existing JSON callback and transport."""
 from __future__ import annotations
 
-from contextlib import contextmanager
-import os
 import threading
 import time
 import uuid
 
 from harnessgrad.personal.contracts import digest, identifier
+from harnessgrad.personal.execution_lock import execution_lock
 from harnessgrad.personal.profile import ModelLimits, ModelSettings
 
 SYSTEM = ('Help improve a personal harness using only the supplied, selected evidence. '
           'Return one JSON object matching the requested schema. Distinguish a proposal '
           'from an applied or verified change; ask for missing evidence when needed.')
-
-
-@contextmanager
-def _job_lock(path):
-    """Nonblocking OS lock; closing the handle, including on process exit, releases it."""
-    if path.is_symlink():
-        raise ValueError('model execution lock must be an ordinary file')
-    stream = path.open('a+b')
-    try:
-        if os.fstat(stream.fileno()).st_nlink != 1:
-            raise ValueError('model execution lock must be single-link')
-        if os.fstat(stream.fileno()).st_size == 0:
-            stream.write(b'\0')
-            stream.flush()
-        stream.seek(0)
-        try:
-            if os.name == 'nt':
-                import msvcrt
-                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            raise ValueError('model job already has an executor or its lock is unavailable') from None
-        try:
-            yield
-        finally:
-            stream.seek(0)
-            if os.name == 'nt':
-                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
-    finally:
-        stream.close()
 
 
 class ModelSession:
@@ -78,7 +43,7 @@ class ModelSession:
     def __enter__(self):
         if self._owner is not None:
             raise ValueError('model execution is already active')
-        self._lock = _job_lock(self.store.path.with_name('model-' + digest(self.job_id) + '.lock'))
+        self._lock = execution_lock(self.store.path.with_name('model-' + digest(self.job_id) + '.lock'), kind='model')
         self._lock.__enter__()
         started = False
         try:
