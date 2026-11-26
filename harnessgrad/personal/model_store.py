@@ -117,9 +117,12 @@ class ModelStore:
                                   {'execution_seconds': max(0, elapsed), 'failed': failed})
 
     def reserve(self, job_id: str, lease: str, stage: str, input_sha256: str,
-                input_bytes: int, now: float) -> int:
+                input_bytes: int, now: float, *, guard=None) -> int:
+        """Run the optional guard with the active write connection and job ID."""
         identifier(stage)
         with self.events.connection() as db, self.events.transaction(db):
+            if guard is not None:
+                guard(db, job_id)
             row = self._row(db, job_id)
             self._active(row, lease)
             limits = ModelLimits(**decode(row['limits']))

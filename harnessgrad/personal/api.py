@@ -1,4 +1,4 @@
-"""Owned loopback HTTP service; no experiment routes or model execution."""
+"""Owned loopback HTTP service; proposal tasks run outside request threads."""
 from __future__ import annotations
 
 import hmac
@@ -9,17 +9,22 @@ from pathlib import Path
 import secrets
 import sqlite3
 import threading
+import time
 from urllib.parse import parse_qs, urlsplit
 
 from harnessgrad import PLATFORM_ROOT
 from harnessgrad.personal.contracts import MAX_BYTES, decode, encode
 from harnessgrad.personal.fixtures import example
 from harnessgrad.personal.event_store import DraftConflict
+from harnessgrad.personal.feedback_store import FeedbackConflict
+from harnessgrad.personal.proposal_run_store import ACTIVE, ProposalUnavailable
 from harnessgrad.personal.service import PersonalService
 
 ASSETS = {'/': ('personal.html', 'text/html'), '/personal.js': ('personal.js', 'text/javascript'),
           '/personal-window.js': ('personal-window.js', 'text/javascript'),
           '/personal-draft.js': ('personal-draft.js', 'text/javascript'),
+          '/personal-feedback.js': ('personal-feedback.js', 'text/javascript'),
+          '/personal-proposal.js': ('personal-proposal.js', 'text/javascript'),
           '/personal.css': ('personal.css', 'text/css'), '/tokens.css': ('tokens.css', 'text/css')}
 ASSET_ROOT = PLATFORM_ROOT / 'console' / 'static'
 
@@ -33,6 +38,7 @@ class PersonalServer(ThreadingHTTPServer):
         self.instance = secrets.token_hex(16)
         self.token = secrets.token_hex(32)
         self.slots = threading.BoundedSemaphore(8)
+        self.stream_slots = threading.BoundedSemaphore(2)
         super().__init__(('127.0.0.1', 0), Handler)
         self.url = f'http://127.0.0.1:{self.server_port}/'
         self.origin = self.url.rstrip('/')
@@ -99,6 +105,13 @@ class Handler(BaseHTTPRequestHandler):
             params = parse_qs(route.query, strict_parsing=True)
             if any(len(v) != 1 for v in params.values()):
                 raise ValueError('repeated query parameter')
+            parts = route.path.strip('/').split('/')
+            action = self.proposal_action(parts)
+            if action is not None and params:
+                raise ValueError('proposal routes do not accept query parameters')
+            if action == 'events' and not mutation:
+                self.proposal_stream(parts[3], parts[5])
+                return
             if mutation:
                 if self.headers.get('Content-Type') != 'application/json':
                     raise ValueError('expected application/json')
@@ -114,6 +127,10 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, result)
         except DraftConflict:
             self.reply(409, {'error': 'draft changed in another editor; retain local text and reload'})
+        except FeedbackConflict:
+            self.reply(409, {'code': 'feedback_conflict', 'error': 'feedback conflicts with its saved request or draft'})
+        except ProposalUnavailable as error:
+            self.reply(409, {'code': error.code, 'error': 'proposal cannot start'})
         except (ValueError, KeyError, TypeError):
             self.reply(400, {'error': 'invalid personal request; check selection, schema and limits'})
         except (OSError, RuntimeError, sqlite3.Error):
@@ -136,12 +153,63 @@ class Handler(BaseHTTPRequestHandler):
             if parts[4] == 'events' and not set(params) - {'after', 'limit'}:
                 return service.store.source_rows(parts[3], after=int(params.get('after', ['0'])[0]),
                                                  limit=int(params.get('limit', ['50'])[0]))
+            if parts[4] == 'evidence' and not set(params) - {'source_instance', 'session_id', 'q', 'after', 'before', 'limit'}:
+                return service.store.evidence.search(parts[3], params['source_instance'][0], params['session_id'][0],
+                    query=params.get('q', [''])[0], after=int(params.get('after', ['0'])[0]),
+                    before=int(params['before'][0]) if 'before' in params else None,
+                    limit=int(params.get('limit', ['50'])[0]))
+            if parts[4] == 'feedback' and not set(params) - {'limit'}:
+                return {'feedback': service.store.feedback.list(parts[3], limit=int(params.get('limit', ['20'])[0]))}
+        if len(parts) == 6 and parts[:3] == ['api', 'personal', 'projects'] and parts[4] == 'feedback' and not params:
+            return service.store.feedback.get(parts[3], parts[5])
+        if self.proposal_action(parts) == 'status' and not params:
+            return {'proposal': service.proposal(parts[3], parts[5])}
         if len(parts) == 5 and parts[:3] == ['api', 'personal', 'jobs'] and parts[4] == 'events':
             return {'events': service.store.job_events(parts[3], int(params.get('after', ['0'])[0]))}
         raise ValueError('unknown personal route')
 
+    @staticmethod
+    def proposal_action(parts):
+        if (len(parts) not in (7, 8) or parts[:3] != ['api', 'personal', 'projects']
+                or parts[4] != 'feedback' or parts[6] != 'proposal'):
+            return None
+        return 'status' if len(parts) == 7 else parts[7]
+
+    def proposal_stream(self, project_id, feedback_id):
+        raw = self.headers.get('Last-Event-ID', '0')
+        if not raw.isascii() or not raw.isdecimal() or len(raw) > 19:
+            raise ValueError('invalid proposal stream cursor')
+        after = int(raw)
+        if not self.server.stream_slots.acquire(blocking=False):
+            self.reply(429, {'error': 'too many proposal streams'})
+            return
+        try:
+            service = self.server.service
+            deadline = time.monotonic() + 1.5
+            while True:
+                current = service.proposal(project_id, feedback_id)
+                rows = service.store.proposal_runs.after(project_id, feedback_id, after)
+                if rows or current is None or current['status'] not in ACTIVE or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.10)
+            frames = [f"id: {row['seq']}\nevent: proposal\ndata: {encode(row)}\n\n" for row in rows]
+            self.reply(200, (''.join(frames) or ': heartbeat\n\n').encode('utf-8'),
+                       content_type='text/event-stream')
+        finally:
+            self.server.stream_slots.release()
+
     def post(self, route, value):
         service = self.server.service
+        parts = route.strip('/').split('/')
+        action = self.proposal_action(parts)
+        if action == 'status' and type(value) is dict and not value:
+            return {'proposal': service.request_proposal(parts[3], parts[5])}
+        if action == 'reply' and set(value) == {'question_id', 'answer'}:
+            return {'proposal': service.reply_to_proposal(parts[3], parts[5], value['question_id'], value['answer'])}
+        if action == 'cancel' and type(value) is dict and not value:
+            return {'proposal': service.cancel_proposal(parts[3], parts[5])}
+        if route == '/api/personal/feedback':
+            return service.submit_feedback(value)
         if route == '/api/personal/draft' and set(value) == {'project_id', 'text', 'revision'}:
             return service.store.save_draft(value['project_id'], value['text'], value['revision'])
         if route == '/api/personal/projects' and set(value) == {'root'}:
@@ -181,6 +249,8 @@ def serve(service: PersonalService, *, ready=print):
         server.serve_forever(poll_interval=0.1)
     finally:
         server.server_close()
+        if owned:
+            service.close()
         if owned and connection.is_file():
             current = decode(connection.read_bytes())
             if current.get('instance') == server.instance:

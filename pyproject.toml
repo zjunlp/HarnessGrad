@@ -68,7 +68,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 ]
 "tools.testing" = ["test_costs.json"]
 "console" = [
-    "static/personal.html", "static/personal.js", "static/personal-window.js", "static/personal-draft.js", "static/personal.css",
+    "static/personal.html", "static/personal.js", "static/personal-window.js", "static/personal-draft.js", "static/personal-feedback.js", "static/personal-proposal.js", "static/personal.css",
     "LICENSE-DSH", "DEVELOPMENT.md", "WORKBENCH.md", "static/app.css", "static/author.html", "static/author.js",
     "static/console.js", "static/detail-i18n.js", "static/evidence.css",
     "static/evidence.html", "static/evidence.js", "static/harness.html",

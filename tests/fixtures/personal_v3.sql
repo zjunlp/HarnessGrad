@@ -1,0 +1,11 @@
+-- Frozen A+B1 schema, before B2 feedback and retrieval.
+CREATE TABLE projects (id TEXT PRIMARY KEY, root TEXT NOT NULL UNIQUE);
+CREATE TABLE sessions (project_id TEXT NOT NULL REFERENCES projects(id), source_instance TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY(project_id,source_instance,id));
+CREATE TABLE source_events (seq INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, source_instance TEXT NOT NULL, session_id TEXT NOT NULL, event_id TEXT NOT NULL, body TEXT NOT NULL, sha256 TEXT NOT NULL, UNIQUE(project_id,source_instance,event_id), FOREIGN KEY(project_id,source_instance,session_id) REFERENCES sessions(project_id,source_instance,id));
+CREATE TABLE jobs (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id), kind TEXT NOT NULL CHECK(kind IN ('import','demo','model')), status TEXT NOT NULL CHECK(status IN ('completed','fixture','ready','running','paused','failed')), input_sha256 TEXT NOT NULL);
+CREATE TABLE evolution_events (job_id TEXT NOT NULL REFERENCES jobs(id), seq INTEGER NOT NULL CHECK(seq>0), type TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(job_id,seq));
+CREATE TABLE questions (id TEXT PRIMARY KEY, job_id TEXT NOT NULL REFERENCES jobs(id), prompt TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','answered')), response TEXT);
+CREATE TABLE model_budgets (job_id TEXT PRIMARY KEY REFERENCES jobs(id), profile_id TEXT NOT NULL, config TEXT NOT NULL, limits TEXT NOT NULL, calls INTEGER NOT NULL DEFAULT 0 CHECK(calls>=0), revisions INTEGER NOT NULL DEFAULT 0 CHECK(revisions>=0), elapsed REAL NOT NULL DEFAULT 0 CHECK(elapsed>=0), active_since REAL, lease TEXT, recoveries INTEGER NOT NULL DEFAULT 0 CHECK(recoveries>=0), fixture INTEGER NOT NULL CHECK(fixture IN (0,1)));
+CREATE TABLE model_calls (job_id TEXT NOT NULL REFERENCES model_budgets(job_id), seq INTEGER NOT NULL CHECK(seq>0), lease TEXT NOT NULL, stage TEXT NOT NULL, input_sha256 TEXT NOT NULL, input_bytes INTEGER NOT NULL CHECK(input_bytes>=0), status TEXT NOT NULL CHECK(status IN ('reserved','completed','failed','unknown')), usage TEXT, failure_kind TEXT, PRIMARY KEY(job_id,seq));
+CREATE TABLE drafts (project_id TEXT PRIMARY KEY REFERENCES projects(id), text TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>0));
+PRAGMA user_version=3;

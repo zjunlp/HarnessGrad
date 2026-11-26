@@ -15,6 +15,8 @@ use std::{
 use tauri::{LogicalSize, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow};
 use window_placement::{clamp_position, fit_client, fit_logical, parse_position, WorkArea};
 
+const ORDINARY_MINIMUM: (u32, u32) = (440, 560);
+
 struct PlacementState {
     point: (i32, i32),
     changed: Instant,
@@ -61,8 +63,14 @@ fn read_bounded(path: &Path, limit: usize) -> std::io::Result<Vec<u8>> {
 async fn window_action(
     window: WebviewWindow,
     action: String,
+    content_height: Option<u32>,
     log: tauri::State<'_, Diagnostics>,
 ) -> Result<bool, String> {
+    if content_height.is_some_and(|height| {
+        !matches!(action.as_str(), "input" | "bubble") || !(72..=700).contains(&height)
+    }) {
+        return Err("content height is outside the compact window limit".into());
+    }
     if !matches!(
         action.as_str(),
         "drag"
@@ -94,8 +102,8 @@ async fn window_action(
         "bar" | "input" | "details" | "bubble" => {
             let (w, h) = match action.as_str() {
                 "bar" => (268, 72),
-                "input" => (382, 288),
-                "bubble" => (382, 420),
+                "input" => (382, content_height.unwrap_or(288)),
+                "bubble" => (382, content_height.unwrap_or(420)),
                 _ => (620, 700),
             };
             if window.is_decorated().unwrap_or(false) {
@@ -123,6 +131,7 @@ async fn window_action(
 
 fn ordinary_window(window: &WebviewWindow) -> tauri::Result<()> {
     window.set_decorations(true)?;
+    set_ordinary_minimum(window)?;
     window.set_resizable(true)?;
     window.set_maximizable(true)?;
     window.set_always_on_top(false)?;
@@ -130,6 +139,14 @@ fn ordinary_window(window: &WebviewWindow) -> tauri::Result<()> {
     // A desktop without absolute positioning keeps the OS-managed ordinary window.
     let _ = keep_visible(window);
     Ok(())
+}
+
+fn set_ordinary_minimum(window: &WebviewWindow) -> tauri::Result<()> {
+    // Include native window chrome when the monitor cannot fit the preferred size.
+    let minimum = fitted_client_size(window, ORDINARY_MINIMUM)
+        .and_then(|size| Ok(size.to_logical::<f64>(window.scale_factor()?)))
+        .unwrap_or_else(|_| LogicalSize::new(ORDINARY_MINIMUM.0 as f64, ORDINARY_MINIMUM.1 as f64));
+    window.set_min_size(Some(minimum))
 }
 
 fn keep_visible(window: &WebviewWindow) -> tauri::Result<()> {
@@ -172,7 +189,10 @@ fn work_area(window: &WebviewWindow) -> tauri::Result<WorkArea> {
     })
 }
 
-fn resize_to(window: &WebviewWindow, logical: (u32, u32)) -> tauri::Result<()> {
+fn fitted_client_size(
+    window: &WebviewWindow,
+    logical: (u32, u32),
+) -> tauri::Result<PhysicalSize<u32>> {
     let area = work_area(window)?;
     let outer = window.outer_size()?;
     let inner = window.inner_size()?;
@@ -182,7 +202,11 @@ fn resize_to(window: &WebviewWindow, logical: (u32, u32)) -> tauri::Result<()> {
     );
     let fitted = fit_logical(logical, window.scale_factor()?, frame, area)
         .ok_or_else(|| std::io::Error::other("no usable desktop size"))?;
-    window.set_size(PhysicalSize::new(fitted.0, fitted.1))?;
+    Ok(PhysicalSize::new(fitted.0, fitted.1))
+}
+
+fn resize_to(window: &WebviewWindow, logical: (u32, u32)) -> tauri::Result<()> {
+    window.set_size(fitted_client_size(window, logical)?)?;
     keep_visible(window)
 }
 
@@ -282,6 +306,9 @@ fn create_window(
         .on_navigation(move |next| next.origin().ascii_serialization() == guard_origin)
         .build()?;
     log.record("window.build_completed", serde_json::json!({}));
+    if force_ordinary {
+        set_ordinary_minimum(&window)?;
+    }
     let restored = read_bounded(&position_file, 4096)
         .ok()
         .and_then(|v| parse_position(&v));
