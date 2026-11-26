@@ -61,7 +61,7 @@ def running(service):
         thread.join(timeout=5)
 
 
-def setup(tmp_path, client=None):
+def make_proposal_service(tmp_path, client=None):
     project = tmp_path / 'project'
     project.mkdir()
     (project / 'AGENTS.md').write_bytes(b'Run focused tests.\r\n')
@@ -100,7 +100,7 @@ def test_http_feedback_to_native_diff_is_idempotent_scoped_and_read_only(tmp_pat
             return super().complete(**kwargs)
 
     client = PausedModel([PLAN, EDIT])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     original = file.read_bytes()
     other = tmp_path / 'other'; other.mkdir()
     other_id = service.add_project(other)['id']
@@ -138,7 +138,7 @@ def test_http_feedback_to_native_diff_is_idempotent_scoped_and_read_only(tmp_pat
 def test_opt_in_and_platform_unavailability_do_not_call_model(tmp_path, monkeypatch):
     client = ScriptedModelClient([PLAN, EDIT])
     monkeypatch.setattr(codex, '_secure_access_available', lambda: False)
-    service, project, _ = setup(tmp_path, client)
+    service, project, _ = make_proposal_service(tmp_path, client)
     with running(service) as request:
         assert request('health')[1]['proposal_generation'] == {'status': 'unavailable'}
         route = submit(request, project)
@@ -151,7 +151,7 @@ def test_opt_in_and_platform_unavailability_do_not_call_model(tmp_path, monkeypa
 @requires_safe_read
 def test_needs_input_is_shown_without_a_candidate_or_second_model_call(tmp_path):
     client = ScriptedModelClient([QUESTION_PLAN])
-    service, project, _ = setup(tmp_path, client)
+    service, project, _ = make_proposal_service(tmp_path, client)
     with running(service) as request:
         route = submit(request, project)
         assert request(route, {})[0] == 200
@@ -172,7 +172,7 @@ def test_drift_during_model_generation_never_publishes_native_diff(tmp_path):
                 file.write_bytes(b'Concurrent edit.\n')
             return result
 
-    service, project, file = setup(tmp_path, DriftModel([PLAN, EDIT]))
+    service, project, file = make_proposal_service(tmp_path, DriftModel([PLAN, EDIT]))
     with running(service) as request:
         route = submit(request, project)
         assert request(route, {})[0] == 200
@@ -183,7 +183,7 @@ def test_drift_during_model_generation_never_publishes_native_diff(tmp_path):
 
 
 def test_reopened_service_marks_abandoned_requests_interrupted_without_replay(tmp_path):
-    service, project, _ = setup(tmp_path)
+    service, project, _ = make_proposal_service(tmp_path)
     with running(service) as request:
         route = submit(request, project)
         feedback = route.split('/')[-2]
@@ -195,7 +195,7 @@ def test_reopened_service_marks_abandoned_requests_interrupted_without_replay(tm
 
 
 def test_v4_to_v6_preserves_feedback_evidence_drafts_and_search(tmp_path):
-    service, project, _ = setup(tmp_path)
+    service, project, _ = make_proposal_service(tmp_path)
     service.import_session(project, example())
     service.store.save_draft(project, 'original draft', 0)
     with running(service) as request:
@@ -228,7 +228,7 @@ def events(request, route, cursor=None):
 @requires_safe_read
 def test_http_reply_resumes_original_job_and_stream_replays_only_new_events(tmp_path):
     client = ScriptedModelClient([QUESTION_PLAN, PLAN, EDIT])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     original = file.read_bytes()
     with running(service) as request:
         route = submit(request, project)
@@ -262,7 +262,7 @@ def test_http_reply_resumes_original_job_and_stream_replays_only_new_events(tmp_
 def test_repeated_question_ends_without_a_second_open_question(tmp_path):
     follow_up = {**QUESTION_PLAN, 'question': 'What is the exact test command?'}
     client = ScriptedModelClient([QUESTION_PLAN, follow_up])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     original = file.read_bytes()
     with running(service) as request:
         route = submit(request, project)
@@ -287,7 +287,7 @@ def test_repeated_question_ends_without_a_second_open_question(tmp_path):
 def test_cancel_before_candidate_reservation_prevents_a_new_call(tmp_path, monkeypatch):
     entered, release = Event(), Event()
     client = ScriptedModelClient([PLAN, EDIT])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     original = file.read_bytes()
     reserve = service.store.models.reserve
 
@@ -329,7 +329,7 @@ def test_cancel_during_owned_call_stops_later_stages(tmp_path):
             return super().complete(**kwargs)
 
     client = PausedModel([PLAN, EDIT])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     original = file.read_bytes()
     with running(service) as request:
         route = submit(request, project)
@@ -353,7 +353,7 @@ def test_cancel_during_owned_call_stops_later_stages(tmp_path):
 @requires_safe_read
 def test_reply_refuses_changed_snapshot_before_another_model_call(tmp_path):
     client = ScriptedModelClient([QUESTION_PLAN, PLAN, EDIT])
-    service, project, file = setup(tmp_path, client)
+    service, project, file = make_proposal_service(tmp_path, client)
     with running(service) as request:
         route = submit(request, project)
         assert request(route, {})[0] == 200
@@ -367,7 +367,7 @@ def test_reply_refuses_changed_snapshot_before_another_model_call(tmp_path):
 
 @requires_safe_read
 def test_v5_migration_preserves_ready_receipt_and_backfills_event(tmp_path):
-    service, project, _ = setup(tmp_path, ScriptedModelClient([PLAN, EDIT]))
+    service, project, _ = make_proposal_service(tmp_path, ScriptedModelClient([PLAN, EDIT]))
     with running(service) as request:
         route = submit(request, project)
         assert request(route, {})[0] == 200
