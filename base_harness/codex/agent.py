@@ -240,7 +240,6 @@ def run(task: dict, workdir: Path) -> int:
                   "model_context_window = 32768",
                   "model_auto_compact_token_limit = 16000",
                   "model_reasoning_effort = \"low\"",
-                  "disable_response_storage = true",
                   "suppress_unstable_features_warning = true"]
         if model:
             config.append("model = " + json.dumps(model))
