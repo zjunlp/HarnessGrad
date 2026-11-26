@@ -1421,7 +1421,8 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             task_context=task_context, task_runtime=task_runtime, errors=admission_errors,
             native_errors=native_errors, external_identities=runtime_identities,
             run_id=run_id, authorization=diagnostic_authorization, observations=observations,
-            protocol=evaluation_protocols.get(tid), policy_refusal=_refuse_unobserved_policies)
+            protocol=evaluation_protocols.get(tid), policy_refusal=_refuse_unobserved_policies,
+            capture_context=capture_task_context)
         if refusal is not None:
             _write_progress(progress_dir, round_no, tid, [], refusal.reason,
                             **refusal.progress_fields(runtime_fields, enforcement))
@@ -1442,13 +1443,15 @@ def _evaluate(repo: Path, tasks: list[dict], scorable: dict[str, str],
             read=lambda kind: ({'setup': setups, 'verifier': verifiers, 'environment': envs}[kind] or {}).get(tid),
             fresh=lambda: fresh_measurement(tid),
             check_context=lambda: trial_worker.check_final_context(
-                task, scorable, setups, verifiers, envs, sandbox=sandbox, expected=task_context, task_id=tid))
+                task, scorable, setups, verifiers, envs, sandbox=sandbox, expected=task_context, task_id=tid,
+                capture_context=capture_task_context))
         journal = trial_worker.TaskEvidenceJournal(
             trial_options, tid, progress_dir, trial_protocol, ordinary_plan, evidence_plan,
             tid in evidence_tasks, trial_rows.get(tid, []))
         return task_worker.run(plan, inputs, journal)
 
-    outcomes = _in_parallel(tasks, _measure, jobs)
+    with verification_context_mod.watch_asset_directories() as capture_task_context:
+        outcomes = _in_parallel(tasks, _measure, jobs)
 
     # The merge. Sequential and in **task order** on purpose: a run that used `--jobs 3`
     # and one that did not must produce comparable records, down to the order of

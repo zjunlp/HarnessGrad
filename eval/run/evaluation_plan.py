@@ -106,11 +106,12 @@ def capture_external(repo, *, harness_error):
     return IdentityCheck(identities, error)
 
 
-def check_current_context(task, scorable, setups, verifiers, envs, *, sandbox, expected):
+def check_current_context(task, scorable, setups, verifiers, envs, *, sandbox, expected, capture_context=None):
     tid = task['task_id']
     try:
         task_python.admit((envs or {}).get(tid), sandbox=sandbox, setup=(setups or {}).get(tid))
-        current = verification_context.capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
+        capture = capture_context or verification_context.capture
+        current = capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
         if verification_context.problems(expected, current):
             raise ValueError('verification context changed before task admission')
     except (OSError, TypeError, ValueError, RuntimeError) as exc:
@@ -137,12 +138,12 @@ def check_policy_and_protocol(task, setups, verifiers, envs, *, sandbox, run_id,
 
 def admit_before_cache(repo, task, scorable, setups, verifiers, envs, *, sandbox, task_context,
                        task_runtime, errors: AdmissionErrors, native_errors, external_identities,
-                       run_id, authorization, observations, protocol, policy_refusal):
+                       run_id, authorization, observations, protocol, policy_refusal, capture_context=None):
     """Return a refusal with exact journal metadata; never write or consume a cache hit."""
     if errors.context is not None:
         return TaskRefusal({'stage': 'verification context', 'detail': errors.context}), None
     refusal = check_current_context(task, scorable, setups, verifiers, envs,
-                                    sandbox=sandbox, expected=task_context)
+                                    sandbox=sandbox, expected=task_context, capture_context=capture_context)
     if refusal is not None:
         return refusal, None
     if errors.dataset is not None:

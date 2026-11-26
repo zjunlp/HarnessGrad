@@ -41,11 +41,17 @@ while running a local study.
 export HG_VERIFICATION_FILE_CACHE_ROOTS="$HG_DATA_ROBOCASA365/prepared-v1"
 ```
 
-Each verification check still enumerates the directories and checks file
-identity and metadata. Changed files are hashed again. Use this option on
-filesystems that reliably update inode metadata when files change. Directories
-outside the configured roots and portable attestations continue to hash source
-bytes on every check. The cache is disabled by default and lasts for one process.
+For sandboxed evaluations on supported local Linux filesystems, a relay read
+path that exactly matches a configured root is verified once as the workers
+start. Workers then share the tree digest while filesystem watches remain
+valid. A change, dropped watch, or mount change invalidates the digest.
+Verification falls back to walking the tree if watches are unavailable.
+
+Use this option for trusted, prepared assets that stay read-only during the
+evaluation. Filesystem watches cannot track writes through an open writable
+memory map. Outside the configured roots and during portable attestations,
+verification continues to hash source bytes directly. The cache is disabled by
+default and lasts for one process.
 
 | Route | Why an RSI/Harness researcher might choose it | Preparation beyond the platform | Headline score in this port |
 | --- | --- | --- | --- |

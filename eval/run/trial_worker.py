@@ -152,11 +152,13 @@ class TaskEvidenceJournal:
             self.marker.unlink()
 
 
-def check_final_context(task, scorable, setups, verifiers, envs, *, sandbox, expected, task_id):
+def check_final_context(task, scorable, setups, verifiers, envs, *, sandbox, expected, task_id,
+                        capture_context=None):
     tid = task_id
     try:
         task_python.admit((envs or {}).get(tid), sandbox=sandbox, setup=(setups or {}).get(tid))
-        current = verification_context.capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
+        capture = capture_context or verification_context.capture
+        current = capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
         if verification_context.problems(expected, current):
             raise ValueError('verification context changed during task execution')
     except (OSError, TypeError, ValueError, RuntimeError) as exc:

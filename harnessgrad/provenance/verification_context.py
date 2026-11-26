@@ -4,13 +4,16 @@ This is an equality commitment, not authentication of code, data or runtime.
 """
 from __future__ import annotations
 
-from functools import lru_cache
+from contextlib import contextmanager
+from functools import lru_cache, partial
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import stat
+
+from harnessgrad.provenance.asset_watch import DirectoryChecks
 
 KEY = 'verification_context'
 ROOT = Path(__file__).resolve().parents[2]
@@ -107,7 +110,7 @@ def _cached_file_digest(path, stamp):
     return _file_digest(path, expected=stamp)
 
 
-def _source(path, memo, *, portable=False, cache_roots=()):
+def _source(path, memo, *, portable=False, cache_roots=(), directory_checks=None):
     source = Path(path)
     if not source.is_absolute():
         source = ROOT / source
@@ -119,11 +122,14 @@ def _source(path, memo, *, portable=False, cache_roots=()):
                  Path('/usr'), Path('/bin'), Path('/lib'), Path('/lib64'), Path('/etc')}
     if resolved in forbidden:
         raise ValueError('verification source is an overly broad root')
-    boundary = resolved if resolved.is_dir() else resolved.parent
+    is_directory = resolved.is_dir()
+    boundary = resolved if is_directory else resolved.parent
     use_file_cache = any(resolved.is_relative_to(root) for root in cache_roots)
     active = set()
 
-    def walk(p):
+    def walk(p, subscribe):
+        if subscribe is not None:
+            subscribe(p)
         before = _stamp(p)
         mode = before[2]
         if stat.S_ISLNK(mode):
@@ -133,7 +139,7 @@ def _source(path, memo, *, portable=False, cache_roots=()):
             link = os.readlink(p)
             if portable and Path(link).is_absolute():
                 link = {'source_relative': target.relative_to(boundary).as_posix()}
-            result = {'link': link, 'target': walk(target)}
+            result = {'link': link, 'target': walk(target, subscribe)}
         elif stat.S_ISREG(mode):
             digest = (_cached_file_digest(p, before) if use_file_cache else _file_digest(p))
             result = {'file': digest, 'executable': bool(mode & 0o111)}
@@ -144,7 +150,7 @@ def _source(path, memo, *, portable=False, cache_roots=()):
             active.add(real)
             try:
                 children = sorted(p.iterdir(), key=lambda x: x.name)
-                result = {'directory': [[child.name, walk(child)] for child in children]}
+                result = {'directory': [[child.name, walk(child, subscribe)] for child in children]}
             finally:
                 active.remove(real)
         else:
@@ -153,18 +159,26 @@ def _source(path, memo, *, portable=False, cache_roots=()):
             raise ValueError('verification source changed during capture')
         return result
 
-    result = _digest(walk(source))
+    def build(subscribe=None):
+        return _digest(walk(source, subscribe))
+
+    if directory_checks is not None and is_directory and source == resolved and resolved in cache_roots:
+        result = directory_checks.digest(resolved, _stamp(resolved), build)
+    else:
+        result = build()
     memo[source] = result
     return result
 
 
-def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=()):
+def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=(), directory_checks=None):
     if isinstance(value, list):
-        return [_sources(v, memo, runtimes=runtimes, cache_roots=cache_roots) for v in value]
+        return [_sources(v, memo, runtimes=runtimes, cache_roots=cache_roots,
+                         directory_checks=directory_checks) for v in value]
     if not isinstance(value, dict):
         return value
     portable = runtimes is not None
-    result = {k: _sources(v, memo, relay=(k == 'tool_relay'), runtimes=runtimes, cache_roots=cache_roots)
+    result = {k: _sources(v, memo, relay=(k == 'tool_relay'), runtimes=runtimes, cache_roots=cache_roots,
+                          directory_checks=directory_checks)
               for k, v in value.items()}
     if portable and 'python_runtime' in value:
         from harnessgrad.datasets.runtime import validate_binding
@@ -212,7 +226,9 @@ def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=()):
             else:
                 if any(path == root or path.is_relative_to(root) for root in system):
                     raise ValueError('unbound system read path cannot be committed as source')
-                commitment = {'source_sha256': _source(raw, memo, portable=portable, cache_roots=cache_roots)}
+                commitment = {'source_sha256': _source(
+                    raw, memo, portable=portable, cache_roots=cache_roots,
+                    directory_checks=directory_checks if relay else None)}
                 if portable:
                     commitment['name'] = path.name if path.is_absolute() else raw
                 commitments.append(commitment)
@@ -227,8 +243,22 @@ def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=()):
     return result
 
 
-def capture(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=True):
-    return _capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox, runtimes=None)
+def capture(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=True, directory_checks=None):
+    return _capture(tasks, scorable, setups, verifiers, envs, sandbox=sandbox, runtimes=None,
+                    directory_checks=directory_checks if sandbox else None)
+
+
+@contextmanager
+def watch_asset_directories():
+    """Share directory verification across the workers of one local evaluation."""
+    if not os.environ.get(_CACHE_ROOTS_ENV):
+        yield capture
+        return
+    checks = DirectoryChecks()
+    try:
+        yield partial(capture, directory_checks=checks)
+    finally:
+        checks.close()
 
 
 def capture_content(tasks, scorable, setups=None, verifiers=None, envs=None, *, sandbox=True, runtimes=None):
@@ -237,7 +267,7 @@ def capture_content(tasks, scorable, setups=None, verifiers=None, envs=None, *, 
                     runtimes={} if runtimes is None else runtimes)
 
 
-def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
+def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes, directory_checks=None):
     if not isinstance(tasks, list) or not isinstance(scorable, dict):
         raise ValueError('invalid verification context inputs')
     if type(sandbox) is not bool:
@@ -257,7 +287,8 @@ def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
             if sandbox and (mappings[2].get(tid) or {}).get('kind', 'files') == 'files':
                 from eval.containers.sandbox import PLAN_VERSION
                 policy['native_sandbox_plan'] = PLAN_VERSION
-            setup = _sources(mappings[0].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots)
+            setup = _sources(mappings[0].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots,
+                             directory_checks=directory_checks)
             if isinstance(setup, dict) and isinstance(setup.get('action_policy'), dict):
                 # The socket locates the service. Its declared identity defines the policy.
                 setup['action_policy'].pop('socket', None)
