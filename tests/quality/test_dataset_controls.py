@@ -46,6 +46,16 @@ QUALITY = ROOT / "tests" / "quality"
 #: metric. An empty `control` with an `exempt` sentence is a dataset that has no oracle arm,
 #: and the sentence has to say why and what writing one would take.
 ROWS: dict[str, dict] = {
+    "ptc_bench": {
+        "control": ["tools/ptc_bench_control.py"],
+        "json_scores": {"--oracle": 1, "--noop": 0},
+        "metric_tests": ["test_ptc_bench_official_scorer.py"],
+    },
+    "wtm_bench": {
+        "control": ["tools/wtm_bench_control.py"],
+        "json_scores": {"--oracle": 1, "--noop": 0},
+        "metric_tests": ["test_wtm_bench_official_scorer.py"],
+    },
     # Pinned upstream ports; controls do not imply production authorization.
     'bbeh': {'control': ['data/scaffolds/native_qa/control.py', '--dataset', 'bbeh'], 'metric_tests': ['test_native_qa_adapters.py']},
     'browsecomp': {'control': [], 'metric_tests': ['test_native_research.py'], 'exempt': 'The native source/scorer bridge is tested on authored protocol controls and a local scripted verifier judge. A configured independent judge or native world and a released-data oracle/noop sweep remain necessary before production; no synthetic pass closes that gate. Native dual-provider/fresh-container requirements remain refused until their exact execution route is implemented.'},

@@ -29,6 +29,14 @@
     },
     {
       "datasets": [
+        "ptc_bench"
+      ],
+      "loading_and_preparation": "Verified GitHub commit and archive, order-preserving preparation of 240 private cases, and a standard-library-only managed Python 3.12 runtime.",
+      "trusted_execution": "Isolated Unix relay owns simulated state and releases follow-up requests in order. The pinned official verifier grades the sealed state and responses with binary task pass.",
+      "verification_scope": "One authored positive and one do-nothing control per official evaluation partition passed through the actual no-network platform runner. The controls exercised a state change, an injected tool failure and a follow-up user turn. All 240 initial-state noops failed the upstream binary metric in a separate offline preflight. No model run or full executable oracle corpus was measured."
+    },
+    {
+      "datasets": [
         "livecodebench"
       ],
       "loading_and_preparation": "Standard-library prepared metadata; NumPy only in metric helpers and managed scoring runtime.",
@@ -108,6 +116,14 @@
       "loading_and_preparation": "Separate managed Python scorer artifact and prepared workbook cases. ENV.task_python binds the managed dependency artifact with an actor role for shell workbook editing.",
       "trusted_execution": "Private native manifest and trusted scorer helpers bind LibreOffice/UNO; CLI/UNO execution is isolated. Task sandbox hides global site packages while retaining its venv/public SDK; private manifest embeds only original-pin UNO files, SHA-checked and rebound individually read-only.",
       "verification_scope": "Real default Loop authored editing controls remain 1/0/1/0 across v1/v2. A separate 21-case official-source versus actual platform differential checks authored normalization, formula/error fallback, selected-cell and v2 mode semantics on LibreOffice 7.3.7.2. V1 reference is a named independent snapshot, not authentication of the historical transcription; no Excel/full-corpus or hermetic-native equivalence claim."
+    },
+    {
+      "datasets": [
+        "wtm_bench"
+      ],
+      "loading_and_preparation": "Pinned Microsoft archive, curated Level 5 task catalogue and workbook bytes. Requires PyArrow for preparation and a separate managed Python 3.12 execution runtime.",
+      "trusted_execution": "Sandboxed workbook editing and a bound, offline official workbook grader. Neither the scorer nor the reference workbooks are staged for actors or methods.",
+      "verification_scope": "All 150 released workbook pairs checked directly with the pinned official scorer. At reported precision, references score 1 on 148 tasks and 0.8 on two chart tasks. All 150 unchanged workbooks score 0. Sandbox controls check native workbook scores and missing output. The original step-reward metric and model runs are outside this coverage."
     },
     {
       "datasets": [

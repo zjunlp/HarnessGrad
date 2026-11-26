@@ -154,6 +154,7 @@ uses all 150 tasks.
 | `officeqa_pro` | none | none | - | - | None (the pool is the scored split) |
 | `personamem_v2` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
 | `physicsquestions` | none | none | - | - | None (the pool is the scored split) |
+| `ptc_bench` | none | none | - | - | None (the pool is the scored split) |
 | `reasoning_gym` | none | none | - | - | [] (not an evaluation set) |
 | `scienceworld` | none | none | - | - | None (the pool is the scored split) |
 | `searchqa` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
@@ -174,6 +175,7 @@ uses all 150 tasks.
 | `twowikimultihopqa` | none | none | - | - | None (the pool is the scored split) |
 | `widesearch` | undeclared | absent | - | - | absent |
 | `workbench` | undeclared | absent | - | - | absent |
+| `wtm_bench` | none | none | - | - | None (the pool is the scored split) |
 
 <!-- split-inventory:end -->
 
