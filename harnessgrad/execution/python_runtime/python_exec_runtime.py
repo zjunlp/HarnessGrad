@@ -19,7 +19,10 @@ from contextlib import nullcontext
 
 from eval.containers import container
 from harnessgrad.execution.python_runtime import python_harness_runtime as native
-from harnessgrad.execution.python_runtime.python_artifacts import atomic_json, canonical, digest, freeze, locked, remove_instance
+from harnessgrad.execution.python_runtime.python_artifacts import (
+    atomic_json, canonical, digest, freeze, frozen_inventory_device, inventory_digest,
+    inventory_entries, locked, remove_instance,
+)
 
 SCHEMA = 'harnessgrad.harness-image-python-artifact.v1'
 KIND = 'python-placements'
@@ -113,22 +116,22 @@ def image_base(image):
     return json.loads(_run(image, [found, '-I', '-S', '-B', '-c', _BASE]))
 
 
-def _inventory(venv, base):
+def _inventory(venv, base, *, reuse_frozen=False):
     """Image interpreter links resolve in the image, never against the host."""
     rows = {}
-    for path in sorted(venv.rglob('*')):
-        relative = path.relative_to(venv).as_posix()
-        if path.is_symlink():
+    frozen_device = frozen_inventory_device(venv) if reuse_frozen else None
+    for relative, path, info in inventory_entries(venv):
+        if stat.S_ISLNK(info.st_mode):
             target = os.readlink(path)
-            absolute = Path(os.path.normpath(path.parent / target))
+            absolute = Path(os.path.normpath(Path(path).parent / target))
             if not absolute.is_relative_to(venv) and not (
                     relative.startswith('bin/python') and str(absolute) == base['executable']):
                 raise native.RuntimeUnavailable('Image venv contains an escaping link: ' + relative)
             rows[relative] = {'kind': 'link', 'target': target}
-        elif path.is_file():
-            rows[relative] = {'kind': 'file', 'sha256': digest(path),
-                              'mode': stat.S_IMODE(path.stat().st_mode)}
-        elif not path.is_dir():
+        elif stat.S_ISREG(info.st_mode):
+            rows[relative] = {'kind': 'file', 'sha256': inventory_digest(path, info, frozen_device=frozen_device),
+                              'mode': stat.S_IMODE(info.st_mode)}
+        else:
             raise native.RuntimeUnavailable('Image venv contains a non-regular entry')
     return rows
 
@@ -204,7 +207,7 @@ def _admit(repo, spec, image, item, *, probe=True):
             or artifact['runtime_paths'] != [artifact['path']]
             or Path(artifact['python']).is_symlink()
             or digest(artifact['python']) != base['sha256']
-            or manifest.get('files') != _inventory(Path(artifact['path']), base)
+            or manifest.get('files') != _inventory(Path(artifact['path']), base, reuse_frozen=True)
             or base['minor'] not in spec['locks']
             or manifest.get('packages') != spec['locks'][base['minor']]['pins']
             or any((manifest.get('recipe') or {}).get(key) != expected for key, expected in

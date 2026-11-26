@@ -1,4 +1,5 @@
 """Exact service/verifier Python artifacts, independent of discovery indices."""
+from concurrent.futures import Future, ThreadPoolExecutor
 import copy
 import json
 import os
@@ -7,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from threading import Barrier, Event
 
 import pytest
 
@@ -82,6 +84,122 @@ def test_service_and_verifier_share_artifact_with_separate_roles(execution):
     service["runtime_paths"].append("/not-a-shared-list")
     assert "/not-a-shared-list" not in verifier["runtime_paths"]
     assert "/not-a-shared-list" not in artifact["runtime_paths"]
+
+
+def test_concurrent_role_admissions_share_one_scan(execution, monkeypatch):
+    _, _, store, _ = execution
+    artifact = runtime.prepare_execution("control", root=store)
+    artifact.pop("reused")
+    calls = []
+    joined = Barrier(3)
+
+    class TrackedBatch(Future):
+        def result(self):
+            if not self.done():
+                joined.wait(timeout=5)
+            return super().result(timeout=5)
+
+    original = runtime._verify_manifest_bytes
+
+    def verify(*args):
+        calls.append(args)
+        return original(*args)
+
+    monkeypatch.setattr(runtime, "Future", TrackedBatch)
+    monkeypatch.setattr(runtime, "sleep", lambda _: joined.wait(timeout=5))
+    monkeypatch.setattr(runtime, "_verify_manifest_bytes", verify)
+    roles = ("actor", "service", "verifier")
+    with ThreadPoolExecutor(3) as workers:
+        requests = [workers.submit(runtime.admit_binding, runtime.bind(artifact, role), role) for role in roles]
+        results = [request.result(timeout=10) for request in requests]
+    assert len(calls) == 1
+    assert results == [artifact] * 3
+    results[0]["runtime_paths"].append("/local-change")
+    assert results[1] == results[2] == artifact
+
+
+def test_late_admission_rechecks_and_can_retry_after_failed_batch(execution, monkeypatch):
+    _, _, store, _ = execution
+    artifact = runtime.prepare_execution("control", root=store)
+    artifact.pop("reused")
+    binding = runtime.bind(artifact, "verifier")
+    marker = next(Path(binding["path"]).rglob("runtime_marker.py"))
+    content, info = marker.read_bytes(), marker.stat()
+    verified, late_arrived, release = Event(), Event(), Event()
+    calls, batches = [], []
+    original = runtime._verify_manifest_bytes
+
+    def batch():
+        future = Future()
+        batches.append(future)
+        if len(batches) == 2:
+            late_arrived.set()
+        return future
+
+    def verify(*args):
+        calls.append(args)
+        result = original(*args)
+        if len(calls) == 1:
+            verified.set()
+            assert release.wait(timeout=5)
+        return result
+
+    monkeypatch.setattr(runtime, "Future", batch)
+    monkeypatch.setattr(runtime, "_verify_manifest_bytes", verify)
+    with ThreadPoolExecutor(2) as workers:
+        first = workers.submit(runtime.admit_binding, binding, "verifier")
+        try:
+            assert verified.wait(timeout=5)
+            marker.chmod(0o644)
+            marker.write_bytes(bytes([content[0] ^ 1]) + content[1:])
+            os.utime(marker, ns=(info.st_atime_ns, info.st_mtime_ns))
+            marker.chmod(0o444)
+            late = workers.submit(runtime.admit_binding, binding, "verifier")
+            assert late_arrived.wait(timeout=5)
+        finally:
+            release.set()
+        assert first.result(timeout=5) == artifact
+        with pytest.raises(runtime.DatasetRuntimeUnavailable, match="inventory changed"):
+            late.result(timeout=5)
+
+    marker.chmod(0o644)
+    marker.write_bytes(content)
+    marker.chmod(0o444)
+    assert runtime.admit_binding(binding, "verifier") == artifact
+    assert len(calls) == 3
+
+
+def test_later_admission_reuses_unchanged_frozen_file_digest(execution, monkeypatch):
+    from harnessgrad.execution.python_runtime import python_artifacts
+
+    _, _, store, _ = execution
+    artifact = runtime.prepare_execution("control", root=store)
+    binding = runtime.bind(artifact, "actor")
+    marker = next(Path(binding["path"]).rglob("runtime_marker.py"))
+    original_digest, clock = python_artifacts.digest, python_artifacts.time.time_ns
+    reads = []
+
+    def count_digest(path):
+        if Path(path) == marker:
+            reads.append(marker)
+        return original_digest(path)
+
+    monkeypatch.setattr(python_artifacts.time, "time_ns", lambda: clock() + 2_000_000_000)
+    monkeypatch.setattr(python_artifacts, "frozen_inventory_device", lambda _: marker.stat().st_dev)
+    monkeypatch.setattr(python_artifacts, "digest", count_digest)
+    python_artifacts._frozen_digest.cache_clear()
+    for _ in range(2):
+        assert runtime.admit_binding(binding, "actor")["runtime_id"] == artifact["runtime_id"]
+    assert reads == [marker]
+
+    content, info = marker.read_bytes(), marker.stat()
+    marker.chmod(0o644)
+    marker.write_bytes(bytes([content[0] ^ 1]) + content[1:])
+    os.utime(marker, ns=(info.st_atime_ns, info.st_mtime_ns))
+    marker.chmod(0o444)
+    with pytest.raises(runtime.DatasetRuntimeUnavailable, match="inventory changed"):
+        runtime.admit_binding(binding, "actor")
+    assert reads == [marker, marker]
 
 
 def _unprepared_binding():

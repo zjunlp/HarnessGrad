@@ -341,7 +341,7 @@ def _read_artifact(repo, spec, reference):
             raise RuntimeUnavailable("Harness runtime physical paths changed")
     if _runtime_paths(repo, venv, manifest["base_python"]) != artifact["runtime_paths"]:
         raise RuntimeUnavailable("Harness runtime base interpreter paths changed")
-    if inventory(venv) != manifest.get("files"):
+    if inventory(venv, reuse_frozen=True) != manifest.get("files"):
         raise RuntimeUnavailable("Harness runtime file inventory changed")
     if digest(manifest["base_python"]["executable"]) != manifest["base_python"]["sha256"]:
         raise RuntimeUnavailable("Harness runtime base executable changed")

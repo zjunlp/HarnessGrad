@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import fcntl
+from functools import lru_cache
 import hashlib
 import json
 import os
@@ -29,21 +30,75 @@ def digest(path):
     return result.hexdigest()
 
 
-def inventory(venv):
+def _file_stat_key(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+            info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+@lru_cache(maxsize=32768)
+def _frozen_digest(path, stat_key):
+    value = digest(path)
+    if _file_stat_key(os.lstat(path)) != stat_key:
+        raise ValueError(f"runtime file inventory changed during hashing: {path}")
+    return value
+
+
+def frozen_inventory_device(venv):
+    """Enable stat-keyed reuse on supported local Linux filesystems."""
+    device = venv.stat().st_dev
+    mount_device = f"{os.major(device)}:{os.minor(device)}"
+    try:
+        with open("/proc/self/mountinfo", encoding="utf-8", errors="surrogateescape") as mounts:
+            for line in mounts:
+                fields, _, filesystem = line.partition(" - ")
+                if fields.split(" ", 3)[2] == mount_device:
+                    if filesystem.split(" ", 1)[0] in {"ext4", "xfs", "btrfs", "tmpfs", "overlay"}:
+                        return device
+                    return None
+    except OSError:
+        pass
+    return None
+
+
+def inventory_digest(path, info, *, frozen_device):
+    """Reuse byte digests for frozen artifact files with the same inode generation."""
+    # A fresh ctime can still share the filesystem's timestamp tick with a write.
+    if (info.st_dev == frozen_device and info.st_ino and info.st_nlink == 1 and not info.st_mode & 0o222
+            and 1_000_000_000 <= time.time_ns() - info.st_ctime_ns):
+        return _frozen_digest(path, _file_stat_key(info))
+    return digest(path)
+
+
+def inventory_entries(venv):
+    """Walk relative names with one fresh lstat per entry and no directory symlink traversal."""
+    directories = [("", os.fspath(venv))]
+    while directories:
+        prefix, directory = directories.pop()
+        with os.scandir(directory) as children:
+            for entry in children:
+                relative = prefix + entry.name
+                info = entry.stat(follow_symlinks=False)
+                if stat.S_ISDIR(info.st_mode):
+                    directories.append((relative + "/", entry.path))
+                else:
+                    yield relative, entry.path, info
+
+
+def inventory(venv, *, reuse_frozen=False):
     result = {}
     interpreter = (venv / "bin/python").resolve(strict=True)
-    for path in sorted(venv.rglob("*")):
-        relative = str(path.relative_to(venv))
-        if path.is_symlink():
-            resolved = path.resolve(strict=True)
+    frozen_device = frozen_inventory_device(venv) if reuse_frozen else None
+    for relative, path, info in inventory_entries(venv):
+        if stat.S_ISLNK(info.st_mode):
+            resolved = Path(path).resolve(strict=True)
             if not resolved.is_relative_to(venv) and not (
                     relative.startswith("bin/python") and resolved == interpreter):
                 raise ValueError(f"runtime symlink escapes the venv: {relative}")
             result[relative] = {"kind": "link", "target": os.readlink(path)}
-        elif path.is_file():
-            result[relative] = {"kind": "file", "sha256": digest(path),
-                                "mode": stat.S_IMODE(path.stat().st_mode)}
-        elif not path.is_dir():
+        elif stat.S_ISREG(info.st_mode):
+            result[relative] = {"kind": "file", "sha256": inventory_digest(path, info, frozen_device=frozen_device),
+                                "mode": stat.S_IMODE(info.st_mode)}
+        else:
             raise ValueError(f"runtime contains a non-regular entry: {relative}")
     return result
 
