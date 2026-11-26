@@ -925,6 +925,22 @@ failed transfers remove partial files and newly created empty directories.
 
 > Declared for consistency with the other QA datasets; this table is CSV, so the check reads it with `csv`, not pyarrow.
 
+## `ptc_bench`
+
+- **Data root:** `<HG_DATA_ROOT>/ptc_bench`
+- **Root override:** `HG_DATA_PTC_BENCH`
+
+### Official I-PTC source and PTC-Bench evaluation partitions
+
+- **Type:** `http`
+- **Version (pinned):** `fa4462e5ad1ea3cde2011aaf6396de5d76da4489`
+- **Size:** 1,335,401 byte archive
+- **URL:** https://codeload.github.com/HuanzhiMao/I-PTC/tar.gz/fa4462e5ad1ea3cde2011aaf6396de5d76da4489
+- **Destination:** `<HG_DATA_ROOT>/ptc_bench/source.tar.gz`
+- **SHA256:** `6121aabf40f21c544d4cc3fce98c62afe0c2f3a38ef62ed7909441535f63e9ba`
+
+> Main, error-recovery and multi-turn combined are 240 evaluation tasks. Prepare the private cases and a standard-library-only Python 3.12 execution runtime.
+
 ## `reasoning_gym`
 
 - **Data root:** `<HG_DATA_ROOT>/reasoning_gym`
@@ -3022,3 +3038,19 @@ failed transfers remove partial files and newly created empty directories.
 - **Destination:** `<HG_DATA_ROOT>/workbench/native-source.tar.gz`
 
 > Pinned native source; use prepare_native_research.py to preserve private grading inputs and source split membership. Downloading alone does not establish scorer/runtime readiness.
+
+## `wtm_bench`
+
+- **Data root:** `<HG_DATA_ROOT>/wtm_bench`
+- **Root override:** `HG_DATA_WTM_BENCH`
+
+### Microsoft WTM-Bench curated workbook pairs and native grader
+
+- **Type:** `http`
+- **Version (pinned):** `83d45ae601f3241ac7246613c67b765e48f93c06`
+- **Size:** 23,404,688 byte archive
+- **URL:** https://codeload.github.com/microsoft/WTM-Bench/tar.gz/83d45ae601f3241ac7246613c67b765e48f93c06
+- **Destination:** `<HG_DATA_ROOT>/wtm_bench/source.tar.gz`
+- **SHA256:** `5642966efd2ac4f35e6497bd81365c7d874f19813c85643011581ab62e8b9220`
+
+> Prepare the 150 curated Level 5 evaluation tasks, and prepare the managed Python execution runtime separately.

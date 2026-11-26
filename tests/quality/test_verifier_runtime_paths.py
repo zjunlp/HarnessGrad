@@ -1,4 +1,5 @@
 """Explicit scorer runtimes are read-only and do not alter undeclared routes."""
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -49,6 +50,19 @@ def test_explicit_venv_survives_hostile_path_and_is_readonly(tmp_path, monkeypat
     assert result['evidence']['prefix'] == str(python_runtime)
     assert result['evidence']['base_prefix'] == sys.base_prefix
     assert result['evidence']['readonly']
+
+
+def test_offline_files_environment_isolates_verifier_network(tmp_path, monkeypatch, python_runtime):
+    monkeypatch.setenv('HARNESSGRAD_WORK_ROOT', str(tmp_path))
+    spec = spec_for(python_runtime)
+    host_network = os.readlink('/proc/self/ns/net')
+    spec['inputs'][0]['content'] = (
+        'import os\n'
+        f'assert os.readlink("/proc/self/ns/net") != {host_network!r}\n'
+        + spec['inputs'][0]['content']
+    )
+    result = verify(tmp_path, spec, env={'kind': 'files', 'network': 'none'})
+    assert result.get('score') == 1, result
 
 
 @pytest.mark.parametrize('case', ['null', 'string', 'relative', 'missing', 'file',

@@ -764,6 +764,7 @@ class ImportDirectionTests(unittest.TestCase):
             'officeqa_pro',
             'personamem_v2',
             'physicsquestions',
+            'ptc_bench',
             'reasoning_gym',
             'scienceworld',
             'searchqa',
@@ -784,6 +785,7 @@ class ImportDirectionTests(unittest.TestCase):
             'twowikimultihopqa',
             'widesearch',
             'workbench',
+            'wtm_bench',
         )
         # The reviewed inventory and catalogue are properties of source declarations;
         # neither requires dataset payloads or optional adapter dependencies.

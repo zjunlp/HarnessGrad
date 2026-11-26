@@ -840,16 +840,16 @@ def _verify_inner(workdir: Path, verifier: dict | None, answer: str,
             # anything, and the failure would have been recorded as a harness failure.
             check_env = _verifier_env(workdir)
             check_env.update({"HOME": "/tmp", "TMPDIR": "/tmp"})
-            judge_options = {}
+            sandbox_options = {"network": "none"} if env_spec.get("network") == "none" else {}
             if judge is not None:
                 check_env["HG_JUDGE_SOCKET"] = "/run/harnessgrad-tool/tool.sock"
-                judge_options = {"network": "none", "tool_socket": judge.path}
+                sandbox_options.update(network="none", tool_socket=judge.path)
             proc = sandbox_mod.run(argv, platform=PLATFORM_ROOT, work_root=work_root,
                                    task_dir=workdir, env=check_env,
                                    timeout_s=timeout_s,
                                    cwd=cwd, repo=workdir, task_dir_writable=False,
                                    immutable_runtimes=immutable_runtimes,
-                                   writable_paths=(reward_dir,) if reward_dir else (), **judge_options,
+                                   writable_paths=(reward_dir,) if reward_dir else (), **sandbox_options,
                                    **({"runtime_paths": runtime_paths} if "runtime_paths" in spec else {}))
         else:
             proc = subprocess.run(argv, capture_output=True, text=True, errors="replace",
