@@ -1,5 +1,10 @@
 # Release onboarding: verification receipt
 
+> **Historical release validation (November 2026, base `e5ff0c7`).** The
+> named checks, timings and skips apply to the release-onboarding checkout
+> below. Use the [test guide](test-suite.md) and
+> [CI workflow](../.github/workflows/quality.yml) for present-day validation.
+
 Worktree: `/tmp/hg-release-onboarding`, branch `codex/release-onboarding`.
 Base: `e5ff0c7`. The already delivered custom-split change was brought into this
 branch as `5391e48`; it was not merged into the operator's main checkout.
@@ -173,10 +178,12 @@ but cannot cancel a scheduled or manually requested full run on the same ref.
   so they cannot silently suppress test planning/execution. The final summary reads
   their raw outcomes and fails the advisory job if any tracked step failed or did
   not run. Job-level `continue-on-error` means that failure need not fail the workflow.
-- The report writes `plan.json`, then invokes `tools/testing/run_selected.py --plan plan.json
-  --jobs 4 --output-json "$RUNNER_TEMP/quality-suite.json"`. Only schedule/manual
-  adds `--full`. The wrapper delegates execution to `tools/testing/run_tests.py`; no fast
-  filtering removes planned slow files. A full push/PR plan is deferred, not run.
+- The [current workflow](../.github/workflows/quality.yml) writes
+  `quality-evidence/plan.json` and `quality-evidence/suite.json` under
+  `RUNNER_TEMP`. The historical workflow called the suite receipt
+  `quality-suite.json`. Only scheduled and manual runs request `--full`.
+  The wrapper uses `tools/testing/run_tests.py` with the planned selection,
+  including selected slow files. A full push/PR plan is deferred.
 - An always-run `actions/upload-artifact@v4` step uploads the plan and machine-readable
   suite receipt as `quality-selection-<run_id>-<run_attempt>`. Missing files warn;
   the final summary checks each file separately, since an upload can succeed with

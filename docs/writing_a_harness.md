@@ -287,27 +287,29 @@ still controls its own model reply format and tool dispatch.
 
 ### 3.2 What you produce
 
-Write the answer to `<workdir>/answer.txt`. The platform compares its stripped
-contents, case-insensitively, against the task's expected answer.
+Follow the task's submission instructions. A task may accept
+`<workdir>/answer.txt`, a structured prediction or specific files declared in
+`submission.paths`. Where supported, an adapter can use the final model
+message as a fallback. See the [answer contract](adapter-spec.md#5-the-answer-contract--three-sources-one-named)
+and the selected dataset's instructions.
 
-**Scoring is deliberately dumb** — exact match on a normalized string. It is not
-a judgement of quality, and it is not extensible by the harness, because a
-harness that can influence its own scoring cannot be compared with another one.
-
-The exit code must be `0` on completion. A non-zero exit is recorded as a harness
-failure and scores zero for that task; it does not abort the run.
+Exit `0` on successful completion and use a nonzero exit to report a harness
+failure. The platform records process status and applies the selected
+dataset's verifier. Exact match applies to the simple answer verifier.
+Use the recorded verdict and outcome to interpret an interrupted or failed task.
 
 ### 3.3 What you may do
 
-Write files, spawn subprocesses, and make network calls. Two places are yours, and the
-difference between them is only where your harness expects to find things:
+Write files, spawn subprocesses, and make network calls within the task's
+execution policy. Use these paths for task files and scratch state:
 
 * **`--workdir`** — the task's working directory, and the process's cwd. Create, read
   and delete whatever you like. Fresh for every task, thrown away afterwards.
-* **`.state/`** — inside your own tree, beside your code. For a harness that writes a
-  cache or a session file relative to itself, this is the one that works without your
-  having to know where `--workdir` is. `HARNESSGRAD_STATE` holds its absolute path if
-  you would rather not assume the layout.
+* **`HARNESSGRAD_STATE`** — the absolute path to the writable, task-private state
+  directory as seen by the Harness. Read it from the environment when writing
+  caches or sessions. It ordinarily points to the candidate's `.state/`. For
+  a managed Python Harness in an `exec` task, it points to `.harnessgrad-state/`
+  under the container's task working directory.
 
 **Nothing persists between tasks, and that is a design decision rather than a
 limitation.** Each task gets fresh directories and the next task gets different ones.
@@ -320,8 +322,9 @@ harness, and no curve could tell the two apart.
 **The code in your tree is read-only, and this is not a request.** That is measurement,
 not distrust: one copy of your harness scores *every task in the round*, so a harness
 that rewrote its own `agent.py` while answering task 1 would be a different program by
-task 2, and the curve would report one harness where two ran. `.state/` is gitignored,
-so what you write there never changes your sha.
+task 2, and the curve would report one harness where two ran. Candidate
+`.state/` is gitignored, and the managed container state lives under the task
+directory. Both keep scratch writes outside the candidate source identity.
 
 Your harness runs in its own mount namespace. Measured from inside it:
 
@@ -332,13 +335,12 @@ Your harness runs in its own mount namespace. Measured from inside it:
 | `HG_METHOD_*` (the method's model and budget) | **not in the environment** |
 | your own harness tree, at its host path | readable |
 | — the code in it | **not writable** |
-| — `.state/` inside it | **writable**, private to the task |
 | `--workdir` | present, writable |
 | `/tmp` | private, writable |
-| `$HOME` | not present |
+| `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME` | task-private writable directories |
 | `HG_AGENT_*` (your model) | present |
-| `HARNESSGRAD_STATE` | absolute path to your `.state/` |
-| the network | unrestricted |
+| `HARNESSGRAD_STATE` | absolute path to a **writable**, task-private state directory |
+| the network | governed by the task environment and its runtime policy |
 
 The first two rows are absence, not permission. The platform's directory survives
 as an empty mount point -- the name is visible, the contents are not -- and an empty
@@ -349,12 +351,9 @@ Paths are the same inside and outside. A harness that records `/…/workspace/fo
 in its trace is naming a path that exists on the host too, so your evidence survives
 the sandbox. The namespace costs about 11 ms per task.
 
-If you write no further than `--workdir`, none of this concerns you. A harness that
-wants a cache should put it in `--workdir` or `/tmp`, both of which are writable and
-private to the task. `$HOME` is not present (the variable is set, the directory is
-not), so anything that lazily creates `~/.cache/...` raises -- loudly and
-immediately, which is the intended trade. The alternative is a harness whose score
-depends on what a previous run left behind.
+Use the task's writable `--workdir`, `/tmp`, or the home and XDG paths
+listed above for temporary state. The runner creates these directories for
+each task, so a CLI can create a fresh cache.
 
 ---
 
@@ -374,10 +373,10 @@ Stated so that their absence is not read as an oversight:
   substance of a harness and precisely what a method is supposed to improve.
 * **Whether you call a model at all.** A harness with no model is legal and
   useful as a floor.
-* **Environment.** Each task gets a fresh working directory, a **writable `$HOME`
-  and `XDG_*`**, and a writable `.state/` inside your tree. Nothing else on the host is
-  visible or writable: the platform's own tree is hidden, and `/tmp` is private to the
-  task. Anything you need outside `/usr` you must name in `runtime_paths`.
+* **Environment.** Each task gets a fresh working directory, the writable home and
+  XDG directories listed above, and a writable `HARNESSGRAD_STATE` directory.
+  The platform's own tree is hidden, and `/tmp` is private to the task.
+  Anything you need outside `/usr` you must name in `runtime_paths`.
 * **Your model.** You may read `HG_AGENT_*`. If you got your model from somewhere else,
   write a `harness_identity` event into your trace — otherwise the curve point records
   a model that did not run. See INTERFACE.md §3.

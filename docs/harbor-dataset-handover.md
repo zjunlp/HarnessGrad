@@ -1,14 +1,24 @@
 # Handover: onboarding a Harbor dataset into HarnessGrad
 
-**Audience:** whoever adapts datasets. **Status:** process agreed, two platform-side
-prerequisites outstanding (listed at the end).
+> **Historical handover (October 2026, retained in `06477915`).** The port-versus-wrap
+> analysis and scorer-parity evidence describe the original review. For a
+> new adapter, use [dataset onboarding](dataset-onboarding.md) and check the
+> specific container route in the [runtime interfaces](dataset-runtime-interfaces.md)
+> and [blocker registry](../registry/dataset-blockers.json). The scoped
+> [Terminal-Bench scorer execution](terminal-bench-runtime-admission.md)
+> supersedes the blanket exec refusal below for that admitted route. The
+> [dataset schema](../data/dataset.schema.json) includes per-file `hf-file`
+> downloads.
+
+**Original handover.** The table, prerequisite list and readiness judgments
+below describe the integration state at the time of the review.
 
 This file is the **Harbor-specific overlay** on the dataset process. It deliberately does not
 repeat the five gates or the ten steps — those live in [`dataset-onboarding.md`](dataset-onboarding.md)
 and that file stays the single source of truth for them. What is here is only what changes when the
 dataset comes from Harbor, plus the decision that has to be made before any work starts.
 
-The container-side blocker is specified separately in
+The original container-side gap was specified in
 [`runtime-observation-brief.md`](runtime-observation-brief.md).
 
 ## 0. The decision that comes first: port, or wrap?
@@ -31,7 +41,7 @@ Fill this in once per adapter before touching code. **Five** questions decide ev
 fifth was added after the first port attempt, because it is the one that is easiest to skip and
 it killed the obvious first candidate.
 
-| adapter | container needed? | delivery | upstream open + pinnable? | `parity_experiment.json`? | Harbor is the upstream? | route | runnable today? |
+| adapter | container needed? | delivery | upstream open + pinnable? | `parity_experiment.json`? | Harbor is the upstream? | route | runnable at the review? |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `aime` | no (text + integer match) | one-shot | **yes** — `GAIR-NLP/AIME-Preview` @ `7011a9ea…`, 3 JSONL, 162 KB | **no** | no | **port** | yes |
 | `gpqa-diamond` | no | one-shot | **no** — upstream is HF `Idavidrein/gpqa`, **gated**; Harbor's generated tasks sit in a **4.2 GB** repo | yes (87.88 ± 0.58 vs 87.21 ± 0.34) | no | port, but see §2 | blocked on data |
@@ -139,8 +149,9 @@ gate 3 needs. `locomo` has one too; `aime` does not, so check per adapter rather
 
 ## 3. The flow
 
-Same ten steps and five gates as [`dataset-onboarding.md`](dataset-onboarding.md), with these five
-Harbor-specific changes.
+The table records the original Harbor-specific changes to the old onboarding
+procedure. Use the [current procedure](dataset-onboarding.md) and the
+runtime and registry links above for a new port.
 
 | step | what changes for Harbor |
 | --- | --- |
@@ -167,6 +178,8 @@ look finished while being wrong:
   when the metric moves.
 
 ## 4. What the platform side owes (prerequisites, in order)
+
+These were the prerequisites recorded in the original handover.
 
 1. **Container admission** — the runtime observation producer, and the model-transport change for
    `exec` tasks. Nothing environment-shaped runs before this. Specified in

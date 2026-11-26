@@ -1,8 +1,12 @@
 # Terminal-Bench `cached-runtime-admission` — identity requirements review
 
-Current disposition (2026-10-15, w-net): **CLOSED at cached-task scorer-execution level.**
-The original source-only review below is historical; section 5 records the real run and
-supersedes its open disposition. Shared scorer/export gates and publication limits remain.
+> **Historical runtime evidence.** The source review and 2026-10-15 w-net
+> receipt apply to the reviewed cached task and its recorded identities. See
+> the [blocker registry](../registry/dataset-blockers.json) and
+> [runtime interfaces](dataset-runtime-interfaces.md) for current admission.
+
+Disposition on 2026-10-15 (w-net): **CLOSED at cached-task scorer-execution level.**
+Section 5 records the real run that superseded the open source-only review.
 
 Original source-only review: no image was pulled, no container was started, no benchmark
 task was executed and no model was called by that review. Its claims cite source files.
@@ -125,6 +129,8 @@ comparable published diagnostic. The unchanged policy receipt still has `score=n
 Driver lifecycle/cleanup receipt fields remain unknown, while real observer probes show
 owned containers, network and snapshot removed. Snapshot/cleanup uncertainty alone is an
 accepted limit under [the decision](enforcement-proof-decision.md), not a new gate.
-The model-weight digest and transitive dependency closure remain unknown. Shared
-`scorer-offline-closure` and `artifact-only-state-export` remain open; no pilot expansion
-or production authorization follows from this closure.
+The model-weight digest and transitive dependency closure were unknown at that
+review. The shared `scorer-offline-closure` and `artifact-only-state-export`
+requirements were open then and have since been
+[withdrawn](../registry/withdrawn-requirements.md). The receipt covers scorer
+execution on the cached task and carries no pilot expansion or production authorization.

@@ -1,5 +1,11 @@
 # Runtime observation: the missing producer
 
+> **Historical implementation brief (October 2026, updates through `54803c60`
+> on 2026-11-10).** The original producer design and work list below record
+> pre-implementation gaps. The dated updates give the scope implemented
+> since then. Use the [current runtime interfaces](dataset-runtime-interfaces.md)
+> and [measurement contract](../INTERFACE.md) for admission and published evidence.
+
 **Status (2026-10-18):** implemented for opt-in fixed workers and their combined verifier
 via `eval/containers/observed.py` (`backend=observed-v1`). This route reads cgroup v2,
 mount/statvfs, privilege and network facts and calls `admit_runtime` before candidate execution.

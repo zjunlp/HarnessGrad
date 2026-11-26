@@ -246,9 +246,9 @@ show it, whatever it intended.
 the harness runs, so there is no static copy to withhold, and the honest answer is
 that the harness does not see them at all.
 
-**The verifier is withheld from methods**, for the same reason eval traces are
-(§2.3): a method that can read the check can fit itself to the check. Curve points
-record the verifier's *kind*, never its arguments.
+Methods receive the study-side verifier details allowed by the dataset's
+evidence projection (§2.3). The eval-side verifier stays outside the method
+channel. Curve points record the verifier's *kind*.
 
 ### 2.3 Which tasks are the method's to study: the dataset's default, the run's choice
 
@@ -348,7 +348,8 @@ A run covers one side now, so the rule is structural instead:
   train loops, and `_run_eval_side` has no method in it at all. `_for_method` *asserts*
   this rather than assuming it: staging an exam point raises, so the day somebody
   stages one, it fails loudly instead of handing over the exam.
-* **Therefore nothing is withheld from a train point.** `WITHHELD` no longer exists.
+* **The study breakdown remains available.** The method channel keeps study
+  scores and feedback with the privacy rules below.
 
 What a train point carries, and why each:
 
@@ -357,16 +358,18 @@ What a train point carries, and why each:
 | the aggregate `score` and `score_ci95` | the reward signal. Withholding it would not make the comparison fairer, it would make every method a random walk — no method could tell whether an edit helped. |
 | `per_task`, and `n_scored` / `n_passed` / `n_invalid` | the diagnostic breakdown, which §2.3's table promises. "Which of the tasks I am scored on are failing" is a mechanistic question about the side the method studies, and attribution is the answer to it. |
 | the traces | what the harness did — and the command **output**, not only the exit code (`loop` writes `output`; a renderer that looked for `stdout`/`stderr` dropped 441 of 441 bytes on a measured trace). |
-| `tasks/<task_id>.json` | the instruction, the verifier **and its gold** (an `answer` verifier's `expected`, a `command` verifier's resolved check program), the per-task verdict, and a note when the initial state is the image. |
+| `tasks/<task_id>.json` | the instruction, the per-task verdict, a note when the initial state is the image, and the study-side verifier details allowed by the evidence projection. |
 
-**The gold is given to the method deliberately.** A method that fits the tasks it studies
-has fitted those tasks, and an eval run is what exposes that. The distinction that matters
-is not *who knows the train answers* but **what the harness can reach at run time**,
-because the same harness runs the exam: a harness that can read the verifier can read it
-on the eval side too. That is the boundary §2.5.9 holds — the check's inputs are copied in
-*after* the harness has stopped, into a fresh container — and it is why the expected
-answers may live in the **channel** while never being written into a **trace**
-(`eval/run/runner.py` writes no `scorable` into a trace, so no harness can read its own grade).
+Study evidence can include an answer verifier's `expected` or a command
+verifier's resolved `checks`. PTC-Bench keeps its simulator state and reference
+responses private. WTM-Bench keeps its reference workbooks and `scorer_input`
+evidence private. For both datasets the staged verifier has `expected: null`,
+empty `checks`, and a placeholder `argv`. Methods still receive the task
+goal, score, projected verdict and study trace.
+
+Expected answers exposed for study are delivered through the method channel.
+The verifier's private inputs arrive after the harness has stopped, as
+specified in §2.5.9. The independent eval run measures generalization.
 
 **The channel is not the record.** `curve.jsonl`, the console's curve and per-task detail,
 and an exported harness's `PROVENANCE.md` keep everything. The channel is the copy a method
@@ -2289,8 +2292,8 @@ workspace/
 └── _harnessgrad/
     ├── round.json               # this round's curve point
     ├── traces/<task_id>.jsonl   # the incumbent's traces, this round only
-    ├── tasks/<task_id>.json     # the instruction, the verifier and its gold, and the
-    │                            # per-task verdict -- one file per task in this run
+    ├── tasks/<task_id>.json     # study instruction, projected verifier details
+    │                            # and per-task verdict (see §2.3)
     ├── history/round-*.json
     ├── history/traces/round-<n>/  # that round's train traces
     ├── states/round-<n>/        # the complete harness at round n

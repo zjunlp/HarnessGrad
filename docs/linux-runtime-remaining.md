@@ -6,6 +6,11 @@ installation requirements.
 
 # Linux runtime acceptance remaining work
 
+> **Historical Linux delivery audit (November 2026, final-source checks at
+> `ecb004b7`).** Runtime requirements and acceptance gaps below describe the
+> named delivery snapshots. See the [runtime support matrix](../data/runtime-support.json)
+> and [public native scoring guide](public-native-scoring.md) for current preparation.
+
 The [2026-11-08 final-source Linux validation](linux-release-validation.md) records
 107 selected files with **1721 passed, zero failures/errors and eight explicit
 optional skips**, plus source-free wheel, native and required-CI controls at
@@ -235,8 +240,10 @@ upstream timeout partial-patch capture is an explicit unsupported transport
 boundary, not certified by import/completed-path controls or added as a new
 all-upstream-parity Goal; no Docker or official regrade was run by that audit.
 
-Final-source integration and installed resource/generator checks still need the
-final delivery receipt. No full benchmark, all-domain or 56×7×26 combination,
+At the time of this audit, final-source integration and installed
+resource/generator checks were pending. The later
+[final delivery receipt](../.github/assets/linux-final-delivery-20261108.json)
+records the checks run for `ecb004b7`. No full benchmark, all-domain or 56×7×26 combination,
 live/paid model, private-resource redistribution or complete Excel/OS equivalence
 is added as a new Goal requirement. This document does not declare the Goal done.
 
@@ -322,7 +329,7 @@ no item here authorizes downloading protected data or contacting a model.
 | `bfcl_v3` | Released function-call corpus/AST metric acceptance beyond authored call and irrelevance controls. |
 | `bird_minidev` | Original 701-blob package and unchanged pin passed fresh archive import/verify/probe plus authored sealed SQLite scoring 1/0/0 and readonly/WAL controls. Reviewed archive supply, released DB/source custody, 500-row release parser and broader actor lifecycle remain separate; no public URL/full-public rebuild promise. |
 | `browsecomp` | Pinned stdlib decrypt/prompt/scoring and trusted judge HTTP have scoped authored failure/usage/config controls. Gated source custody and real configured judge acceptance remain separate. |
-| `chessbench_puzzles` | Original 718-blob package recovered and verified; four authored trajectories pass through its sealed scorer with rewards 1/0/0/0. Provider/interactive controls remain distinct. A fresh installation needs the reviewed native archive; no released pool is certified. |
+| `chessbench_puzzles` | Original 718-blob package recovered and verified; four authored trajectories pass through its sealed scorer with rewards 1/0/0/0. Provider/interactive controls remain distinct. Exact reproduction of that sealed run needs the reviewed archive. Its control did not certify the released pool. |
 | `cooperbench` | Sixteen authored tests passed (host-relocated verifier, not a prepared image); a separate real observed-v1 dual-peer/fresh-verifier run_one shared lane measured correct/one-wrong 1/0 with original scorer and owned cleanup. Missing manifest/capacity/freeze/image refusal passed without tasks. Exact selected original group source/runtime/freeze/image/resources/mirrors remain external; no 652-pair or real selected-group acceptance. |
 | `costbench` | Actual original-package service, socket, trusted seal, native scorer and cleanup are verified on authored oracle/noop/invalid-tool cases; broader domains are outside this scope. |
 | `costbench_dynamic` | Actual authored cost_change lifecycle/scoring passes 1/0/0; the other dynamic modes and broader domains remain outside that control. |
@@ -335,7 +342,7 @@ no item here authorizes downloading protected data or contacting a model.
 | `harvey_lab` | Real legal-task/judge/document-conversion lifecycle and native resources beyond prepared managed recipe, exact admission and two actual worker probes; no model/judge run. |
 | `hle` | Pinned stdlib prompt/schema/parser and independent judge transport have authored local-HTTP success/failure/usage/configuration evidence. Frozen judge config and external source custody remain; no live judge/model acceptance claim. |
 | `hotpotqa` | Authored provider and QA controls; released datasets and every task are not certified by these controls. |
-| `jericho` | Original 1039-blob sealed package recovered and verified. The CC0 authored TextWorld-ABI story passes actual engine/relay/client, shipped replay and sealed scoring with 2/2 reward and cleanup. Fresh installations need the reviewed archive; no released ROM is certified. |
+| `jericho` | Original 1039-blob sealed package recovered and verified. The CC0 authored TextWorld-ABI story passes actual engine/relay/client, shipped replay and sealed scoring with 2/2 reward and cleanup. Exact reproduction of that sealed run needs the reviewed archive. Its control did not certify a released ROM. |
 | `jobbench` | Managed original-renderer preparation and canonical Harbor/judge identity are implemented with scoped real-source/Hub/local-HTTP controls. Shared Harbor authored actual-Trial 1/0 is now recorded separately; official weighted-rubric Trial, explicit public-network approval and selected images/private tests remain separate inputs/acceptance. |
 | `kumo` | Prepared execution and original env.load_env preparation imports are proven stdlib on the unchanged pin (210 hash-checked source modules, 103 registered environments, authored cold invocation). Retain source custody and existing 23-case actor/relay/scorer/failure scope; no new venv or full-release/model requirement. |
 | `livecodebench` | Released executor/aggregator artifact custody and representative native sandbox behavior beyond authored controls. |

@@ -50,6 +50,18 @@ def test_catalog_and_private_files_refuse_tampering(tmp_path, monkeypatch):
         wtm_bench._prepared_file("scorer_v2.py", wtm_bench.SCORER_SHA256)
 
 
+def test_unconfigured_data_root_is_reported(monkeypatch):
+    from harnessgrad import paths
+
+    monkeypatch.setattr(paths, "_settings", lambda: {})
+    monkeypatch.setattr(wtm_bench, "DATASET_ROOT", paths.DatasetPath("wtm_bench"))
+
+    status = wtm_bench.provision_status()
+    assert status["present"] is False
+    assert status["root"] is None
+    assert "HG_DATA_WTM_BENCH" in status["detail"]
+
+
 @pytest.mark.parametrize("case,mode,score", [
     ("566", "oracle", 1), ("566", "noop", 0), ("566", "missing", 0),
     ("2939", "oracle", 1), ("2183", "oracle", 0.8), ("2284", "oracle", 0.8),
