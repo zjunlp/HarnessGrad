@@ -72,7 +72,7 @@ CONTROLS = ROOT / "tests" / "quality" / "test_dataset_controls.py"
 #: the reading that supports it, which is why it is a literal dict and not a grep at
 #: render time.
 DEVIATIONS: dict[str, str] = {
-    "wtm_bench": "reports the released workbook cell_grade for curated Level 5; upstream overall score also includes a tool-execution bonus",
+    "wtm_bench": "reports the released workbook cell grade, while the upstream overall score also includes a tool-execution bonus",
     'locomo': 'per-conversation Harbor rewards are preserved; the platform curve is conversation-macro mean, while report.py computes the question-weighted Harbor aggregate',
     'nq': 'upstream short-answer-text EM/F1 on the any-short-answer-or-yes-no subset; not the full official NQ long/short-answer leaderboard metric',
     'supergpqa': 'upstream final_letter_v1 sample-mean accuracy; not official discipline-macro/freeform evaluation',

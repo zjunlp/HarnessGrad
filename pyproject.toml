@@ -163,6 +163,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "rsi-terminal-bench2-eval.json", "rsi-terminal-bench2.json",
     "splits/ptc-bench/study.json", "splits/ptc-bench/dev.txt", "splits/ptc-bench/test.txt",
     "splits/wtm-bench/study.json", "splits/wtm-bench/dev.txt", "splits/wtm-bench/test.txt",
+    "splits/wtm-bench/mixed/study.json", "splits/wtm-bench/mixed/dev.txt", "splits/wtm-bench/mixed/test.txt",
 ]
 "data.scaffolds.command_oracle_harness" = ["harness.json"]
 "data.scaffolds.native_harbor_runtime" = ["PROVENANCE.json", "README.md"]
@@ -177,7 +178,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.datasets.chessbench_puzzles" = ["execution-runtime.json", "runtime.json", "requirements-load.txt", "LOADER_RUNTIME.md", "NATIVE_RUNTIME.md"]
 "data.datasets.appworld" = ["execution-runtime.json", "requirements.lock", "PREPARATION.md", "cli/aw"]
 "data.datasets.ptc_bench" = ["execution-runtime.json", "requirements.lock", "README.md"]
-"data.datasets.wtm_bench" = ["execution-runtime.json", "requirements.lock", "README.md"]
+"data.datasets.wtm_bench" = ["execution-runtime.json", "requirements.lock", "README.md", "study-300.json"]
 "data.runtimes" = ["chessbench_puzzles-native.json", "alfworld-native.json", "bird_minidev-native.json",
                    "jericho-native.json", "scienceworld-native.json"]
 "data.datasets.locomo" = ["requirements-score.txt", "execution-runtime.json", "requirements.lock",
