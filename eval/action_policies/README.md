@@ -9,9 +9,12 @@ The benchmark relay executes the returned actions and retains its own score.
 Choose the endpoint in the run configuration. Its description includes the
 checkpoint hashes, backend configuration, environment contract, and action
 horizon. The policy identity and environment contract enter the verification
-context. Restarting the same service at a new socket path preserves eligibility
-for reuse. Measurements captured with the earlier path-sensitive policy
-context, from another policy, or without a policy require a fresh evaluation.
+context, the prepared run reservation, and the runtime commitment for a declared
+treatment. Restarting the same service at a new socket path preserves those
+identities. The driver preflights the service with `--check-only` and
+`--prepare-only` using `describe`. Recreate prepared reservations made with the
+earlier socket-path binding. Measurements captured under different policy or
+route code require a fresh evaluation.
 
 ## GR00T N1.5 on RoboCasa365
 

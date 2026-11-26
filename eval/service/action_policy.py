@@ -37,8 +37,10 @@ def digest(value):
                              allow_nan=False).encode()).hexdigest()
 
 
-def bind_setups(socket, dataset, task_ids, setups, envs, *, sandbox):
-    """Freeze the service, environment and client in the verification context."""
+def inspect_service(socket, dataset, *, sandbox):
+    """Admit the live service and freeze the action/observation contract."""
+    if not sandbox:
+        raise ValueError('action policy requires a sandboxed native environment')
     if not re.fullmatch(r'[a-z][a-z0-9_]*', dataset):
         raise ValueError('invalid action policy dataset name')
     port = Path(__file__).resolve().parents[2] / 'data/action_policy_ports' / f'{dataset}.py'
@@ -49,12 +51,6 @@ def bind_setups(socket, dataset, task_ids, setups, envs, *, sandbox):
     if (path.resolve() != path or not stat.S_ISSOCK(path.stat().st_mode)
             or path.parent.stat().st_mode & 0o077):
         raise ValueError('action policy requires a UNIX socket in a private local directory')
-    for task_id in task_ids:
-        setup = setups.get(task_id) or {}
-        env = envs.get(task_id) or {}
-        if (not sandbox or env.get('kind') != 'files' or env.get('network') != 'none'
-                or not setup.get('tool_relay') or setup.get('workers')):
-            raise ValueError(f'{task_id} does not declare a sandboxed native action policy environment')
     identity = call(path, 'describe')
     if (not isinstance(identity, dict) or identity.get('protocol') != PROTOCOL
             or any(not isinstance(identity.get(key), list) or any(not isinstance(v, str) for v in identity[key])
@@ -69,9 +65,29 @@ def bind_setups(socket, dataset, task_ids, setups, envs, *, sandbox):
         raise ValueError(f'{dataset} has an incompatible control or observation contract')
     binding = {'socket': str(path), 'identity': identity, 'sha256': digest(identity),
                'route_sha256': sha256(Path(__file__).read_bytes()).hexdigest()}
+    return binding, environment
+
+
+def service_identity(binding):
+    """Project the service contract independently of its current socket address."""
+    return {key: value for key, value in binding.items() if key != 'socket'}
+
+
+def bind_setups(socket, dataset, task_ids, setups, envs, *, sandbox):
+    """Freeze the service, environment and client in the verification context."""
+    service = inspect_service(socket, dataset, sandbox=sandbox)
+    return bind_service(service, task_ids, setups, envs, sandbox=sandbox)
+
+
+def bind_service(service, task_ids, setups, envs, *, sandbox):
+    binding, environment = service
     bound = {}
     for task_id in task_ids:
-        setup = setups[task_id]
+        setup = setups.get(task_id) or {}
+        env = envs.get(task_id) or {}
+        if (not sandbox or env.get('kind') != 'files' or env.get('network') != 'none'
+                or not setup.get('tool_relay') or setup.get('workers')):
+            raise ValueError(f'{task_id} does not declare a sandboxed native action policy environment')
         files = list(setup.get('files') or ())
         if any(item['path'] == CLIENT.name for item in files):
             raise ValueError(f'{task_id} already uses the action policy client path')

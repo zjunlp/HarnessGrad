@@ -14,11 +14,12 @@ from eval.service.tool_transport import Relay, call
 from harnessgrad.provenance import verification_context
 
 
-def fixture_service(path, *, control=None, events=None, fail=False, value=0.0, before_predict=None):
+def fixture_service(path, *, control=None, events=None, fail=False, value=0.0, before_predict=None,
+                    checkpoint='same'):
     env = environment()
     identity = {'protocol': PROTOCOL, 'control': control or env['control'],
                 'cameras': env['cameras'], 'states': env['states'],
-                'actions': list(env['actions']), 'chunk_size': 2}
+                'actions': list(env['actions']), 'chunk_size': 2, 'checkpoint': checkpoint}
 
     def handle(op, args):
         if op == 'describe':
@@ -253,6 +254,67 @@ def test_runner_keeps_policy_fault_when_actor_later_times_out(tmp_path, monkeypa
     stats = result['runtime_services']['action_policy']
     assert stats['fault'] == 'predict: ToolTransportError'
     assert stats['policy_seconds'] > 0
+
+
+def test_driver_preflights_and_binds_reservation_and_treatment_to_service_identity(
+        tmp_path, monkeypatch, capsys):
+    import json
+    import sys
+
+    import driver
+    from harnessgrad.datasets import runtime_identity
+    from harnessgrad.orchestration import readiness, treatment_identity
+
+    monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
+    monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
+    monkeypatch.setattr(runtime_identity, 'h0_selection', lambda _: (
+        ['task'], {'task': {'tool_relay': {'program': 'fixture.py'}}}, {},
+        {'task': {'kind': 'files', 'network': 'none'}}))
+    monkeypatch.setattr(readiness, 'plan_checks', lambda args: [])
+    real_readiness = driver._readiness
+    treatment = tmp_path / 'treatment.json'
+    wrapper = tmp_path / 'wrapper.py'
+    wrapper.touch()
+    treatment.write_text(json.dumps({'schema': treatment_identity.SCHEMA, 'files': {'wrapper': str(wrapper)},
+                                     'configuration': {}, 'environment': []}))
+    bindings = []
+
+    def record(args):
+        if hasattr(args, '_action_policy_service'):
+            bindings.append(treatment_identity.capture(treatment, runtime=driver._treatment_runtime(args)))
+        return real_readiness(args)
+
+    monkeypatch.setattr(driver, '_readiness', record)
+
+    def invoke(socket, *extra):
+        monkeypatch.setattr(sys, 'argv', [
+            'driver.py', '--dataset', 'robocasa365', '--rounds', '0', '--sampling', 'all',
+            '--run-id', 'prepared', '--runs-root', str(tmp_path / 'runs'),
+            '--work-root', str(tmp_path / 'work'), '--action-policy-socket', str(socket), *extra,
+        ])
+        return driver.main()
+
+    with fixture_service(tmp_path / 'original.sock') as original:
+        assert invoke(original.path, '--prepare-only') == 0, capsys.readouterr()
+    with fixture_service(tmp_path / 'restarted.sock') as restarted:
+        assert invoke(restarted.path, '--check-only') == 0, capsys.readouterr()
+    treatment_identity.require_same(*bindings, declared=True)
+    prepared = tmp_path / 'runs' / 'prepared' / 'run_meta.json'
+    metadata = json.loads(prepared.read_text())
+    assert metadata['action_policy']['checkpoint'] == 'same'
+    assert '.sock' not in prepared.read_text()
+
+    with fixture_service(tmp_path / 'changed.sock', checkpoint='changed') as changed:
+        assert invoke(changed.path, '--check-only') == 2
+        assert 'preparation differs' in capsys.readouterr().err
+        assert invoke(changed.path, '--check-only', '--run-id', 'other') == 0
+    with pytest.raises(treatment_identity.TreatmentRefused, match='treatment changed'):
+        treatment_identity.require_same(bindings[0], bindings[-1], declared=True)
+
+    assert invoke(tmp_path / 'missing.sock', '--check-only', '--prepare-only', '--run-id', 'missing') == 2
+    output = capsys.readouterr()
+    assert 'action-policy' in output.out and 'action-policy' in output.err
+    assert not (tmp_path / 'runs' / 'missing').exists()
 
 
 @pytest.mark.parametrize('capture', [verification_context.capture, verification_context.capture_content])

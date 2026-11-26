@@ -379,6 +379,22 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     # Preserve parsed arguments before readiness and runtime add derived fields.
     namespace_args = dict(vars(args))
+    action_policy_service = None
+    if args.action_policy_socket is not None:
+        from eval.service.action_policy import inspect_service, service_identity
+
+        try:
+            action_policy_service = inspect_service(
+                args.action_policy_socket, args.dataset, sandbox=args.sandbox)
+        except (OSError, ValueError, RuntimeError) as exc:
+            if not (args.check_only or args.prepare_only):
+                print(f'action policy admission failed: {exc}', file=sys.stderr)
+                return 2
+            args._action_policy_problem = str(exc)
+        else:
+            args._action_policy_service = action_policy_service
+            namespace_args.pop('action_policy_socket')
+            namespace_args['action_policy'] = service_identity(action_policy_service[0])
     namespace_staged = args.sampling in ("diagnostic", "pilot_10pct")
     namespace_mode = "unified" if args.mode in ("A", "B") else args.mode
     if not args.resume and (args.run_id or not namespace_staged):
@@ -493,7 +509,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         selected = build_selected_run_plan(
             options, datasets, runs_root=runs_root, scenario=scenario_spec, model=model,
             harness_source=harness_src, policy_evidence=policy_evidence, reporter=console,
-            **({'action_policy_socket': args.action_policy_socket} if args.action_policy_socket else {}))
+            **({'action_policy_service': action_policy_service} if action_policy_service is not None else {}))
     except SelectedRunRefused as exc:
         exc.report(console)
         return 2
