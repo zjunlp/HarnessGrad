@@ -13,7 +13,9 @@ an official scorer shipped in the repository — and only running the gold throu
 showed the benchmark cannot reproduce its own recorded answers, which is what turned it into a
 refusal. `ds1000` looked like a refusal — the official tests need a package this host lacks and
 one group of them fetches data over the network — and measuring showed it was two different
-things, neither of them a metric problem, leaving 926 of 1000 rows runnable.
+things, neither of them a metric problem. That October 2026 sweep offered
+926 of 1000 rows. See the [current DS-1000 runtime guide](../data/datasets/ds1000/README.md)
+for the managed actor and verifier setup.
 
 So: **do not write `data/datasets/<name>.py` until §1.3 is done.**
 
@@ -50,15 +52,14 @@ and resource status; `DOWNLOADS.md` displays portable logical paths.
 Read the scorer, not the paper. The paper describes the headline; the scorer decides what is
 computed and what is discarded. The questions that actually matter:
 
-* Does the scorer read a field the answer contract does not carry? (`fever` needs
-  `predicted_evidence`; `hotpotqa` needs supporting facts; `tau2_bench` needs a second party.)
-* Is the headline one number, or a **product** of two? A product with one factor missing is
-  not a slightly worse score, it is a different metric.
-* Are the sub-scores reported as separate keys? Then one of them can be published alone, and
-  that is a choice the record has to name. (`musique` returns `answer_f1`, `answer_em` and
-  `support_f1` separately; the README publishes `answer_f1` alone.)
-* Does any line of it perform a **network call** or accept a **model identifier**? That is the
-  judge/live-service test, and it is mechanical.
+* Which evidence fields and execution channels does the scorer need? FEVER
+  and HotpotQA accept structured evidence. Consult the selected adapter for its
+  reward and any diagnostic metrics.
+* Which components does the official evaluator report separately? Record each
+  supported component by name. MuSiQue reports answer and support components and
+  labels its combined scalar as a platform reward.
+* Does the scorer call a service or accept a model identifier? Record the
+  dependency and check whether the platform can bind and observe that route.
 
 ### 1.3 Run the gold through the official scorer — over the whole suite
 
@@ -85,7 +86,7 @@ Three outcomes, and they route everything that follows (§2). Two habits while d
 | gold reaches 1 on every row | **runnable** | §3.1, then the procedure page |
 | gold reaches 1 on most rows, the rest fail for *environmental* reasons | **runnable, with a measured exclusion** | §3.3 |
 | gold reaches 1, but the metric needs a channel the contract lacks | **refused** (`contract_gap`) | §3.2 |
-| gold reaches 1, but needs a second party, an unpinned judge, or a live service | **refused** | §3.2 |
+| gold reaches 1, but the required simulator, judge or service lacks an admissible route | **blocked** for missing provisioning, **refused** for a demonstrated contract gap | §4 or §3.2 |
 | the released data cannot reproduce the official metric at all | **refused** (`unreproducible`) | §3.2 |
 | the environment cannot be provisioned without changing the shared interpreter | **blocked**, not refused | §4.1 |
 
@@ -130,8 +131,8 @@ been executed, you do not have a refusal; you have a suspicion.
 
 ### 3.3 Runnable, with a measured exclusion
 
-Dropping rows is allowed. Dropping them **silently** is not. The batch's worked example is
-`data/datasets/ds1000.py`, and the shape it arrived at is the one to copy:
+Report every excluded row and its measured cause. The October 2026 DS-1000
+sweep illustrates how it recorded its frozen cohort:
 
 * the excluded rows are enumerated, per row, with the **cause that row actually reported**;
 * the largest group is a *criterion* recomputed from the released data (rows whose official
@@ -149,15 +150,16 @@ Dropping rows is allowed. Dropping them **silently** is not. The batch's worked 
 
 ### 4.1 What the sandbox can actually see
 
-Measured on this host by running one check under `--platform` and asking what exists outside
-its workdir: an absolute path under the dataset root **did not exist**, `HOME` was `/tmp`, and
-a neighbouring dataset's runtime was absent. `eval/containers/sandbox.py` starts from an empty root and
-binds only `/usr`, the interpreter prefix, the work root and the task directory.
+In the October 2026 `--platform` probe, `HOME` was `/tmp`. An undeclared
+absolute path under the dataset root and a neighbouring adapter's runtime were
+both absent. Those observations apply to that configuration.
 
-The consequence is stronger than "prefer `VERIFY.inputs`": **a dependency outside the work root
-cannot be reached at all.** So a heavy runtime either travels with every task — AgentDojo ships
-its trusted runtime that way, and pays a copy per check — or it is not available, which is why
-DS-1000's tensorflow rows are excluded rather than installed into the shared interpreter.
+For current native command verifiers, use `VERIFY.inputs` for task-private
+inputs and declare supported read-only `VERIFY.runtime_paths` for runtime
+dependencies outside the work root. See the [dataset runtime interfaces](dataset-runtime-interfaces.md)
+for admission and the [DS-1000 runtime guide](../data/datasets/ds1000/README.md)
+for a managed example. The managed runtime controls have a separate scope
+from the historical 926/74 sweep.
 
 ### 4.2 A missing package is a coverage fact, not a refusal
 
@@ -174,8 +176,11 @@ test time. The fix was to pin `mwaskom/seaborn-data`, ship the four CSVs it need
 `VERIFY.inputs`, and point `SEABORN_DATA` at them: the official code path is unchanged and the
 rows are *included*. The line to draw is **what the fetch is for**:
 
-* the metric needs a live service to produce a number → refusal;
-* the harness fetches fixed, pinnable data → `downloads()`, and the row stays in.
+* A metric that needs a live service requires an admissible, identified route.
+  See the [runtime interfaces](dataset-runtime-interfaces.md) for supported trusted
+  judges and environment simulators.
+* Declare fixed, pinnable inputs through `downloads()` and retain the row when
+  the pinned assets reproduce the intended execution.
 
 ### 4.4 Version drift is per-row and must be measured
 
@@ -193,7 +198,7 @@ diagnosed by running the gold and grouping the errors.
 | it looked like | what measurement said | dataset |
 | --- | --- | --- |
 | "10,000 puzzles, gold in a column, done" | the first `Moves` token is the **opponent's** setup move; only odd indices are the solver's, and an alternative immediate mate also counts | `chessbench_puzzles` |
-| "multi-hop QA with supporting facts — same trap as HotpotQA, refuse" | the official scorer returns `answer_f1`, `answer_em` and `support_f1` as **separate keys**; the standalone answer metric is publishable | `musique` |
+| "multi-hop QA with supporting facts requires a refusal" | the official scorer reports answer and support metrics separately. The current adapter accepts evidence and reports both components. | `musique` |
 | "needs tensorflow and network → refuse" | a missing package is a coverage fact; the network fetch was fixed, pinnable data | `ds1000` |
 | "gold execution failing is an environment problem" | 4 stable failures, and a repeat sweep that moved — the release cannot reproduce its own recorded results | `nestful` |
 | "0 attacks succeeded, so the agent is safe" | that is one fixed attack template; and a do-nothing agent also has 0 attack successes, so `not ASR` is not a reward | `agentdojo` |

@@ -8,7 +8,7 @@
 
 ### 0. 一次性环境检查
 
-Linux或已恢复虚拟化并重启的WSL2；Python>=3.10、git、可正常创建隔离命名空间的bwrap、curl。平台/服务主要使用标准库，浏览器UAT另需Playwright及匹配Chromium。
+使用 Linux（或具备所需隔离能力的 WSL2）、Python 3.12+、Git、uv、可创建用户命名空间的 Bubblewrap 和 curl。平台安装见[首次使用指南](getting-started.md)。浏览器 UAT 另需 Playwright 和匹配的 Chromium。
 
 ```bash
 # 当前install.sh的只读自检会挂载仓库同级的../harnessgrad_work。
@@ -172,7 +172,7 @@ python3 console/uat/smoke.py --url http://127.0.0.1:4460 \
 
 | 配置 | 默认/要求 |
 | --- | --- |
-| HG_CONSOLE_PLATFORM | 实际仓库根；示例显式设置，原服务默认仍为共享机器路径 |
+| HG_CONSOLE_PLATFORM | 源码版默认使用 Console 所在的仓库根；示例显式设置 |
 | HG_CONSOLE_RUNS | 独立runs根，必须存在且平台外 |
 | HG_CONSOLE_SUBMISSIONS_ROOT | 显式设置的提交根，必须存在且平台外；未设时不启用提交生命周期 |
 | HG_CONSOLE_SUBMISSIONS_WORK | 平台外work根，默认/tmp/hg-submissions-work；与其他根分开 |

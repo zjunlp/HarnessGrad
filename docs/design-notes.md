@@ -60,7 +60,15 @@ being measured.
 
 ### Two execution modes
 
-They differ only in who owns the schedule:
+The current driver runs one engine. It accepts the deprecated `--mode`
+option for compatibility. Train curve points record `identity.run_mode: unified`.
+Eval curve points still record the parsed legacy mode, which defaults to `A`.
+Use the recorded `side` to distinguish train and eval points.
+A method may submit one candidate or a sequence. Read
+`steps_in_submission` for the shape of a submission and see the
+[current method guide](bring-your-own-method.md) for the protocol.
+
+The historical A/B labels described who owned the schedule:
 
 * **Mode A — platform-driven.** The platform owns the loop and calls the method
   once per round for one step. Maximum comparability.
@@ -70,11 +78,11 @@ They differ only in who owns the schedule:
   not be re-wired in order to be measured — RRSI owns an annealed 20-round budget,
   DGM an archive.
 
-Both write the same `curve.jsonl`, so curves from either land on one axis.
+Both historical paths wrote `curve.jsonl`. Apply the measurement identity rules when comparing curves.
 
 ## The old in-harness method design, and why it went
 
-The method lives **inside the harness repository**, as the implementation of two
+In the original design the method lived **inside the harness repository**, as the implementation of two
 entrypoints the harness declares in `harness.json`:
 
 ```json
@@ -158,8 +166,8 @@ score; changing sampling or using `--no-sandbox` does not satisfy those gates. T
 default is staged `diagnostic`, which requires `--policy-evidence`, one task, one trial,
 one job and zero improvement rounds. General sampling (`all`) is not production
 authorization, and the local demo examples in the README explicitly use it. Production
-diagnostics and pilots remain subject to the staged pilot policy in
-[`../AGENTS.md`](../AGENTS.md) and to dataset gates.
+diagnostics and pilots remain subject to the [staged policy](../eval/policy/diagnostic_policy.py)
+and to dataset gates.
 
 **Resource and network policy.** Ordinary entrypoints add no universal
 filesystem-quota or backend-observer prerequisite. Existing declared
@@ -219,11 +227,12 @@ kind that would otherwise have been read as a result:
    round, so a harness that rewrote `agent.py` while answering task 1 would be a
    different program by task 2 and the curve would report one harness where two ran.
 
-   A harness still has two writable places: `--workdir` (the task's cwd, fresh per
-   task) and `.state/` inside its own tree (a per-task tmpfs, gitignored, for harnesses
-   that write relative to themselves; `HARNESSGRAD_STATE` names it). Verified in the
-   sandbox: writing `.state/cache.json` succeeds, rewriting `agent.py` raises
-   `OSError`, and neither the host tree nor the sha moves.
+   In the original native sandbox test, `--workdir` was writable and
+   `HARNESSGRAD_STATE` pointed to a per-task tmpfs mounted at the candidate's
+   gitignored `.state/`. Writing `.state/cache.json` succeeded, rewriting
+   `agent.py` raised `OSError`, and neither the host tree nor the sha moved.
+   Use `HARNESSGRAD_STATE` for the current layout across environments. See the
+   [Harness authoring guide](writing_a_harness.md#33-what-you-may-do).
    What is hashed is the referee (`driver.py`, `harnessgrad/`, `eval/`, `ckpt/`,
    `data/`, `tools/`,
    `methods/`, `tests/`, `docs/`, `INTERFACE.md`, `.env`), never `base_harness/` —
@@ -234,11 +243,10 @@ kind that would otherwise have been read as a result:
    put numbers on the same axis that were produced under different rules. It says so
    and exits non-zero.
 
-   **Known gap:** the namespace constrains the filesystem and nothing else. A
-   harness keeps the network and the agent's API key, because it cannot run without
-   them, so it could exfiltrate that key. Closing it needs egress filtering; see
-   INTERFACE.md §4.8. `--no-sandbox` exists for debugging, and `run_meta.json`
-   records which mode produced a run.
+   **Historical finding.** The original filesystem namespace left the
+   actor's network available. For current network and model-route behavior,
+   see the [measurement contract](../INTERFACE.md) and [egress guide](egress.md).
+   `run_meta.json` records the sandbox mode used for the run.
 
 ## Open decisions
 

@@ -1,6 +1,12 @@
 # Shared-foundation refactor review
 
-This is a review map for the current refactor branch. Earlier controls cited below refer to the specific commits named alongside them, including `10bbe985cbf882c1984c25a912260cfb4d333011`; they have not all been rerun on the final branch. The branch is not a claim of full-suite, real-model or full-benchmark acceptance. Detailed dated controls and their limitations are in [shared-foundation-offline.md](shared-foundation-offline.md).
+> **Historical validation (November 2026, before `f1d5f062`).** The refactor
+> was integrated into main by `f1d5f062`. The branch state, local refs and
+> results below refer to the named review checkouts. See the
+> [architecture map](../architecture.md) and [test guide](../test-suite.md)
+> for the current source and checks.
+
+This is the pre-integration review map for the shared-foundation refactor. Earlier controls cited below refer to the specific commits named alongside them, including `10bbe985cbf882c1984c25a912260cfb4d333011`; they have not all been rerun on the final branch. The branch is not a claim of full-suite, real-model or full-benchmark acceptance. Detailed dated controls and their limitations are in [shared-foundation-offline.md](shared-foundation-offline.md).
 
 ## Subsequent module updates
 
@@ -14,7 +20,7 @@ A later user-authorized real-model smoke comparison ran Loop + DGM on five GSM8K
 
 ## Delivery audit against the requested refactor
 
-| Requirement | Current evidence | Remaining limit |
+| Requirement | Evidence at review | Limit at review |
 | --- | --- | --- |
 | Keep the experiment checkout separate | The work is on `refactor/shared-foundation` in `HarnessGrad-refactor`; the original local `main` README matches its HEAD and its untracked files were retained. | The branch has not been merged or published. |
 | Retain the LightRSI fixes | Fix commit `a0f837fd` and original local-main commit `1eedb4c5` are ancestors. | The remote can advance; check it again at integration. |
@@ -43,10 +49,10 @@ Source declarations, loader, scorer, actual runtime and selected-input commitmen
 - At clean commit `a507933e6ca215fb0a902810b708b33b08922666`, the selected offline cross-layer suite reported **760 passed**. Later source-profile and decoding changes have their own focused controls in the detailed record; they are not covered by that earlier run.
 - The reviewed subprocess-decoding audit now passes at `10bbe985`; its [inventory](decoding-inventory.md) lists the source-scan scope and the individually reviewed fail-closed cases. This is not full runtime validation.
 - Five native Loop controls now pass with the locked `openai==2.21.0` SDK, including H0 reuse and resume; container routes were not run. Ten authored QA-provider controls pass with `pyarrow==23.0.0`; two authored QA-to-MiniAgent controls and five MiniAgent native controls also pass with its locked SDK. Other external dataset/Harness runtimes remain unverified.
-- The pre-existing results-matrix display test remains a known mismatch: JSON retains graceful-stop metadata, but the Markdown view does not display the expected status. The separate [test guide](../test-suite.md#existing-failures-checked-during-shared-layer-refactoring) describes the baseline evidence. Full test-suite acceptance has not been established.
+- The results-matrix display test showed a mismatch on the reviewed checkouts: JSON retains graceful-stop metadata, but the Markdown view does not display the expected status. The separate [test guide](../test-suite.md#existing-failures-checked-during-shared-layer-refactoring) describes the baseline evidence. Full test-suite acceptance has not been established.
 - The local equivalent of the eight gating CI guard files passed **222 tests** (plus 462 pytest subtests) at `8f433ca28dcfdc59a1004bb9de657b56e636a91e` in an isolated Python environment. Against remote main `8264a916`, the CI selector chose the full suite, which this workflow defers on ordinary push/PR to a scheduled or manually dispatched run. The local guard and 1,329-test selection are not a completed full CI run.
 - The separate original `main` checkout was inspected without modifying it: its README matched its local HEAD, and its untracked files were retained. The branch comparison and validation do not authorize rewriting existing experiment records or silently resuming across a changed platform identity.
 
 ## History before integration
 
-The unpublished work is consolidated into eight module-oriented commits on a merge base retaining both the LightRSI fix and original local-main ancestry. The original development history is preserved locally in `refactor/shared-foundation-history-20261117` and a backup ref. Additional cited commits outside that history are retained by `refactor/shared-foundation-validation-evidence-20261117`, whose archive-only merges retain those exact objects. These local refs are not published automatically; both history branches must be preserved when publishing if readers need to inspect all cited commits. Published history was not rewritten.
+Before integration the work was consolidated into eight module-oriented commits on a merge base retaining both the LightRSI fix and original local-main ancestry. The original development history is preserved locally in `refactor/shared-foundation-history-20261117` and a backup ref. Additional cited commits outside that history are retained by `refactor/shared-foundation-validation-evidence-20261117`, whose archive-only merges retain those exact objects. These local refs are not published automatically; both history branches must be preserved when publishing if readers need to inspect all cited commits. Published history was not rewritten.

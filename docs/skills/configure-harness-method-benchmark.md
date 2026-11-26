@@ -4,8 +4,8 @@ This is the procedure we follow ourselves, written so an agent — or a person w
 opened this repository — can follow it end to end. Follow it in order. Each stage ends with a
 check that the stage worked; do not start the next stage on a red check.
 
-Everything here is standard library plus git. Commands assume you are at the repository root
-and inside the virtual environment from the README's Installation section.
+Use an active [platform environment](../getting-started.md) from the repository
+root. Prepare the declared dependencies for the components you select.
 
 ---
 
@@ -16,7 +16,7 @@ Three artefacts, three contracts, and they do not overlap:
 | artefact | the question it answers | the file that defines it |
 | --- | --- | --- |
 | **harness** | how does an agent turn a task into an answer? | `base_harness/<name>/harness.json` + an entrypoint |
-| **method** | how does the harness get edited between rounds? | `experiments/method-<name>.json` + a program |
+| **method** | how does the harness get edited between rounds? | method entrypoint and an optional experiment preset |
 | **benchmark** | what is a task, and what does a score mean? | `data/datasets/<name>.py` (an adapter) |
 
 The platform supplies the fourth thing — rounds, the git-managed candidate workspace, the
@@ -28,44 +28,38 @@ sandbox, the receipts — and never needs to know what your three do.
 
 **1.1 Copy the closest working example.** `base_harness/loop` is a complete harness in one
 file. `base_harness/miniagent` includes a native runtime and a managed CPython 3.12
-dependency lock; follow its README for preparation and sandboxed driver checks
-instead of the legacy smoke path below. Copy, do not edit in place.
+dependency lock. Copy the selected source to `base_harness/my-harness`.
+For a managed Harness, follow its guide to prepare dependencies for the copy.
 
-**1.2 Write `harness.json`.** It must declare:
+**1.2 Edit the copied `harness.json`.** Set `name` to `my-harness` and
+choose a version for your copy. Keep the source's `entrypoint` and `backend`
+unless your implementation changes them. Preserve `runtime`, `install` and
+their referenced lockfiles for a managed Harness.
 
-```json
-{
-  "name": "my-harness",
-  "version": "0.1.0",
-  "entrypoint": "agent.py",
-  "backend": "cli",
-  "env_kinds": ["files", "exec"]
-}
-```
+Keep the source's `env_kinds` for an unchanged copy. MiniAgent declares
+`["files"]`. Update the declaration when you change and test the supported
+environments. `files` uses a task filesystem under Bubblewrap, and `exec`
+uses the task's Docker container.
 
-`env_kinds` is a promise: `files` means your harness runs under `bubblewrap` with the task's
-files, `exec` means it runs inside the task's Docker container. Declare only what you have
-tested — the platform refuses a pairing you did not declare instead of guessing.
+**1.3 Implement the [entrypoint and output contract](../writing_a_harness.md).**
+Accept `--task task.json --workdir <dir>`, follow the task's submission
+instructions and record the trajectory in `trace.jsonl`. The platform scores
+the submission.
 
-**1.3 Implement the entrypoint contract.** Your program is started as
-`<entrypoint> --task task.json --workdir <dir>` and must write `answer.txt` in the workdir, plus
-`trace.jsonl` if you want the round's trajectory to be readable. The *task* decides what
-`answer.txt` should contain; your harness must not score anything.
-
-**1.4 Check it.** The platform will run this for you and print a table; every `yes` row is a
-requirement:
+**1.4 Check readiness.** The table reports prerequisites. Step 1.5 exercises
+the entrypoint.
 
 ```bash
-HG_AGENT_BACKEND=mock harnessgrad run --harness-path base_harness/my-harness \
-  --config experiments/quickstart.json --check-only
+harnessgrad run --config experiments/quickstart.json --agent-backend mock \
+  --set harness=my-harness --check-only
 ```
 
-**1.5 Prove it on one round** with the mock backend. A harness that cannot complete the demo
-fixture will not survive a real benchmark:
+**1.5 Run the mock demo** to exercise the Harness and scoring path. Replace
+the example run ID with a fresh one for each attempt.
 
 ```bash
-HG_AGENT_BACKEND=mock harnessgrad run --harness-path base_harness/my-harness \
-  --config experiments/quickstart.json --set run_id=my-harness-demo --improver none
+harnessgrad run --config experiments/quickstart.json --agent-backend mock \
+  --set harness=my-harness --set run_id=my-harness-demo --improver none --fail-on-incomplete
 ```
 
 **1.6 Board row.** `python3 tools/contribute.py harness --name my-harness --path base_harness/my-harness --contributor <handle>`.
@@ -74,32 +68,39 @@ HG_AGENT_BACKEND=mock harnessgrad run --harness-path base_harness/my-harness \
 
 ## Stage 2 — an RSI method
 
-**2.1 Pick the interface.** A method is a program that receives one request (JSON on stdin) and
-answers either an edit or a decision not to edit. The request carries the round index, the
-trajectory of the last round, the current harness directory, and the workspace to write into.
-The reply names the new harness directory and whether the method accepted the round.
+**2.1 Follow the [method interface](../bring-your-own-method.md).** The method
+reads a JSON request on stdin, uses staged study evidence, and writes a
+trajectory of candidate Harness directories under its private workspace.
+The platform measures candidates and supplies the results on later calls.
 
 **2.2 Start from a real one.** `methods/echo_base/run.py` is the minimal reference;
 `methods/dgm/run.py` is a real port with a selection rule; `examples/method-template/run.py` is
 the skeleton with the request/response fields written out.
 
 **2.3 Declare the preset.** `experiments/method-<name>.json` names the dataset, harness, side,
-sampling, round count and your `method_entrypoint` (an absolute command line is safest). Keep
-`rounds` and `trials` small at first — a method that is wrong is wrong in two rounds.
+sampling and round count. Use the JSON key `method` for the method name
+(e.g. `echo_base`) or a command with an absolute script path. The corresponding
+CLI flag is `--method-entrypoint`. Keep `rounds` and `trials` small for
+the first wiring check.
 
-**2.4 Check the preset starts.** This catches the most common failure, an entrypoint that needs
-an argument the preset cannot supply:
+**2.4 Check readiness.** Preflight checks entrypoint availability. Use a mock
+run to verify its arguments and request/trajectory exchange.
 
 ```bash
-harnessgrad run --config experiments/method-<name>.json --check-only
+# Set method_config to the path of your experiment preset.
+harnessgrad run --config "$method_config" --check-only
 ```
 
-**2.5 One round, no model.** With `HG_AGENT_BACKEND=mock` the round is scored by scripted
-replies; that is enough to prove the plumbing (request → edit → new tree → scored round):
+**2.5 Exercise the exchange with a no-model method.** The mock solver uses
+scripted replies. Use the [template smoke](../bring-your-own-method.md#start-with-a-working-process-boundary)
+for a method that makes no model calls. With a self-contained no-model preset,
+use a fresh run ID and request one improvement round.
 
 ```bash
-HG_AGENT_BACKEND=mock harnessgrad run --config experiments/method-<name>.json --set rounds=1 --improver none
-python3 tools/analysis/run_summary.py runs/<run-id>
+# Set method_run_id to a fresh ID for this attempt.
+harnessgrad run --config "$method_config" --agent-backend mock \
+  --set rounds=1 --improver none --run-id "$method_run_id" --fail-on-incomplete
+python3 tools/analysis/run_summary.py "runs/$method_run_id"
 ```
 
 **2.6 Board row.** `python3 tools/contribute.py method --name my-method --preset experiments/method-my-method.json --contributor <handle>`.
@@ -108,12 +109,10 @@ python3 tools/analysis/run_summary.py runs/<run-id>
 
 ## Stage 3 — a benchmark
 
-**3.1 Write the adapter** `data/datasets/<name>.py`. It declares `KIND = "dataset"` and provides:
-
-- `tasks(...)` or a loader that yields task records;
-- `materialize(task, workdir)` — put the task's files where the harness will see them;
-- a scorer, either `score(answer, task)` or a command; the official scorer is preferred;
-- `downloads()` when the bytes are external, so `tools/datasets.py --fetch` can obtain them.
+**3.1 Write the adapter** `data/datasets/<name>.py`. Follow the
+[dataset onboarding contract](../dataset-onboarding.md#2-where-everything-lives)
+for `KIND`, `load()`, `downloads()` and task declarations in `ENV`,
+`SETUP` and `VERIFY`. Choose a supported verifier for the official scorer.
 
 **3.2 Declare the deviations.** If your metric is not the paper's, say so in the same file next
 to the metric and in `DATASETS.md`; the adapter's own docstring is where a reader looks first.
@@ -123,15 +122,15 @@ refused with the missing piece named, never approximated under the benchmark's o
 **3.3 Lint and catalogue.**
 
 ```bash
-python3 tools/dataset_lint.py --check
+# Set dataset_name to the registered adapter name.
+python3 tools/dataset_lint.py --dataset "$dataset_name"
 python3 tools/datasets_doc.py --write      # regenerates DATASETS.md from the declarations
-python3 tools/datasets.py --check --dataset <name>
+python3 tools/datasets.py --check --dataset "$dataset_name"
 ```
 
-**3.4 Prove it declaratively.** A three-step control on a handful of tasks: the oracle must
-score 1.0, the no-op must not, and an invalid answer must be `unmeasured` rather than zero.
-`tests/quality/test_dataset_controls.py` shows the shape; `python3 tools/datasets.py --check`
-tells you whether the bytes are where the adapter thinks they are.
+**3.4 Run the [adapter controls](../dataset-onboarding.md#1-the-five-gates).**
+Record oracle and no-op outcomes, verify scorer parity, and check that the
+adapter classifies invalid inputs and execution failures as declared.
 
 **3.5 Board row.** `python3 tools/contribute.py benchmark --name my-bench --adapter data/datasets/my_bench.py --contributor <handle>`.
 
@@ -151,7 +150,7 @@ read.
 
 Not a score. Four things:
 
-1. the staged check (`--check-only`) passes in your pull request description;
+1. the readiness check (`--check-only`) passes in your pull request description;
 2. `python3 tools/contributors.py --check` passes, so the drawing matches the record;
 3. no file outside your contribution changed, and `runs/` is not committed;
 4. one sentence per artefact saying what it does, in English, in the file that defines it.

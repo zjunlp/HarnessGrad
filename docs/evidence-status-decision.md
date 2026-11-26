@@ -1,5 +1,11 @@
 # Decision: all three evidence gates withdrawn; four permanent refusals remain
 
+> **Historical decision (2026-10-16, with later dated corrections).** The
+> title, counts and blocker dispositions describe the recorded snapshots.
+> The current [blocker registry](../registry/dataset-blockers.json) and
+> [withdrawal record](../registry/withdrawn-requirements.md) track active
+> requirements and the scope of the original decisions.
+
 > **Superseded 2026-10-22, on the refusal half only:** the four refusals are no longer permanent
 > exclusions, and `tau2_bench`'s was lifted conditionally. The three gate withdrawals stand.
 > See `docs/refusal-policy.md`.
@@ -18,7 +24,7 @@ Applied to `registry/dataset-blockers.json`; the named limits are in
 | `appworld` | `successful-task-evidence` | **withdrawn** | the measurement path is proven sound by controls; a success-only gate can never be closed by a faithful failure |
 
 Checker: `{"valid": true, "datasets": 28, "shared_blockers": 0, "production_authorized": false}`.
-**No non-refusal blocker remains**; the registry now carries only the four contract refusals
+**At that snapshot no non-refusal blocker remained**. The registry carried four contract refusals
 (`api_bank`, `nestful`, `sotuqa`, `tau2_bench`).
 
 ## The two scope withdrawals are not impossibility findings
@@ -133,7 +139,7 @@ registry.
   measured 1.0/0.0 on three tasks), so no adapter refuses today.
 - **`hotpotqa` and the `journal-coverage` family** — still open elsewhere in the record; what they
   need is an operator-supplied selected manifest, an input rather than an impossibility.
-- **No dataset in the registry now carries a non-refusal blocker.** That is a state the checker
+- **At the original review, no dataset in the registry carried a non-refusal blocker.** That is a state the checker
   supports (an empty `blockers` list is a statement, per `docs/enforcement-proof-decision.md`), but
   no dataset had reached it before, and the ten datasets with no measured run remain the larger gap.
 

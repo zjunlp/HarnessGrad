@@ -91,18 +91,16 @@ into every other dataset's selection too.
 Files that are about one dataset without being named after it are listed explicitly
 in `EXTRA`; each entry is a decision, not a guess.
 
-**2026-10-27:** the *test* of the scoping helper (`test_test_scope.py`) was
-deleted with the audit-round tests it selected; the helper, now `tools/testing/scope.py`, is
-still what `tools/testing/run_tests.py` uses to build its lanes.
+**Historical coverage snapshot (through 2026-10-27).** The test of the scoping
+helper (`test_test_scope.py`) was deleted with the audit-round tests it selected.
+The runner still uses `tools/testing/scope.py`.
 
 `test_test_scope.py` guarded the rule: it failed if a dataset was added
 with no test file, if an `EXTRA` entry points at a file that no longer exists, or if
-a registry-wide file starts being scoped to individual datasets. It also pins a real
-coverage gap it found: **8 of 29 datasets have no dedicated adapter test file** and
-are reached only through the cross-dataset tests. The list can shrink, not grow.
-(Both numbers here were stale until `aime` was registered: the tuple had already
-shrunk to 8 when the 2026-10-16 fidelity phase gave `fever` and `tau_bench` their
-own test files, and the total went 28 → 29 with the port.)
+a registry-wide file starts being scoped to individual datasets. It also recorded a
+coverage gap. Eight of the 29 adapters at that snapshot had only cross-dataset
+coverage. On 2026-10-16, FEVER and Tau-bench gained dedicated tests, reducing
+the gap to eight. The AIME addition brought the adapter count from 28 to 29.
 
 ## If you add a dataset
 
@@ -114,18 +112,13 @@ own test files, and the total went 28 → 29 with the port.)
 
 ## Where the temporary directories go
 
-Per-file pytest basetemps are placed on the **roomiest writable scratch filesystem**,
-not blindly in `/tmp`, and each file's tree is removed when that file finishes.
+The runner uses `--basetemp-root` when provided. Otherwise it creates a fresh
+directory under `HG_TEST_TMPDIR` or Python's default temporary directory
+(including `TMPDIR`). Choose a writable parent with enough space on a shared
+machine. Give each concurrent invocation its own explicit `--basetemp-root`.
 
-This is not tidiness. On a shared machine `/tmp` is often a small root filesystem, and
-when it fills, tests fail with `No usable temporary directory found` — which looks like a
-broken test rather than a full disk. It also makes real integration tests time out, so a
-nearly-full disk quietly converts working code into a red suite. A test run must neither
-depend on that filesystem having room nor be the thing that fills it.
-
-Override the location with `HG_TEST_TMPDIR=/some/roomy/path`. The runner prints the chosen
-directory and its free space before it starts. `--keep-basetemp` retains the trees for
-debugging; without it, 140 files would leave 140 trees behind.
+Use `--list` to see the selected path and available space. The runner removes
+each file's temporary tree after it finishes unless you pass `--keep-basetemp`.
 
 ## Reading a failure
 
@@ -194,9 +187,18 @@ identity change.
 
 ## Subprocess decoding guard: current audit
 
-The `test_harness_decoding.py` audit scans 138 text-mode subprocess call sites in the current tree, including its embedded actor example. The original main and LightRSI fix trees contain the same total; four calls moved from `tools/` to `harnessgrad/` during refactoring. Each call has a reviewed policy or a specific documented exception; the [inventory review](validation/decoding-inventory.md) records the comparison and limits. Strict decoding remains intentional for source-bound scoring and identity paths where malformed output must refuse measurement rather than change it. The test scans source syntax; it does not prove every runtime output is valid or every decoder handles failures correctly.
+The [decoding guard](../tests/quality/test_harness_decoding.py) scans text-mode
+subprocess calls and checks the encoding error policy at each site. Use its
+inventory for the current counts. The [138-call comparison](validation/decoding-inventory.md)
+describes the three tested refactor snapshots. Strict decoding remains
+intentional for selected scoring and identity paths that reject malformed
+output. At `7a47eb4a` the exact-site checks flag the H0 runtime identity
+probe because its reviewed line moved from 266 to 304.
 
 ## Existing failures checked during shared-layer refactoring
+
+The two focused test targets below pass at `7a47eb4a`. The original
+results describe the named November 2026 checkouts.
 
 On 2026-11-16, the following focused controls were run without a model or benchmark on both the original `main` checkout at `1eedb4c5be7104025c8eb89c3782323b7cbdf0b6` and the refactor checkout at `b3b87b4631ad4d5b6587157513e9fc63c47c2b56`. Both controls failed in both checkouts:
 

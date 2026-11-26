@@ -1,43 +1,66 @@
 # Onboarding a dataset: the procedure
+
 ## Step 0: measure the baseline once, and share it
 
-Every run measures round 0 as the baseline harness's score, so a batch that starts N runs has N
-baselines unless one is shared. Those are not interchangeable: the cross-method comparison is
-paired, and "method A beat method B" computed against two different baselines answers two
-different questions.
+Once the adapter is ready, prepare H0 for the study configuration before comparing
+methods. A shared H0 gives each method the same initial measurement and traces.
 
 ```bash
-# once per (dataset, study set, agent model, endpoint)
-python3 tools/prepare_h0.py --dataset appworld --side train \
-    --study-ids /tmp/appworld-study-train90.txt --jobs 32
-# -> H0 measured: h0-appworld-<stamp>   score 0.0111 on 90 tasks
-#    --h0-from h0-appworld-<stamp>
-
-# then every study run for that dataset passes it
-python3 driver.py ... --h0-from h0-appworld-<stamp>
+# Set STUDY_IDS_FILE to a file with one AppWorld train ID per line.
+# Set RUNS_ROOT to the external directory for H0 and its recipient runs.
+HG_APPWORLD_STUDY_IDS="$STUDY_IDS_FILE" python3 tools/prepare_h0.py \
+    --dataset appworld --harness loop --side train --split declared \
+    --study-ids "$STUDY_IDS_FILE" --sampling all --trials 1 --jobs 32 \
+    --runs-root "$RUNS_ROOT"
 ```
 
-The tool refuses instead of measuring when a valid baseline for the same configuration is already
-on disk (two measurements of one state are two numbers, and picking either is a choice no record
-can defend), and it refuses to *publish* a baseline with holes: fewer tasks than the study set, any
-invalid task, or no `h0_sha` is not a baseline.
+The tool returns success and reuses an existing compatible measurement.
+Publication requires the complete selected cohort, valid task measurements and
+an H0 hash. Before reusing the donor, review its round-zero point in
+`curve.jsonl`. Check that `per_task` covers exactly the study IDs, all task
+scores are finite, and `n_invalid` is zero. For the single-trial run above,
+the curve omits `n_trials` and `per_task_trials`. For a multi-trial run, also
+check that `n_trials` matches the requested count, `per_task_trials` has the
+same study IDs, and each ID has exactly that many finite scores. An earlier
+trial's score can survive a later failure, and the publication check can
+accept that partial record.
+Also check that `identity.jobs` matches the recipient's `--jobs`, since
+concurrency is outside the preparation tool's reuse key. If either check fails
+or the required fields are missing, remeasure with the intended settings in a
+fresh external `--runs-root` and use that root for the donor and its recipients.
 
-`--study-ids` is forwarded to the driver's `--tasks` selector for every dataset,
-before setup and H0 evaluation. Empty or duplicate-ID files are refused before
-launch; completed and reused baselines must match the actual study IDs.
-Use `--split default`, `--split official` or `--split <file.json>` to choose an
-explicit division; the default remains `declared`. Explicit split selections
-are included in H0 configuration identity, with JSON files identified by content.
+Pass the donor's cohort explicitly to each recipient. The command below
+verifies strict reuse before starting any method rounds. Use the same AppWorld
+study file for the adapter's declared train side.
 
-**What counts as the same configuration** is the dataset, the side, the study-id set (by content,
-not by path), an explicitly selected split, the agent model and the endpoint. A different model
-or a different study set is a different H0, and the tool measures one rather than reusing.
+```bash
+# Set H0_RUN to the printed --h0-from ID, WORK_ROOT to an external work
+# directory, and RUN_ID to a fresh recipient ID.
+(
+    set -eu
+    task_ids=$(paste -sd , < "$STUDY_IDS_FILE")
+    HG_APPWORLD_STUDY_IDS="$STUDY_IDS_FILE" python3 driver.py \
+        --dataset appworld --harness loop --side train --split declared \
+        --sampling all --trials 1 --jobs 32 --tasks "$task_ids" \
+        --runs-root "$RUNS_ROOT" --work-root "$WORK_ROOT" --h0-from "$H0_RUN" \
+        --run-id "$RUN_ID" --rounds 0 --improver none --fail-on-incomplete
+)
+```
 
-`--h0-from` copies the donor's point **and its `round0_traces`**, so every method's first input
-traces are the same traces too -- which matters for methods that read the traces rather than the
-score.
-Namespaced task IDs retain their directory prefixes when these traces are read into the
-method's evidence channel, including ordered trial traces; the same reader restores resume evidence.
+`--study-ids` is forwarded to the driver's `--tasks` selector. Empty or duplicate
+IDs are refused. The default split is `declared`; choose another with `--split`.
+The configuration binds task IDs and custom split files by content. It also
+binds the dataset, side, agent model/backend/endpoint, trials, sampling,
+Harness source and applicable scoring, input and runtime identities. See the
+[preparation implementation](../tools/prepare_h0.py) and
+[H0 reuse guide](h0-content-comparability.md) for strict reuse, content-attested
+donors and the published historical baseline.
+
+Recipient runs use the donor's round-zero point and `round0_traces`. Namespaced
+IDs and ordered trial traces are preserved in the method evidence channel.
+
+The previous walkthrough illustrated the tool output with 0.0111 on a
+90-task AppWorld cohort. Keep that value with its original example.
 
 **This page is the procedure.** Document reusable adapter contracts in the adapter's own public documentation; preserve historical evaluation evidence separately and link only to material actually distributed with the project.
 If the dataset is new to you, read `docs/dataset-first-day.md` first: it is the
@@ -53,9 +76,10 @@ Three rules that produce most of the failures this page exists to prevent:
 
 1. **Read the function that computes the number**, not the paper. Dropping a requirement is
    a downgrade; adding one is an invention; both produce a plausible number.
-2. **Everything the check needs must travel in `VERIFY.inputs`.** The verification namespace
-   hides the platform tree (`eval/containers/sandbox.py`), so a check that imports from `data/` works
-   by hand and fails under `--platform`.
+2. **Declare the verifier's dependencies.** Use `VERIFY.inputs` for private
+   task inputs and [verifier runtime declarations](dataset-runtime-interfaces.md) for
+   supported read-only runtime mounts. The verifier namespace hides the platform
+   tree, so test imports and paths through `--platform`.
 3. **The gold never reaches the agent.** `SETUP` is trimmed of reference solutions,
    walkthroughs and expected outputs; `VERIFY.inputs` is re-materialised after the agent
    stops. If the answer is readable from the task workdir, the oracle scores 1 for the wrong
@@ -71,20 +95,21 @@ unreachable check from a weak harness, and these are what separate them.
 | # | gate | how you prove it |
 | --- | --- | --- |
 | 1 | **oracle control scores 1** | `python3 data/datasets/<name>/control.py --oracle` |
-| 2 | **do-nothing control scores 0** | `python3 data/datasets/<name>/control.py --noop` |
-| 3 | **the official scorer is copied verbatim into a test, with a differential test** | `tests/quality/test_<name>_official_scorer.py` |
+| 2 | **do-nothing control matches the adapter's expected outcome** | `python3 data/datasets/<name>/control.py --noop` |
+| 3 | **the scorer is checked against the pinned official metric** | `tests/quality/test_<name>_official_scorer.py` |
 | 4 | **`KIND = "dataset"`** | `python3 tools/dataset_lint.py` |
-| 5 | **it runs** | `python3 tools/studies/task_difficulty.py --dataset <name>` returns 0 |
+| 5 | **the intended route produces a measurement** | Inspect the platform run's `run_meta.json`, `curve.jsonl` and per-task verdicts for the planned cohort. |
 
 Gates 1 and 2 must pass **twice**: by hand, and through the platform
 (`… --oracle --platform`, which drives `SETUP → harness → VERIFY` via
-`eval.run.runner.run_one`). The QA family's control is shared —
-`python3 data/scaffolds/qa/control.py --dataset <name> --oracle` — not a per-dataset script. Gate 3
-means *transcribe their function*, quote its upstream line numbers, and add a drift test that
-fails when the upstream lines move. Importing their package and calling it "the same" is not
-gate 3 — the point is that the number you publish is the number they publish, provably.
-Where the metric *is* the upstream package's own function (Jericho's normalised score), the
-test pins the table and the game set instead, and says so.
+`eval.run.runner.run_one`). Check the expectations and any scoped exemptions
+in [the dataset controls](../tests/quality/test_dataset_controls.py).
+PersonaMem-v2 and MemoryAgentBench expect a `null` no-op reward. Preserve
+that outcome and its recorded reason. The QA family's control is shared —
+`python3 data/scaffolds/qa/control.py --dataset <name> --oracle`. For a
+transcribed scorer, cite the pinned upstream function and compare the local
+implementation against it. For an upstream engine or package scorer, pin the
+engine and inputs and verify the claimed metric with independent controls.
 
 Gate 3 has three admissible forms, and which one applies is decided by what the benchmark
 publishes, not by which is cheapest:
@@ -92,12 +117,20 @@ publishes, not by which is cheapest:
 * the metric **is a function in the upstream package** (Reasoning Gym's
   `Dataset.score_answer`) — call it, pin the package version, and compare the call against the
   library called independently in the test;
-* the metric is **a column of a table the benchmark publishes** (MuSiQue's `answer_f1`,
-  2WikiMultihopQA's `Ans F1`), while other columns of the same evaluator need evidence this
-  contract cannot carry — report that column **under its own name**, transcribe the columns
-  that cannot be carried, and have the evidence say which are missing;
-* **nothing this contract can compute appears in that table** (HotpotQA, whose leaderboard
-  number is `joint`) — that is **§5 (a refusal)**, not a reason to report a nearby number.
+* the adapter reports **a published component under its own name**. HotpotQA
+  uses answer F1 as reward and reports supporting-fact and joint metrics
+  separately as diagnostics. The [MuSiQue adapter](../data/datasets/musique.py)
+  reports official answer and support components through
+  `data.datasets.musique.aggregate` and labels its scalar reward as a platform
+  product.
+* a required metric has **no faithfully supported execution or evidence route**.
+  Use the refusal procedure in §5 and name the missing requirement.
+
+MuSiQue copies its [output contract](musique-output-contract.md) verbatim into
+each task as `qa/output-contract.md`. Keep its bytes stable to preserve
+existing verification contexts. The adapter serves MuSiQue-Ans v1.0 dev and
+reads the full dev pool when asked for task or split maps. It declares no
+train/eval partition. Use `--split default` for the platform's hash division.
 
 The distinction is not cosmetic: a number that is near a published one and shares its name
 makes a curve point indistinguishable from a wrong metric, while a column reported under its
@@ -106,6 +139,13 @@ own column name is the benchmark's number.
 `tests/quality/test_dataset_controls.py` enforces gates 1–3 over every published dataset: a
 dataset with no row there fails the suite, which is what stops the next one from being
 onboarded without a way to show its grade is reachable.
+
+For Gate 5, record the dataset, runtime route and task IDs from an actual
+platform measurement, using the applicable [execution policy](../eval/policy/diagnostic_policy.py).
+Check that the curve and verdicts cover the intended measurement cohort with
+finite scores. Record the reasons for exclusions and any invalid or unmeasured
+outcomes. `task_difficulty.py` summarizes existing runs and exits successfully
+when it skips a dataset with no measured state.
 
 ---
 
@@ -200,31 +240,11 @@ Network access depends on the host. If a pinned raw GitHub URL is inaccessible,
 only that host; declared checksums still apply. The header of `DOWNLOADS.md`
 documents these endpoint settings.
 
-**A dataset can be blocked twice, at the transport and at its preparation interpreter, and
-one fix does not lift the other.** `memoryagentbench` measured both (2026-11-02, re-measured
-2026-11-03): its pinned `punkt_tab.zip` is on the reset-blocked `raw.githubusercontent.com`,
-and its preparation imports `nltk`/`regex`/`tiktoken` at versions that decide the sentence
-tables, so it cannot run in the interpreter every other dataset shares. Two commands
-provision it, each with one variable set per blocker:
-
-```sh
-HG_GH_RAW_MIRROR=https://ghproxy.net python3 tools/datasets.py --fetch --dataset memoryagentbench
-HG_MAB_PYTHON=/tmp/hg-mab-venv/bin/python python3 data/datasets/memoryagentbench/prepare.py \
-    --raw "$R/raw" --resources "$R/resources" --output "$R/prepared"
-```
-
-with `R=<the dataset root>`, and the prepared interpreter built once:
-`python3 -m venv /tmp/hg-mab-venv && /tmp/hg-mab-venv/bin/pip install nltk==3.10.3
-regex==2026.9.29 tiktoken==0.14.0`. In the recorded network check, omitting the mirror
-ended with `FAIL … curl exited 35: curl: (35) Recv failure: 连接被对方重置`.
-An incompatible preparation interpreter refuses with
-`dependency_version_mismatch:nltk` plus the three pins, the three installed versions and
-that install command. `HG_MAB_PYTHON` is a **prepared interpreter, not an install into the
-shared one**: it is the shape `HG_SWE_PYTHON` and `HG_JUDGE_*_PYTHON` already use, and
-`prepare.py` re-executes itself under it before reading anything. Note
-`requirements-prepare.txt` pins `nltk==3.10.4` (the first release outside
-GHSA-8mgp-746c-j5xp's `<= 3.10.3` range) while the gate demands the reproducible `3.10.3`:
-install the gate's three versions, not the file.
+Transport and preparation can fail independently. See
+[MemoryAgentBench preparation](../data/datasets/memoryagentbench/README.md#preparation)
+for the pinned tokenizer dependencies, PyArrow, resource preparation and
+`HG_MAB_PYTHON` setup. The historical 2026-11-02 and 2026-11-03 checks saw a
+connection reset on raw GitHub without a mirror.
 
 ---
 
@@ -318,9 +338,10 @@ data/datasets/<name>/oracle_harness/{agent.py,harness.json}   the scripted oracl
 
 Three measured traps:
 
-* **`files` environments may carry only `kind`.** `data/scaffolds/registry.py::_check_env` refuses
-  `agent_timeout_s` and friends — the platform defaults apply, so a task that needs longer
-  must be sized down or dropped, and the drop must be recorded.
+* **Declare only supported `files` fields.** In addition to `kind`, the registry
+  accepts `agent_timeout_s`, `verify_timeout_s`, `network: "none"`, `agent_runtime`
+  and `task_python`. Use the [runtime interfaces](dataset-runtime-interfaces.md)
+  and the [dataset schema](../data/dataset.schema.json) to check the field shapes.
 * **A directory in `VERIFY.inputs` must be re-materialisable.** The platform clears the
   target before copying (`eval/observe/tracing.py::_clear_tree`), because a read-only input tree
   (a JRE, a game suite) cannot be overwritten otherwise.
@@ -339,9 +360,10 @@ Three measured traps:
    Then `python3 tools/datasets.py --check`.
 4. **Write the CLI and the check as one shared library plus two thin programs.**
 5. **Strip the answer** from everything the agent receives.
-6. **Write the oracle and the do-nothing control and run both** — `--oracle` 1, `--noop` 0,
-   by hand and through `--platform` — **before writing any prose**.
-7. **Copy the official scorer into a test**, with upstream line numbers and a drift test.
+6. **Write and run the oracle and do-nothing controls** by hand and through
+   `--platform`. Check the declared outcomes before writing the integration notes.
+7. **Record the scoring evidence required by [Gate 3](#1-the-five-gates).**
+   Cite the pinned metric and the tests or controls that verify it.
 8. **Name the reason in the evidence**, and keep "unmeasured" distinct from "failed": no
    reward file, exit 3, `evidence["measured"] is False` → the task is `unmeasured`, not 0.
 9. **Run `python3 tools/dataset_lint.py` and `python3 tools/datasets.py --write`.**
@@ -360,12 +382,13 @@ outcome is a **first-class refusal**, not a nearby metric:
 * `load()` raises that same sentence;
 * `tools/dataset_lint.py` prints `REFUSED <name>: …`, returns **rc 0**, and still checks
   `KIND`, the required callables, the data-root path and the `downloads()` entries;
-* `tests/quality/test_refusal_contract.py` recognises **two kinds**, tested against a synthetic
-  module because no adapter refuses today (2026-11-04: `tau2_bench`, the last one, was
-  implemented instead):
-  * `contract_gap` — the metric needs a channel the contract does not have
-    (`fever`'s `strict_score` needed predicted evidence; `hotpotqa`'s `joint` needed
-    supporting facts; `sotuqa`'s headline was an unpinned LLM judge);
+* `tests/quality/test_refusal_contract.py` checks two kinds using a synthetic
+  adapter. Use the [blocker registry](../registry/dataset-blockers.json) for
+  current dataset dispositions.
+  * `contract_gap` — the metric needs an unsupported channel. Past examples
+    included FEVER's evidence, HotpotQA's supporting facts and SOTUQA's
+    unpinned judge. Current FEVER and HotpotQA adapters accept structured
+    evidence. Their own documentation defines the reward and diagnostic metrics.
   * `unreproducible` — the metric cannot be reproduced from the released samples at all
     (`api_bank`'s gold call reproduced its own recorded result on only 262/508 = 51.6%).
 
@@ -383,18 +406,17 @@ refusal.
 
 ```sh
 python3 data/datasets/<name>/control.py --oracle              # expect reward 1
-python3 data/datasets/<name>/control.py --noop                # expect reward 0
+python3 data/datasets/<name>/control.py --noop                # check the declared outcome
 python3 data/datasets/<name>/control.py --oracle --platform   # expect reward 1 again
-python3 data/datasets/<name>/control.py --noop   --platform   # expect reward 0 again
+python3 data/datasets/<name>/control.py --noop   --platform   # check the declared outcome again
 python3 tools/dataset_lint.py                        # expect: ok <name>, rc 0
 python3 tools/datasets.py --write                    # DOWNLOADS.md, generated
-python3 tools/studies/task_difficulty.py --dataset <name>    # expect rc 0
 python3 -m pytest tests/quality -q                   # the suite stays green
 ```
 
-plus: the official scorer is transcribed with a differential test, the dataset appears in
-`data.scaffolds.registry.published()`, no data byte is in git, and the lesson is appended to the
-skill doc.
+Record the applicable [Gate 3 and Gate 5](#1-the-five-gates) scoring and run evidence. Confirm
+the dataset appears in `data.scaffolds.registry.published()`. Keep dataset
+payloads outside Git and record the integration lesson in the skill doc.
 
 `tests/quality/test_dataset_controls.py` enforces the shape of this section over every
 published dataset: each one must declare a control entry point and a scorer test, and the
