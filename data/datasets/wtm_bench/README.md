@@ -1,6 +1,6 @@
 # WTM-Bench
 
-[Workbook Time Machine](https://arxiv.org/abs/2608.07873) evaluates agents that edit a real starter workbook from a natural-language request. This adapter serves the 150 curated Level 5 evaluation tasks from the [Microsoft release](https://github.com/microsoft/WTM-Bench/tree/83d45ae601f3241ac7246613c67b765e48f93c06), under the `wtm_bench/Backward_EnronFuse.*` IDs. The [Hugging Face collection](https://huggingface.co/datasets/prose-ms/wtm-bench) also contains a larger pool. The full Level 5 evaluation uses all 150 tasks. HarnessGrad studies can use the [workbook-grouped 50/50/50 research split](../../../experiments/splits/wtm-bench/README.md).
+[Workbook Time Machine](https://arxiv.org/abs/2608.07873) evaluates agents that edit a real starter workbook from a natural-language request. The curated evaluation uses all 150 Level 5 tasks from the [Microsoft release](https://github.com/microsoft/WTM-Bench/tree/83d45ae601f3241ac7246613c67b765e48f93c06). The optional [100/100/100 research split](../../../experiments/splits/wtm-bench/README.md) selects 300 additional tasks from the [Hugging Face release](https://huggingface.co/datasets/prose-ms/wtm-bench/tree/c565125154df4a197611847d4a3197909f75d9b4), with one instruction variant per task across Levels 1, 3 and 5.
 
 Actors receive the released user request and workbook preview together with `input.xlsx`. They can edit the workbook with the task-owned Python and openpyxl and submit `output.xlsx`. The verifier checks the pinned starter and reference workbooks and grades a private copy of the submission. Reference files and the scorer are private to verification.
 
@@ -18,12 +18,20 @@ python tools/dataset_lint.py --dataset wtm_bench
 
 Preparation pins the archive, Level 5 parquet, complete task catalogue, scorer source and each workbook. The official scorer ships under the MIT license in Microsoft's source archive. The curated benchmark data is distributed under CDLA-Permissive-2.0 as stated in the dataset card.
 
-For the curated evaluation, use `--split official --side eval`. This command checks data and sandbox readiness for a single task without invoking a model.
+After preparing the curated release, prepare the mixed-level collection with Git and PyArrow.
+
+```bash
+python data/datasets/wtm_bench/prepare.py --study
+```
+
+The command fetches the pinned full parquet and the selected workbook pairs. Set `HF_ENDPOINT` to use a Hugging Face mirror, or pass `--study-source /path/to/snapshot` for a local copy of the same revision. Set `HG_WTM_BENCH_POOL=mixed` and use the [mixed-level split files](../../../experiments/splits/wtm-bench/README.md) for training and held-out evaluation.
+
+For the curated evaluation, use `HG_WTM_BENCH_POOL=curated` (the default) and `--split official --side eval`. This command checks data and sandbox readiness for a single task without invoking a model.
 
 ```bash
 python driver.py --dataset wtm_bench --split official --side eval \
   --tasks wtm_bench/Backward_EnronFuse.566 --harness-path examples/bash-harness \
-  --agent-backend mock --check-only
+  --agent-backend mock --rounds 0 --check-only
 ```
 
 ## Scoring and controls

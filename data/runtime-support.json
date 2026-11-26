@@ -121,9 +121,9 @@
       "datasets": [
         "wtm_bench"
       ],
-      "loading_and_preparation": "Pinned Microsoft archive, curated Level 5 task catalogue and workbook bytes. Requires PyArrow for preparation and a separate managed Python 3.12 execution runtime.",
-      "trusted_execution": "Sandboxed workbook editing and a bound, offline official workbook grader. Neither the scorer nor the reference workbooks are staged for actors or methods.",
-      "verification_scope": "All 150 released workbook pairs checked directly with the pinned official scorer. At reported precision, references score 1 on 148 tasks and 0.8 on two chart tasks. All 150 unchanged workbooks score 0. Sandbox controls check native workbook scores and missing output. The original step-reward metric and model runs are outside this coverage."
+      "loading_and_preparation": "Pinned Microsoft archive for the curated Level 5 release and a pinned Hugging Face revision for the optional mixed-level study. Requires PyArrow for preparation and a separate managed Python 3.12 execution runtime.",
+      "trusted_execution": "Sandboxed workbook editing with a bound, offline official grader. The scorer and reference workbooks stay private to verification.",
+      "verification_scope": "All 150 curated workbook pairs checked directly with the pinned scorer. At reported precision, references score 1 on 148 tasks and 0.8 on two chart tasks. All 150 unchanged workbooks score 0. The mixed-level study pins 300 additional workbook pairs and uses the same scorer."
     },
     {
       "datasets": [
