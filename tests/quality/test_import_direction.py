@@ -118,7 +118,8 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/orchestration/selected_dataset.py": {
         "__future__", "dataclasses", "pathlib", "sys", "typing",
         "data.scaffolds.custom_split", "eval.ckpt.git_state", "eval.policy.diagnostic_policy",
-        "eval.run.metrics", "harnessgrad.config", "harnessgrad.orchestration.environments",
+        "eval.run.metrics", "eval.service.action_policy", "harnessgrad.config",
+        "harnessgrad.orchestration.environments",
         "harnessgrad.orchestration.readiness", "harnessgrad.provenance.scoring_identity",
         "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.verification_context",
         "harnessgrad.provenance.measurement_components"},
@@ -211,7 +212,7 @@ EXTRACTED_UNIT_IMPORTS = {
     "eval/run/task_workspace.py": {"__future__", "json", "pathlib", "shutil", "tempfile"},
     "eval/run/task_session.py": {
         "__future__", "sys", "eval.containers.responses_overlay", "eval.run.tool_relay",
-        "eval.service.modelgate", "eval.service.services"},
+        "eval.service.action_policy", "eval.service.modelgate", "eval.service.services"},
     "eval/run/task_output.py": {"__future__", "dataclasses", "eval.run.trial_evidence"},
     "eval/run/task_verification.py": {"__future__", "dataclasses", "eval.containers.immutable_runtime"},
     "console/run_query.py": {
@@ -694,8 +695,9 @@ class ImportDirectionTests(unittest.TestCase):
         # oracle），由 `tools/scenario_builder.py` 读写，和 `runtimes` 一样是纯数据、没有 import。
         # `candidates` 是控制台"编辑这一版"复制出来的候选 harness 根（每个目录一个
         # harness.json + 代码），也是纯数据：它不参与 import，平台只复制和读取它。
+        # Action policy ports declare public environment controls for opt-in evaluations.
         infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes", "authored",
-                          "candidates"}
+                          "candidates", "action_policy_ports"}
         for directory in (ROOT / "data").iterdir():
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")

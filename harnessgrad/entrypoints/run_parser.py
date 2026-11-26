@@ -205,6 +205,8 @@ def build_parser() -> argparse.ArgumentParser:
                          "reproduced.")
     ap.set_defaults(sandbox=True)
     ap.add_argument("--runs-root", default="runs")
+    ap.add_argument("--action-policy-socket", type=Path, metavar="PATH",
+                    help="enable a trusted local action policy for compatible native episodes")
     ap.add_argument("--visual-evidence", action="store_true",
                     help="archive inline model-request images for training trials on the native HTTP route")
     ap.add_argument("--no-sandbox", dest="sandbox", action="store_false",

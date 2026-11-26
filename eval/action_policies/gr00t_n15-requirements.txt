@@ -1,0 +1,17 @@
+# Install the CUDA build of torch==2.5.1 and torchvision==0.20.1 first.
+# Install a matching FlashAttention 2.7.4.post1 wheel for the selected CUDA/Python ABI.
+accelerate==1.6.0
+albumentations==1.4.18
+av==12.3.0
+diffusers==0.30.2
+dm-tree==0.1.8
+einops==0.8.1
+numpy==1.26.4
+numpydantic==1.6.7
+opencv-python-headless==4.11.0.86
+pandas==2.2.3
+peft==0.17.0
+pydantic==2.10.6
+setuptools==80.9.0
+timm==1.0.14
+transformers==4.51.3

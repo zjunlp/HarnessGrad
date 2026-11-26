@@ -19,6 +19,7 @@ class TaskSession:
         self.web = None
         self.stepwise = None
         self.tool = None
+        self.action_policy = None
 
     def start_services(self, specs, *, recordings_root, run_id, task_id, run_seed):
         self.services = services.start(specs, recordings_root=recordings_root,
@@ -58,6 +59,21 @@ class TaskSession:
         self.tool = tool_relay.start(setup, **({'context': context} if context is not None else {}),
                                     **({'private_diagnostics': True} if private_diagnostics else {}))
 
+    def start_action_policy(self, setup, **episode):
+        from eval.service.action_policy import EpisodePolicy
+
+        self.action_policy = EpisodePolicy(setup, self.tool.path, **episode).start()
+
+    @property
+    def tool_path(self):
+        route = self.action_policy or self.tool
+        return route.path if route is not None else None
+
+    def stop_action_policy(self):
+        if self.action_policy is not None:
+            self.action_policy.close()
+            self.receipt['action_policy'] = dict(self.action_policy.summary)
+
     def environment_usage(self, *, project_model):
         usage = self.services.usage() if self.services is not None else {}
         if self.tool is not None and self.tool.model is not None:
@@ -77,6 +93,7 @@ class TaskSession:
         """One explicit close pass; receipt mutations remain visible to the caller."""
         output.capture_pending()
         self.collect_responses(responses_enabled)
+        self.stop_action_policy()
         self.close_tool(output.evidence)
         self.close_stepwise()
         self.close_model(native_model)

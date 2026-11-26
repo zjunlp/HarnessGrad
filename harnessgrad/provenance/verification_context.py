@@ -257,10 +257,14 @@ def _capture(tasks, scorable, setups, verifiers, envs, *, sandbox, runtimes):
             if sandbox and (mappings[2].get(tid) or {}).get('kind', 'files') == 'files':
                 from eval.containers.sandbox import PLAN_VERSION
                 policy['native_sandbox_plan'] = PLAN_VERSION
+            setup = _sources(mappings[0].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots)
+            if isinstance(setup, dict) and isinstance(setup.get('action_policy'), dict):
+                # The socket locates the service. Its declared identity defines the policy.
+                setup['action_policy'].pop('socket', None)
             value = {'measurement_protocol': MEASUREMENT_PROTOCOL,
                      'execution_policy': policy,
                      'task': task, 'scorable_present': tid in scorable, 'scorable': scorable.get(tid),
-                     'setup': _sources(mappings[0].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots),
+                     'setup': setup,
                      'verifier': _sources(mappings[1].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots),
                      'env': _sources(mappings[2].get(tid), memo, runtimes=runtimes, cache_roots=cache_roots)}
             if runtimes is not None:

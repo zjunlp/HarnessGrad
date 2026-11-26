@@ -236,9 +236,17 @@ def admit_selected_run(options, partition, selection, *, model, scenario, harnes
 
 def build_selected_run_plan(options: SelectionOptions, source: DatasetSource, *, runs_root: Path,
                             scenario: dict | None, model: dict, harness_source: Path,
-                            policy_evidence: dict | None, reporter: Reporter) -> SelectedRunPlan:
+                            policy_evidence: dict | None, reporter: Reporter,
+                            action_policy_socket: Path | None = None) -> SelectedRunPlan:
     partition = resolve_catalog_partition(options, source, runs_root, scenario, reporter)
     selection = select_run_tasks(options, partition, policy_evidence)
     setups, verifiers, envs = load_selected_declarations(options, source, selection, scenario)
+    if action_policy_socket is not None:
+        from eval.service.action_policy import bind_setups
+        try:
+            setups = bind_setups(action_policy_socket, options.dataset, selection.ids,
+                                 setups, envs, sandbox=options.sandbox)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise SelectedRunRefused(f'action policy admission failed: {exc}') from exc
     return admit_selected_run(options, partition, selection, model=model, scenario=scenario,
                               harness_source=harness_source, setups=setups, verifiers=verifiers, envs=envs)

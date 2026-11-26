@@ -492,7 +492,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     try:
         selected = build_selected_run_plan(
             options, datasets, runs_root=runs_root, scenario=scenario_spec, model=model,
-            harness_source=harness_src, policy_evidence=policy_evidence, reporter=console)
+            harness_source=harness_src, policy_evidence=policy_evidence, reporter=console,
+            **({'action_policy_socket': args.action_policy_socket} if args.action_policy_socket else {}))
     except SelectedRunRefused as exc:
         exc.report(console)
         return 2
@@ -977,6 +978,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             metadata_platform, oracle_source, oracle_coverage),
         attribution=run_metadata.AttributionRecord(model["model"], model["backend"], FRAMEWORK_VERSION,
             improver, improver_tool_calls, improver_tool_calls_detail), web_record=web_record)
+    if args.action_policy_socket:
+        metadata_fields['action_policy'] = setups[side_ids[0]]['action_policy']['identity']
     if args.task_budget_context is not None:
         metadata_fields['task_http_budget'] = {
             'mode': 'strict', 'split': args.task_budget_context.split,

@@ -343,6 +343,11 @@ def run_one(repo: Path, task: dict, timeout_s: int | None = None,
                               stage='task budget admission', service=None)
             result['task_budget_stop'] = {'scope': 'task', 'split': task_budget_context.split, **stop}
             return result
+    if (setup or {}).get('action_policy') and (
+            not sandbox or (env or {}).get('kind') != 'files' or (env or {}).get('network') != 'none'
+            or not setup.get('tool_relay') or setup.get('workers') or _worker is not None):
+        return _invalid(task, 'action policy requires an isolated native tool route',
+                        stage='action policy admission', service=None)
     judge_spec = (verifier or {}).get("judge")
     if judge_spec is not None:
         from eval.service.judge import Judge, JudgeUnavailable
@@ -875,6 +880,13 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 reason = getattr(exc, 'safe_message', exc) if evidence_output is not None else exc
                 return _invalid(task, reason, stage="tool relay", service=None)
 
+        if (setup or {}).get('action_policy'):
+            try:
+                session.start_action_policy(setup, task_id=task['task_id'], trial_id=trial_id,
+                                            run_seed=run_seed, timeout_s=timeout_s)
+            except (OSError, ValueError, RuntimeError) as exc:
+                return _invalid(task, exc, stage='action policy route', service=None)
+
         # The subject's resource envelope, read once: the receipt and the launch must
         # describe the same numbers, and two reads of the config are two chances for them
         # to disagree. A container gets its envelope from Docker
@@ -912,10 +924,10 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                     network=env_spec.get('network'),
                     model_socket=(session.model.socket_path if isinstance(session.model, NativeModelRoute) else None),
                     model_path=(session.model.path if isinstance(session.model, NativeModelRoute) else ''),
-                    tool_socket=(worker['socket'] if worker is not None else
-                                 session.tool.path if session.tool is not None else None),
+                    tool_socket=worker['socket'] if worker is not None else session.tool_path,
                     package_overlays=package_overlays, immutable_runtimes=immutable_runtimes,
-                    managed=managed_python is not None, private_paths=private_paths)
+                    managed=managed_python is not None, private_paths=private_paths + (
+                        (Path(setup['action_policy']['socket']),) if session.action_policy is not None else ()))
             return actor_execution.execute(spec, container_run=container_mod.run,
                                             process_run=run_process, sandbox_run=sandbox_mod.run)
 
@@ -944,9 +956,12 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                 finally:
                     if session.stepwise is not None:
                         session.stepwise.stop()
+                    session.stop_action_policy()
                     if session.tool is not None:
                         session.tool.stop()
             exit_code, stderr = capture.process.returncode, capture.process.stderr[-2000:]
+            if session.action_policy is not None and session.action_policy.fault:
+                return _invalid(task, session.action_policy.fault, stage='action policy route', service=None)
             if session.tool is not None:
                 fault = session.tool.fault()
                 if fault is not None:
@@ -1022,6 +1037,8 @@ def _run_one(repo: Path, task: dict, timeout_s: int | None = None,
                                      "empty" if not answer.strip() else "present"}
         if session.tool is not None and session.tool.recording is not None:
             verdict["interaction_record"] = session.tool.recording
+        if session.action_policy is not None:
+            verdict['action_policy'] = dict(session.action_policy.summary)
         # The environment's own spend, read from the recordings **before teardown**:
         # the containers are about to be removed and their evidence with them.
         env_usage = session.environment_usage(project_model=_environment_model_usage)

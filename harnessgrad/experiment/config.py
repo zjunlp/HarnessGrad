@@ -76,6 +76,7 @@ _FLAGS: dict[str, str] = {
     "no_sandbox": "--no-sandbox",
     "fail_on_incomplete": "--fail-on-incomplete",
     "visual_evidence": "--visual-evidence",
+    "action_policy_socket": "--action-policy-socket",
 }
 
 #: The keys, for the error message and for a caller that wants to document them.
