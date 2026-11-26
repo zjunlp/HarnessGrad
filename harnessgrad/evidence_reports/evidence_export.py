@@ -18,7 +18,7 @@ import tempfile
 from harnessgrad.evidence_reports import evidence, evidence_stats
 from harnessgrad.evidence_reports.receipt_verification import (
     DEFAULT_MAX_BYTES, ReceiptStore, canonical, claim_states, digest,
-    measurement_problems, safe_id, verify_in_store,
+    measurement_problems, parse_json, safe_id, verify_in_store,
 )
 
 SCHEMA = 'harnessgrad.evidence-export.v1'
@@ -42,6 +42,8 @@ _NUMERIC_FIELDS = frozenset(('jobs', 'trials', 'rounds', 'max_steps', 'max_token
     'max_attempts', 'memory_mb', 'cpus', 'pids', 'seed', 'requested_rounds',
     'completed_rounds'))
 _BOOLEAN_FIELDS = frozenset(('coverage_complete', 'sandbox'))
+_ACTION_POLICY_COUNTS = ('requests', 'predictions', 'executed_steps', 'clipped_values')
+_ACTION_POLICY_TIMES = ('queue_seconds', 'policy_seconds', 'inference_seconds', 'environment_seconds')
 
 
 def _object(value):
@@ -133,14 +135,57 @@ def _point(point, verification_groups=None, component_groups=None):
     return result
 
 
+def _action_policy_metrics(value):
+    source = _object(value)
+    counts = {key: source[key] for key in _ACTION_POLICY_COUNTS
+              if type(source.get(key)) is int and source[key] >= 0}
+    times = {key: source[key] for key in _ACTION_POLICY_TIMES
+             if evidence.finite_number(source.get(key)) and source[key] >= 0}
+    return {**counts, **times} or None
+
+
+def _action_policy_trials(store, point):
+    rows = []
+    for tid in sorted(point['per_task']):
+        try:
+            data = store.read(point['run_id'], f"verdicts/round-{point['round']}/{tid}.json")
+            verdict = _object(parse_json(data)) if data is not None else {}
+        except (OSError, ValueError, RecursionError):
+            verdict = {}
+        if (verdict.get('task_id') != tid or type(verdict.get('round')) is not int
+                or verdict['round'] != point['round']):
+            rows.append(None)
+            continue
+        trials = verdict.get('trials', [verdict])
+        metrics = ([_action_policy_metrics(_object(trial).get('action_policy')) for trial in trials]
+                   if isinstance(trials, list) else [])
+        rows.append(metrics if any(metrics) else None)
+    return rows
+
+
+def _valid_policy_trials(rows, task_scores):
+    return (isinstance(rows, list) and isinstance(task_scores, list) and len(rows) == len(task_scores)
+            and any(rows) and all(row is None or (
+                isinstance(row, list) and any(row)
+                and all(metric is None or metric == _action_policy_metrics(metric) for metric in row)
+            ) for row in rows))
+
+
 def _metadata(meta):
     meta = meta or {}
-    return {**_fields(meta, ('run_id', 'dataset', 'harness', 'agent_model', 'agent_backend')),
-            'dataset_runtime': evidence_stats.dataset_runtime(meta),
-            'harness_runtime': evidence_stats.actor_runtime(meta),
-            'platform': _fields(meta.get('platform'), ('content_sha', 'git_sha', 'git_commit')),
-            'config': _config(meta),
-            'completion': _fields(meta.get('completion'), ('status', 'requested_rounds', 'completed_rounds', 'coverage_complete'))}
+    result = {**_fields(meta, ('run_id', 'dataset', 'harness', 'agent_model', 'agent_backend')),
+              'dataset_runtime': evidence_stats.dataset_runtime(meta),
+              'harness_runtime': evidence_stats.actor_runtime(meta),
+              'platform': _fields(meta.get('platform'), ('content_sha', 'git_sha', 'git_commit')),
+              'config': _config(meta),
+              'completion': _fields(meta.get('completion'), ('status', 'requested_rounds', 'completed_rounds', 'coverage_complete'))}
+    policy = _object(meta.get('action_policy'))
+    identity = _fields(policy, ('backend', 'protocol', 'data_config', 'embodiment', 'control'))
+    identity.update({key: policy[key] for key in ('chunk_size', 'denoising_steps')
+                     if type(policy.get(key)) is int and policy[key] > 0})
+    if identity:
+        result['action_policy'] = identity
+    return result
 
 
 def _attempt(store, run, authored):
@@ -320,8 +365,17 @@ def build_export(document, run_root, *, max_bytes=DEFAULT_MAX_BYTES, max_runs=No
         verification_groups = {}
         component_groups = {}
         for name, run in runs.items():
-            projected = {'run_meta': _metadata(run['meta']),
-                         'curve': [_point(p, verification_groups, component_groups) for _, p in sorted(run['points'].items())],
+            meta = _metadata(run['meta'])
+            policy_recorded = bool(_object((run['meta'] or {}).get('action_policy')))
+            curve = []
+            for _, point in sorted(run['points'].items()):
+                public_point = _point(point, verification_groups, component_groups)
+                if policy_recorded and not public_point['measurement_problems']:
+                    rows = _action_policy_trials(store, point)
+                    if any(rows):
+                        public_point['action_policy_trials'] = rows
+                curve.append(public_point)
+            projected = {'run_meta': meta, 'curve': curve,
                          'patches': [_patch(store, name, number) for number in sorted(run['points'])]}
             units.append({'run_id': name, 'source_sha256': run['hashes'],
                           'missing': run['missing'], 'problems': run['problems'],
@@ -395,6 +449,9 @@ def check_export(bundle):
                 if (type(number) is not int or number < 0 or (name, number) in points
                         or point.get('run_id') != name):
                     return ['invalid_export_round']
+                if 'action_policy_trials' in point and not _valid_policy_trials(
+                        point['action_policy_trials'], point.get('task_scores')):
+                    return ['invalid_export_action_policy_trials']
                 points[name, number] = point
         if (run_ids != {a['run_id'] for a in bundle['manifest']['attempts']}
                 or sorted(run_ids) != bundle['discovery']['run_ids']):
