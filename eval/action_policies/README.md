@@ -69,8 +69,14 @@ runner supplies independent noise seeds for each episode step.
 
 A service implements `describe` and `predict` over the UNIX tool transport. Its
 description declares the named camera and state fields, named action fields,
-action horizon, and control contract. It incorporates the deployed checkpoint
-and implementation identity. A compatible environment supplies a port in
+action horizon, and control contract. It can declare a positive finite
+`predict_timeout_s` for the client's wait after dispatch, with 60 seconds as
+the fallback. A service that declares `recovery_timeout_s` can respond to
+`predict` with `{"status": "recovering"}`. The client then polls the
+`predict_ready` operation for `{"ready": true}` before resubmitting the
+observation. A service-side prediction deadline can return `{"status": "timeout"}`.
+The description incorporates the deployed checkpoint and implementation
+identity. A compatible environment supplies a port in
 `data/action_policy_ports` and exposes `observe` and `step_many` through its
 native episode relay. The current port carries current-frame RGB observations.
 Each configured GR00T checkpoint selects its own upstream data and embodiment

@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import socket as sockets
 import stat
+import sys
 import tempfile
 import threading
 import time
@@ -21,7 +22,7 @@ from eval.service.tool_transport import Relay, ToolCallTimeout, ToolTransportErr
 
 
 PROTOCOL = 'harnessgrad.action-policy.v1'
-PREDICT_TIMEOUT_S = 60.0
+DEFAULT_PREDICT_TIMEOUT_S = 60.0
 CLIENT = Path(__file__).with_name('action_policy_client.py')
 PROMPT = (
     'A learned robot controller is available. Use it to execute the task instruction or a subgoal. '
@@ -57,6 +58,11 @@ def inspect_service(socket, dataset, *, sandbox):
                    for key in ('cameras', 'states', 'actions'))
             or type(identity.get('chunk_size')) is not int or identity['chunk_size'] < 1):
         raise ValueError('invalid action policy service description')
+    for field in ('predict_timeout_s', 'inference_timeout_s', 'recovery_timeout_s'):
+        if field in identity:
+            timeout = identity[field]
+            if type(timeout) not in (int, float) or not 0 < timeout <= sys.float_info.max:
+                raise ValueError(f'action policy {field} must be a positive finite number')
     if (identity.get('control') != environment['control']
             or set(identity.get('cameras', ())) != set(environment['cameras'])
             or set(identity.get('states', ())) != set(environment['states'])
@@ -167,6 +173,8 @@ class EpisodePolicy:
         self.summary = {'sha256': self.binding['sha256'], 'requests': 0, 'predictions': 0, 'queue_timeouts': 0,
                         'executed_steps': 0, 'clipped_values': 0, 'queue_seconds': 0.0,
                         'policy_seconds': 0.0, 'inference_seconds': 0.0, 'environment_seconds': 0.0}
+        if 'recovery_timeout_s' in self.binding['identity']:
+            self.summary['recovery_seconds'] = 0.0
         self.fault = None
         self.directory = Path(tempfile.mkdtemp(prefix='hg-policy-'))
         self.relay = Relay(self.directory / 'tool.sock', self.handle, max_calls=None)
@@ -237,15 +245,49 @@ class EpisodePolicy:
                 self._record_fault(f'{op}: {type(exc).__name__}')
             raise
         finally:
-            self.summary[timing] += time.monotonic() - started
+            if timing is not None:
+                self.summary[timing] += time.monotonic() - started
 
     def _environment(self, op, args):
         return self._request(self.environment_socket, op, args,
                              budget=math.inf, timing='environment_seconds')
 
     def _predict(self, args):
-        return self._request(self.binding['socket'], 'predict', args,
-                             budget=PREDICT_TIMEOUT_S, timing='policy_seconds')
+        identity = self.binding['identity']
+        timeout = identity.get('predict_timeout_s', DEFAULT_PREDICT_TIMEOUT_S)
+        recovery_timeout = identity.get('recovery_timeout_s')
+        recovery_deadline = None
+        while True:
+            result = self._request(self.binding['socket'], 'predict', args,
+                                   budget=timeout, timing='policy_seconds')
+            if result == {'status': 'timeout'}:
+                self._record_fault('predict: timeout')
+                raise ToolCallTimeout('action policy inference deadline reached')
+            if result != {'status': 'recovering'} or recovery_timeout is None:
+                return result
+            if recovery_deadline is None:
+                recovery_deadline = time.monotonic() + recovery_timeout
+            self._await_recovery(recovery_deadline)
+
+    def _await_recovery(self, deadline):
+        started = time.monotonic()
+        try:
+            while True:
+                episode_remaining = self._remaining()
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    self._record_fault('predict_ready: timeout')
+                    raise ToolCallTimeout('action policy recovery deadline reached')
+                result = self._request(self.binding['socket'], 'predict_ready', {},
+                                       budget=remaining, timing=None)
+                ready = result.get('ready') if isinstance(result, dict) else None
+                if ready is True:
+                    return
+                if ready is not False:
+                    raise ValueError('invalid action policy readiness reply')
+                self.closed.wait(min(0.25, remaining, episode_remaining))
+        finally:
+            self.summary['recovery_seconds'] += time.monotonic() - started
 
     def handle(self, op, args):
         if op != 'policy.run':

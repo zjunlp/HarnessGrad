@@ -16,15 +16,18 @@ from harnessgrad.provenance import verification_context
 
 
 def fixture_service(path, *, control=None, events=None, fail=False, value=0.0, before_predict=None,
-                    checkpoint='same'):
+                    checkpoint='same', policy_handler=None, **description_fields):
     env = environment()
     identity = {'protocol': PROTOCOL, 'control': control or env['control'],
                 'cameras': env['cameras'], 'states': env['states'],
-                'actions': list(env['actions']), 'chunk_size': 2, 'checkpoint': checkpoint}
+                'actions': list(env['actions']), 'chunk_size': 2, 'checkpoint': checkpoint,
+                **description_fields}
 
     def handle(op, args):
         if op == 'describe':
             return identity
+        if policy_handler is not None:
+            return policy_handler(op, args)
         if fail:
             raise RuntimeError('private service detail')
         assert op == 'predict'
@@ -188,18 +191,38 @@ def test_policy_failure_and_contract_mismatch(tmp_path):
             route.close()
 
 
+@pytest.mark.parametrize(('description_fields', 'expected'), [({}, 60), ({'predict_timeout_s': 10}, 10)])
+def test_prediction_deadline_uses_service_description(tmp_path, monkeypatch, description_fields, expected):
+    with fixture_service(tmp_path / 'model.sock', **description_fields) as service:
+        setup = bind(service.path, ['task'])['task']
+    monkeypatch.setattr(action_policy, 'time', SimpleNamespace(monotonic=lambda: 100))
+    monkeypatch.setattr(action_policy, 'call', lambda *args, deadline, **kwargs: deadline)
+    route = EpisodePolicy(setup, None, task_id='task', trial_id='1', run_seed='1', timeout_s=120)
+    try:
+        assert route._predict({}) == 100 + expected
+    finally:
+        route.close()
+
+
+@pytest.mark.parametrize('timeout', [None, True, '10', 0, -1, float('inf'), float('nan'), 10**310])
+def test_policy_rejects_invalid_prediction_timeout(tmp_path, timeout):
+    with fixture_service(tmp_path / 'model.sock', predict_timeout_s=timeout) as service:
+        with pytest.raises(ValueError, match='predict_timeout_s must be a positive finite number'):
+            bind(service.path, ['task'])
+
+
 @pytest.mark.parametrize('expiry', ['prediction', 'episode', 'close'])
-def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, monkeypatch, expiry):
+def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, expiry):
     started, release = Event(), Event()
 
     def hold():
         started.set()
         assert release.wait(5)
 
-    if expiry == 'prediction':
-        monkeypatch.setattr(action_policy, 'PREDICT_TIMEOUT_S', 0.25)
+    prediction_timeout = 0.25 if expiry == 'prediction' else 10
     args = {'instruction': 'move', 'steps': 1}
-    with fixture_service(tmp_path / 'model.sock', events=[], before_predict=hold) as service, \
+    with fixture_service(tmp_path / 'model.sock', events=[], before_predict=hold,
+                         predict_timeout_s=prediction_timeout) as service, \
             episode(tmp_path / 'env.sock') as env, ThreadPoolExecutor(max_workers=1) as pool:
         setup = bind(service.path, ['task'])['task']
         route = EpisodePolicy(setup, env.path, task_id='task', trial_id='1', run_seed='1',
@@ -216,6 +239,39 @@ def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, monkeyp
             assert route.summary['executed_steps'] == 0
         finally:
             release.set()
+            route.close()
+
+
+@pytest.mark.parametrize('outcome', ['ready', 'episode', 'recovery'])
+def test_policy_recovery_respects_both_deadlines(tmp_path, outcome):
+    operations = []
+
+    def handle(op, args):
+        operations.append(op)
+        if op == 'predict_ready':
+            assert args == {}
+            return {'ready': outcome == 'ready' and operations.count(op) > 1}
+        if operations.count(op) == 1:
+            return {'status': 'recovering'}
+        return {'actions': [{key: [0.0] * size for key, size in environment()['actions'].items()}] * 2}
+
+    with fixture_service(tmp_path / 'model.sock', policy_handler=handle,
+                         recovery_timeout_s=0.4 if outcome == 'recovery' else 5) as model, \
+            episode(tmp_path / 'env.sock', horizon=1) as env:
+        setup = bind(model.path, ['task'])['task']
+        route = EpisodePolicy(setup, env.path, task_id='task', trial_id='1', run_seed='1',
+                              timeout_s=0.4 if outcome == 'episode' else 10)
+        try:
+            result = route.handle('policy.run', {'instruction': 'move', 'steps': 1})
+            assert route.summary['recovery_seconds'] > 0
+            if outcome == 'ready':
+                assert result['executed_steps'] == 1 and route.fault is None
+                assert operations == ['predict', 'predict_ready', 'predict_ready', 'predict']
+            else:
+                assert 'error' in result and route.summary['predictions'] == 0
+                assert route.fault == ('predict_ready: timeout' if outcome == 'recovery' else None)
+                assert operations.count('predict') == 1
+        finally:
             route.close()
 
 
