@@ -86,5 +86,10 @@ Select `--harness loop-vision` with a vision-capable model endpoint to attach th
 Run `python3 data/datasets/robocasa365/control.py` to check kitchen startup, the three views, a zero action, and the sealed zero score through HarnessGrad without a model.
 
 HarnessGrad allows up to 120 seconds for the simulator service to start for each episode.
+The first successfully started episode saves its Numba compilation cache under
+`${XDG_CACHE_HOME:-~/.cache}/harnessgrad/relay-startup-v1`. Later episodes copy that
+snapshot into private storage. The snapshot is scoped to the host, simulator
+bundle and managed Python runtime. Cache misses compile locally, and the saved
+snapshot can be deleted to force a fresh warmup.
 
 The adapter provides simulation and scoring. The harness supplies the policy, action selection and stopping logic. The full leaderboard pool allows 4,522,500 simulator steps at the published horizons. Wall-clock time depends on policy latency, episode length and host parallelism. A shorter study run can select a subset with `--tasks`. Reference demonstrations are separate releases with their own initial states. The leaderboard supplies no oracle actions for the sampled evaluation episodes.

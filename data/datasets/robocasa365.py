@@ -90,6 +90,7 @@ def _setup(case):
             'program': str(ASSETS / 'relay.py'), 'python': runtime['python'],
             'python_runtime': runtime, 'read_paths': [str(path.resolve()) for path in read_paths],
             'asset_mounts': assets,
+            'startup_cache': {'directory': 'numba', 'key': bundle},
             'filename': 'case.json', 'content_flag': '--case-spec',
             'content': json.dumps({
                 'case': case, 'prepared': str(relay_asset_path('prepared')), 'bundle': bundle,

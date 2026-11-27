@@ -119,7 +119,7 @@ def test_robocasa365_strict_h0_reuses_relocated_assets(control, tmp_path, monkey
                "runtime_paths": [str(python_root / "venv"), "/usr"]}
     monkeypatch.setattr(robocasa365, "resolve_execution", lambda _: {})
     monkeypatch.setattr(robocasa365, "bind", lambda _, role: binding)
-    monkeypatch.setattr(robocasa365, "_prepared", lambda: (asset_root / "prepared-v1", "same-bundle"))
+    monkeypatch.setattr(robocasa365, "_prepared", lambda: (asset_root / "prepared-v1", "b" * 64))
     monkeypatch.setattr(robocasa365, "_osmesa", lambda: str(asset_root / "libOSMesa.so.8"))
     case = next(iter(robocasa365.CASES.values()))
 

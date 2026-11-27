@@ -914,6 +914,9 @@ def _check_setup(spec, tid: str, name: str) -> None:
     if "ready_timeout_s" in relay:
         from data.scaffolds.runtime_extensions import validate_relay_ready_timeout
         validate_relay_ready_timeout(relay["ready_timeout_s"])
+    if "startup_cache" in relay:
+        from data.scaffolds.runtime_extensions import relay_startup_cache
+        relay_startup_cache(relay)
     if "python_runtime" in relay:
         from harnessgrad.datasets.runtime import validate_binding
         if not isinstance(relay.get("python"), str):

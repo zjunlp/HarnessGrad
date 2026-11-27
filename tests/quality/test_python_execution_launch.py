@@ -70,6 +70,14 @@ parser.add_argument('--socket'); parser.add_argument('--receipt'); parser.add_ar
 args = parser.parse_args()
 case = json.loads(Path(args.game).read_text())
 counter = case['initial']
+if 'compile_marker' in case:
+    compiled = Path(os.environ['XDG_CACHE_HOME'], 'compiled', 'artifact')
+    before_compile = compiled.read_text() if compiled.exists() else None
+    if before_compile is None:
+        compiled.parent.mkdir(parents=True, exist_ok=True)
+        compiled.write_text(case['compile_marker'])
+    if case.get('fail_startup'):
+        raise RuntimeError('fixture startup failure')
 done = False
 def stop(*_):
     global done
@@ -113,6 +121,10 @@ def inspect():
 
 def handle(op, values):
     global counter
+    if op == 'check_cache':
+        compiled.write_text('episode local')
+        return {'before_compile': before_compile,
+                'host_cache_visible': Path(values['host_cache']).exists()}
     if op == 'asset':
         root, library = Path(case['asset']), Path(case['library'])
         return {'fixture': (root / 'alias').read_text(), 'library': library.read_text(),
@@ -250,6 +262,32 @@ def test_named_service_assets_keep_their_sandbox_paths_after_relocation(
     (moved / "kitchen" / "fixture").write_text("stone")
     assert verification_context.capture([task], {}, setups) != original[0]
     assert verification_context.capture_content([task], {}, setups, runtimes=bindings) != original[1]
+
+
+def test_bound_service_startup_cache_is_published_only_when_ready_and_copied_privately(
+        execution_artifact, service_program, tmp_path, monkeypatch):
+    from eval.containers import service_startup_cache
+
+    monkeypatch.setenv('XDG_CACHE_HOME', str(tmp_path / 'driver-cache'))
+    setup = service_setup(execution_artifact, service_program)
+    relay = setup['tool_relay']
+    spec = relay['startup_cache'] = {'directory': 'compiled', 'key': 'b' * 64}
+    snapshot = service_startup_cache.snapshot_path(spec, execution_artifact['runtime_id'])
+    case = {'initial': 0, 'compile_marker': 'first compilation'}
+
+    relay['content'] = json.dumps({**case, 'fail_startup': True})
+    with pytest.raises(tool_relay.ToolRelayStartError):
+        tool_relay.start(setup, context=context(), ready_timeout_s=10)
+    assert not snapshot.exists()
+
+    relay['content'] = json.dumps(case)
+    for previous in (None, 'first compilation'):
+        with tool_relay.start(setup, context=context(), ready_timeout_s=10) as handle:
+            assert call(handle.path, 'check_cache', {'host_cache': str(snapshot)}) == {
+                'before_compile': previous, 'host_cache_visible': False}
+            assert (handle.directory / 'cache/compiled/artifact').read_text() == 'episode local'
+            assert (snapshot / 'artifact').read_text() == 'first compilation'
+            seal(handle)
 
 
 def test_concurrent_bound_relays_have_independent_state_and_complete_delayed_records(

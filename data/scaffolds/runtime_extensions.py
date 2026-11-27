@@ -42,6 +42,21 @@ def validate_relay_ready_timeout(value) -> None:
         raise ValueError("tool_relay.ready_timeout_s must be a positive finite number")
 
 
+def relay_startup_cache(relay: dict) -> dict | None:
+    """Select a disposable XDG cache directory for a bound Python service."""
+    if 'startup_cache' not in relay:
+        return None
+    spec = relay['startup_cache']
+    if (not isinstance(relay.get('python_runtime'), dict)
+            or not isinstance(spec, dict) or set(spec) != {'directory', 'key'}
+            or not isinstance(spec['directory'], str)
+            or not re.fullmatch(r'[a-z][a-z0-9_-]{0,63}', spec['directory'])
+            or not isinstance(spec['key'], str) or not re.fullmatch(r'[a-f0-9]{64}', spec['key'])):
+        raise ValueError('tool_relay.startup_cache requires a bound Python service, '
+                         'a cache directory name and a SHA-256 key')
+    return spec
+
+
 def validate_record(spec) -> None:
     if spec is None:
         return
