@@ -275,6 +275,17 @@ def test_policy_recovery_respects_both_deadlines(tmp_path, outcome):
             route.close()
 
 
+def test_gr00t_device_respects_visible_cuda_indices(monkeypatch):
+    from eval.action_policies.gr00t_n15 import selected_gpu
+
+    monkeypatch.delenv('CUDA_VISIBLE_DEVICES', raising=False)
+    assert selected_gpu('cuda:2') == '2'
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', '3,GPU-example')
+    assert selected_gpu('cuda:1') == 'GPU-example'
+    with pytest.raises(ValueError, match='outside CUDA_VISIBLE_DEVICES'):
+        selected_gpu('cuda:2')
+
+
 def test_actor_shutdown_at_episode_deadline_is_not_a_route_fault(tmp_path, monkeypatch):
     with fixture_service(tmp_path / 'model.sock', events=[]) as model:
         setup = bind(model.path, ['task'])['task']

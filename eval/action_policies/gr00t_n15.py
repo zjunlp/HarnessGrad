@@ -16,7 +16,8 @@ import sys
 import threading
 import time
 
-from eval.service.action_policy import digest, PROTOCOL
+from eval.action_policies.ray_policy import local_ray, RayPolicyService
+from eval.service.action_policy import PROTOCOL
 from eval.service.tool_transport import Relay
 
 
@@ -53,7 +54,21 @@ def source_revision(source):
     return git('rev-parse', 'HEAD')
 
 
-class Gr00tService:
+def selected_gpu(device):
+    match = re.fullmatch(r'cuda:([0-9]+)', device)
+    if not match:
+        raise ValueError('GR00T requires an explicit CUDA device, for example cuda:0')
+    index = int(match[1])
+    visible = os.environ.get('CUDA_VISIBLE_DEVICES')
+    if visible is None:
+        return str(index)
+    devices = [item.strip() for item in visible.split(',')]
+    if index >= len(devices) or not devices[index] or '-1' in devices[:index + 1]:
+        raise ValueError(f'{device} is outside CUDA_VISIBLE_DEVICES')
+    return devices[index]
+
+
+class Gr00tWorker:
     def __init__(self, args):
         checkpoint = args.checkpoint.resolve(strict=True)
         source = args.source.resolve(strict=True)
@@ -70,8 +85,6 @@ class Gr00tService:
         self.image = Image
         self.torch = torch
         self.device = torch.device(args.device)
-        if self.device.type != 'cuda' or self.device.index is None:
-            raise ValueError('GR00T requires an explicit CUDA device, for example cuda:0')
         torch.cuda.set_device(self.device)
         data = DATA_CONFIG_MAP[args.data_config]
         config = data.modality_config()
@@ -96,14 +109,11 @@ class Gr00tService:
             'python': list(sys.version_info[:3]), 'cuda': torch.version.cuda,
             'packages_sha256': digest(sorted((dist.metadata['Name'], dist.version) for dist in distributions())),
         }
-        self.signature = digest(self.identity)
 
-    def handle(self, op, args):
-        if op == 'describe' and not args:
-            return self.identity
-        if (op != 'predict' or set(args) != {'identity', 'instruction', 'images', 'state', 'seed'}
-                or args['identity'] != self.signature):
-            raise ValueError('invalid request or action policy identity changed')
+    def describe(self):
+        return self.identity
+
+    def predict(self, args):
         start = time.monotonic()
         observation = {self.language: [args['instruction']]}
         for name in self.cameras:
@@ -140,15 +150,23 @@ def main():
         parser.error('--socket must be an unused path in a private directory')
     if args.denoising_steps < 1:
         parser.error('--denoising-steps must be positive')
+    try:
+        os.environ['CUDA_VISIBLE_DEVICES'] = selected_gpu(args.device)
+    except ValueError as exc:
+        parser.error(str(exc))
+    # Ray allocates the one visible GPU; CUDA numbers it from zero in the actor.
+    args.device = 'cuda:0'
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['NO_ALBUMENTATIONS_UPDATE'] = '1'
-    service = Gr00tService(args)
-    stop = threading.Event()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(signum, lambda *_: stop.set())
-    with Relay(args.socket, service.handle, max_calls=None):
-        print(f'GR00T ready, identity {service.signature}', flush=True)
-        stop.wait()
+    with local_ray(num_gpus=1) as ray:
+        service = RayPolicyService(ray, Gr00tWorker, args, num_gpus=1,
+                                   inference_timeout_s=10.0, recovery_timeout_s=120.0)
+        stop = threading.Event()
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(signum, lambda *_: stop.set())
+        with Relay(args.socket, service.handle, max_calls=None):
+            print(f'GR00T ready, identity {service.signature}', flush=True)
+            stop.wait()
 
 
 if __name__ == '__main__':

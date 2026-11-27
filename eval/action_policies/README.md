@@ -24,8 +24,8 @@ Use the RoboCasa Isaac-GR00T fork at `9d7d7a9eb7ad30bd8ce30448d9ab53a918b45b10`.
 Checkout with `GIT_LFS_SKIP_SMUDGE=1` to skip demo media. Use a separate Python
 3.10 environment with PyTorch 2.5.1 and torchvision 0.20.1 for CUDA 12.4, a
 matching FlashAttention 2.7.4.post1 wheel, and the dependencies in
-`gr00t_n15-requirements.txt`. The RoboCasa365 simulator continues to use its
-managed Python 3.11 runtime.
+`gr00t_n15-requirements.txt`, including Ray Core. The RoboCasa365 simulator
+uses its managed Python 3.11 runtime.
 
 The public weights for this profile are in `robocasa/robocasa365_checkpoints` at
 `c484448aba1a9b60a04c9b0ca117241518ea69f3`, under
@@ -53,17 +53,26 @@ queue uses each episode's remaining time budget. Environment calls can run
 while another episode is using the policy. Each independent HarnessGrad
 process has its own queue.
 
-Each dispatched prediction has up to 60 seconds, capped by the remaining
-episode time. If the 60-second prediction deadline expires first, the episode
-is unmeasured. If the episode budget expires first, queued and in-flight
-requests stop waiting and the runner uses its normal episode-timeout handling.
-Closing an episode releases its client connection and queue ticket. A service
-may finish work it already accepted.
+The service starts a private local Ray instance with one actor on the CUDA
+device selected by `--device` (relative to `CUDA_VISIBLE_DEVICES`, when set).
+The actor loads the checkpoint once and serves one prediction at a time.
+The service gives each prediction dispatched to the ready actor 10 seconds.
+On expiry it terminates that actor and starts a replacement. HarnessGrad allows
+up to 15 seconds for the prediction RPC, including time for the timeout reply.
 
-The per-episode receipt records delegated requests, predictions, queue wait
-(`queue_seconds`), queue timeouts, policy request time, model inference time, actual delegated
-steps, clipped control values, and time spent calling the environment. The
-runner supplies independent noise seeds for each episode step.
+The timed-out prediction fails the episode as unmeasured. A following
+prediction waits separately for the replacement to load the checkpoint, with
+up to 120 seconds for recovery. Once ready, the replacement gets a fresh
+10 seconds for the next prediction. The service checks the worker identity
+again before using it. Queue, recovery, and prediction waits are all capped
+by the remaining episode time. If the episode budget expires first, the
+runner uses its normal episode-timeout handling.
+
+The per-episode receipt records delegated requests, predictions, queue wait,
+queue timeouts, recovery wait (`recovery_seconds`), policy request time, model
+inference time, actual delegated steps, clipped control values, and time spent
+calling the environment. The runner supplies independent noise seeds for each
+episode step.
 
 ## Adding another configuration
 

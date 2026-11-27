@@ -12,6 +12,7 @@ opencv-python-headless==4.11.0.86
 pandas==2.2.3
 peft==0.17.0
 pydantic==2.10.6
+ray==2.60.1
 setuptools==80.9.0
 timm==1.0.14
 transformers==4.51.3
