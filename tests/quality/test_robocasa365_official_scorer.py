@@ -194,6 +194,33 @@ def protocol_modules(monkeypatch):
     return episode, check
 
 
+@pytest.mark.parametrize('compiled', [True, False])
+def test_startup_yaml_preserves_values_and_restores_loader_after_failure(monkeypatch, compiled):
+    yaml = pytest.importorskip('yaml')
+    monkeypatch.setitem(sys.modules, 'protocol', dataset.PROTOCOL)
+    simulator = load_asset(dataset.ASSETS / 'simulator.py')
+    if not compiled:
+        monkeypatch.delattr(yaml, 'CSafeLoader', raising=False)
+    original = yaml.safe_load
+    text = '''defaults: &defaults
+  enabled: true
+  scale: 0.125
+  position: [1, -2, 3.5]
+scene:
+  <<: *defaults
+  name: kitchen
+  optional: null
+'''
+    expected = original(text)
+    with pytest.raises(RuntimeError, match='startup failed'):
+        with simulator._compiled_safe_yaml():
+            assert yaml.safe_load(text) == expected
+            with pytest.raises(yaml.YAMLError):
+                yaml.safe_load('scene: [')
+            raise RuntimeError('startup failed')
+    assert yaml.safe_load is original
+
+
 def test_gym_success_is_latched_without_exposing_it(protocol_modules, monkeypatch):
     episode_type, _ = protocol_modules
     protocol = dataset.PROTOCOL

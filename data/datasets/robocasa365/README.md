@@ -118,4 +118,7 @@ snapshot into private storage. The snapshot is scoped to the host, simulator
 bundle and managed Python runtime. Cache misses compile locally, and the saved
 snapshot can be deleted to force a fresh warmup.
 
+During environment construction and reset, the service uses PyYAML's compiled
+safe loader when available to read the released kitchen configuration files.
+
 The adapter provides simulation and scoring. The harness supplies the policy, action selection and stopping logic. The full leaderboard pool allows 4,522,500 simulator steps at the published horizons. Wall-clock time depends on policy latency, episode length and host parallelism. A shorter study run can select a subset with `--tasks`. Reference demonstrations are separate releases with their own initial states. The leaderboard supplies no oracle actions for the sampled evaluation episodes.
