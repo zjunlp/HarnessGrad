@@ -942,8 +942,7 @@ def task_options(dataset: str) -> dict:
     if not dataset or not SAFE_ID.match(dataset):
         return {"error": "bad dataset name"}
     try:
-        tasks, _ = registry.load(dataset)
-        split = registry.load_split(dataset)[2]
+        tasks, _, split = registry.load_split(dataset)
         envs = registry.load_envs(dataset)
     except (ValueError, ImportError) as exc:
         return {"error": str(exc)[:300]}
@@ -972,10 +971,11 @@ def task_options(dataset: str) -> dict:
         except Exception:                                       # noqa: BLE001
             unavailable[tid] = image or "?"
 
+    default_side = "unassigned" if split is not None else "eval"
     return {"dataset": dataset, "has_split": split is not None,
             "n_unavailable": len(unavailable),
             "tasks": [{"task_id": t["task_id"],
-                       "side": side_of.get(t["task_id"], "eval"),
+                       "side": side_of.get(t["task_id"], default_side),
                        "available": t["task_id"] not in unavailable,
                        "why": (f"镜像 {unavailable[t['task_id']]} 不在本地"
                                if t["task_id"] in unavailable else ""),

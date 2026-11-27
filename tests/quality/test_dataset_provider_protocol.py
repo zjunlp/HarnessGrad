@@ -38,6 +38,21 @@ def test_inventory_does_not_materialize_every_verifier_or_return_private_answers
     assert 'private' not in json.dumps(value)
 
 
+def test_official_eval_only_provider_keeps_extra_cases_available(monkeypatch):
+    from data.scaffolds import registry
+
+    tasks = [{'task_id': 'exam'}, {'task_id': 'catalog'}]
+    scorable = {'exam': 'key', 'catalog': 'key'}
+    evaluated = {'train': [], 'eval': ['exam']}
+    catalog = {'tasks': tasks, 'scorable': scorable, 'metadata': {
+        'SPLIT_SOURCE': 'official-eval', 'SPLIT': evaluated, 'OFFICIAL_EVAL': ['exam'],
+    }}
+    monkeypatch.setattr(registry, 'provider', lambda name: SimpleNamespace(catalog=lambda: catalog))
+
+    assert registry.load_split('authored') == (tasks, scorable, evaluated)
+    assert registry.official_split('authored', tasks) == evaluated
+
+
 def test_control_snapshot_keeps_selected_reference_callbacks_in_the_provider(monkeypatch):
     from data.scaffolds import registry
     record={'task_id':'authored/one', 'gold':{'answer':'private answer','supporting_facts':[['private',0]]},

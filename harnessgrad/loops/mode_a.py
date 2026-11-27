@@ -499,10 +499,12 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # bookkeeping except this line: a method that can read an eval trace can
         # edit the harness against the tasks it is about to be scored on, and the
         # curve that results is indistinguishable from improvement.
+        visual_root = (run_dir / 'visual-evidence' / 'train'
+                       if getattr(args, 'visual_evidence', False) else None)
         _stage_for_method(work, prior, base["traces"], history=curve,
                           task_ids=train_ids, run_dir=run_dir,
                           tasks=tasks, setups=setups, verifiers=verifiers,
-                          result=base)
+                          result=base, **({'visual_root': visual_root} if visual_root is not None else {}))
 
         base_dir = (method_root / f"round{r}_base").resolve()
         if base_dir.exists():
@@ -519,6 +521,9 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
         # "is it thinking or is it dead?" is hardest to answer from outside: the method
         # is an external process the platform does not log. A phase record here is the
         # difference between a 20-minute blank and "RRSI is still generating".
+        visual_images = visual_root / 'images' if visual_root is not None else None
+        evidence_roots = ((visual_images.resolve(),)
+                          if visual_images is not None and visual_images.is_dir() else ())
         with console.reporter.phase("agent", round_no=r, task_id="method",
                                    budget_s=args.method_timeout):
             reply = _call_method(work, argv, {
@@ -551,7 +556,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                 # curve point names, so the method cannot run a different one.
                 "improver": _improver_identity(improver),
             }, args.method_timeout, sandboxed=args.sandbox,
-                scratch=method_root, cwd=method_ws, readonly=(base_dir,),
+                scratch=method_root, cwd=method_ws, readonly=(base_dir, *evidence_roots),
                 runtime=_improver_runtime(improver), improver=improver,
                 rejected_candidate=bool(prior.get("unmeasured")),
                 admission_receipt=run_dir / 'training-window-status.json')
@@ -1121,6 +1126,7 @@ def _run_mode_a(args, work, man, run_id, mode, curve, h0_sha, base, tasks,
                             envs=envs, run_id=run_id, run_seed=os.environ["HARNESSGRAD_SEED"],
                             recordings_root=run_dir / "recordings",
                             round_no=r,
+                            **({'visual_evidence': True} if getattr(args, 'visual_evidence', False) else {}),
                             **({'task_budget_context': args.task_budget_context}
                                if getattr(args, 'task_budget_context', None) is not None else {}))
                    if has_manifest else None)

@@ -965,6 +965,109 @@ failed transfers remove partial files and newly created empty directories.
 
 > Import an operator-supplied copy of the historical pool. Its digest fixes the original bytes and task order.
 
+## `robocasa365`
+
+- **Data root:** `<HG_DATA_ROOT>/robocasa365`
+- **Root override:** `HG_DATA_ROBOCASA365`
+
+### RoboCasa365 1.0.1 source
+
+- **Type:** `http`
+- **Version (pinned):** `7bfc60c9d26c02506d4265cbe0e86b35e6e25d42`
+- **Size:** 42 MB
+- **URL:** https://codeload.github.com/robocasa/robocasa/tar.gz/7bfc60c9d26c02506d4265cbe0e86b35e6e25d42
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/source.tar.gz`
+- **SHA256:** `8c0585e27c8f85eb9d4aae9d663e526557861bcf85bac8a68d4202256e12f549`
+
+> Pinned upstream simulator source for the trusted Python 3.11 service.
+
+### robosuite 1.5.2 source
+
+- **Type:** `http`
+- **Version (pinned):** `5ce6643f3092639d08f7b0f90ed1c6a84f50552c`
+- **Size:** 261 MB
+- **URL:** https://codeload.github.com/ARISE-Initiative/robosuite/tar.gz/5ce6643f3092639d08f7b0f90ed1c6a84f50552c
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/robosuite.tar.gz`
+- **SHA256:** `24330cf5265effb1b5733c7ea2afda0e68899abe4b3c3de39e40b7db2b1b432e`
+
+> Pinned upstream simulator source for the trusted Python 3.11 service.
+
+### RoboCasa365 textures asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 543 MB
+- **URL:** https://utexas.box.com/shared/static/4i85ileasdvstmlln5sbvzptz7keuoy1.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/textures.zip`
+- **SHA256:** `ba3a4dcef96e199cbd601c7cdb7eb46077fb6672611b7ac74c25a191bf0be392`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### RoboCasa365 generative_textures asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 1.18 GB
+- **URL:** https://utexas.box.com/shared/static/ebaad09k82tmfmlq6ohdkmrh8izl9vn5.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/generative_textures.zip`
+- **SHA256:** `bc05095af306222d9a799a9b0b5b16662aa546998622ee8fd3072566ea4c31ec`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### RoboCasa365 fixtures_lightwheel asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 530 MB
+- **URL:** https://utexas.box.com/shared/static/idbncsadpnaz1jfl4i6m8qejawk7p9pi.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/fixtures_lightwheel.zip`
+- **SHA256:** `62c1c87776edda9b7c42dda7b00781a1e5a7f90acc3e49d06c39c9545cbd6c3e`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### RoboCasa365 objaverse asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 2.16 GB
+- **URL:** https://utexas.box.com/shared/static/03eionyo8fk3a9dsksq9jb8du5lqfw8h.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/objaverse.zip`
+- **SHA256:** `66a7eebef3bac855301964d35d905fc2cb44d691f007f97af08d96e83db5cc08`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### RoboCasa365 aigen_objs asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 5.77 GB
+- **URL:** https://utexas.box.com/shared/static/nwi1vrn5pgbo95kushkasa3nx1i012ff.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/aigen_objs.zip`
+- **SHA256:** `1f88792322ccce79f775e88482626c324c6e07d002adf23320a124b72764dd19`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### RoboCasa365 objects_lightwheel asset pack
+
+- **Type:** `http`
+- **Version (pinned):** `1.0.1`
+- **Size:** 792 MB
+- **URL:** https://utexas.box.com/shared/static/vckqvvkh1z8t69k8qcpcmee6k66stii4.zip
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/objects_lightwheel.zip`
+- **SHA256:** `a1db739b0e80fc4d56d4be27d89dba3aa60000e9648c5607874700e0f14b7955`
+
+> Official kitchen assets extracted by the preparation step and mounted read-only.
+
+### Prepared RoboCasa365 simulator and assets
+
+- **Type:** `generated`
+- **Version (pinned):** `prepared-v1`
+- **Size:** manifest and extracted kitchen assets
+- **Destination:** `<HG_DATA_ROOT>/robocasa365/prepared-v1/prepared.json`
+- **SHA256:** `173a4a6334ea97ecd51d589e768f0e75bd51ca72a8540057f80ded7a8fc9274f`
+
+> OSMesa is also required. See the adapter README for local setup.
+
 ## `scienceworld`
 
 - **Data root:** `<HG_DATA_ROOT>/scienceworld`

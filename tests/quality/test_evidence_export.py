@@ -30,9 +30,10 @@ def author():
             'budget': {'rounds': 1, 'trials': 3, 'source': 'author protocol'}}
 
 
-def save_run(root, name, number=0, *, tree='a', rows=None):
+def save_run(root, name, number=0, *, tree='a', rows=None, task_ids=None):
     rows = rows or [[0, 1, 0], [1, 1, 1]]
-    tasks = {PRIVATE_TASK + str(i): sum(row) / len(row) for i, row in enumerate(rows)}
+    task_ids = task_ids or [PRIVATE_TASK + str(i) for i in range(len(rows))]
+    tasks = {tid: sum(row) / len(row) for tid, row in zip(task_ids, rows)}
     meta = {'run_id': name, 'harness': 'loop', 'dataset': 'synthetic', 'workspace': '/private/workspace',
             'agent_model': 'solver', 'agent_backend': 'openai', 'platform': {'content_sha': 'p' * 64},
             'config': {'agent': {'model': 'solver', 'temperature': 0, 'api_key': SECRET,
@@ -107,6 +108,50 @@ def test_portable_export_matches_sources_and_preserves_privacy(source, tmp_path)
     with pytest.raises(FileExistsError):
         write_export(pack, output)
     assert output.read_bytes() == canonical(pack) + b'\n'
+
+
+def test_action_policy_stats_survive_verdict_writing_and_public_export(tmp_path):
+    from harnessgrad.experiment.records import _save_verdicts
+
+    root = tmp_path / 'runs'
+    save_run(root, 'base')
+    single = 'robocasa365/leaderboard/PrivateZ/00'
+    missing = 'robocasa365/leaderboard/PrivateM/00'
+    repeated = 'robocasa365/leaderboard/PrivateA/00'
+    ids = [single, missing, repeated]
+    _, point = save_run(root, 'sub', 1, tree='b', task_ids=ids, rows=[[1, 1, 1], [0, 0, 1], [1, 0, 0]])
+    policy = {'backend': 'gr00t-n1.5', 'chunk_size': 16, 'socket': '/private/policy.sock', 'token': SECRET}
+    change(root, 'sub', 'run_meta.json', lambda meta: meta.update(action_policy=policy))
+    first = {'requests': 2, 'predictions': 4, 'executed_steps': 50, 'clipped_values': 0,
+             'queue_seconds': 0.125, 'policy_seconds': 0.5, 'inference_seconds': 0.25,
+             'environment_seconds': 1.5, 'recovery_seconds': 1.25, 'queue_timeouts': 1}
+    last = {'requests': 1, 'predictions': 2}
+    raw = {**first, 'sha256': 'a' * 64, 'instruction': PRIVATE_TASK, 'fault': SECRET}
+    _save_verdicts(root / 'sub', 1, {
+        'per_task': point['per_task'],
+        'verdicts': {single: {'action_policy': {'requests': 0, 'queue_seconds': float('nan')}},
+                     repeated: {'action_policy': last}},
+        'trial_verdicts': {repeated: [{'action_policy': raw}, {}, {'action_policy': last}]},
+    }, ids)
+    verdict = json.loads((root / 'sub' / 'verdicts/round-1' / f'{repeated}.json').read_text())
+    assert verdict['action_policy'] == last
+    assert verdict['trials'][0]['action_policy'] == raw
+
+    pack = build_export(author(), root)
+    assert check_export(pack) == []
+    assert 'action_policy_trials' not in unit(pack, 'base')['projection']['curve'][0]
+    sub = unit(pack, 'sub')
+    assert sub['projection']['run_meta']['action_policy'] == {'backend': 'gr00t-n1.5', 'chunk_size': 16}
+    result = sub['projection']['curve'][0]
+    assert result['action_policy_trials'] == [[first, None, last], None, [{'requests': 0}]]
+    encoded = canonical(pack)
+    for withheld in (*ids, PRIVATE_TASK, SECRET, policy['socket'], raw['sha256']):
+        assert withheld.encode() not in encoded
+
+    result['action_policy_trials'][0][0]['predictions'] = True
+    sub['projection_sha256'] = digest(canonical(sub['projection']))
+    pack['content_sha256'] = digest(canonical({k: v for k, v in pack.items() if k != 'content_sha256'}))
+    assert check_export(pack) == ['invalid_export_action_policy_trials']
 
 
 def test_discovers_recording_only_and_failed_or_stopped_attempts(source):

@@ -13,11 +13,12 @@ these cells say `unknown (computed)` and the numbers are printed by
 `python3 tools/split_inventory.py --host`, which answers for one machine and is never
 written into this file.
 
-## The four states
+## Dataset split states
 
 | `state` | what it means |
 | --- | --- |
 | `declared` | `SPLIT_SOURCE` is `"declared"`: the benchmark publishes both sides and the adapter says which is which. A run's `--split declared` and `--split official` are then the same division, and `OFFICIAL_EVAL` is the scored side's ids. |
+| `official-eval` | The declared and official splits assign only `OFFICIAL_EVAL` to the evaluation side. Other catalog tasks are unassigned until an explicit split selects them. |
 | `none` | the adapter declares no division: `SPLIT_SOURCE` is `"none"`, or a prose source (the authored bundle), or absent with no `SPLIT` at all (`locomo`). A run covers every task, and `--split default` (the platform's hash rule) or `--split <file.json>` is how a division is supplied. |
 | `undeclared` | the adapter answers no `SPLIT_SOURCE` and builds `SPLIT` from its payload, so whether it divides its pool is not a fact this file can state and it says so instead of guessing (`--host` prints what the payload resolves to). The nine upstream research adapters are here (`browsecomp`, `deepsearchqa`, `harvey_lab`, `hle`, `livemathbench`, `swe_bench`, `travelplanner`, `workbench`, `widesearch`): their split membership is read from a prepared manifest, so declaring `SPLIT_SOURCE` would be a claim about a payload. The marker is not evidence that the dataset is undivided. |
 | `refused` | `REFUSED` is set: this benchmark cannot be measured as released, so its adapter refuses it and `load()` raises. There is no division to report -- `docs/refusal-policy.md` says why for each one. |
@@ -106,6 +107,12 @@ every group on one side. Invalid mappings or groups crossing sides are refused
 before task selection or execution. Adapters without `SPLIT_GROUPS` keep the
 existing task-id hash rule and validation.
 
+A frozen custom split with source `non-official-eval` partitions the catalog
+outside the benchmark's declared evaluation IDs. Its manifest lists the
+official IDs as excluded. A subsequent official evaluation can use the
+trained checkpoint when the full roster and the recorded study split verify
+against that manifest's held-out set.
+
 StrongREJECT uses each original request as its grouping key, so its three
 attack variants stay together. It declares no native split. On its frozen
 150-task Harbor pool, an explicit `--split default` yields 99 train tasks
@@ -156,6 +163,7 @@ uses all 150 tasks.
 | `physicsquestions` | none | none | - | - | None (the pool is the scored split) |
 | `ptc_bench` | none | none | - | - | None (the pool is the scored split) |
 | `reasoning_gym` | none | none | - | - | [] (not an evaluation set) |
+| `robocasa365` | official-eval | official-eval | - | unknown (computed) | unknown (computed) |
 | `scienceworld` | none | none | - | - | None (the pool is the scored split) |
 | `searchqa` | declared | declared | unknown (computed) | unknown (computed) | unknown (computed) |
 | `sportsunderstanding` | none | none | - | - | None (the pool is the scored split) |

@@ -96,8 +96,8 @@ def test_cli_creates_a_fresh_run_even_in_the_same_second(tmp_path, monkeypatch):
     monkeypatch.setattr(ts.time, 'time', lambda: 1000)
     tasks = [{'task_id': f'fixture/{i}'} for i in range(3)]
     monkeypatch.setattr(ts.registry, 'load_split', lambda *a: (tasks, {}, None))
-    monkeypatch.setattr(ts.registry, 'load_tasks', lambda *a: (tasks, {}, {}))
-    monkeypatch.setattr(ts.registry, 'load_envs', lambda *a: {})
+    monkeypatch.setattr(ts.registry, 'load_tasks', lambda *a, task_ids: (tasks, {}, {}))
+    monkeypatch.setattr(ts.registry, 'load_envs', lambda *a, task_ids: {})
     runs = []
 
     def measure(specs, tasks, scorable, setups, verifiers, envs, args, work_root, run_dir, cache):

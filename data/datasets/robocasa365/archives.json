@@ -1,0 +1,90 @@
+[
+  {
+    "kind": "http",
+    "name": "RoboCasa365 1.0.1 source",
+    "version": "7bfc60c9d26c02506d4265cbe0e86b35e6e25d42",
+    "url": "https://codeload.github.com/robocasa/robocasa/tar.gz/7bfc60c9d26c02506d4265cbe0e86b35e6e25d42",
+    "dst": "source.tar.gz",
+    "size": "42 MB",
+    "sha256": "8c0585e27c8f85eb9d4aae9d663e526557861bcf85bac8a68d4202256e12f549",
+    "package": "robocasa",
+    "note": "Pinned upstream simulator source for the trusted Python 3.11 service."
+  },
+  {
+    "kind": "http",
+    "name": "robosuite 1.5.2 source",
+    "version": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+    "url": "https://codeload.github.com/ARISE-Initiative/robosuite/tar.gz/5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+    "dst": "robosuite.tar.gz",
+    "size": "261 MB",
+    "sha256": "24330cf5265effb1b5733c7ea2afda0e68899abe4b3c3de39e40b7db2b1b432e",
+    "package": "robosuite",
+    "note": "Pinned upstream simulator source for the trusted Python 3.11 service."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 textures asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/4i85ileasdvstmlln5sbvzptz7keuoy1.zip",
+    "dst": "textures.zip",
+    "size": "543 MB",
+    "sha256": "ba3a4dcef96e199cbd601c7cdb7eb46077fb6672611b7ac74c25a191bf0be392",
+    "extract_into": "",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 generative_textures asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/ebaad09k82tmfmlq6ohdkmrh8izl9vn5.zip",
+    "dst": "generative_textures.zip",
+    "size": "1.18 GB",
+    "sha256": "bc05095af306222d9a799a9b0b5b16662aa546998622ee8fd3072566ea4c31ec",
+    "extract_into": "",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 fixtures_lightwheel asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/idbncsadpnaz1jfl4i6m8qejawk7p9pi.zip",
+    "dst": "fixtures_lightwheel.zip",
+    "size": "530 MB",
+    "sha256": "62c1c87776edda9b7c42dda7b00781a1e5a7f90acc3e49d06c39c9545cbd6c3e",
+    "extract_into": "",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 objaverse asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/03eionyo8fk3a9dsksq9jb8du5lqfw8h.zip",
+    "dst": "objaverse.zip",
+    "size": "2.16 GB",
+    "sha256": "66a7eebef3bac855301964d35d905fc2cb44d691f007f97af08d96e83db5cc08",
+    "extract_into": "objects",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 aigen_objs asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/nwi1vrn5pgbo95kushkasa3nx1i012ff.zip",
+    "dst": "aigen_objs.zip",
+    "size": "5.77 GB",
+    "sha256": "1f88792322ccce79f775e88482626c324c6e07d002adf23320a124b72764dd19",
+    "extract_into": "objects",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  },
+  {
+    "kind": "http",
+    "name": "RoboCasa365 objects_lightwheel asset pack",
+    "version": "1.0.1",
+    "url": "https://utexas.box.com/shared/static/vckqvvkh1z8t69k8qcpcmee6k66stii4.zip",
+    "dst": "objects_lightwheel.zip",
+    "size": "792 MB",
+    "sha256": "a1db739b0e80fc4d56d4be27d89dba3aa60000e9648c5607874700e0f14b7955",
+    "extract_into": "objects",
+    "note": "Official kitchen assets extracted by the preparation step and mounted read-only."
+  }
+]

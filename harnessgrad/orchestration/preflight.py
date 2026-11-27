@@ -26,6 +26,26 @@ class ReadinessPorts:
     write_run_meta: Callable
 
 
+def _action_policy_check(args):
+    from eval.service.action_policy import bind_service
+    from harnessgrad.datasets.runtime_identity import h0_selection
+
+    problem = getattr(args, '_action_policy_problem', None)
+    if problem is not None:
+        return readiness.Check('action-policy', True, False, problem)
+    try:
+        ids, setups, _, envs = h0_selection({
+            'dataset': args.dataset, 'side': args.side, 'split': args.split,
+            'task_ids': list(dict.fromkeys(tid.strip() for tid in (args.tasks or '').split(',') if tid.strip())),
+            'sampling': args.sampling,
+        })
+        bind_service(args._action_policy_service, ids, setups, envs, sandbox=args.sandbox)
+    except (OSError, ImportError, ValueError, RuntimeError) as exc:
+        return readiness.Check('action-policy', True, False, str(exc))
+    return readiness.Check('action-policy', True, True,
+                           'local service and selected task controls are compatible (no inference requested)')
+
+
 def run_readiness(args, ports: ReadinessPorts) -> int:
     """`--check-only` / `--prepare-only`: the door, without walking through it.
 
@@ -89,8 +109,11 @@ def run_readiness(args, ports: ReadinessPorts) -> int:
             print(f"warning: the dataset probe cannot apply --pool {args.pool!r}: {exc}",
                   file=sys.stderr)
 
+    policy_check = _action_policy_check(args) if getattr(args, 'action_policy_socket', None) else None
     if args.check_only:
         checks = readiness.plan_checks(args)
+        if policy_check is not None:
+            checks.append(policy_check)
         print(readiness.render(checks))
         failed = [check.name for check in checks if check.required and not check.ok]
         if failed:
@@ -106,6 +129,9 @@ def run_readiness(args, ports: ReadinessPorts) -> int:
             print("warning: optional check(s) failed: " + ", ".join(warnings))
         if not args.prepare_only:
             return 0
+    if policy_check is not None and not policy_check.ok:
+        print(f'refusing --prepare-only: action policy: {policy_check.detail}', file=sys.stderr)
+        return 2
 
     # The run directory `--prepare-only` creates is the one a real run would use, from the
     # same argv -- including the resolved mode and the staged-run id suffix -- so the
@@ -137,6 +163,8 @@ def run_readiness(args, ports: ReadinessPorts) -> int:
         args, run_id, seed=os.environ.get("HARNESSGRAD_SEED"), mode=mode)
     prepared_fields = run_metadata.prepared_run_fields(
         prepared_config, platform_config.dump(run=prepared_config), ports.framework_version, prepared_split)
+    if policy_check is not None:
+        prepared_fields['action_policy'] = args._action_policy_service[0]['identity']
     ports.write_run_meta(run_dir, fresh=True, **prepared_fields)
     run_namespace.finish_preparation(run_dir, args._namespace_config)
     print(run_dir)

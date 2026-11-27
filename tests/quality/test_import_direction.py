@@ -35,7 +35,7 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/improvement/stages.py": {"__future__", "dataclasses", "json", "typing", "harnessgrad.improvement.contracts", "methods.policy_ports.ace_proposal", "methods.policy_ports.skillopt_fast", "methods.policy_ports.skillopt_patch", "methods.policy_ports.evo_harness_proposal", "methods.policy_ports.gepa_proposal", "methods.policy_ports.vendor.ace"},
     "harnessgrad/orchestration/treatment_workflow.py": {"__future__", "pathlib", "shlex", "harnessgrad.orchestration.improver_readiness", "harnessgrad.orchestration.treatment_identity"},
     "harnessgrad/orchestration/execution_policy.py": {"__future__", "json", "pathlib", "sys", "eval.policy.diagnostic_policy"},
-    "harnessgrad/orchestration/preflight.py": {"__future__", "dataclasses", "os", "pathlib", "secrets", "sys", "typing", "data.scaffolds.registry", "data.scaffolds.custom_split", "harnessgrad.config", "harnessgrad.execution.run_namespace", "harnessgrad.orchestration.readiness", "harnessgrad.orchestration.run_metadata"},
+    "harnessgrad/orchestration/preflight.py": {"__future__", "dataclasses", "os", "pathlib", "secrets", "sys", "typing", "data.scaffolds.registry", "data.scaffolds.custom_split", "eval.service.action_policy", "harnessgrad.config", "harnessgrad.datasets.runtime_identity", "harnessgrad.execution.run_namespace", "harnessgrad.orchestration.readiness", "harnessgrad.orchestration.run_metadata"},
     "harnessgrad/customization/patch.py": {"__future__", "contextlib", "os", "pathlib", "re", "typing", "harnessgrad.improvement.contracts", "harnessgrad.customization.review"},
     "harnessgrad/customization/review.py": {"__future__", "dataclasses", "hashlib", "json", "re", "typing", "harnessgrad.customization.inputs", "harnessgrad.improvement.contracts", "harnessgrad.core.harness"},
     "harnessgrad/customization/inputs.py": {"__future__", "contextlib", "json", "os", "pathlib", "stat", "typing", "harnessgrad.improvement.contracts"},
@@ -85,7 +85,8 @@ EXTRACTED_UNIT_IMPORTS = {
         "eval.containers.sandbox", "eval.containers.bun_runtime", "harnessgrad.training_window", "methods.stop_status"},
     "harnessgrad/experiment/channel.py": {
         "__future__", "pathlib", "hashlib", "json", "os", "re", "shutil", "subprocess",
-        "eval.ckpt.git_state", "eval.observe.tracing", "harnessgrad", "harnessgrad.config",
+        "eval.ckpt.git_state", "eval.observe.tracing", "eval.service.visual_evidence",
+        "harnessgrad", "harnessgrad.config",
         "harnessgrad.core.snapshot",
         "harnessgrad.datasets.runtime", "harnessgrad.datasets.runtime_identity",
         "harnessgrad.provenance.native_judge_identity"},
@@ -118,7 +119,8 @@ EXTRACTED_UNIT_IMPORTS = {
     "harnessgrad/orchestration/selected_dataset.py": {
         "__future__", "dataclasses", "pathlib", "sys", "typing",
         "data.scaffolds.custom_split", "eval.ckpt.git_state", "eval.policy.diagnostic_policy",
-        "eval.run.metrics", "harnessgrad.config", "harnessgrad.orchestration.environments",
+        "eval.run.metrics", "eval.service.action_policy", "harnessgrad.config",
+        "harnessgrad.orchestration.environments",
         "harnessgrad.orchestration.readiness", "harnessgrad.provenance.scoring_identity",
         "harnessgrad.datasets.runtime_identity", "harnessgrad.provenance.verification_context",
         "harnessgrad.provenance.measurement_components"},
@@ -211,7 +213,7 @@ EXTRACTED_UNIT_IMPORTS = {
     "eval/run/task_workspace.py": {"__future__", "json", "pathlib", "shutil", "tempfile"},
     "eval/run/task_session.py": {
         "__future__", "sys", "eval.containers.responses_overlay", "eval.run.tool_relay",
-        "eval.service.modelgate", "eval.service.services"},
+        "eval.service.action_policy", "eval.service.modelgate", "eval.service.services"},
     "eval/run/task_output.py": {"__future__", "dataclasses", "eval.run.trial_evidence"},
     "eval/run/task_verification.py": {"__future__", "dataclasses", "eval.containers.immutable_runtime"},
     "console/run_query.py": {
@@ -439,6 +441,10 @@ EXCEPTIONS = {
         "The existing platform control invokes run_one with the Jericho verifier.",
     ("data-eval", "data/scaffolds/qa/control.py", "eval.run.runner"):
         "The shared QA control invokes run_one to validate adapter wiring.",
+    ("data-eval", "data/datasets/robocasa365/control.py", "eval.run.runner"):
+        "The local control exercises simulator startup and sealed scoring through run_one.",
+    ("data-eval", "data/datasets/robocasa365/relay.py", "eval.service.tool_transport"):
+        "The simulator serves public observations and actions over the platform tool relay.",
     ("data-eval", "data/datasets/scienceworld/control.py", "eval.run.runner"):
         "The existing platform control invokes run_one with the ScienceWorld verifier.",
     ("data-eval", "data/datasets/spreadsheetbench/control.py", "eval.run.runner"):
@@ -694,8 +700,9 @@ class ImportDirectionTests(unittest.TestCase):
         # oracle），由 `tools/scenario_builder.py` 读写，和 `runtimes` 一样是纯数据、没有 import。
         # `candidates` 是控制台"编辑这一版"复制出来的候选 harness 根（每个目录一个
         # harness.json + 代码），也是纯数据：它不参与 import，平台只复制和读取它。
+        # Action policy ports declare public environment controls for opt-in evaluations.
         infrastructure = {"scaffolds", "datasets", "__pycache__", "runtimes", "authored",
-                          "candidates"}
+                          "candidates", "action_policy_ports"}
         for directory in (ROOT / "data").iterdir():
             if directory.is_dir():
                 self.assertIn(directory.name, infrastructure, f"unclassified data directory: {directory}")
@@ -771,6 +778,7 @@ class ImportDirectionTests(unittest.TestCase):
             'physicsquestions',
             'ptc_bench',
             'reasoning_gym',
+            'robocasa365',
             'scienceworld',
             'searchqa',
             'sportsunderstanding',

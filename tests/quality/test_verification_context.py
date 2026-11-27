@@ -1,6 +1,7 @@
 """Authored verification context and cache controls; no real scorers or models."""
 import copy
 import json
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -108,6 +109,172 @@ def test_relay_code_and_read_paths_changes_are_bound(tmp_path):
     assert context.problems(None,None)
 
 
+def test_local_file_cache_preserves_digest_and_rehashes_changed_assets(tmp_path, monkeypatch):
+    assets = tmp_path / 'assets'
+    nested = assets / 'nested'
+    nested.mkdir(parents=True)
+    image = nested / 'texture.png'
+    image.write_bytes(b'abc')
+    mesh = assets / 'mesh.obj'
+    mesh.write_bytes(b'mesh')
+    scorer = tmp_path / 'check.py'
+    scorer.write_text('pass')
+    task = [{'task_id': 'bench'}]
+    setups = {'bench': {'tool_relay': {'read_paths': [str(assets)]}}}
+    verifiers = {'bench': {'inputs': [{'path': 'check.py', 'from': str(scorer)}]}}
+
+    def capture():
+        return context.capture(task, {}, setups, verifiers, sandbox=False)
+
+    monkeypatch.delenv('HG_VERIFICATION_FILE_CACHE_ROOTS', raising=False)
+    baseline = capture()
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    with patch.object(context, '_file_digest', wraps=context._file_digest) as digest:
+        assert capture() == baseline
+        assert capture() == baseline
+        assert [call.args[0] for call in digest.call_args_list] == [mesh, image, scorer, scorer]
+
+        # An in-place edit can preserve the length and mtime of a nested file.
+        previous = image.stat()
+        image.write_bytes(b'xyz')
+        os.utime(image, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+        digest.reset_mock()
+        changed = capture()
+        assert changed != baseline
+        assert [call.args[0] for call in digest.call_args_list] == [image, scorer]
+
+        mesh.unlink()
+        assert capture() != changed
+        mesh.write_bytes(b'mesh')
+        assert capture() == changed
+
+        digest.reset_mock()
+        context.capture_content(task, {}, setups, verifiers, sandbox=False)
+        assert [call.args[0] for call in digest.call_args_list] == [mesh, image, scorer]
+
+
+@pytest.fixture
+def local_asset_watch(tmp_path):
+    from harnessgrad.provenance import asset_watch
+
+    try:
+        watch = asset_watch._Watch(tmp_path)
+    except asset_watch.WatchUnavailable:
+        pytest.skip('local Linux file watches are unavailable')
+    watch.close()
+
+
+def test_watched_relay_assets_skip_the_tree_until_a_nested_edit(local_asset_watch, tmp_path, monkeypatch):
+    assets = tmp_path / 'assets'
+    nested = assets / 'nested'
+    nested.mkdir(parents=True)
+    image = nested / 'texture'
+    image.write_bytes(b'abc')
+    outside = tmp_path / 'outside'
+    outside.hardlink_to(image)
+    scorer = tmp_path / 'score.py'
+    scorer.write_text('pass')
+    task = [{'task_id': 'bench'}]
+    setups = {'bench': {'tool_relay': {'read_paths': [str(assets)]}}}
+    verifiers = {'bench': {'inputs': [{'path': 'check.py', 'from': str(scorer)}]}}
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    baseline = context.capture(task, {}, setups, verifiers)
+    with context.watch_asset_directories() as capture:
+        assert capture(task, {}, setups, verifiers) == baseline
+        with patch.object(context, '_stamp', wraps=context._stamp) as stamp:
+            assert capture(task, {}, setups, verifiers) == baseline
+            visited = [call.args[0] for call in stamp.call_args_list]
+            assert image not in visited
+            assert scorer in visited
+
+        # The linked inode must invalidate even when written outside the watched tree.
+        before = image.stat()
+        outside.write_bytes(b'xyz')
+        os.utime(outside, ns=(before.st_atime_ns, before.st_mtime_ns))
+        changed = capture(task, {}, setups, verifiers)
+        assert changed != baseline
+        assert changed == context.capture(task, {}, setups, verifiers)
+        image.unlink()
+        assert capture(task, {}, setups, verifiers) != changed
+        image.write_bytes(b'abc')
+        assert capture(task, {}, setups, verifiers) == baseline
+
+
+def test_named_asset_watch_cannot_reuse_a_nonrelocatable_read_path(tmp_path, monkeypatch):
+    assets = tmp_path / 'assets'
+    assets.mkdir()
+    fixture = assets / 'fixture'
+    fixture.write_text('wood')
+    (assets / 'alias').symlink_to(fixture)
+    tasks = [{'task_id': 'trial'}]
+    setup = {'trial': {'tool_relay': {'read_paths': [str(assets)]}}}
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    with context.watch_asset_directories() as capture:
+        assert capture(tasks, {}, setup) == context.capture(tasks, {}, setup)
+        binding = {'schema': 'harnessgrad.python-runtime-binding.v1', 'dataset': 'control',
+                   'profile': 'execution', 'role': 'service', 'runtime_id': 'a' * 64,
+                   'manifest_path': '/control/build/artifact.json', 'path': '/control/build/venv',
+                   'python': '/control/build/venv/bin/python', 'runtime_paths': ['/control/build/venv', '/usr']}
+        setup['trial']['tool_relay'].update(python_runtime=binding, python=binding['python'],
+                                          asset_mounts={'prepared': str(assets)})
+        with pytest.raises(ValueError, match='verification context unavailable'):
+            capture(tasks, {}, setup)
+
+
+def test_watch_setup_failure_keeps_ordinary_verification(tmp_path, monkeypatch):
+    from harnessgrad.provenance import asset_watch
+
+    assets = tmp_path / 'assets'
+    assets.mkdir()
+    image = assets / 'texture'
+    image.write_text('first')
+    tasks = [{'task_id': 'task'}]
+    setups = {'task': {'tool_relay': {'read_paths': [str(assets)]}}}
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+
+    def unavailable(_):
+        raise asset_watch.WatchUnavailable
+
+    monkeypatch.setattr(asset_watch, '_Watch', unavailable)
+    with context.watch_asset_directories() as capture:
+        original = capture(tasks, {}, setups)
+        image.write_text('second')
+        assert capture(tasks, {}, setups) != original
+
+
+def test_parallel_evaluation_shares_relay_asset_checks(local_asset_watch, tmp_path, monkeypatch):
+    repo = tmp_path / 'repo'
+    repo.mkdir()
+    assets = tmp_path / 'assets'
+    assets.mkdir()
+    image = assets / 'texture'
+    image.write_text('same')
+    tasks = [{'task_id': tid} for tid in ('a', 'b', 'c', 'd')]
+    setups = {task['task_id']: {'tool_relay': {'read_paths': [str(assets)]}} for task in tasks}
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    monkeypatch.setattr(runner, 'snapshot', lambda root: {})
+
+    def measure(_repo, task, **kwargs):
+        return {'task_id': task['task_id'], 'trace': '{}\n', 'exit_code': 0, 'stderr': '',
+                'verdict': {'kind': 'answer', 'passed': True, 'score': 1}}
+
+    monkeypatch.setattr(runner, 'run_one', measure)
+    with patch.object(Path, 'iterdir', autospec=True, side_effect=Path.iterdir) as listing:
+        result = runner._evaluate(repo, tasks, {}, setups=setups, jobs=2)
+        assert result['per_task'] == dict.fromkeys(setups, 1)
+        # One full plan capture, then one watched tree for every worker's checks.
+        assert sum(call.args == (assets,) for call in listing.call_args_list) == 2
+
+    def mutate(_repo, task, **kwargs):
+        image.write_text('changed during measurement')
+        return measure(_repo, task, **kwargs)
+
+    monkeypatch.setattr(runner, 'run_one', mutate)
+    result = runner._evaluate(repo, tasks[:1], {}, setups=setups)
+    assert result['per_task'] == {}
+    assert result['invalid']['a']['stage'] == 'verification context'
+
+
 def test_cache_reuses_only_unchanged_context_and_records_progress(tmp_path):
     repo=tmp_path/'repo';repo.mkdir(); source=tmp_path/'scorer.py';source.write_text('one')
     task={'task_id':'authored'};calls=[];cache={}
@@ -134,8 +301,13 @@ def test_cache_reuses_only_unchanged_context_and_records_progress(tmp_path):
         assert not evaluate()['cached_tasks'] and len(calls)==4
 
 
-def test_missing_and_midrun_changed_source_are_unmeasured(tmp_path):
+@pytest.mark.parametrize('cache_files', [False, True])
+def test_missing_and_midrun_changed_source_are_unmeasured(tmp_path, monkeypatch, cache_files):
     repo=tmp_path/'repo'; repo.mkdir(); source=tmp_path/'check.py'
+    if cache_files:
+        monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(tmp_path))
+    else:
+        monkeypatch.delenv('HG_VERIFICATION_FILE_CACHE_ROOTS', raising=False)
     task={'task_id':'x'}; cache={}; calls=[]
     verifier={'x':{'kind':'command','argv':['python3','check.py'],
                    'inputs':[{'path':'check.py','from':str(source)}]}}

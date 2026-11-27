@@ -41,6 +41,7 @@ import traceback
 from pathlib import Path
 
 from data.scaffolds.runtime_extensions import validate_record as validate_record
+from data.scaffolds.runtime_extensions import relay_asset_mounts, relay_startup_cache, validate_relay_ready_timeout
 
 #: Fixed destination the sandbox mounts the socket at. Kept in step with
 #: `eval/containers/tool_route.py`, which publishes it; a dataset never chooses this.
@@ -307,7 +308,7 @@ def declaration(setup: dict | None) -> dict | None:
     return (setup or {}).get("tool_relay")
 
 
-def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
+def start(setup: dict | None, *, ready_timeout_s: float | None = None,
           context: dict | None = None, private_diagnostics=False) -> ToolRelay | None:
     """Start the relay `setup` declares, or return `None` for a task that needs none.
 
@@ -318,6 +319,14 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
     decl = declaration(setup)
     if not decl:
         return None
+    if ready_timeout_s is None:
+        ready_timeout_s = decl.get("ready_timeout_s", READY_TIMEOUT_S)
+    try:
+        validate_relay_ready_timeout(ready_timeout_s)
+        assets = relay_asset_mounts(decl)
+        cache_spec = relay_startup_cache(decl)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
     validate_record(decl.get("record"))
     filename = decl.get("filename", "environment")
     if not isinstance(filename, str) or filename in ("", ".", "..") or Path(filename).name != filename:
@@ -395,12 +404,17 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
             if model is not None:
                 handles["HG_ENV_MODEL_SOCKET"] = str(model.path)
             child_env = python_service.environment(directory, handles)
+            if cache_spec is not None:
+                from eval.containers import service_startup_cache
+                local_cache = Path(child_env["XDG_CACHE_HOME"]) / cache_spec["directory"]
+                shared_cache = service_startup_cache.snapshot_path(cache_spec, selected_runtime["runtime_id"])
+                service_startup_cache.copy_snapshot(shared_cache, local_cache)
             info_read, info_write = os.pipe()
             os.set_blocking(info_read, False)
             argv = python_service.command(
                 argv, directory=directory, runtime_paths=selected_runtime["runtime_paths"],
                 read_paths=decl.get("read_paths"), model_socket=child_env.get("HG_ENV_MODEL_SOCKET"),
-                info_fd=info_write)
+                info_fd=info_write, **({"asset_mounts": assets} if assets else {}))
             launch_options["pass_fds"] = (info_write,)
         log = log_path.open("w")
         try:
@@ -449,9 +463,12 @@ def start(setup: dict | None, *, ready_timeout_s: float = READY_TIMEOUT_S,
                 probe.settimeout(2.0)
                 try:
                     probe.connect(str(sock))
-                    return handle
                 except OSError:
                     pass
+                else:
+                    if cache_spec is not None:
+                        service_startup_cache.copy_snapshot(local_cache, shared_cache)
+                    return handle
                 finally:
                     probe.close()
             if time.monotonic() > deadline:

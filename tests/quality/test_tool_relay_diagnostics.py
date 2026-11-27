@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import socket
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -120,8 +121,9 @@ def test_startup_failure_carries_evidence_after_private_cleanup(setup, mode):
     setup['tool_relay']['content'] = mode
     if mode == 'missing_python':
         setup['tool_relay']['python'] = '/nonexistent/hg-diagnostic-python'
+    startup_timeout = 0.2 if mode == 'timeout' else 5.0
     with pytest.raises(tool_relay.ToolRelayStartError) as caught:
-        tool_relay.start(setup, context=CONTEXT, ready_timeout_s=.2, private_diagnostics=True)
+        tool_relay.start(setup, context=CONTEXT, ready_timeout_s=startup_timeout, private_diagnostics=True)
     exc = caught.value
     assert exc.report['cleanup'] == {'complete': True, 'errors': []}
     assert exc.diagnostic['stage'] == 'startup'
@@ -135,6 +137,33 @@ def test_startup_failure_carries_evidence_after_private_cleanup(setup, mode):
     elif mode == 'missing_python':
         assert exc.diagnostic['exception']['type'] == 'FileNotFoundError'
         assert 'hg-diagnostic-python' in exc.diagnostic['exception']['message']
+
+
+@pytest.mark.parametrize('declared,override,expected', [
+    (120, None, 120),
+    (30, None, 30),
+    (None, None, 60.0),
+    (120, 0.2, 0.2),
+])
+def test_relay_startup_timeout_uses_dataset_declaration(setup, monkeypatch, declared, override, expected):
+    setup['tool_relay']['content'] = 'timeout'
+    if declared is not None:
+        setup['tool_relay']['ready_timeout_s'] = declared
+    times = iter((0, expected - 0.01, expected + 0.01))
+    sleeps = []
+    monkeypatch.setattr(tool_relay, 'time', SimpleNamespace(monotonic=times.__next__, sleep=sleeps.append))
+    kwargs = {} if override is None else {'ready_timeout_s': override}
+    with pytest.raises(tool_relay.ToolRelayStartError) as caught:
+        tool_relay.start(setup, context=CONTEXT, private_diagnostics=True, **kwargs)
+    assert len(sleeps) == 1
+    assert f'relay did not accept a connection within {expected}s' in caught.value.report['faults']
+
+
+@pytest.mark.parametrize('timeout', [0, -1, None, True, '30', float('inf'), float('nan')])
+def test_invalid_relay_startup_timeout_is_rejected_before_launch(setup, timeout):
+    setup['tool_relay']['ready_timeout_s'] = timeout
+    with pytest.raises(RuntimeError, match=r'tool_relay\.ready_timeout_s must be a positive finite number'):
+        tool_relay.start(setup, context=CONTEXT)
 
 
 def test_truncation_missing_and_unsafe_sources_are_explicit(setup, monkeypatch, tmp_path):

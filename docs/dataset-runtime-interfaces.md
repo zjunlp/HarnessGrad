@@ -30,12 +30,15 @@ SETUP[task_id] = {
         "program": str(relay_program),
         "content": private_json,
         "content_flag": "--case",
+        "ready_timeout_s": 120,
         "record": {"path": "trusted_episode", "max_bytes": 32 * 1024 * 1024},
     },
 }
 ```
 
 relay 声明支持 `program/python/content/content_path/content_flag/filename/budget/deadline_s/max_calls/max_line_bytes`。
+`tool_relay.ready_timeout_s` 可声明服务启动后等待连接的秒数，取有限正数，省略时使用 60 秒。
+直接调用 `tool_relay.start(..., ready_timeout_s=...)` 时，显式参数优先。
 `record.path` 是一个相对顶层目录名；省略 `max_bytes` 默认为 32 MiB。显式 `null` 不加记录大小上限；正整数仍执行大小校验。文件类型、链接、JSON 和绑定校验始终保留。
 
 启用 `record` 后，可信服务进程得到：
@@ -413,6 +416,12 @@ ALFWorld、Jericho、ScienceWorld 和 DS-1000 的任务声明按键生成，枚�
 不继承宿主凭据或 Python 配置。服务只取得本次生成的 record/context 句柄，
 以及声明模型通道后由本次 broker 创建的 socket；不采用宿主已有的模型 socket。
 网络 namespace 不开放外部网络。白名单不能覆盖可写服务目录；这些可信输入不会因此投影给 actor。
+
+对于宿主机上可能移动的只读资产，绑定 Python 的服务可以用
+`SETUP.tool_relay.asset_mounts` 声明名称到绝对源路径的映射，例如
+`{"prepared": "/mnt/data/prepared-v1"}`。服务从固定的
+`/run/harnessgrad-relay/assets/prepared` 读取。严格和便携校验都绑定沙箱内路径和资产内容，
+宿主机路径仅用于挂载。目录内部的符号链接必须使用留在该目录中的相对路径。
 
 评分器在 `VERIFY.python_runtime` 放入 verifier 绑定，`argv` 须以
 `[binding["python"], "-I", "-B", ...]` 开头，`runtime_paths` 须与绑定完全一致，

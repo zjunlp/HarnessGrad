@@ -48,6 +48,7 @@ A blank line is ignored, so a caller may keep the socket open across calls. A re
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 import json
 import os
 import socket
@@ -71,6 +72,10 @@ MAX_DIAGNOSTIC_TRACEBACK = 32768
 
 class ToolTransportError(RuntimeError):
     """The transport could not complete a call. Never a tool result."""
+
+
+class ToolCallTimeout(ToolTransportError):
+    """The deadline expired during an in-progress tool call."""
 
 
 class Relay:
@@ -327,7 +332,7 @@ class Relay:
 
 
 def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float | None = 60.0,
-         max_line_bytes: int | None = MAX_LINE):
+         max_line_bytes: int | None = MAX_LINE, deadline=None, connection=None):
     """One call against a `Relay`. Raises `ToolTransportError` on any failure.
 
     A missing socket is a *platform* failure, not a tool that returned nothing, and it is
@@ -337,27 +342,42 @@ def call(socket_path, op: str, args: dict | None = None, *, timeout_s: float | N
     if not path.exists():
         raise ToolTransportError(f"tool relay socket is absent: {path}")
     payload = json.dumps({"op": op, "args": args or {}}).encode() + b"\n"
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.settimeout(None if timeout_s is None else float(timeout_s))
-    try:
-        sock.connect(str(path))
-        sock.sendall(payload)
-        buffer = b""
-        while b"\n" not in buffer:
-            chunk = sock.recv(65536)
-            if not chunk:
-                raise ToolTransportError("tool relay closed the connection mid-reply")
-            buffer += chunk
-            if max_line_bytes is not None and len(buffer) > max_line_bytes:
-                raise ToolTransportError("tool relay reply exceeded the frame limit")
-    except OSError as exc:
-        raise ToolTransportError(f"tool relay unreachable: {exc}") from exc
-    finally:
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        def arm():
+            if check_open is not None:
+                check_open()
+            timeout = timeout_s
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise ToolCallTimeout("tool call deadline reached")
+                timeout = remaining if timeout is None else min(timeout, remaining)
+            sock.settimeout(timeout)
+
         try:
-            sock.close()
-        except OSError:
-            pass
+            with connection(sock) if connection else nullcontext() as check_open:
+                arm()
+                sock.connect(str(path))
+                arm()
+                sock.sendall(payload)
+                buffer = b""
+                while b"\n" not in buffer:
+                    arm()
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        raise ToolTransportError("tool relay closed the connection mid-reply")
+                    buffer += chunk
+                    if max_line_bytes is not None and len(buffer) > max_line_bytes:
+                        raise ToolTransportError("tool relay reply exceeded the frame limit")
+        except TimeoutError as exc:
+            if deadline is not None:
+                raise ToolCallTimeout("tool call deadline reached") from exc
+            raise ToolTransportError(f"tool relay unreachable: {exc}") from exc
+        except OSError as exc:
+            raise ToolTransportError(f"tool relay unreachable: {exc}") from exc
     reply = json.loads(buffer.split(b"\n", 1)[0])
+    if not isinstance(reply, dict):
+        raise ToolTransportError("tool relay returned an invalid reply")
     if not reply.get("ok"):
         raise ToolTransportError(str(reply.get("error") or "tool call failed"))
     return reply.get("result")

@@ -19,6 +19,7 @@ class TaskSession:
         self.web = None
         self.stepwise = None
         self.tool = None
+        self.action_policy = None
 
     def start_services(self, specs, *, recordings_root, run_id, task_id, run_seed):
         self.services = services.start(specs, recordings_root=recordings_root,
@@ -43,8 +44,9 @@ class TaskSession:
                                               if self.task_budget_context is not None else {})).start()
         return self.model.base_url
 
-    def start_native_model(self, base, *, factory, observe_http):
+    def start_native_model(self, base, *, factory, observe_http, visual=None):
         self.model = factory(base, **({'observe_http': True} if observe_http else {}),
+            **({'visual': visual} if visual is not None else {}),
             **({'budget_context': self.task_budget_context} if self.task_budget_context is not None else {})).start()
 
     def prepare_stepwise(self, session, *, factory, contract, public_fields, timeout_s):
@@ -56,6 +58,21 @@ class TaskSession:
     def start_tool(self, setup, *, context, private_diagnostics):
         self.tool = tool_relay.start(setup, **({'context': context} if context is not None else {}),
                                     **({'private_diagnostics': True} if private_diagnostics else {}))
+
+    def start_action_policy(self, setup, **episode):
+        from eval.service.action_policy import EpisodePolicy
+
+        self.action_policy = EpisodePolicy(setup, self.tool.path, **episode).start()
+
+    @property
+    def tool_path(self):
+        route = self.action_policy or self.tool
+        return route.path if route is not None else None
+
+    def stop_action_policy(self):
+        if self.action_policy is not None:
+            self.action_policy.close()
+            self.receipt['action_policy'] = dict(self.action_policy.summary)
 
     def environment_usage(self, *, project_model):
         usage = self.services.usage() if self.services is not None else {}
@@ -76,6 +93,7 @@ class TaskSession:
         """One explicit close pass; receipt mutations remain visible to the caller."""
         output.capture_pending()
         self.collect_responses(responses_enabled)
+        self.stop_action_policy()
         self.close_tool(output.evidence)
         self.close_stepwise()
         self.close_model(native_model)

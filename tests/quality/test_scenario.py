@@ -199,8 +199,11 @@ def test_relative_scenario_split_is_checked_and_normalized(tmp_path, monkeypatch
     assert args.split == str(path.resolve())
 
 
-@pytest.mark.parametrize("dataset,pool,key", [("appworld", "dev", "HG_APPWORLD_POOL"),
-                                            ("alfworld", "valid_seen", "HG_ALFWORLD_POOL")])
+@pytest.mark.parametrize("dataset,pool,key", [
+    ("appworld", "dev", "HG_APPWORLD_POOL"),
+    ("alfworld", "valid_seen", "HG_ALFWORLD_POOL"),
+    ("robocasa365", "all", "HG_ROBOCASA365_POOL"),
+])
 def test_scenario_pool_uses_existing_adapter_knob(dataset, pool, key):
     import driver
     assert driver._scenario_pool_env(dataset, pool) == {key: pool}

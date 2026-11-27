@@ -1,6 +1,60 @@
 """Validation for explicitly enabled runtime extensions; standard library only."""
 from pathlib import Path
 import math
+import re
+import sys
+
+
+RELAY_ASSET_ROOT = Path('/run/harnessgrad-relay/assets')
+
+
+def relay_asset_path(name: str) -> Path:
+    if not isinstance(name, str) or not re.fullmatch(r'[a-z][a-z0-9_-]{0,63}', name):
+        raise ValueError('tool_relay.asset_mounts requires simple asset names')
+    return RELAY_ASSET_ROOT / name
+
+
+def relay_asset_mounts(relay: dict) -> dict[Path, Path]:
+    """Resolve declared names to fixed service paths without consulting the host."""
+    if 'asset_mounts' not in relay:
+        return {}
+    if not isinstance(relay.get('python_runtime'), dict):
+        raise ValueError('tool_relay.asset_mounts requires a bound Python service')
+    assets = relay['asset_mounts']
+    if not isinstance(assets, dict) or not assets:
+        raise ValueError('tool_relay.asset_mounts requires a nonempty object')
+    system = tuple(Path(path) for path in ('/usr', '/bin', '/sbin', '/lib', '/lib64', '/etc'))
+    mounts = {}
+    for name, value in assets.items():
+        target = relay_asset_path(name)
+        if not isinstance(value, str) or '\x00' in value:
+            raise ValueError('tool_relay.asset_mounts requires absolute source paths')
+        path = Path(value)
+        if (not path.is_absolute() or value.startswith('//') or '..' in path.parts
+                or value != str(path) or any(path.is_relative_to(root) for root in system)):
+            raise ValueError('tool_relay.asset_mounts requires normalized absolute asset paths outside system directories')
+        mounts[target] = path
+    return mounts
+
+
+def validate_relay_ready_timeout(value) -> None:
+    if type(value) not in (int, float) or not 0 < value <= sys.float_info.max:
+        raise ValueError("tool_relay.ready_timeout_s must be a positive finite number")
+
+
+def relay_startup_cache(relay: dict) -> dict | None:
+    """Select a disposable XDG cache directory for a bound Python service."""
+    if 'startup_cache' not in relay:
+        return None
+    spec = relay['startup_cache']
+    if (not isinstance(relay.get('python_runtime'), dict)
+            or not isinstance(spec, dict) or set(spec) != {'directory', 'key'}
+            or not isinstance(spec['directory'], str)
+            or not re.fullmatch(r'[a-z][a-z0-9_-]{0,63}', spec['directory'])
+            or not isinstance(spec['key'], str) or not re.fullmatch(r'[a-f0-9]{64}', spec['key'])):
+        raise ValueError('tool_relay.startup_cache requires a bound Python service, '
+                         'a cache directory name and a SHA-256 key')
+    return spec
 
 
 def validate_record(spec) -> None:

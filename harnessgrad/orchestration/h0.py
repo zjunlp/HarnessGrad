@@ -34,6 +34,7 @@ class H0Options:
     jobs: int
     gpu_budget: int | None
     sandbox: bool
+    visual_evidence: bool = False
 
 
 @dataclass(frozen=True)
@@ -357,6 +358,7 @@ def measure_h0(measurement: Callable, work, tasks, scorable, cache, source_sha, 
         **measurement_components.fields(identities.measurement),
         **candidate_runtime.fields(identities.current_actor), verification_context=identities.verification,
         envs=envs, run_id=attribution.run_id, run_seed=run_seed, recordings_root=run_dir / "recordings",
+        **({'visual_evidence': True} if options.visual_evidence and options.side == 'train' else {}),
         **({"diagnostic_authorization": diagnostic_authorization} if diagnostic_authorization is not None else {}),
         **({"task_budget_context": task_budget_context} if task_budget_context is not None else {}))
 

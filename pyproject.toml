@@ -82,6 +82,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "base_harness" = ["launchable.json", "deepseek-harness/harness.json", "deepseek-harness/knobs.json", "deepseek-harness/surface.json", "deepseek-harness/dsh_farm.tsv", "deepseek-harness/README.md"]
 "base_harness.codex" = ["harness.json", "README.md"]
 "base_harness.loop" = ["harness.json", "requirements.txt", "requirements.lock", "requirements-py310.lock", "requirements-py39.lock", "README.md"]
+"base_harness.loop-vision" = ["harness.json", "requirements.lock", "README.md"]
 "base_harness.miniagent" = ["harness.json", "requirements.txt", "requirements.lock", "LICENSE.upstream", "PROVENANCE.json", "README.md", "agent.yaml", "components.yaml"]
 "base_harness.miniagent.prompts" = ["extract.md", "system.md"]
 "base_harness.miniagent.skills" = ["main.md"]
@@ -108,6 +109,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
 "data.datasets.costbench" = ["execution-runtime.json", "requirements.lock", "source-files.json", "README.md",
                              "LIFECYCLE_CONTROL.md"]
 "data.datasets.costbench_dynamic" = ["README.md"]
+"data.datasets.robocasa365" = ["execution-runtime.json", "requirements.lock", "archives.json", "tasks.json", "README.md"]
 "data.datasets.ds1000" = ["execution-runtime.json", "requirements.lock",
                          "cpu-wheels-cp312-linux-x86_64.json", "README.md"]
 "harnessgrad.improvers" = ["improvers.json", "launchable.json", "skill.md"]
@@ -162,6 +164,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "rsi-swe-bench-pro-v2-eval.json", "rsi-swe-bench-pro-v2.json",
     "rsi-terminal-bench2-eval.json", "rsi-terminal-bench2.json",
     "splits/ptc-bench/study.json", "splits/ptc-bench/dev.txt", "splits/ptc-bench/test.txt",
+    "splits/robocasa365/study.json",
     "splits/wtm-bench/study.json", "splits/wtm-bench/dev.txt", "splits/wtm-bench/test.txt",
     "splits/wtm-bench/mixed/study.json", "splits/wtm-bench/mixed/dev.txt", "splits/wtm-bench/mixed/test.txt",
 ]

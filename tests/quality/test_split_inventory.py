@@ -217,8 +217,8 @@ def test_the_committed_document_carries_no_host_fact():
     rows = _table(text)
     for name, cells in rows.items():
         assert cells[STATE] != "not provisioned", name
-        assert cells[STATE] in {"declared", "none", "undeclared", "refused"}, (
-            f"{name}'s state is not one of the four declared states: {cells[STATE]!r}")
+        assert cells[STATE] in {"declared", "official-eval", "none", "undeclared", "refused"}, (
+            f"{name}'s state is not a supported split state: {cells[STATE]!r}")
 
 
 def test_no_committed_cell_prints_a_size():

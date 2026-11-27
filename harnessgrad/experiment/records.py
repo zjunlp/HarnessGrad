@@ -742,7 +742,8 @@ def _saved_verdict(verdict: dict) -> dict:
     entry["scorer_isolation_class"] = observed_class(verdict)
     entry.update({key: verdict[key] for key in
                   ("scorer_isolation_declared", "scorer_isolation_evidence") if key in verdict})
-    entry.update({key: verdict[key] for key in ("trial", "invalid", "unmeasured", "evidence", "protocol", "native_runtime")
+    entry.update({key: verdict[key] for key in ("trial", "invalid", "unmeasured", "evidence", "protocol",
+                                               "native_runtime", "action_policy")
                   if key in verdict})
     evidence = verdict.get("evidence")
     has_identity = "trial" in verdict or (isinstance(evidence, dict) and "trial" in evidence)

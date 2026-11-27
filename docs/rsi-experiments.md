@@ -9,6 +9,51 @@ These are executable experiment configurations, not new benchmark results. The
 five-task settings bound the initial task count; they do not demonstrate a method's
 quality. Downloading source bytes does not establish native runtime readiness.
 
+### Visual training evidence
+
+Pass `--visual-evidence` on a training run to archive inline PNG and JPEG inputs
+observed on the platform's native HTTP model route. The recorder supports Chat
+Completions and Responses. The run stores each image once under
+`visual-evidence/train/images`, keyed by SHA-256, and writes trial indexes under
+`visual-evidence/train/rounds`. References record HTTP status and response
+completion. Loop Vision also links the images to model and tool steps.
+Retrying a logical trial updates its index in place.
+
+The shared editing workspace receives training indexes under
+`evidence/history/visual` with read-only paths to the images. An editor can open
+a selected frame with its image-viewing tool. Capture records expose the request
+and HTTP response, with interpretation left to the downstream model. Evaluation
+runs leave capture disabled. File IDs, remote URLs and transports outside the
+native HTTP route do not supply image bytes. With `--h0-from` and
+`--visual-evidence`, strict local H0 reuse (including subset views) copies the
+admitted training tasks' round-zero image indexes and referenced images into the
+new run. When preparing a shared training baseline, pass `--visual-evidence` to
+`tools/prepare_h0.py` as well. The tool reuses a baseline for that request only
+if its run metadata records that capture was enabled.
+
+### Caching large local verification assets
+
+Set `HG_VERIFICATION_FILE_CACHE_ROOTS` to a colon-separated list of absolute,
+trusted local asset directories to reuse file SHA-256 digests within each
+HarnessGrad process. For example, point it at the prepared RoboCasa365 assets
+while running a local study.
+
+```sh
+export HG_VERIFICATION_FILE_CACHE_ROOTS="$HG_DATA_ROBOCASA365/prepared-v1"
+```
+
+For sandboxed evaluations on supported local Linux filesystems, a relay read
+path or named asset source that exactly matches a configured root is verified
+once as the workers start. Workers then share the tree digest while filesystem
+watches remain valid. A change, dropped watch, or mount change invalidates the digest.
+Verification falls back to walking the tree if watches are unavailable.
+
+Use this option for trusted, prepared assets that stay read-only during the
+evaluation. Filesystem watches cannot track writes through an open writable
+memory map. Outside the configured roots and during portable attestations,
+verification continues to hash source bytes directly. The cache is disabled by
+default and lasts for one process.
+
 | Route | Why an RSI/Harness researcher might choose it | Preparation beyond the platform | Headline score in this port |
 | --- | --- | --- | --- |
 | [BBEH](https://github.com/google-deepmind/bbeh) | Hard general reasoning; diagnose context, execution and answer delivery beyond school mathematics | Pinned JSON data; agent/editor model; no Docker, web service or model judge | Native per-answer correctness |

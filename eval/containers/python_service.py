@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+
+from data.scaffolds.runtime_extensions import RELAY_ASSET_ROOT, relay_asset_path
 from harnessgrad.execution.bubblewrap import executable as bubblewrap_executable
 
 
@@ -26,9 +28,24 @@ def environment(directory: Path, inherited: dict | None) -> dict:
     return selected
 
 
+def _read_mount(value, directory, broad):
+    path = Path(value)
+    if (not path.is_absolute() or ".." in path.parts or path in broad
+            or path.resolve(strict=True) != path
+            or not (path.is_dir() or path.is_file())):
+        raise ValueError(f"invalid bound Python service read path: {value}")
+    if _overlaps(path, directory):
+        raise ValueError("service read paths overlap its writable state")
+    return path
+
+
+def _overlaps(left, right):
+    return left.is_relative_to(right) or right.is_relative_to(left)
+
+
 def command(argv: list[str], *, directory: Path, runtime_paths: list[str],
             read_paths: list[str], model_socket: str | None = None,
-            info_fd: int | None = None) -> list[str]:
+            info_fd: int | None = None, asset_mounts: dict[Path, Path] | None = None) -> list[str]:
     """Mount declared inputs/runtime read-only and only this instance writable."""
     try:
         bwrap = bubblewrap_executable()
@@ -40,15 +57,18 @@ def command(argv: list[str], *, directory: Path, runtime_paths: list[str],
     mounts = []
     broad = {Path("/"), Path("/tmp"), Path("/var/tmp"), Path("/home"), Path.home().resolve()}
     for value in [*runtime_paths, *read_paths]:
-        path = Path(value)
-        if (not path.is_absolute() or ".." in path.parts or path in broad
-                or path.resolve(strict=True) != path
-                or not (path.is_dir() or path.is_file())):
-            raise ValueError(f"invalid bound Python service read path: {value}")
-        if path == directory or path in directory.parents or directory in path.parents:
-            raise ValueError("service read paths overlap its writable state")
+        path = _read_mount(value, directory, broad)
         if path not in mounts:
             mounts.append(path)
+    named = {}
+    if asset_mounts:
+        occupied = [directory, *mounts, *([Path(model_socket)] if model_socket else [])]
+        if any(_overlaps(path, RELAY_ASSET_ROOT) for path in occupied):
+            raise ValueError("service mount overlaps the reserved asset directory")
+        for target, source in sorted(asset_mounts.items()):
+            if target != relay_asset_path(target.name):
+                raise ValueError("invalid bound Python service asset destination")
+            named[target] = _read_mount(source, directory, broad)
     program = Path(argv[3])  # [absolute Python, -I, -B, absolute service program, ...]
     if not any(program == path or (path.is_dir() and path in program.parents) for path in mounts):
         raise ValueError("bound Python service program must be a declared read path")
@@ -62,6 +82,8 @@ def command(argv: list[str], *, directory: Path, runtime_paths: list[str],
             plan += ["--ro-bind", name, name]
     for path in sorted(mounts, key=lambda item: (len(item.parts), str(item))):
         plan += ["--ro-bind", str(path), str(path)]
+    for target, source in named.items():
+        plan += ["--ro-bind", str(source), str(target)]
     if model_socket is not None:
         # The broker owns inference credentials and transport; the service only
         # gets this socket, even though it has no network namespace egress.

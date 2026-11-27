@@ -478,6 +478,15 @@ def evidence_pointer(base: Path) -> str:
     prompt stops growing with the dataset.
     """
     entrypoint = (_read_manifest(base).get("entrypoint") or "agent.py")
+    visual = ""
+    if (channel(base) / "history" / "visual").is_dir():
+        visual = (
+            "- training images: `evidence/history/visual/round-<N>.jsonl` lists images by "
+            "task, trial and model request, with matching tool steps when available. "
+            "If an image could explain a decision, open its `path` with your image-viewing tool "
+            "(for example `view_image` if available). Cite the task and request number "
+            "with any diagnosis that uses an image.\n"
+        )
     return (
         "## Where the evidence is -- read what your own diagnosis needs\n"
         f"- the harness you are changing **is the current directory**; its entrypoint is "
@@ -491,6 +500,7 @@ def evidence_pointer(base: Path) -> str:
         "- the tasks, their grading, and the verifier's verdict: `evidence/tasks/<task>.json`\n"
         "- earlier rounds: `evidence/history/round-<N>.json`; complete harness trees from\n"
         "  earlier rounds: `evidence/states/round-<N>/`\n"
+        f"{visual}"
         "- how to improve a harness on this platform: `evidence/SKILL.md` -- read this first\n"
     )
 

@@ -35,7 +35,7 @@ def authored_legacy_harness(monkeypatch):
     # Never load a real dataset in unit tests. The context is a synthetic task plan.
     from harnessgrad.provenance import verification_context
     monkeypatch.setattr(prepare_h0, '_verification_preflight',
-                        lambda dataset, side, ids, split, sampling, environment:
+                        lambda dataset, side, ids, split, sampling, environment, **kwargs:
                         verification_context.create({tid: 'a' * 64 for tid in (ids or ['t1', 't2'])}))
 
 
@@ -164,6 +164,27 @@ def test_an_existing_baseline_is_reused_for_the_same_configuration(tmp_path):
     assert found is not None and found[0] == run
 
 
+def test_visual_baseline_reuse_requires_recorded_capture(tmp_path):
+    original = prepare_h0.configuration(_args(tmp_path, ["t1"]))
+    visual = prepare_h0.configuration(_args(tmp_path, ["t1"], visual_evidence=True))
+    assert visual == {**original, "visual_evidence": True}
+
+    old = _write_run(tmp_path, "h0-appworld-1", per_task={"t1": 0.5}, config=original)
+    assert prepare_h0.find_existing(original, tmp_path)[0] == old
+    assert prepare_h0.find_existing(visual, tmp_path) is None
+
+    new = _write_run(tmp_path, "h0-appworld-2", per_task={"t1": 0.5}, config=visual)
+    with pytest.raises(SystemExit, match="visual evidence capture was not enabled"):
+        prepare_h0.verify(new, None, 1, configuration=visual)
+    assert prepare_h0.find_existing(visual, tmp_path) is None
+
+    meta_path = new / "run_meta.json"
+    metadata = json.loads(meta_path.read_text())
+    metadata["config"]["run"]["visual_evidence"] = True
+    meta_path.write_text(json.dumps(metadata))
+    assert prepare_h0.find_existing(visual, tmp_path)[0] == new
+
+
 @pytest.mark.parametrize("measured", [["t1", "t3"], ["t1", "t2", "t3"]])
 def test_existing_baseline_must_measure_the_actual_study_set(tmp_path, measured):
     config = prepare_h0.configuration(_args(tmp_path, ["t1", "t2"]))
@@ -195,6 +216,30 @@ def test_dry_run_measures_the_baseline_and_nothing_else(tmp_path, capsys):
     assert "--rounds 0" in printed and "--improver none" in printed
     assert "--tasks t1,t2" in printed
     assert not (tmp_path / "runs").exists() or not list((tmp_path / "runs").glob("h0-*"))
+
+
+def test_action_policy_socket_is_forwarded_to_preflight_and_driver(tmp_path, monkeypatch, capsys):
+    from harnessgrad.provenance import verification_context
+
+    sockets = []
+
+    def preflight(*args, action_policy_socket):
+        sockets.append(action_policy_socket)
+        return verification_context.create({'t1': 'a' * 64})
+
+    monkeypatch.setattr(prepare_h0, '_verification_preflight', preflight)
+    socket = tmp_path / 'policy.sock'
+    assert prepare_h0.main(['--dataset', 'demo', '--dry-run', '--runs-root', str(tmp_path / 'runs'),
+                            '--action-policy-socket', str(socket)]) == 0
+    assert sockets == [socket]
+    assert f'--action-policy-socket {socket}' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("side", ["train", "eval"])
+def test_visual_evidence_is_forwarded_to_training_driver(tmp_path, capsys, side):
+    assert prepare_h0.main(["--dataset", "demo", "--side", side, "--visual-evidence",
+                            "--runs-root", str(tmp_path / "runs"), "--dry-run"]) == 0
+    assert ("--visual-evidence" in capsys.readouterr().out) == (side == "train")
 
 
 @pytest.mark.parametrize("contents, message", [

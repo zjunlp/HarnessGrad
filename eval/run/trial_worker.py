@@ -34,6 +34,7 @@ class RunOptions:
     recordings_root: Path | None
     authorization: object
     private_paths: tuple[Path, ...]
+    visual_evidence: bool = False
 
     def trial_identity(self, trial):
         return f'round-{self.round_no}.harness-{self.harness_sha}.trial-{trial + 1}'
@@ -151,11 +152,13 @@ class TaskEvidenceJournal:
             self.marker.unlink()
 
 
-def check_final_context(task, scorable, setups, verifiers, envs, *, sandbox, expected, task_id):
+def check_final_context(task, scorable, setups, verifiers, envs, *, sandbox, expected, task_id,
+                        capture_context=None):
     tid = task_id
     try:
         task_python.admit((envs or {}).get(tid), sandbox=sandbox, setup=(setups or {}).get(tid))
-        current = verification_context.capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
+        capture = capture_context or verification_context.capture
+        current = capture([task], scorable, setups, verifiers, envs, sandbox=sandbox)
         if verification_context.problems(expected, current):
             raise ValueError('verification context changed during task execution')
     except (OSError, TypeError, ValueError, RuntimeError) as exc:
@@ -265,6 +268,8 @@ class TaskTrialWorker:
                 setup=inputs.read('setup'), verifier=inputs.read('verifier'), env=inputs.read('environment'),
                 run_id=self.options.run_id, run_seed=(journal.seed(trial) if journal.protocol else self.options.run_seed),
                 recordings_root=self.options.recordings_root,
+                **({'visual_attempt': (trial + 1, self.options.trial_identity(trial))}
+                   if self.options.visual_evidence else {}),
                 **({'trial_id': self.options.trial_identity(trial)}
                    if inputs.fresh() or declared_class(inputs.read('verifier')) == 'pristine-offline' else {}),
                 **({'diagnostic_authorization': self.options.authorization}

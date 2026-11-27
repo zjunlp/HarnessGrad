@@ -1,4 +1,4 @@
-"""Passive HTTP/1 response metadata; never change forwarded bytes or retain bodies.
+"""Passive HTTP/1 response metadata and optional bounded request image capture.
 
 Framing follows Content-Length, chunked encoding and EOF, so body text cannot be
 mistaken for a later status line on a keep-alive connection. Unsupported/malformed
@@ -10,13 +10,16 @@ import io
 import threading
 from urllib.parse import urlsplit
 
+from eval.service.visual_evidence import MAX_REQUEST_BYTES
+
 
 class HTTPObservation:
-    def __init__(self):
+    def __init__(self, visual=None):
         self.lock = threading.RLock()
         self.calls = []
         self.errors = []
         self.connections = []
+        self.visual = visual
 
     def connection(self):
         with self.lock:
@@ -53,6 +56,7 @@ class _Connection:
                     self.owner.errors.append({'side': side, 'type': type(exc).__name__})
                 parser.state = 'broken'
                 parser.buffer.clear()
+                parser.image_body = None
 
 
 class _Messages:
@@ -62,6 +66,8 @@ class _Messages:
         self.state = 'headers'
         self.remaining = 0
         self.call = None
+        self.image_call = None
+        self.image_body = None
 
     @property
     def idle(self):
@@ -70,7 +76,13 @@ class _Messages:
     def finish(self):
         if self.call is not None:
             self.call['complete'] = True
+        if self.image_call is not None:
+            if self.response:
+                self.image_call['response_complete'] = True
+            elif self.image_body is not None:
+                self.pair.owner.visual.capture(self.image_call, self.image_body)
         self.call = None
+        self.image_call = self.image_body = None
         self.state = 'headers'
 
     def feed(self, data):
@@ -96,6 +108,12 @@ class _Messages:
                 self.headers(raw)
             elif self.state in ('body', 'chunk'):
                 size = min(len(self.buffer), self.remaining)
+                if self.image_body is not None:
+                    if len(self.image_body) + size <= MAX_REQUEST_BYTES:
+                        self.image_body.extend(self.buffer[:size])
+                    else:
+                        self.image_call['capture_status'] = 'request_too_large'
+                        self.image_body = None
                 del self.buffer[:size]
                 self.remaining -= size
                 if self.remaining:
@@ -145,9 +163,11 @@ class _Messages:
                 raise ValueError('unsupported HTTP response')
             if status < 200:
                 return  # Interim responses do not consume a request.
-            method, operation = self.pair.pending.popleft()
+            method, operation, self.image_call = self.pair.pending.popleft()
             self.call = {'operation': operation, 'status': status, 'complete': False}
             self.pair.owner.calls.append(self.call)
+            if self.image_call is not None:
+                self.image_call['http_status'] = status
             if method == 'HEAD' or status in (204, 304):
                 self.finish()
                 return
@@ -159,7 +179,13 @@ class _Messages:
             operation = next((name for suffix, name in (
                 ('/chat/completions', 'chat.completions'), ('/responses', 'responses'),
                 ('/completions', 'completions')) if method == 'POST' and path.endswith(suffix)), 'other')
-            self.pair.pending.append((method, operation))
+            if self.pair.owner.visual is not None and operation in ('chat.completions', 'responses'):
+                self.image_call = self.pair.owner.visual.start_request(operation, headers)
+                if headers.get('Content-Encoding', 'identity').lower() != 'identity':
+                    self.image_call['capture_status'] = 'unsupported_content_encoding'
+                else:
+                    self.image_body = bytearray()
+            self.pair.pending.append((method, operation, self.image_call))
         transfer = headers.get('Transfer-Encoding', '').lower().strip()
         if transfer:
             if transfer != 'chunked':

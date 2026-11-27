@@ -450,11 +450,15 @@ def lint_provider(name: str, schema: dict, *, inspect_only: bool = False) -> Res
         if not _outside_platform(base, ROOT):
             result.error("DATASET_ROOT is inside the platform tree")
         split = metadata.get("SPLIT")
-        lint_split(split, task_ids, schema, result)
-        if split is not None:
-            registry.validate_split(name, tasks, split, split_groups=metadata.get("SPLIT_GROUPS"))
-        elif metadata.get("SPLIT_GROUPS") is not None:
-            registry._validate_split_groups(name, tasks, metadata["SPLIT_GROUPS"])
+        if metadata.get("SPLIT_SOURCE") == "official-eval":
+            registry.validate_split(name, tasks, split, require_nonempty=("eval",),
+                                    split_groups=metadata.get("SPLIT_GROUPS"), allow_unassigned=True)
+        else:
+            lint_split(split, task_ids, schema, result)
+            if split is not None:
+                registry.validate_split(name, tasks, split, split_groups=metadata.get("SPLIT_GROUPS"))
+            elif metadata.get("SPLIT_GROUPS") is not None:
+                registry._validate_split_groups(name, tasks, metadata["SPLIT_GROUPS"])
         if metadata.get("REFUSED") is not None:
             reason = metadata["REFUSED"]
             if not isinstance(reason, str) or len(reason.strip()) < 40:
@@ -637,11 +641,17 @@ def lint_dataset(name: str, schema: dict, *, require_data: bool = True,
         return result
 
     task_ids = lint_tasks(tasks, scorable, schema, result)
-    lint_split(getattr(module, "SPLIT", None), task_ids, schema, result)
     try:
         split_groups = registry.load_split_groups(name, tasks)
-        if split_groups is not None and getattr(module, "SPLIT", None) is not None:
-            registry.validate_split(name, tasks, module.SPLIT, split_groups=split_groups)
+        if getattr(module, "SPLIT_SOURCE", None) == "official-eval":
+            registry.validate_split(name, tasks, registry.official_split(name, tasks),
+                                    require_nonempty=("eval",), split_groups=split_groups,
+                                    allow_unassigned=True)
+        else:
+            split = getattr(module, "SPLIT", None)
+            lint_split(split, task_ids, schema, result)
+            if split_groups is not None and split is not None:
+                registry.validate_split(name, tasks, split, split_groups=split_groups)
     except ValueError as exc:
         result.error(str(exc))
 

@@ -179,6 +179,16 @@
    "denominator": "measured_tasks"
   }
  },
+ "robocasa365": {
+  "run_reward": {
+   "aggregation": "arithmetic_mean",
+   "denominator": "measured_tasks"
+  },
+  "corpus_metrics": {
+   "aggregation": "ordered_macro_mean",
+   "denominator": "provided_results"
+  }
+ },
  "scienceworld": {
   "run_reward": {
    "aggregation": "arithmetic_mean",

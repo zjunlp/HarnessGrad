@@ -171,6 +171,13 @@ exported in sorted source-task order without the task names; a task-set digest b
 ordering. Equal task-set digests allow comparing those anonymous positions across runs.
 Hashes are identifiers, not a guarantee against guessing known public inputs.
 
+Runs with action policies can include `run_meta.action_policy` with allowlisted
+backend and configuration identifiers. A curve point's `action_policy_trials`
+follows the anonymous task order of `task_scores`. Each entry contains the
+recorded policy counts and timings in saved verdict trial order. Missing task
+or trial statistics use `null`. Unrecorded fields, including timings absent
+from older verdicts, are omitted.
+
 A patch descriptor records `diffs/round-N.patch`, its original hash and byte count. Patch
 text is withheld because code can contain benchmark answers or credentials. Missing and
 unreadable patches are explicitly distinguished from withheld patches. The original patch

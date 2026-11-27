@@ -491,27 +491,14 @@ def _scenario(name: str, platform: Path) -> tuple[dict, dict]:
 
 def _metadata(spec: dict) -> dict:
     """Trusted offline metadata only: never materialize tasks or invoke a scorer."""
-    from data.scaffolds import registry
-    tasks, _, split = registry.load_split(spec['dataset'])
-    # Match the driver's explicit divisions. Declared splits are already checked
-    # by load_split; an absent declaration must not create a study division.
-    split_groups = (registry.load_split_groups(spec['dataset'], tasks)
-                    if spec['split'] != 'declared' else None)
-    if spec['split'] == 'default':
-        split = registry.validate_split(
-            spec['dataset'], tasks, registry.default_split(tasks, split_groups=split_groups),
-            require_nonempty=(spec['side'],), split_groups=split_groups)
-    elif spec['split'] == 'official':
-        split = registry.validate_split(
-            spec['dataset'], tasks, registry.official_split(spec['dataset'], tasks),
-            require_nonempty=(spec['side'],), split_groups=split_groups)
-    elif spec['split'] != 'declared':
-        path = (PLATFORM_ROOT/spec['split']).resolve(strict=True)
-        if not path.is_relative_to(PLATFORM_ROOT):
+    from data.scaffolds import custom_split, registry
+    tasks, _, declared = registry.load_split(spec['dataset'])
+    choice = spec['split']
+    if choice not in ('declared', 'default', 'official'):
+        choice = (PLATFORM_ROOT / choice).resolve(strict=True)
+        if not choice.is_relative_to(PLATFORM_ROOT):
             raise ValueError('split file leaves platform')
-        split = registry.validate_split(
-            spec['dataset'], tasks, json.loads(path.read_text()),
-            require_nonempty=(spec['side'],), split_groups=split_groups)
+    split, _, _ = custom_split.resolve(spec['dataset'], tasks, declared, choice, side=spec['side'])
     ids = split[spec['side']] if split else [t['task_id'] for t in tasks]
     envs = registry.load_envs(spec['dataset'], task_ids=ids)
     kinds = {env.get('kind', 'files') for env in envs.values()}
@@ -545,13 +532,11 @@ def _probe_metadata(spec: dict, *, platform: Path, work: Path, env: dict) -> dic
 
 def scenario_environment(spec: dict, env: dict) -> dict:
     """Bind reviewed pool once for both trusted readiness and real execution."""
-    result = dict(env)
-    selector = {'appworld':'HG_APPWORLD_POOL', 'alfworld':'HG_ALFWORLD_POOL'}.get(spec['dataset'])
-    if selector and spec.get('pool'):
-        result[selector] = spec['pool']
-    elif spec.get('pool') not in (None,'train','eval'):
-        _reject('service-not-ready', f"dataset {spec['dataset']} has no selector for pool {spec['pool']!r}")
-    return result
+    from harnessgrad.orchestration.scenario_config import pool_environment
+    try:
+        return {**env, **pool_environment(spec['dataset'], spec.get('pool'))}
+    except ValueError as exc:
+        _reject('service-not-ready', str(exc))
 
 
 def scenario_status(name: str, *, platform_root: Path = PLATFORM_ROOT,

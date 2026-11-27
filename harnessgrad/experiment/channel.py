@@ -467,12 +467,38 @@ def _stage_default_skill(channel: Path) -> None:
         (channel / "SKILL.md").write_text(skill.read_text(encoding="utf-8"), encoding="utf-8")
 
 
+def _stage_visual_evidence(channel, root, points, task_ids):
+    """Publish trial indexes for the method's admitted training tasks."""
+    from eval.service.visual_evidence import image_path, round_manifests
+
+    if not task_ids:
+        return
+    destination = channel / 'history' / 'visual'
+    for round_no in sorted({p['round'] for p in points if type(p.get('round')) is int}):
+        records = round_manifests(root, round_no, task_ids)
+        for trial in records:
+            for call in trial['calls']:
+                for image in call['images']:
+                    path = image_path(root, image)
+                    image.pop('file', None)
+                    image.pop('path', None)
+                    if path is not None:
+                        image['path'] = str(path.resolve())
+                    elif image.get('status') == 'captured':
+                        image['status'] = 'file_unavailable'
+        if records:
+            destination.mkdir(parents=True, exist_ok=True)
+            with (destination / f'round-{round_no}.jsonl').open('w', encoding='utf-8') as stream:
+                for record in records:
+                    stream.write(json.dumps(record, ensure_ascii=False) + '\n')
+
+
 def _stage_for_method(work: Path, point: dict, traces: dict,
                       history: list[dict] | None = None,
                       task_ids: list[str] | None = None,
                       run_dir: Path | None = None,
                       tasks=None, setups=None, verifiers=None,
-                      result=None) -> None:
+                      result=None, visual_root: Path | None = None) -> None:
     """Hand the method this round's evidence, and the record of the rounds before it.
 
     `history` is what makes a whole family of methods implementable. Several published
@@ -539,6 +565,8 @@ def _stage_for_method(work: Path, point: dict, traces: dict,
     # §4.7 already says where the things a method may read live. A method with its own
     # skill simply ignores it.
     _stage_default_skill(hg)
+    if visual_root is not None:
+        _stage_visual_evidence(hg, visual_root, [*(history or []), point], task_ids)
     for past in (history or []):
         (hg / "history" / f"round-{past.get('round', 0)}.json").write_text(
             json.dumps(_for_method(past), indent=1))

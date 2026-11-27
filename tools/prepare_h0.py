@@ -157,10 +157,12 @@ with registry.provider_session():
         return {"harness_sha": sha, **candidate_runtime.fields(binding), **external_runtime.fields(current)}
 
 
-def _verification_preflight(dataset, side, task_ids, split, sampling, environment):
+def _verification_preflight(dataset, side, task_ids, split, sampling, environment, *, action_policy_socket=None):
     """Capture current selected scorer inputs in the same isolated loading session."""
     request = {"dataset": dataset, "side": side, "task_ids": task_ids,
                "split": split, "sampling": sampling}
+    if action_policy_socket is not None:
+        request["action_policy_socket"] = str(action_policy_socket)
     program = r"""
 import json, sys
 from contextlib import redirect_stdout
@@ -170,6 +172,10 @@ from harnessgrad.provenance.verification_context import capture
 request = json.loads(sys.argv[1])
 with redirect_stdout(sys.stderr), registry.provider_session():
     ids, setups, verifiers, envs = h0_selection(request)
+    if request.get('action_policy_socket'):
+        from eval.service.action_policy import bind_setups
+        setups = bind_setups(request['action_policy_socket'], request['dataset'],
+                             ids, setups, envs, sandbox=True)
     from driver import _resolve_envs
     envs, error = _resolve_envs(envs)
     if error:
@@ -211,8 +217,10 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         sampling=getattr(args, "sampling", "all"), env=environment,
         **({"managed_harness": True} if managed else {}),
         **({'managed_exec': True} if image_contract else {}))
+    socket = getattr(args, "action_policy_socket", None)
     verifier_context = _verification_preflight(args.dataset, args.side, ids, split,
-                                               getattr(args, "sampling", "all"), environment)
+        getattr(args, "sampling", "all"), environment,
+        **({"action_policy_socket": socket} if socket is not None else {}))
     context = harness_context(source, env=environment,
         **({'selection': {'dataset': args.dataset, 'side': args.side, 'task_ids': ids,
                           'split': split, 'sampling': getattr(args, 'sampling', 'all')}}
@@ -231,6 +239,7 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         "endpoint": agent.base_url,
         "trials": args.trials,
         "sampling": getattr(args, "sampling", "all"),
+        **({"visual_evidence": True} if args.side == "train" and getattr(args, "visual_evidence", False) else {}),
         **split_fields,
         **scoring_identity.fields(scoring),
         **measurement_components.fields(components),
@@ -390,20 +399,20 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
     except (OSError, TypeError, ValueError) as exc:
         problems.append(str(exc))
     if configuration is not None:
-        meta_path = run / "run_meta.json"
-        meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
-        curve = points(run / "curve.jsonl")
         point = curve[0] if curve else {}
+        run_config = (metadata.get("config") or {}).get("run") or {}
         problems.extend(h0_identity.agent_problems(
             run, point, model=configuration.get("agent_model"),
             backend=configuration.get("agent_backend"), endpoint=configuration.get("endpoint"), env=env))
         sampling = configuration.get("sampling")
         for source, recorded in (
                 ("curve", (point.get("sampling") or {}).get("policy")),
-                ("run metadata", meta.get("sampling_policy")),
-                ("run configuration", ((meta.get("config") or {}).get("run") or {}).get("sampling"))):
+                ("run metadata", metadata.get("sampling_policy")),
+                ("run configuration", run_config.get("sampling"))):
             if sampling is None or recorded != sampling:
                 problems.append(f"{source} sampling differs from requested configuration or is missing")
+        if configuration.get("visual_evidence") and run_config.get("visual_evidence") is not True:
+            problems.append("training visual evidence capture was not enabled")
     if scoring is not None or payload.get("scoring_identity") is not None:
         problems.extend(scoring_identity.problems(payload.get("scoring_identity"), scoring))
         meta = json.loads((run / "run_meta.json").read_text())
@@ -450,12 +459,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sampling", default="all")
     ap.add_argument("--model", default=None, help="agent model (default: the platform's)")
     ap.add_argument("--endpoint", default=None, help="agent endpoint (default: the platform's)")
+    ap.add_argument("--action-policy-socket", type=pathlib.Path, metavar="PATH",
+                    help="bind H0 to a trusted local action policy service")
+    ap.add_argument("--visual-evidence", action="store_true",
+                    help="archive inline model-request images for training trials on the native HTTP route")
     ap.add_argument("--runs-root", type=pathlib.Path, default=DEFAULT_RUNS)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
     args.runs_root = args.runs_root.resolve()
     if args.harness_path is not None:
         args.harness_path = args.harness_path.expanduser().resolve()
+    if args.action_policy_socket is not None:
+        args.action_policy_socket = args.action_policy_socket.absolute()
 
     ids = study_ids_from(args.study_ids)
     if args.split not in ("declared", "default", "official"):
@@ -488,6 +503,10 @@ def main(argv: list[str] | None = None) -> int:
                "--rounds", "0", "--improver", "none",
                "--run-id", run_id, "--runs-root", str(args.runs_root),
                "--work-root", f"/tmp/hg-h0-work/{run_id}"]
+    if args.action_policy_socket is not None:
+        command.extend(["--action-policy-socket", str(args.action_policy_socket)])
+    if config.get("visual_evidence"):
+        command.append("--visual-evidence")
     if args.study_ids:
         # Generic selection happens before setup and H0 evaluation in the driver.
         # Keep the legacy knobs too: those adapters use them to construct their pool.

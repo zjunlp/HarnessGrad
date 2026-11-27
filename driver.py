@@ -379,6 +379,22 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
 
     # Preserve parsed arguments before readiness and runtime add derived fields.
     namespace_args = dict(vars(args))
+    action_policy_service = None
+    if args.action_policy_socket is not None:
+        from eval.service.action_policy import inspect_service, service_identity
+
+        try:
+            action_policy_service = inspect_service(
+                args.action_policy_socket, args.dataset, sandbox=args.sandbox)
+        except (OSError, ValueError, RuntimeError) as exc:
+            if not (args.check_only or args.prepare_only):
+                print(f'action policy admission failed: {exc}', file=sys.stderr)
+                return 2
+            args._action_policy_problem = str(exc)
+        else:
+            args._action_policy_service = action_policy_service
+            namespace_args.pop('action_policy_socket')
+            namespace_args['action_policy'] = service_identity(action_policy_service[0])
     namespace_staged = args.sampling in ("diagnostic", "pilot_10pct")
     namespace_mode = "unified" if args.mode in ("A", "B") else args.mode
     if not args.resume and (args.run_id or not namespace_staged):
@@ -492,7 +508,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
     try:
         selected = build_selected_run_plan(
             options, datasets, runs_root=runs_root, scenario=scenario_spec, model=model,
-            harness_source=harness_src, policy_evidence=policy_evidence, reporter=console)
+            harness_source=harness_src, policy_evidence=policy_evidence, reporter=console,
+            **({'action_policy_service': action_policy_service} if action_policy_service is not None else {}))
     except SelectedRunRefused as exc:
         exc.report(console)
         return 2
@@ -977,6 +994,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             metadata_platform, oracle_source, oracle_coverage),
         attribution=run_metadata.AttributionRecord(model["model"], model["backend"], FRAMEWORK_VERSION,
             improver, improver_tool_calls, improver_tool_calls_detail), web_record=web_record)
+    if args.action_policy_socket:
+        metadata_fields['action_policy'] = setups[side_ids[0]]['action_policy']['identity']
     if args.task_budget_context is not None:
         metadata_fields['task_http_budget'] = {
             'mode': 'strict', 'split': args.task_budget_context.split,
@@ -1065,7 +1084,8 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         if baseline_state.is_dir():
             man = manifest(baseline_state)
     h0_options = h0_planning.H0Options(args.dataset, args.sampling, args.side, args.trials,
-                                       args.jobs, args.gpu_budget, args.sandbox)
+                                       args.jobs, args.gpu_budget, args.sandbox,
+                                       visual_evidence=args.visual_evidence)
     h0_identities = h0_planning.H0Identities(args.scoring_identity, args.dataset_runtime_identity,
         args.verification_context, args.harness_runtime_identity, args.current_harness_runtime_identity,
         args.measurement_components)
@@ -1075,6 +1095,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
         h0_sha = h0_planning.commit_h0_source(work, commit_state)
         t0 = time.time()
         shared_point = None
+        visual_donor = None
         try:
             if args.h0_agent_content:
                 content_capture = h0_planning.capture_content(work, h0_sha, h0_identities, h0_options,
@@ -1093,6 +1114,7 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
                              level="info")
             elif args.h0_from:
                 donor = h0_planning.load_h0_donor(args.h0_from, Path(args.runs_root), h0_sha)
+                visual_donor = donor.directory
                 if args.h0_subset_view:
                     from harnessgrad.orchestration.h0_subset import materialize_subset
                     reused = materialize_subset(donor, work, h0_sha, man, h0_attribution,
@@ -1166,6 +1188,17 @@ def _main_with_sources(attempt: dict, sources: ExitStack) -> int:
             return 2
         task_ids, train_ids = h0_selection.task_ids, h0_selection.train_ids
         tasks, sampling = h0_selection.tasks, h0_selection.sampling
+        if args.visual_evidence and train_ids and visual_donor is not None:
+            from eval.service.visual_evidence import reuse_round_zero
+
+            try:
+                images = reuse_round_zero(visual_donor, run_dir, train_ids)
+            except OSError:
+                console.note('Could not copy the H0 donor visual evidence.', level='warn')
+            else:
+                if not images:
+                    console.note('The H0 donor has no saved images for the selected training tasks.',
+                                 level='warn')
         if args.h0_comparability == "content" and set(task_ids) != set(shared_point["per_task"]):
             console.note("refusing content H0 reuse: recipient sampling changes the attested task cohort",
                          level="error")

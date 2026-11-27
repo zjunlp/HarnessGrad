@@ -206,6 +206,7 @@ EXERCISES: dict[str, tuple[str, ...]] = {
     "bird_minidev": ("context", "tools", "verification"),
     "physicsquestions": ("context", "verification"),
     "scienceworld": ("context", "tools", "control", "memory", "recovery"),
+    "robocasa365": ("context", "tools", "control", "recovery"),
     "sportsunderstanding": ("context", "verification"),
     "spreadsheetbench": ("context", "tools", "control", "verification"),
     "strategyqa": ("context", "verification"),
@@ -315,6 +316,7 @@ CAPABILITY: dict[str, tuple[str, str]] = {
     "bird_minidev": ("artifact", "text_to_sql"),
     "physicsquestions": ("reasoning", "reasoning"),
     "scienceworld": ("environment", "science_simulation"),
+    "robocasa365": ("environment", "embodied_manipulation"),
     "sportsunderstanding": ("reasoning", "reasoning"),
     "spreadsheetbench": ("artifact", "spreadsheet"),
     "strategyqa": ("reasoning", "reasoning"),
@@ -352,7 +354,7 @@ ADVERSARIAL = frozenset({"agentdojo", "strongreject"})
 #: which advances the private input stream. A dataset that ships a *new*
 #: action verb therefore fails the check below rather than being silently misclassified --
 #: which is what happened to `agentdojo` when this list held only `do`.
-ACT_VERBS = ("do", "call", "send_message", "ack")
+ACT_VERBS = ("do", "call", "send_message", "ack", "step", "step_many")
 
 #: The judged value, declared, and asserted equal to the derived one by `classify_all()`.
 #: Two independent sources that must agree: if a shipped CLI changes its surface, or someone
@@ -411,6 +413,7 @@ EXPECTED_INTERACTION = {
     "bird_minidev": "single_shot",
     "physicsquestions": "single_shot",
     "scienceworld": "closed_loop",
+    "robocasa365": "closed_loop",
     "sportsunderstanding": "single_shot",
     "spreadsheetbench": "single_shot",
     "strategyqa": "single_shot",
@@ -546,14 +549,17 @@ def classify(name: str) -> dict:
         else:
             if getattr(module, "ENV", None):
                 row["env_kinds"] = sorted({v.get("kind") for v in module.ENV.values()})
-            tasks = module.load()[0]
+            elif getattr(module, "DEFAULT_ENV", None):
+                row["env_kinds"] = [module.DEFAULT_ENV.get("kind", "files")]
+            tasks, _, split = registry.load_split(name)
             task_id = tasks[0]["task_id"]
             # Prefer the declared kind to building every lazy verifier entry.
-            declared_kinds = getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None)
+            declared_kinds = (getattr(module, "VERIFIER_KIND", None)
+                              or getattr(getattr(module, "_SPEC", None), "VERIFIER_KIND", None))
             row["verifier_kinds"] = ([declared_kinds] if declared_kinds
                                      else sorted({v["kind"] for v in module.VERIFY.values()}))
             scripts = _cli_scripts(module, task_id)
-            count, split = len(tasks), getattr(module, 'SPLIT', None)
+            count = len(tasks)
         surface_names = []
         acts = False
         for script in scripts:
