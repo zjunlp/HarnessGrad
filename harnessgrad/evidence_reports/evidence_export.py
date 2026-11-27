@@ -43,7 +43,8 @@ _NUMERIC_FIELDS = frozenset(('jobs', 'trials', 'rounds', 'max_steps', 'max_token
     'completed_rounds'))
 _BOOLEAN_FIELDS = frozenset(('coverage_complete', 'sandbox'))
 _ACTION_POLICY_COUNTS = ('requests', 'predictions', 'executed_steps', 'clipped_values', 'queue_timeouts')
-_ACTION_POLICY_TIMES = ('queue_seconds', 'policy_seconds', 'inference_seconds', 'environment_seconds')
+_ACTION_POLICY_TIMES = ('queue_seconds', 'policy_seconds', 'inference_seconds',
+                        'environment_seconds', 'recovery_seconds')
 
 
 def _object(value):
