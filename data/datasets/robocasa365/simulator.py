@@ -17,6 +17,24 @@ from protocol import (
 )
 
 
+@contextmanager
+def _compiled_safe_yaml():
+    """Accelerate the pinned simulator's configuration reads during startup."""
+    import yaml
+
+    loader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
+    original = yaml.safe_load
+
+    def load(stream):
+        return yaml.load(stream, Loader=loader)
+
+    yaml.safe_load = load
+    try:
+        yield
+    finally:
+        yaml.safe_load = original
+
+
 def open_env(case, prepared, osmesa):
     os.environ.update(MUJOCO_GL='osmesa', PYOPENGL_PLATFORM='osmesa',
                       LP_NUM_THREADS='1', OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1',
@@ -46,14 +64,15 @@ def open_env(case, prepared, osmesa):
     # fixture visualization colors from NumPy's legacy process RNG.
     random.seed(case['seed'])
     np.random.seed(case['seed'] % (2**32))
-    env = gym.make(f"robocasa/{case['task']}", split=SCENE_SPLIT,
-                   seed=case['seed'], disable_env_checker=True)
-    try:
-        observation, _ = env.reset(seed=case['seed'])
-        return env, observation
-    except BaseException:
-        env.close()
-        raise
+    with _compiled_safe_yaml():
+        env = gym.make(f"robocasa/{case['task']}", split=SCENE_SPLIT,
+                       seed=case['seed'], disable_env_checker=True)
+        try:
+            observation, _ = env.reset(seed=case['seed'])
+            return env, observation
+        except BaseException:
+            env.close()
+            raise
 
 
 def _png_frame(rgb):
