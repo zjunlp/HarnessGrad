@@ -79,10 +79,13 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "static/submit.js", "static/tokens.css", "static/trace-view.js",
     "static/trace.html", "static/ui.css",
 ]
-"base_harness" = ["launchable.json", "deepseek-harness/harness.json", "deepseek-harness/knobs.json", "deepseek-harness/surface.json", "deepseek-harness/dsh_farm.tsv", "deepseek-harness/README.md"]
+"base_harness" = [
+    "launchable.json", "deepseek-harness/harness.json", "deepseek-harness/knobs.json",
+    "deepseek-harness/surface.json", "deepseek-harness/dsh_farm.tsv", "deepseek-harness/README.md",
+    "loop-vision/agent.py", "loop-vision/harness.json", "loop-vision/requirements.lock", "loop-vision/README.md",
+]
 "base_harness.codex" = ["harness.json", "README.md"]
 "base_harness.loop" = ["harness.json", "requirements.txt", "requirements.lock", "requirements-py310.lock", "requirements-py39.lock", "README.md"]
-"base_harness.loop-vision" = ["harness.json", "requirements.lock", "README.md"]
 "base_harness.miniagent" = ["harness.json", "requirements.txt", "requirements.lock", "LICENSE.upstream", "PROVENANCE.json", "README.md", "agent.yaml", "components.yaml"]
 "base_harness.miniagent.prompts" = ["extract.md", "system.md"]
 "base_harness.miniagent.skills" = ["main.md"]
@@ -164,7 +167,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "rsi-swe-bench-pro-v2-eval.json", "rsi-swe-bench-pro-v2.json",
     "rsi-terminal-bench2-eval.json", "rsi-terminal-bench2.json",
     "splits/ptc-bench/study.json", "splits/ptc-bench/dev.txt", "splits/ptc-bench/test.txt",
-    "splits/robocasa365/study.json",
+    "splits/robocasa365/study.json", "splits/robocasa365/study-100.json", "splits/robocasa365/test-100.txt",
     "splits/wtm-bench/study.json", "splits/wtm-bench/dev.txt", "splits/wtm-bench/test.txt",
     "splits/wtm-bench/mixed/study.json", "splits/wtm-bench/mixed/dev.txt", "splits/wtm-bench/mixed/test.txt",
 ]
