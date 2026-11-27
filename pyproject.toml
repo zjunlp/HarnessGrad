@@ -164,7 +164,7 @@ exclude = ["data.authored*", "data.candidates*", "console.uat*"]
     "rsi-swe-bench-pro-v2-eval.json", "rsi-swe-bench-pro-v2.json",
     "rsi-terminal-bench2-eval.json", "rsi-terminal-bench2.json",
     "splits/ptc-bench/study.json", "splits/ptc-bench/dev.txt", "splits/ptc-bench/test.txt",
-    "splits/robocasa365/study.json",
+    "splits/robocasa365/study.json", "splits/robocasa365/study-100.json", "splits/robocasa365/test-100.txt",
     "splits/wtm-bench/study.json", "splits/wtm-bench/dev.txt", "splits/wtm-bench/test.txt",
     "splits/wtm-bench/mixed/study.json", "splits/wtm-bench/mixed/dev.txt", "splits/wtm-bench/mixed/test.txt",
 ]

@@ -53,6 +53,32 @@ classes. List the additional IDs with
 `python3 -m data.datasets.robocasa365 --pool catalog`. These episodes are
 available for explicit study splits. The default split leaves them unassigned.
 
+### 100/100/100 research split
+
+Use [study-100.json](../../../experiments/splits/robocasa365/study-100.json) for
+training and validation. Each side has 100 distinct task classes, comprising
+15 atomic tasks, 70 composite tasks with upstream horizons and 15 composite tasks
+with estimated horizons. The two sides use disjoint classes and exclude all
+official evaluation episodes. The remaining 115 catalog classes are unassigned.
+
+Use the [fixed test roster](../../../experiments/splits/robocasa365/test-100.txt)
+after selecting a checkpoint. It takes episodes `00` and `01` from each of the
+50 held-out official classes, giving 36 Atomic-Seen, 32 Composite-Seen and
+32 Composite-Unseen episodes. Compare H0 and trained checkpoints on these same
+100 episodes and report the result as the HarnessGrad fixed test subset.
+
+```bash
+# Training or validation. For validation, select --side eval and the training checkpoint.
+--pool all --split experiments/splits/robocasa365/study-100.json
+# Test the selected checkpoint with --side eval --from-run and --from-round
+--pool all --split official --sampling all \
+  --tasks "$(paste -sd, experiments/splits/robocasa365/test-100.txt)"
+```
+
+Verify the frozen files with `python experiments/splits/robocasa365/build-100.py --check`.
+
+### 252/63 catalog study
+
 Use `--pool all --split experiments/splits/robocasa365/study.json` to opt into the
 frozen catalog study. It assigns 252 catalog episodes to `--side train` and 63
 to validation via `--side eval`. Each episode represents a different task class.

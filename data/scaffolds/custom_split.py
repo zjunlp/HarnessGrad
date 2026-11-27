@@ -15,6 +15,7 @@ from data.scaffolds import registry
 SCHEMA = 'harnessgrad.custom-split.v1'
 CLAIM = 'custom-heldout; not an official benchmark split or leaderboard score'
 SOURCES = ('all', 'official-eval', 'non-official-eval')
+NON_OFFICIAL_SUBSET = 'non-official-eval-subset'
 
 
 def digest(value):
@@ -162,7 +163,11 @@ def validate(name, tasks, manifest, *, require_nonempty=('train', 'eval')):
     if len(all_ids) != len(set(all_ids)) or set(all_ids) != set(ids):
         raise ValueError('train/eval/excluded must cover every task exactly once, without overlap')
     selected = set(sides['train'] + sides['eval'])
-    if selected != _source_ids(ids, official, manifest['source']):
+    source = manifest['source']
+    if source == NON_OFFICIAL_SUBSET:
+        if not selected <= _source_ids(ids, official, 'non-official-eval'):
+            raise ValueError('custom study subset contains official evaluation tasks')
+    elif selected != _source_ids(ids, official, source):
         raise ValueError('custom source pool differs from the declared source selection')
     if not isinstance(manifest['recipe'], dict) or manifest['claim'] != CLAIM:
         raise ValueError('custom split recipe/claim is malformed')
@@ -239,10 +244,11 @@ def check_eval_pair(train_run, name, split, protocol, *, official_tasks=None):
         return
     if isinstance(previous, dict) and protocol is None and official_tasks is not None:
         manifest = previous.get('manifest')
-        if isinstance(manifest, dict) and manifest.get('source') == 'non-official-eval':
+        if isinstance(manifest, dict) and manifest.get('source') in ('non-official-eval', NON_OFFICIAL_SUBSET):
             study = validate(name, official_tasks, manifest)
+            official = _official(name, official_tasks)
             if (meta.get('split_sha') != registry.split_sha(study)
-                    or split is None or set(split['eval']) != set(manifest['excluded'])):
+                    or split is None or set(split['eval']) != official):
                 raise ValueError('official test differs from the study manifest holdout')
             return
     if (previous is None) != (protocol is None):

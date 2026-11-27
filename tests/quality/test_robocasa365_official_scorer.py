@@ -128,6 +128,51 @@ def test_frozen_catalog_study_and_official_test_agree_across_entries(monkeypatch
     assert Counter(row['side'] for row in task_options(name)['tasks']) == {'eval': 2500, 'unassigned': 315}
 
 
+def test_balanced_study_selects_fixed_test_episodes_after_checkpoint_admission(monkeypatch, tmp_path):
+    from harnessgrad.orchestration.selected_dataset import (
+        SelectionOptions, resolve_catalog_partition, select_run_tasks,
+    )
+
+    monkeypatch.setenv('HG_ROBOCASA365_POOL', 'all')
+    expanded = load_asset(Path(dataset.__file__))
+    monkeypatch.setitem(sys.modules, dataset.__name__, expanded)
+    name = 'robocasa365'
+    tasks, _, declared = registry.load_split(name)
+    directory = dataset.PLATFORM / 'experiments/splits/robocasa365'
+    split, receipt = custom_split.read(name, tasks, directory / 'study-100.json')
+    test = (directory / 'test-100.txt').read_text(encoding='utf-8').splitlines()
+    assert receipt['counts'] == {'train': 100, 'eval': 100, 'excluded': 2615}
+    assert set(declared['eval']) <= set(receipt['manifest']['excluded'])
+    assert len(test) == 100 and len(set(test)) == 100 and set(test) <= set(declared['eval'])
+    assert Counter(expanded.CASES[tid]['task'] for tid in test) == dict.fromkeys(
+        (expanded.CASES[tid]['task'] for tid in declared['eval']), 2)
+    assert Counter(expanded.CASES[tid]['group'] for tid in test) == {
+        'atomic_seen': 36, 'composite_seen': 32, 'composite_unseen': 32}
+    for members in split.values():
+        cases = [expanded.CASES[tid] for tid in members]
+        assert len({case['task'] for case in cases}) == 100
+        assert Counter(case['group'] for case in cases) == {'atomic': 15, 'composite': 85}
+        assert sum(case['task'] in expanded.PROTOCOL.FALLBACK_MEDIAN_SECONDS for case in cases) == 15
+    assert len({expanded.CASES[tid]['task'] for tid in split['train'] + split['eval'] + test}) == 250
+
+    manifest = receipt['manifest']
+    official_id = test[0]
+    swapped = {**manifest, 'split': {**split, 'train': [official_id, *split['train'][1:]]},
+               'excluded': [split['train'][0], *(tid for tid in manifest['excluded'] if tid != official_id)]}
+    with pytest.raises(ValueError, match='subset contains official'):
+        custom_split.validate(name, tasks, swapped)
+
+    donor = tmp_path / 'train'
+    donor.mkdir()
+    (donor / 'run_meta.json').write_text(json.dumps({
+        'dataset': name, 'split_sha': registry.split_sha(split), 'split_protocol': receipt}))
+    options = SelectionOptions(name, 'official', 'eval', ','.join(test), 'all',
+                               'test', donor.name, True, False)
+    partition = resolve_catalog_partition(options, registry, runs_root=tmp_path,
+                                          scenario=None, reporter=SimpleNamespace(note=lambda *a, **kw: None))
+    assert set(select_run_tasks(options, partition, None).ids) == set(test)
+
+
 def test_aggregate_keeps_partial_coverage_visible():
     ids = dataset.OFFICIAL_EVAL
     scores = dict.fromkeys(ids, 0)

@@ -34,6 +34,10 @@ Neither option downloads additional tasks or changes which upstream files an
 adapter loads. To select a different upstream pool, prepare/configure the adapter
 first, then generate the manifest.
 
+A benchmark-specific builder can freeze a smaller study and validation roster
+with manifest source `non-official-eval-subset`. The manifest records unused IDs
+and keeps the entire official pool eligible for paired test evaluation.
+
 Alternatively request an exact study count:
 
 ```bash
