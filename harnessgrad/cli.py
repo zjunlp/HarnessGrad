@@ -46,6 +46,7 @@ usage:
   {program} personal serve|status|stop|project|import|demo|inspect|desktop  personal read-only setup
   {program} personal model-config|model-demo  explicit model config and offline budget demo
   {program} personal plan-demo              offline feedback-to-plan demo
+  {program} personal evolution-check        offline C1 baseline or C2 comparison receipt
   {program} version                     print the installed version
   {program} --version                   the same, as a flag
 
