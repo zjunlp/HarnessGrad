@@ -101,6 +101,32 @@ Harbor. Harbor framework and benchmark adapter contributions; original benchmark
 - `tau2_bench` — 2026-11-03 — dual-control adapter: v0.1.0 pin, private user simulator, official ALL scorer; HarnessGrad integration: Xubqpanda
 - `tau3_bench` — 2026-11-03 — declared adapter; HarnessGrad integration: crepuscular-drizzle
 
+<a id="crepuscular-drizzle"></a>
+
+## [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) — 11 entries
+
+Wen Yu. dataset storage contract: explicit, portable roots instead of machine literals
+
+**harness**
+
+- `loop-vision` — 2026-11-27 — Loop with image attachments for vision-capable models
+
+**benchmark**
+
+- `costbench` — 2026-11-03 — declared adapter
+- `costbench_dynamic` — 2026-11-03 — declared adapter
+- `memoryagentbench` — 2026-11-03 — declared adapter
+- `personamem_v2` — 2026-11-03 — declared adapter
+- `robocasa365` — 2026-11-27 — RoboCasa365 kitchen simulator and held-out leaderboard episodes
+
+**platform**
+
+- `platform core` — 2026-10-01 — driver, rounds, sandbox, records, scoring
+- `dataset root resolver` — 2026-11-03 — one place that answers where a dataset's bytes live; no machine literal in an adapter
+- `dataset storage migration` — 2026-11-03 — 58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues
+- `env-file precedence` — 2026-11-03 — shell > worktree .env > primary .env, read without importing an adapter
+- `provisioning CLI` — 2026-11-03 — per-dataset fetch/check from the adapter's own declaration
+
 <a id="trancefornow"></a>
 
 ## [@trancefornow](https://github.com/trancefornow) — 11 entries
@@ -123,24 +149,3 @@ Trance. method launch validation and measurement identity
 - `measurement identity in the matrix` — 2026-11-03 — a row carries the harness, split and scorer identity its score was measured with
 - `method launch validation` — 2026-11-03 — refuses a method that cannot start before a round spends a model call
 - `readiness rows` — 2026-11-03 — editor and method are separate pre-H0 rows
-
-<a id="crepuscular-drizzle"></a>
-
-## [@crepuscular-drizzle](https://github.com/crepuscular-drizzle) — 9 entries
-
-Wen Yu. dataset storage contract: explicit, portable roots instead of machine literals
-
-**benchmark**
-
-- `costbench` — 2026-11-03 — declared adapter
-- `costbench_dynamic` — 2026-11-03 — declared adapter
-- `memoryagentbench` — 2026-11-03 — declared adapter
-- `personamem_v2` — 2026-11-03 — declared adapter
-
-**platform**
-
-- `platform core` — 2026-10-01 — driver, rounds, sandbox, records, scoring
-- `dataset root resolver` — 2026-11-03 — one place that answers where a dataset's bytes live; no machine literal in an adapter
-- `dataset storage migration` — 2026-11-03 — 58 adapters moved from an operator's absolute path to one resolver: HG_DATA_<NAME> > HG_DATA_ROOT, no implicit directory, portable catalogues
-- `env-file precedence` — 2026-11-03 — shell > worktree .env > primary .env, read without importing an adapter
-- `provisioning CLI` — 2026-11-03 — per-dataset fetch/check from the adapter's own declaration

@@ -1,6 +1,6 @@
 {
   "schema": "harnessgrad.leaderboards.v2",
-  "updated": "2026-11-03",
+  "updated": "2026-11-27",
   "comment": "One entry per contributed harness, method, benchmark or result. `adoption` counts independent reproductions reported to us (a run id or a link in the pull request that adds the entry); it is a declared number, not a scraped metric. The results board admits an entry only with a comparable (benchmark, metric) group and a receipt in this repository -- see docs/leaderboards.md for the admission rule.",
   "boards": {
     "harness": [
@@ -11,6 +11,14 @@
         "since": "2026-10-01",
         "adoption": 1,
         "note": "reference CLI harness: one agent loop, no framework"
+      },
+      {
+        "name": "loop-vision",
+        "path": "base_harness/loop-vision",
+        "contributor": "crepuscular-drizzle",
+        "since": "2026-11-27",
+        "adoption": 0,
+        "note": "Loop with image attachments for vision-capable models"
       },
       {
         "name": "codex",
@@ -493,6 +501,13 @@
         "contributor": "Xubqpanda",
         "since": "2026-11-03",
         "note": "declared adapter"
+      },
+      {
+        "name": "robocasa365",
+        "adapter": "data/datasets/robocasa365.py",
+        "contributor": "crepuscular-drizzle",
+        "since": "2026-11-27",
+        "note": "RoboCasa365 kitchen simulator and held-out leaderboard episodes"
       },
       {
         "name": "scienceworld",
