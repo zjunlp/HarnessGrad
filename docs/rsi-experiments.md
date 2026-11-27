@@ -27,8 +27,9 @@ runs leave capture disabled. File IDs, remote URLs and transports outside the
 native HTTP route do not supply image bytes. With `--h0-from` and
 `--visual-evidence`, strict local H0 reuse (including subset views) copies the
 admitted training tasks' round-zero image indexes and referenced images into the
-new run. To collect images for a baseline measured before capture was enabled,
-start a fresh study.
+new run. When preparing a shared training baseline, pass `--visual-evidence` to
+`tools/prepare_h0.py` as well. The tool reuses a baseline for that request only
+if its run metadata records that capture was enabled.
 
 ### Caching large local verification assets
 

@@ -239,6 +239,7 @@ def configuration(args, *, study_ids: list[str] | None = None, env=None) -> dict
         "endpoint": agent.base_url,
         "trials": args.trials,
         "sampling": getattr(args, "sampling", "all"),
+        **({"visual_evidence": True} if args.side == "train" and getattr(args, "visual_evidence", False) else {}),
         **split_fields,
         **scoring_identity.fields(scoring),
         **measurement_components.fields(components),
@@ -398,20 +399,20 @@ def verify(run: pathlib.Path, args, expected_ids: int, *, scoring=None, study_id
     except (OSError, TypeError, ValueError) as exc:
         problems.append(str(exc))
     if configuration is not None:
-        meta_path = run / "run_meta.json"
-        meta = json.loads(meta_path.read_text()) if meta_path.is_file() else {}
-        curve = points(run / "curve.jsonl")
         point = curve[0] if curve else {}
+        run_config = (metadata.get("config") or {}).get("run") or {}
         problems.extend(h0_identity.agent_problems(
             run, point, model=configuration.get("agent_model"),
             backend=configuration.get("agent_backend"), endpoint=configuration.get("endpoint"), env=env))
         sampling = configuration.get("sampling")
         for source, recorded in (
                 ("curve", (point.get("sampling") or {}).get("policy")),
-                ("run metadata", meta.get("sampling_policy")),
-                ("run configuration", ((meta.get("config") or {}).get("run") or {}).get("sampling"))):
+                ("run metadata", metadata.get("sampling_policy")),
+                ("run configuration", run_config.get("sampling"))):
             if sampling is None or recorded != sampling:
                 problems.append(f"{source} sampling differs from requested configuration or is missing")
+        if configuration.get("visual_evidence") and run_config.get("visual_evidence") is not True:
+            problems.append("training visual evidence capture was not enabled")
     if scoring is not None or payload.get("scoring_identity") is not None:
         problems.extend(scoring_identity.problems(payload.get("scoring_identity"), scoring))
         meta = json.loads((run / "run_meta.json").read_text())
@@ -460,6 +461,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--endpoint", default=None, help="agent endpoint (default: the platform's)")
     ap.add_argument("--action-policy-socket", type=pathlib.Path, metavar="PATH",
                     help="bind H0 to a trusted local action policy service")
+    ap.add_argument("--visual-evidence", action="store_true",
+                    help="archive inline model-request images for training trials on the native HTTP route")
     ap.add_argument("--runs-root", type=pathlib.Path, default=DEFAULT_RUNS)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
@@ -502,6 +505,8 @@ def main(argv: list[str] | None = None) -> int:
                "--work-root", f"/tmp/hg-h0-work/{run_id}"]
     if args.action_policy_socket is not None:
         command.extend(["--action-policy-socket", str(args.action_policy_socket)])
+    if config.get("visual_evidence"):
+        command.append("--visual-evidence")
     if args.study_ids:
         # Generic selection happens before setup and H0 evaluation in the driver.
         # Keep the legacy knobs too: those adapters use them to construct their pool.
