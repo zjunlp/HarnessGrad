@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog='harnessgrad personal', description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('serve', 'status', 'stop', 'project', 'import', 'demo', 'inspect', 'desktop',
-                 'model-config', 'model-demo', 'plan-demo'):
+                 'model-config', 'model-demo', 'plan-demo', 'evolution-check'):
         sub = commands.add_parser(name)
         sub.add_argument('--state-root', type=Path, required=name != 'model-config', help='owned directory outside the checkout')
         if name in ('project', 'demo', 'model-demo', 'plan-demo'):
@@ -72,12 +72,25 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument('--ordinary', action='store_true', help='OS-managed ordinary window without floating placement')
         if name == 'model-config':
             sub.add_argument('--env-file', type=Path, help='explicit model environment file; process values take precedence')
+        if name == 'evolution-check':
+            sub.add_argument('--fixture', type=Path, required=True,
+                             help='one explicit offline evolution-check JSON fixture')
+            sub.add_argument('--phase', choices=('baseline', 'review'), required=True)
     args = parser.parse_args(argv)
     try:
         from harnessgrad.personal.contracts import encode
         if args.command == 'model-config':
             from harnessgrad.personal.profile import load_model_settings
             result = load_model_settings(env_file=args.env_file).identity()
+        elif args.command == 'evolution-check':
+            from harnessgrad.personal.reproduction import ReproductionScenario, compare_scenario, run_scenario
+            from harnessgrad.personal.service import read_import, state_directory
+            root = state_directory(args.state_root)
+            scenario = ReproductionScenario.from_dict(read_import(args.fixture))
+            result = (run_scenario(scenario, root, phase='baseline') if args.phase == 'baseline'
+                      else compare_scenario(scenario, root))
+            from dataclasses import asdict
+            result = asdict(result)
         elif args.command in ('status', 'stop', 'desktop'):
             value = connection(args.state_root)
             result = contact(value, stop=args.command == 'stop')

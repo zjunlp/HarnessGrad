@@ -7,6 +7,7 @@ from typing import Literal, Protocol
 
 from harnessgrad.personal.contracts import SourceEvent, digest, identifier
 from harnessgrad.personal.evidence import EvidenceSelection
+from harnessgrad.personal.evolution_contracts import Scope
 
 SourceStatus = Literal['ready', 'unavailable', 'refused', 'unchecked']
 TriggerStatus = Literal['triggered', 'skipped', 'deferred']
@@ -16,17 +17,9 @@ class SourceConflict(ValueError):
     """A source no longer matches its stored read position."""
 
 
-@dataclass(frozen=True)
-class LearningScope:
-    profile_id: str
-    project_id: str
-
-    def __post_init__(self):
-        identifier(self.profile_id)
-        identifier(self.project_id)
-
-    def key(self) -> tuple[str, str]:
-        return self.profile_id, self.project_id
+# D's domain spelling remains import-compatible while the actual scope DTO is
+# owned by the shared C/D boundary.
+LearningScope = Scope
 
 
 @dataclass(frozen=True)

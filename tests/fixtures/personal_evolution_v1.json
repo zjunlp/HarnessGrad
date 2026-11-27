@@ -1,0 +1,83 @@
+{
+  "schema": "harnessgrad.personal.evolution.queue-fixture.v1",
+  "scope": {
+    "profile_id": "fixture-profile",
+    "project_id": "fixture-project"
+  },
+  "snapshot": {
+    "ref": "snapshot-python-edit",
+    "sha256": "b8fc742b2e9e263a0fbd594e977163cc532dd912d171959483e84a6a933a6221",
+    "kind": "virtual_snapshot",
+    "payload": {
+      "files": {
+        "instruction.md": "# Instructions\n"
+      },
+      "target_ids": [
+        "target-instructions"
+      ]
+    }
+  },
+  "candidate": {
+    "ref": "candidate-python-tests",
+    "sha256": "caf8bd3134a631be90e4beba7c510e547f86777c431953ad51e95d3e63c43299",
+    "kind": "text_candidate",
+    "payload": {
+      "files": {
+        "instruction.md": "# Instructions\n\n- After changing Python code, run related tests.\n"
+      }
+    }
+  },
+  "changed_candidate": {
+    "ref": "candidate-all-tests",
+    "sha256": "eda54216f918bc17400b3f7a9291d16cdd8628a6a635025246b92d2eb7259998",
+    "kind": "text_candidate",
+    "payload": {
+      "files": {
+        "instruction.md": "# Instructions\n\n- After changing any code, run all tests.\n"
+      }
+    }
+  },
+  "evidence_refs": [
+    "evidence-python-test-feedback"
+  ],
+  "scenario_ids": [
+    "python-related-tests"
+  ],
+  "request": {
+    "schema": "harnessgrad.personal.evolution.candidate-request.v1",
+    "profile_id": "fixture-profile",
+    "project_id": "fixture-project",
+    "target_ids": [
+      "target-instructions"
+    ],
+    "snapshot_ref": "snapshot-python-edit",
+    "snapshot_sha256": "b8fc742b2e9e263a0fbd594e977163cc532dd912d171959483e84a6a933a6221",
+    "candidate_ref": "candidate-python-tests",
+    "candidate_sha256": "caf8bd3134a631be90e4beba7c510e547f86777c431953ad51e95d3e63c43299",
+    "evidence_refs": [
+      "evidence-python-test-feedback"
+    ],
+    "intent": "preference",
+    "conditions": [
+      "changes Python code"
+    ],
+    "scenario_id": "python-related-tests",
+    "idempotency_key": "fixture-candidate-request"
+  },
+  "expected": {
+    "initial_status": "collecting",
+    "events": [
+      {
+        "seq": 1,
+        "status": "created",
+        "reason_code": null
+      },
+      {
+        "seq": 2,
+        "status": "collecting",
+        "reason_code": null
+      }
+    ],
+    "next_after": 2
+  }
+}
