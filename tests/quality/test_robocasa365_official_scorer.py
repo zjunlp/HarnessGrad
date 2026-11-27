@@ -183,6 +183,81 @@ def test_gym_success_is_latched_without_exposing_it(protocol_modules, monkeypatc
     assert len(env.actions) == 2 and episode.first_success_step == 1
 
 
+@pytest.mark.parametrize('end', ['batch', 'horizon', 'terminated', 'truncated'])
+def test_step_many_returns_the_same_last_frames_as_single_steps(protocol_modules, monkeypatch, end):
+    episode_type, _ = protocol_modules
+    protocol = dataset.PROTOCOL
+    native_end = end in ('terminated', 'truncated')
+    horizon = 3 if end == 'horizon' else 10
+
+    class Gym:
+        def __init__(self):
+            self.step_no = 0
+            self.frames = []
+            self.env = SimpleNamespace(ignore_done=not native_end, viewer_get_obs=False,
+                                       control_timestep=0.05, model_timestep=0.002,
+                                       sim=SimpleNamespace(render=self.render))
+
+        def render(self, *, camera_name, width, height, depth=False):
+            self.frames.append((self.step_no, camera_name))
+            return f'{camera_name} at step {self.step_no}'
+
+        def observation(self):
+            state = SimpleNamespace(tolist=lambda: [self.step_no])
+            return {
+                protocol.LANGUAGE_KEY: 'Open the cabinet.',
+                **dict.fromkeys(protocol.STATE_KEYS, state),
+                **{camera: self.env.sim.render(camera_name=camera, width=2, height=2)
+                   for camera in protocol.CAMERAS},
+            }
+
+        def step(self, action):
+            self.step_no += 1
+            return (self.observation(), 0,
+                    end == 'terminated' and self.step_no == 2,
+                    end == 'truncated' and self.step_no == 2,
+                    {'success': self.step_no == 1})
+
+    class OrderEnforcing:
+        def __init__(self, env):
+            self.env = self.unwrapped = env
+
+        def step(self, action):
+            return self.env.step(action)
+
+    monkeypatch.setitem(sys.modules, 'gymnasium.wrappers', SimpleNamespace(OrderEnforcing=OrderEnforcing))
+    monkeypatch.setitem(sys.modules, 'robocasa.wrappers.gym_wrapper', SimpleNamespace(RoboCasaGymEnv=Gym))
+    monkeypatch.setitem(sys.modules, 'numpy', SimpleNamespace(
+        asarray=lambda values, **_: values, float64='float64', uint8='uint8',
+        zeros=lambda shape, dtype: 'discarded frame',
+    ))
+    monkeypatch.setitem(episode_type.observe.__globals__, '_png_frame', lambda frame: frame)
+
+    def start():
+        env = Gym()
+        episode = episode_type(OrderEnforcing(env), env.observation(), horizon)
+        env.frames.clear()
+        return episode, env
+
+    action = {key: [0] * size for key, size in protocol.ACTION_SIZES.items()}
+    sequential, baseline = start()
+    for _ in range(4):
+        expected = sequential.handle('step', {'action': action})
+        if expected['ended']:
+            break
+
+    batched, env = start()
+    actual = batched.handle('step_many', {'actions': [action] * 4})
+    assert actual == expected
+    assert batched.first_success_step == sequential.first_success_step == 1
+    assert not native_end or env.step_no == 2
+    assert env.frames == (baseline.frames if native_end else baseline.frames[-len(protocol.CAMERAS):])
+    if not actual['ended']:
+        # A following request can observe any camera and take another full step.
+        assert batched.handle('observe', {}) == actual
+        assert batched.handle('step', {'action': action}) == sequential.handle('step', {'action': action})
+
+
 @pytest.mark.parametrize('success_step,expected', [(None, False), (1, True)])
 def test_verifier_checks_sealed_native_episode(protocol_modules, success_step, expected):
     _, check = protocol_modules

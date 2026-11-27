@@ -78,6 +78,9 @@ both published horizons and rollout lengths. [Upstream task list](https://github
 
 In the actor sandbox, run `python3 robocasa365_client.py observe --image-dir views`. The harness can also import `robocasa365_client.call` to obtain the same observation with the camera frames as base64-encoded PNGs. Sensor and action keys preserve the official Gym names. The client supports one action with `step ACTION.json` or up to 32 consecutive actions with `step_many CHUNK.json`. Use `--image-dir views` to save the latest three views after either operation. The action schema is in `robocasa365_controls.json`.
 
+On the pinned Gym path, `step_many` runs physics and checks success at every step,
+and renders RGB views on the last executed step of the batch.
+
 Select `--harness loop-vision` with a vision-capable model endpoint to attach the saved camera PNGs to model requests. [Loop Vision setup](../../../base_harness/loop-vision/README.md)
 
 Run `python3 data/datasets/robocasa365/control.py` to check kitchen startup, the three views, a zero action, and the sealed zero score through HarnessGrad without a model.

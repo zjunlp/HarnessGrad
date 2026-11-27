@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
 import ctypes
 import io
 import math
@@ -68,6 +69,51 @@ def _bounded_vector(value, size):
             and all(type(item) in (int, float) and -1 <= item <= 1 for item in value))
 
 
+def _batch_camera_sim(env):
+    """Use the fast path only for the pinned Gym path that ends at our step limit."""
+    gym_env = getattr(env, 'unwrapped', None)
+    if gym_env is None:
+        return None
+    from gymnasium.wrappers import OrderEnforcing
+    from robocasa.wrappers.gym_wrapper import RoboCasaGymEnv
+
+    if env is not gym_env and (type(env) is not OrderEnforcing or env.env is not gym_env):
+        return None
+    if not isinstance(gym_env, RoboCasaGymEnv) or type(gym_env).step is not RoboCasaGymEnv.step:
+        return None
+    suite = gym_env.env
+    # In the pinned suite, RGB observables sample at the control frequency.
+    # Admit only complete control periods so the final step refreshes every view.
+    substeps = int(suite.control_timestep / suite.model_timestep)
+    if (not suite.ignore_done or suite.viewer_get_obs
+            or substeps * suite.model_timestep != suite.control_timestep):
+        return None
+    return suite.sim
+
+
+@contextmanager
+def _skip_rgb_rendering(sim):
+    import numpy as np
+
+    render = sim.render
+    placeholders = {}
+
+    def discard_rgb(*args, **kwargs):
+        if (args or kwargs.get('camera_name') is None or kwargs.get('depth')
+                or kwargs.get('segmentation')):
+            return render(*args, **kwargs)
+        shape = (kwargs['height'], kwargs['width'], 3)
+        if shape not in placeholders:
+            placeholders[shape] = np.zeros(shape, dtype=np.uint8)
+        return placeholders[shape]
+
+    sim.render = discard_rgb
+    try:
+        yield
+    finally:
+        sim.render = render
+
+
 class Episode:
     def __init__(self, env, observation, horizon):
         self.env = env
@@ -118,15 +164,29 @@ class Episode:
         return self.advance(actions, cameras)
 
     def advance(self, actions, cameras):
-        import numpy as np
-
+        count = min(len(actions), self.horizon - self.steps)
+        sim = _batch_camera_sim(self.env) if count > 1 else None
+        if sim is not None:
+            with _skip_rgb_rendering(sim):
+                for action in actions[:count - 1]:
+                    self._step(action)
+                    if self.ended:
+                        raise RuntimeError('batched RoboCasa environment ended before its step limit')
+            # The Gym sensors acquire the visible frame at their usual sample time.
+            actions = actions[count - 1:count]
         for action in actions:
-            values = {key: np.asarray(value, dtype=np.float64) for key, value in action.items()}
-            self.observation, _, terminated, truncated, info = self.env.step(values)
-            self.steps += 1
-            if bool(info['success']) and self.first_success_step is None:
-                self.first_success_step = self.steps
-            if terminated or truncated or self.steps == self.horizon:
-                self.ended = True
+            self.observation = self._step(action)
+            if self.ended:
                 break
         return self.observe(cameras)
+
+    def _step(self, action):
+        import numpy as np
+
+        values = {key: np.asarray(value, dtype=np.float64) for key, value in action.items()}
+        observation, _, terminated, truncated, info = self.env.step(values)
+        self.steps += 1
+        if bool(info['success']) and self.first_success_step is None:
+            self.first_success_step = self.steps
+        self.ended = bool(terminated or truncated or self.steps == self.horizon)
+        return observation
