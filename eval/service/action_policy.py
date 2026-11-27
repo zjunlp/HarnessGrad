@@ -99,11 +99,11 @@ def bind_service(service, task_ids, setups, envs, *, sandbox):
 
 
 class _EpisodeEnded(Exception):
-    """The episode closed or ran out of time before dispatching this call."""
+    """The episode closed or ran out of time."""
 
 
 class _EpisodeDeadline(_EpisodeEnded):
-    """The episode budget expired before dispatch."""
+    """The episode budget expired."""
 
 
 class _PredictionQueue:
@@ -222,17 +222,18 @@ class EpisodePolicy:
     def _request(self, path, op, args, *, budget, timing):
         self._remaining()
         started = time.monotonic()
-        deadline = min(self.deadline, started + budget)
+        call_deadline = started + budget
+        deadline = min(self.deadline, call_deadline)
         try:
             return call(path, op, args, timeout_s=None, deadline=deadline, connection=self._connection)
-        except ToolCallTimeout:
-            self._record_fault(f'{op}: timeout')
-            raise
         except (OSError, ToolTransportError, ValueError) as exc:
-            if self.closed.is_set():
-                if time.monotonic() >= deadline:
-                    self._record_fault(f'{op}: timeout')
-            else:
+            closed = self.closed.is_set()
+            expired = isinstance(exc, ToolCallTimeout) or (closed and time.monotonic() >= deadline)
+            if expired:
+                if self.deadline <= call_deadline:
+                    raise _EpisodeDeadline() from exc
+                self._record_fault(f'{op}: timeout')
+            elif not closed:
                 self._record_fault(f'{op}: {type(exc).__name__}')
             raise
         finally:

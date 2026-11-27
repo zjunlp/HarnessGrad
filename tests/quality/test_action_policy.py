@@ -4,13 +4,14 @@ from contextlib import ExitStack
 import subprocess
 from threading import Barrier, Event
 import time
+from types import SimpleNamespace
 
 import pytest
 
 from data.action_policy_ports.robocasa365 import environment
 from eval.service import action_policy
 from eval.service.action_policy import bind_setups, EpisodePolicy, PROTOCOL
-from eval.service.tool_transport import Relay, call
+from eval.service.tool_transport import Relay, ToolTransportError, call
 from harnessgrad.provenance import verification_context
 
 
@@ -42,7 +43,7 @@ def bind(socket, tasks):
     return bind_setups(socket, 'robocasa365', tasks, setups, envs, sandbox=True)
 
 
-def episode(path, *, horizon=10):
+def episode(path, *, horizon=10, before_step=None):
     actions_taken = []
 
     def public_observation():
@@ -52,6 +53,8 @@ def episode(path, *, horizon=10):
 
     def handle(op, args):
         if op == 'step_many':
+            if before_step is not None:
+                before_step()
             actions_taken.extend(args['actions'])
         else:
             assert op == 'observe'
@@ -208,7 +211,7 @@ def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, monkeyp
                 route.close()
             assert pending.result(timeout=2) == {'error': 'action policy could not complete the request'}
             assert not route.prediction_queue.tickets
-            assert route.fault == (None if expiry == 'close' else 'predict: timeout')
+            assert route.fault == ('predict: timeout' if expiry == 'prediction' else None)
             assert route.summary['policy_seconds'] > 0
             assert route.summary['executed_steps'] == 0
         finally:
@@ -216,9 +219,30 @@ def test_dispatched_prediction_timeout_and_close_release_queue(tmp_path, monkeyp
             route.close()
 
 
-def test_runner_keeps_policy_fault_when_actor_later_times_out(tmp_path, monkeypatch):
+def test_actor_shutdown_at_episode_deadline_is_not_a_route_fault(tmp_path, monkeypatch):
+    with fixture_service(tmp_path / 'model.sock', events=[]) as model:
+        setup = bind(model.path, ['task'])['task']
+        clock = SimpleNamespace(now=10)
+        monkeypatch.setattr(action_policy, 'time', SimpleNamespace(monotonic=lambda: clock.now))
+        route = EpisodePolicy(setup, tmp_path / 'env.sock', task_id='task', trial_id='1',
+                              run_seed='1', timeout_s=20)
+
+        def shutdown(*args, deadline, **kwargs):
+            clock.now = deadline
+            route.close()
+            raise ToolTransportError('tool relay closed the connection mid-reply')
+
+        monkeypatch.setattr(action_policy, 'call', shutdown)
+        try:
+            assert 'error' in route.handle('observe', {})
+            assert route.fault is None
+        finally:
+            route.close()
+
+
+@pytest.mark.parametrize('operation', ['policy_error', 'predict', 'step_many'])
+def test_runner_scores_episode_deadlines_and_preserves_policy_faults(tmp_path, monkeypatch, operation):
     import json
-    from types import SimpleNamespace
 
     from eval.run import runner, task_session
 
@@ -229,31 +253,55 @@ def test_runner_keeps_policy_fault_when_actor_later_times_out(tmp_path, monkeypa
     monkeypatch.setenv('HG_AGENT_BACKEND', 'mock')
     monkeypatch.setenv('HG_REVIEWED_ENVIRONMENT_ONLY', '1')
     routes = []
+    verified = []
+    started, release = Event(), Event()
     start = task_session.TaskSession.start_action_policy
+    timeout_s = 20 if operation == 'policy_error' else 1
+
+    def hold_request():
+        started.set()
+        assert release.wait(5)
 
     def start_policy(session, *args, **kwargs):
         start(session, *args, **kwargs)
         routes.append(session.action_policy)
 
     def time_out(*args, **kwargs):
-        reply = call(routes[0].path, 'policy.run', {'instruction': 'move', 'steps': 1})
-        assert 'error' in reply
-        raise subprocess.TimeoutExpired('actor', 20)
+        try:
+            reply = call(routes[0].path, 'policy.run', {'instruction': 'move', 'steps': 1}, timeout_s=3)
+            assert 'error' in reply
+            assert operation == 'policy_error' or started.is_set()
+        finally:
+            release.set()
+        raise subprocess.TimeoutExpired('actor', timeout_s)
+
+    def verify(*args, **kwargs):
+        verified.append(True)
+        return {'kind': 'command', 'passed': False, 'score': 0.0}
 
     monkeypatch.setattr(task_session.TaskSession, 'start_action_policy', start_policy)
     monkeypatch.setattr(runner.actor_execution, 'execute', time_out)
-    with fixture_service(tmp_path / 'model.sock', fail=True) as model, episode(tmp_path / 'env.sock') as env:
+    monkeypatch.setattr(runner.task_verification, 'verify_output', verify)
+    with fixture_service(tmp_path / 'model.sock', fail=operation == 'policy_error', events=[],
+                         before_predict=hold_request if operation == 'predict' else None) as model, \
+            episode(tmp_path / 'env.sock', before_step=hold_request if operation == 'step_many' else None) as env:
         setup = bind(model.path, ['task'])['task']
         relay = SimpleNamespace(path=env.path, fault=lambda: None, stop=lambda: None,
-                                report=dict, cleanup=lambda: None, model=None)
+                                report=dict, cleanup=lambda: None, model=None, recording=None)
         monkeypatch.setattr(task_session.tool_relay, 'start', lambda *args, **kwargs: relay)
         result = runner.run_one(harness, {'task_id': 'task', 'goal': 'Move'},
-                                timeout_s=20, setup=setup, env={'kind': 'files', 'network': 'none'})
-    assert result['invalid']['stage'] == 'action policy route', result
-    assert result.get('verdict') is None
+                                timeout_s=timeout_s, setup=setup, env={'kind': 'files', 'network': 'none'})
     stats = result['runtime_services']['action_policy']
-    assert stats['fault'] == 'predict: ToolTransportError'
-    assert stats['policy_seconds'] > 0
+    if operation == 'policy_error':
+        assert result['invalid']['stage'] == 'action policy route', result
+        assert result.get('verdict') is None and not verified
+        assert stats['fault'] == 'predict: ToolTransportError'
+    else:
+        assert 'invalid' not in result and verified
+        assert result['verdict']['score'] == 0.0
+        assert 'fault' not in stats
+    timing = 'environment_seconds' if operation == 'step_many' else 'policy_seconds'
+    assert stats[timing] > 0
 
 
 def test_driver_preflights_and_binds_reservation_and_treatment_to_service_identity(

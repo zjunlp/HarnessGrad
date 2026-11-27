@@ -54,11 +54,11 @@ while another episode is using the policy. Each independent HarnessGrad
 process has its own queue.
 
 Each dispatched prediction has up to 60 seconds, capped by the remaining
-episode time. A prediction timeout leaves the episode unmeasured. If the episode
-budget expires while a request is still in the queue, the request is dropped
-and normal actor-timeout handling applies. Closing an episode releases its
-client connection and queue ticket. A service may finish work it already
-accepted.
+episode time. If the 60-second prediction deadline expires first, the episode
+is unmeasured. If the episode budget expires first, queued and in-flight
+requests stop waiting and the runner uses its normal episode-timeout handling.
+Closing an episode releases its client connection and queue ticket. A service
+may finish work it already accepted.
 
 The per-episode receipt records delegated requests, predictions, queue wait
 (`queue_seconds`), queue timeouts, policy request time, model inference time, actual delegated
