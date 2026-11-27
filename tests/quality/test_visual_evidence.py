@@ -3,7 +3,12 @@
 import base64
 import hashlib
 import json
+import os
+from pathlib import Path
+import shutil
 import struct
+import subprocess
+import sys
 import zlib
 
 import pytest
@@ -108,3 +113,38 @@ def test_retry_replaces_logical_index_and_h0_reuse_copies_only_selected_images(t
     [row] = output.read_text().splitlines()
     assert json.loads(row)['trial_id'] == 'trial-1'
     assert reuse_round_zero(tmp_path / 'legacy', recipient, ['train']) == 0
+
+
+def test_visual_index_through_a_runs_symlink_opens_in_method_sandbox(tmp_path):
+    from eval.containers import sandbox
+
+    if shutil.which('bwrap') is None:
+        pytest.skip('bwrap is not installed')
+    platform, runs, work, method, base = (tmp_path / name for name in
+                                         ('platform', 'physical-runs', 'work', 'method', 'base'))
+    for directory in (platform, runs, work, method, base):
+        directory.mkdir()
+    runs_link = platform / 'runs'
+    runs_link.symlink_to(runs, target_is_directory=True)
+
+    archive = ImageArchive(runs / 'study', 0)
+    trial = archive.start_trial('train', 'trial-1')
+    png = _png(b'\xff\x00\x00')
+    _send(HTTPObservation(trial).connection(), 'responses', png, 'a' * 32)
+    trial.finish('', available=True)
+
+    visual_root = runs_link / 'study' / 'visual-evidence' / 'train'
+    _stage_visual_evidence(method, visual_root, [{'round': 0}], ['train'])
+    index = method / 'history' / 'visual' / 'round-0.jsonl'
+    image = json.loads(index.read_text())['calls'][0]['images'][0]
+    # Mode A mounts the physical images directory while the platform tree is hidden.
+    images = (visual_root / 'images').resolve()
+    assert Path(image['path']).parent == images
+    command = sandbox.command(
+        [sys.executable, '-I', '-B', '-c',
+         'import sys; from pathlib import Path; sys.stdout.buffer.write(Path(sys.argv[1]).read_bytes())',
+         image['path']], platform=platform, work_root=work, task_dir=method, repo=base,
+        env={'PATH': os.defpath, 'HOME': str(method)}, network='none', visible_paths=(images,))
+    result = subprocess.run(command, capture_output=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == png

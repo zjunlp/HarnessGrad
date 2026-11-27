@@ -483,7 +483,7 @@ def _stage_visual_evidence(channel, root, points, task_ids):
                     image.pop('file', None)
                     image.pop('path', None)
                     if path is not None:
-                        image['path'] = str(path.absolute())
+                        image['path'] = str(path.resolve())
                     elif image.get('status') == 'captured':
                         image['status'] = 'file_unavailable'
         if records:
