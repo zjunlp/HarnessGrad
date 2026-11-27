@@ -87,13 +87,14 @@ class DirectoryChecks:
         self._entries = {}
         self._unsupported = set()
 
-    def digest(self, root, stamp, build):
+    def digest(self, root, stamp, build, *, relocatable=False):
+        key = (root, relocatable)
         with self._lock:
-            if root in self._entries:
-                old_stamp, digest, watch = self._entries[root]
+            if key in self._entries:
+                old_stamp, digest, watch = self._entries[key]
                 if old_stamp == stamp and watch.unchanged():
                     return digest
-                del self._entries[root]
+                del self._entries[key]
                 watch.close()
             if root not in self._unsupported:
                 try:
@@ -101,10 +102,10 @@ class DirectoryChecks:
                     try:
                         digest = build(watch.add)
                         if watch.unchanged():
-                            self._entries[root] = (stamp, digest, watch)
+                            self._entries[key] = (stamp, digest, watch)
                             return digest
                     finally:
-                        if root not in self._entries:
+                        if key not in self._entries:
                             watch.close()
                 except WatchUnavailable:
                     self._unsupported.add(root)

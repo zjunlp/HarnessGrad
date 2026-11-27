@@ -102,6 +102,59 @@ def test_missing_exact_context_refuses_without_copying_or_measuring(control, tmp
     assert not (tmp_path / "recipient").exists()
 
 
+def test_robocasa365_strict_h0_reuses_relocated_assets(control, tmp_path, monkeypatch):
+    from data.datasets import robocasa365
+    from data.scaffolds import registry
+
+    asset_root = tmp_path / "old"
+    prepared = asset_root / "prepared-v1"
+    prepared.mkdir(parents=True)
+    (prepared / "texture").write_text("wood")
+    (asset_root / "libOSMesa.so.8").write_text("authored renderer")
+    python_root = tmp_path / "build"
+    binding = {"schema": "harnessgrad.python-runtime-binding.v1", "dataset": "robocasa365",
+               "profile": "execution", "role": "service", "runtime_id": "a" * 64,
+               "manifest_path": str(python_root / "artifact.json"), "path": str(python_root / "venv"),
+               "python": str(python_root / "venv/bin/python"),
+               "runtime_paths": [str(python_root / "venv"), "/usr"]}
+    monkeypatch.setattr(robocasa365, "resolve_execution", lambda _: {})
+    monkeypatch.setattr(robocasa365, "bind", lambda _, role: binding)
+    monkeypatch.setattr(robocasa365, "_prepared", lambda: (asset_root / "prepared-v1", "same-bundle"))
+    monkeypatch.setattr(robocasa365, "_osmesa", lambda: str(asset_root / "libOSMesa.so.8"))
+    case = next(iter(robocasa365.CASES.values()))
+
+    def capture():
+        setup = robocasa365._setup(case)
+        registry._check_setup(setup, "t1", "robocasa365")
+        return setup, verification_context.capture([{"task_id": "t1"}], {}, {"t1": setup})
+
+    setup, original = capture()
+    work, manifest, opts, ids, attribution, reporter = control
+    ids = replace(ids, verification=original)
+    _, point = donor(tmp_path, (work, manifest, opts, ids, attribution, reporter))
+    loaded = h0.load_h0_donor("donor", tmp_path, "owned-sha")
+    asset_root = asset_root.rename(tmp_path / "new")
+    moved, current = capture()
+    assert moved["tool_relay"]["content"] == setup["tool_relay"]["content"]
+    assert moved["tool_relay"]["asset_mounts"] != setup["tool_relay"]["asset_mounts"]
+    assert current == original
+    h0.admit_h0_donor_records(loaded, work, replace(ids, verification=current), opts,
+                             setups={"t1": moved}, envs={})
+    recipient = tmp_path / "recipient"
+    recipient.mkdir()
+    shared = h0.materialize_shared_h0(loaded, recipient, "owned-sha", manifest, attribution, opts, reporter)
+    assert shared.base["per_task"] == point["per_task"]
+
+    for path in (asset_root / "prepared-v1/texture", asset_root / "libOSMesa.so.8"):
+        contents = path.read_text()
+        path.write_text("changed input")
+        changed, changed_context = capture()
+        with pytest.raises(h0.H0Refused, match="verification_context changed"):
+            h0.admit_h0_donor_records(loaded, work, replace(ids, verification=changed_context), opts,
+                                     setups={"t1": changed}, envs={})
+        path.write_text(contents)
+
+
 def test_measurement_port_is_called_exactly_once_with_current_binding_and_cache(control, tmp_path):
     work, _, opts, ids, attribution, _ = control
     cache, calls = {}, []

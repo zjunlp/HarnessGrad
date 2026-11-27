@@ -200,6 +200,27 @@ def test_watched_relay_assets_skip_the_tree_until_a_nested_edit(local_asset_watc
         assert capture(task, {}, setups, verifiers) == baseline
 
 
+def test_named_asset_watch_cannot_reuse_a_nonrelocatable_read_path(tmp_path, monkeypatch):
+    assets = tmp_path / 'assets'
+    assets.mkdir()
+    fixture = assets / 'fixture'
+    fixture.write_text('wood')
+    (assets / 'alias').symlink_to(fixture)
+    tasks = [{'task_id': 'trial'}]
+    setup = {'trial': {'tool_relay': {'read_paths': [str(assets)]}}}
+    monkeypatch.setenv('HG_VERIFICATION_FILE_CACHE_ROOTS', str(assets))
+    with context.watch_asset_directories() as capture:
+        assert capture(tasks, {}, setup) == context.capture(tasks, {}, setup)
+        binding = {'schema': 'harnessgrad.python-runtime-binding.v1', 'dataset': 'control',
+                   'profile': 'execution', 'role': 'service', 'runtime_id': 'a' * 64,
+                   'manifest_path': '/control/build/artifact.json', 'path': '/control/build/venv',
+                   'python': '/control/build/venv/bin/python', 'runtime_paths': ['/control/build/venv', '/usr']}
+        setup['trial']['tool_relay'].update(python_runtime=binding, python=binding['python'],
+                                          asset_mounts={'prepared': str(assets)})
+        with pytest.raises(ValueError, match='verification context unavailable'):
+            capture(tasks, {}, setup)
+
+
 def test_watch_setup_failure_keeps_ordinary_verification(tmp_path, monkeypatch):
     from harnessgrad.provenance import asset_watch
 

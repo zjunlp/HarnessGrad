@@ -417,6 +417,12 @@ ALFWorld、Jericho、ScienceWorld 和 DS-1000 的任务声明按键生成，枚�
 以及声明模型通道后由本次 broker 创建的 socket；不采用宿主已有的模型 socket。
 网络 namespace 不开放外部网络。白名单不能覆盖可写服务目录；这些可信输入不会因此投影给 actor。
 
+对于宿主机上可能移动的只读资产，绑定 Python 的服务可以用
+`SETUP.tool_relay.asset_mounts` 声明名称到绝对源路径的映射，例如
+`{"prepared": "/mnt/data/prepared-v1"}`。服务从固定的
+`/run/harnessgrad-relay/assets/prepared` 读取。严格和便携校验都绑定沙箱内路径和资产内容，
+宿主机路径仅用于挂载。目录内部的符号链接必须使用留在该目录中的相对路径。
+
 评分器在 `VERIFY.python_runtime` 放入 verifier 绑定，`argv` 须以
 `[binding["python"], "-I", "-B", ...]` 开头，`runtime_paths` 须与绑定完全一致，
 并满足第 5.1 节的只读挂载和执行路线限制。绑定结构无效、制品损坏、角色或解释器不匹配时，

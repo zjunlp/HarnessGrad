@@ -68,7 +68,8 @@ from transport import Relay
 parser = argparse.ArgumentParser()
 parser.add_argument('--socket'); parser.add_argument('--receipt'); parser.add_argument('--game')
 args = parser.parse_args()
-counter = json.loads(Path(args.game).read_text())['initial']
+case = json.loads(Path(args.game).read_text())
+counter = case['initial']
 done = False
 def stop(*_):
     global done
@@ -112,6 +113,11 @@ def inspect():
 
 def handle(op, values):
     global counter
+    if op == 'asset':
+        root, library = Path(case['asset']), Path(case['library'])
+        return {'fixture': (root / 'alias').read_text(), 'library': library.read_text(),
+                'readonly': all(os.statvfs(p).f_flag & os.ST_RDONLY for p in (root, library)),
+                'host_path_visible': Path(values['host_path']).exists()}
     if op == 'increment':
         counter += values.get('amount', 1)
         for key in ('HOME', 'TMPDIR', 'XDG_CACHE_HOME'):
@@ -202,6 +208,48 @@ def test_bound_service_uses_readonly_artifact_and_scrubs_ambient_environment(
         handle.cleanup()
     assert handle.report()["cleanup"] == {"complete": True, "errors": []}
     assert handle.report()["python_runtime"]["runtime_id"] == execution_artifact["runtime_id"]
+
+
+def test_named_service_assets_keep_their_sandbox_paths_after_relocation(
+        execution_artifact, service_program, tmp_path):
+    from data.scaffolds.runtime_extensions import relay_asset_path
+    from harnessgrad.datasets import runtime_identity
+    from harnessgrad.provenance import verification_context
+
+    assets = tmp_path / "original"
+    (assets / "kitchen").mkdir(parents=True)
+    (assets / "kitchen" / "fixture").write_text("wood")
+    (assets / "kitchen" / "alias").symlink_to("fixture")
+    (assets / "renderer").write_text("software renderer")
+    setup = service_setup(execution_artifact, service_program)
+    relay = setup["tool_relay"]
+    relay["content"] = json.dumps({"initial": 0, "asset": str(relay_asset_path("prepared")),
+                                   "library": str(relay_asset_path("renderer"))})
+    task = {"task_id": "control"}
+    setups = {task["task_id"]: setup}
+    bindings = {}
+    metadata = runtime_identity.create(tasks={"control": {"service": relay["python_runtime"]}})
+    runtime_identity.content_key(metadata, binding_keys=bindings)
+
+    def check(source):
+        relay["asset_mounts"] = {"prepared": str(source / "kitchen"), "renderer": str(source / "renderer")}
+        strict = verification_context.capture([task], {}, setups)
+        portable = verification_context.capture_content([task], {}, setups, runtimes=bindings)
+        handle = tool_relay.start(setup, context=context(), ready_timeout_s=10)
+        try:
+            assert call(handle.path, "asset", {"host_path": str(source)}) == {
+                "fixture": "wood", "library": "software renderer", "readonly": True, "host_path_visible": False}
+            seal(handle)
+            return strict, portable, handle.context["input_sha256"]
+        finally:
+            handle.cleanup()
+
+    original = check(assets)
+    moved = assets.rename(tmp_path / "relocated")
+    assert check(moved) == original
+    (moved / "kitchen" / "fixture").write_text("stone")
+    assert verification_context.capture([task], {}, setups) != original[0]
+    assert verification_context.capture_content([task], {}, setups, runtimes=bindings) != original[1]
 
 
 def test_concurrent_bound_relays_have_independent_state_and_complete_delayed_records(

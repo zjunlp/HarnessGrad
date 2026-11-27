@@ -28,6 +28,12 @@ For Ubuntu or Debian, install the system `libosmesa6` package. For a user-local 
 
 Preparation verifies the upstream source and six asset archives against SHA-256 pins. The simulator loads RoboCasa and robosuite from those pinned source archives. This uses the upstream robosuite source's optional IK packaging, which permits RoboCasa's required NumPy 2.2.5. The prepare step changes the location of generated object XML to the service's private temporary directory, with asset paths still resolved against the original object folder. Code and kitchen assets are credited to the RoboCasa project under its published licenses. [RoboCasa installation](https://robocasa.ai/docs/build/html/introduction/installation.html) · [RoboCasa licenses](https://github.com/robocasa/robocasa/tree/7bfc60c9d26c02506d4265cbe0e86b35e6e25d42#license)
 
+The service mounts the prepared directory and any explicitly configured local
+OSMesa library at fixed read-only paths. A baseline measured with these mounts
+can be reused with `--h0-from` after relocating the asset directory on the same
+host when the assets and other measurement identities match. Baselines measured
+with the earlier host-path declarations require a fresh H0 under this layout.
+
 ## Running an evaluation
 
 Use `--dataset robocasa365 --split official --side eval` with the chosen harness

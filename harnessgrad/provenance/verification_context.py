@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import stat
 
+from data.scaffolds.runtime_extensions import relay_asset_mounts
 from harnessgrad.provenance.asset_watch import DirectoryChecks
 
 KEY = 'verification_context'
@@ -110,14 +111,27 @@ def _cached_file_digest(path, stamp):
     return _file_digest(path, expected=stamp)
 
 
-def _source(path, memo, *, portable=False, cache_roots=(), directory_checks=None):
+def _require_relocatable_link(link, parent, boundary):
+    relative = Path(link)
+    if relative.is_absolute():
+        raise ValueError('named asset mounts require relative symlinks')
+    for part in relative.parts:
+        parent = (parent / part).resolve(strict=True)
+        if not parent.is_relative_to(boundary):
+            raise ValueError('named asset mount symlink leaves its source tree')
+
+
+def _source(path, memo, *, portable=False, cache_roots=(), directory_checks=None, relocatable=False):
     source = Path(path)
     if not source.is_absolute():
         source = ROOT / source
     source = Path(os.path.abspath(source))
-    if source in memo:
-        return memo[source]
+    key = (source, relocatable)
+    if key in memo:
+        return memo[key]
     resolved = source.resolve(strict=True)
+    if relocatable and source != resolved:
+        raise ValueError('named asset mount source must be a canonical path')
     forbidden = {Path('/'), Path('/tmp'), Path('/var/tmp'), Path('/home'), Path.home(),
                  Path('/usr'), Path('/bin'), Path('/lib'), Path('/lib64'), Path('/etc')}
     if resolved in forbidden:
@@ -137,6 +151,8 @@ def _source(path, memo, *, portable=False, cache_roots=(), directory_checks=None
             if not target.is_relative_to(boundary):
                 raise ValueError('verification source symlink escapes its source root')
             link = os.readlink(p)
+            if relocatable:
+                _require_relocatable_link(link, p.parent, boundary)
             if portable and Path(link).is_absolute():
                 link = {'source_relative': target.relative_to(boundary).as_posix()}
             result = {'link': link, 'target': walk(target, subscribe)}
@@ -163,10 +179,10 @@ def _source(path, memo, *, portable=False, cache_roots=(), directory_checks=None
         return _digest(walk(source, subscribe))
 
     if directory_checks is not None and is_directory and source == resolved and resolved in cache_roots:
-        result = directory_checks.digest(resolved, _stamp(resolved), build)
+        result = directory_checks.digest(resolved, _stamp(resolved), build, relocatable=relocatable)
     else:
         result = build()
-    memo[source] = result
+    memo[key] = result
     return result
 
 
@@ -235,6 +251,12 @@ def _sources(value, memo, *, relay=False, runtimes=None, cache_roots=(), directo
         result['__read_path_sha256'] = commitments
         if portable:
             del result['read_paths']
+    if relay and 'asset_mounts' in value:
+        result['asset_mounts'] = {
+            str(target): _source(source, memo, portable=portable, cache_roots=cache_roots,
+                                 directory_checks=directory_checks, relocatable=True)
+            for target, source in relay_asset_mounts(value).items()
+        }
     if relay and isinstance(value.get('program'), str):
         program = Path(value['program'])
         result['__program_sha256'] = _source(program, memo, portable=portable, cache_roots=cache_roots)

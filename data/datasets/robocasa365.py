@@ -12,6 +12,7 @@ from statistics import mean
 
 from data.scaffolds.asset_module import load as load_asset
 from data.scaffolds.declarations import TaskDeclarations, once
+from data.scaffolds.runtime_extensions import relay_asset_path
 from harnessgrad.datasets.runtime import bind, check_execution, resolve_execution
 from harnessgrad.paths import DataRootNotConfigured, dataset_root
 
@@ -68,12 +69,13 @@ def _setup(case):
     prepared, bundle = _prepared()
     osmesa = _osmesa()
     runtime = bind(resolve_execution(MANAGED_EXECUTION_RUNTIME), 'service')
-    read_paths = [ASSETS, prepared, PLATFORM / 'eval/service/tool_transport.py']
+    read_paths = [ASSETS, PLATFORM / 'eval/service/tool_transport.py']
     for name in ('eval/__init__.py', 'eval/service/__init__.py'):
         if (PLATFORM / name).is_file():
             read_paths.append(PLATFORM / name)
+    assets = {'prepared': str(prepared.resolve(strict=True))}
     if osmesa:
-        read_paths.append(Path(osmesa))
+        assets['osmesa'] = osmesa
     return {
         'files': [
             {'path': 'robocasa365_client.py', 'from': str(ASSETS / 'cli/client.py')},
@@ -87,8 +89,12 @@ def _setup(case):
         'tool_relay': {
             'program': str(ASSETS / 'relay.py'), 'python': runtime['python'],
             'python_runtime': runtime, 'read_paths': [str(path.resolve()) for path in read_paths],
+            'asset_mounts': assets,
             'filename': 'case.json', 'content_flag': '--case-spec',
-            'content': json.dumps({'case': case, 'prepared': str(prepared), 'bundle': bundle, 'osmesa': osmesa}),
+            'content': json.dumps({
+                'case': case, 'prepared': str(relay_asset_path('prepared')), 'bundle': bundle,
+                'osmesa': str(relay_asset_path('osmesa')) if osmesa else None,
+            }),
             'ready_timeout_s': 120,
             'max_line_bytes': 1024**2,
             'record': {'path': 'trusted_episode', 'max_bytes': 16 * 1024},

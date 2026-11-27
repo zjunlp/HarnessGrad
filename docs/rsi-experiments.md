@@ -42,9 +42,9 @@ export HG_VERIFICATION_FILE_CACHE_ROOTS="$HG_DATA_ROBOCASA365/prepared-v1"
 ```
 
 For sandboxed evaluations on supported local Linux filesystems, a relay read
-path that exactly matches a configured root is verified once as the workers
-start. Workers then share the tree digest while filesystem watches remain
-valid. A change, dropped watch, or mount change invalidates the digest.
+path or named asset source that exactly matches a configured root is verified
+once as the workers start. Workers then share the tree digest while filesystem
+watches remain valid. A change, dropped watch, or mount change invalidates the digest.
 Verification falls back to walking the tree if watches are unavailable.
 
 Use this option for trusted, prepared assets that stay read-only during the

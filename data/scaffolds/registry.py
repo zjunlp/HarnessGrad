@@ -908,6 +908,9 @@ def _check_setup(spec, tid: str, name: str) -> None:
     if not isinstance(spec, dict):
         raise ValueError(f"dataset {name!r}: SETUP[{tid!r}] must be a dict")
     relay = spec.get("tool_relay") or {}
+    if "asset_mounts" in relay:
+        from data.scaffolds.runtime_extensions import relay_asset_mounts
+        relay_asset_mounts(relay)
     if "ready_timeout_s" in relay:
         from data.scaffolds.runtime_extensions import validate_relay_ready_timeout
         validate_relay_ready_timeout(relay["ready_timeout_s"])
