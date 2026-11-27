@@ -17,7 +17,7 @@ import threading
 import time
 
 from eval.action_policies.ray_policy import local_ray, RayPolicyService
-from eval.service.action_policy import PROTOCOL
+from eval.service.action_policy import digest, PROTOCOL
 from eval.service.tool_transport import Relay
 
 

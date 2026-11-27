@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 import subprocess
+import sys
 from threading import Barrier, Event
 import time
 from types import SimpleNamespace
@@ -284,6 +285,47 @@ def test_gr00t_device_respects_visible_cuda_indices(monkeypatch):
     assert selected_gpu('cuda:1') == 'GPU-example'
     with pytest.raises(ValueError, match='outside CUDA_VISIBLE_DEVICES'):
         selected_gpu('cuda:2')
+
+
+@pytest.mark.parametrize('selector', ['3', 'GPU-selected'])
+def test_ray_gpu_label_probe_uses_selected_device_and_restores_probe(monkeypatch, selector):
+    from eval.action_policies.ray_policy import selected_gpu_type
+
+    operations = []
+
+    class Manager:
+        @staticmethod
+        def get_current_node_accelerator_type():
+            raise RuntimeError('unavailable physical device zero')
+
+        @staticmethod
+        def _gpu_name_to_accelerator_type(name):
+            assert name == 'NVIDIA GeForce RTX 3090'
+            return 'GeForce-RTX-3090'
+
+    def selected_handle(value):
+        assert str(value) == selector
+        operations.append(value)
+        return 'selected handle'
+
+    nvml = SimpleNamespace(
+        nvmlInit=lambda: operations.append('init'),
+        nvmlShutdown=lambda: operations.append('shutdown'),
+        nvmlDeviceGetHandleByUUID=selected_handle,
+        nvmlDeviceGetHandleByIndex=selected_handle,
+        nvmlDeviceGetName=lambda _: b'NVIDIA GeForce RTX 3090',
+    )
+    monkeypatch.setitem(sys.modules, 'ray._private.accelerators.nvidia_gpu',
+                        SimpleNamespace(NvidiaGPUAcceleratorManager=Manager))
+    monkeypatch.setitem(sys.modules, 'ray._private.thirdparty', SimpleNamespace(pynvml=nvml))
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', selector)
+    original = Manager.get_current_node_accelerator_type
+    with pytest.raises(ValueError, match='init failed'):
+        with selected_gpu_type():
+            assert Manager.get_current_node_accelerator_type() == 'GeForce-RTX-3090'
+            raise ValueError('init failed')
+    assert Manager.get_current_node_accelerator_type is original
+    assert operations == ['init', int(selector) if selector.isdecimal() else selector, 'shutdown']
 
 
 def test_actor_shutdown_at_episode_deadline_is_not_a_route_fault(tmp_path, monkeypatch):

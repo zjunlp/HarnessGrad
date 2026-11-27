@@ -11,6 +11,32 @@ from eval.service.action_policy import digest
 
 
 @contextmanager
+def selected_gpu_type():
+    """Limit Ray's optional device label probe to its explicitly selected GPU."""
+    from ray._private.accelerators.nvidia_gpu import NvidiaGPUAcceleratorManager
+    from ray._private.thirdparty import pynvml
+
+    selected = os.environ.get('CUDA_VISIBLE_DEVICES', '').split(',')[0].strip()
+    original = NvidiaGPUAcceleratorManager.get_current_node_accelerator_type
+    if selected:
+        pynvml.nvmlInit()
+        try:
+            handle = (pynvml.nvmlDeviceGetHandleByUUID(selected) if selected.startswith('GPU-')
+                      else pynvml.nvmlDeviceGetHandleByIndex(int(selected)))
+            name = pynvml.nvmlDeviceGetName(handle)
+            if isinstance(name, bytes):
+                name = name.decode('utf-8')
+            label = NvidiaGPUAcceleratorManager._gpu_name_to_accelerator_type(name)
+        finally:
+            pynvml.nvmlShutdown()
+        NvidiaGPUAcceleratorManager.get_current_node_accelerator_type = staticmethod(lambda: label)
+    try:
+        yield
+    finally:
+        NvidiaGPUAcceleratorManager.get_current_node_accelerator_type = staticmethod(original)
+
+
+@contextmanager
 def local_ray(*, num_gpus):
     os.environ.update(RAY_AUTH_MODE='token', RAY_AUTH_TOKEN=secrets.token_hex(32),
                       RAY_USAGE_STATS_ENABLED='0')
@@ -18,8 +44,9 @@ def local_ray(*, num_gpus):
 
     with tempfile.TemporaryDirectory(prefix='hg-ray-') as directory:
         try:
-            ray.init(address='local', include_dashboard=False, num_cpus=1, num_gpus=num_gpus,
-                     object_store_memory=128 << 20, _temp_dir=directory, _node_ip_address='127.0.0.1')
+            with selected_gpu_type():
+                ray.init(address='local', include_dashboard=False, num_cpus=1, num_gpus=num_gpus,
+                         object_store_memory=128 << 20, _temp_dir=directory, _node_ip_address='127.0.0.1')
             yield ray
         finally:
             ray.shutdown()
